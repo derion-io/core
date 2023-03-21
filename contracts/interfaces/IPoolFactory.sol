@@ -14,5 +14,5 @@ struct Params {
 
 interface IPoolFactory {
     function getParams() external view returns (Params memory);
-    function TOKEN_1155() external view returns (address);
+    function TOKEN() external view returns (address);
 }

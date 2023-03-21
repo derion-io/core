@@ -10,14 +10,16 @@ import "./interfaces/IERC1155Supply.sol";
 import "./logics/Storage.sol";
 import "hardhat/console.sol";
 
-contract DerivablePool is Storage, Constants {
-    uint public constant MINIMUM_LIQUIDITY = 10**3;
+contract Pool is Storage, Constants {
+    uint public constant MINIMUM_LIQUIDITY = 10 ** 3;
 
     /// Immutables
     address internal immutable LOGIC;
-    address internal immutable TOKEN_ORACLE;
+    address internal immutable ORACLE;
+    address internal immutable TOKEN;
     address internal immutable TOKEN_COLLATERAL;
     bool internal immutable BASE_TOKEN_0;
+    uint224 internal immutable MARK_PRICE;
 
     struct Param {
         uint R; // current reserve of cToken (base, quote or LP)
@@ -27,23 +29,23 @@ contract DerivablePool is Storage, Constants {
 
     constructor() {
         Params memory params = IPoolFactory(msg.sender).getParams();
-        s_token1155 = IPoolFactory(msg.sender).TOKEN_1155();
+        TOKEN = IPoolFactory(msg.sender).TOKEN();
         LOGIC = params.logic;
-        TOKEN_ORACLE = params.tokenOracle;
-        address t0 = IUniswapV2Pair(TOKEN_ORACLE).token0();
+        ORACLE = params.tokenOracle;
+        address t0 = IUniswapV2Pair(ORACLE).token0();
         TOKEN_COLLATERAL = params.tokenCollateral;
         BASE_TOKEN_0 = TOKEN_COLLATERAL == t0;
+        MARK_PRICE = params.markPrice;
 
         s_a = params.a;
         s_b = params.b;
 
         (bool success, bytes memory result) = LOGIC.delegatecall(
             abi.encodeWithSignature(
-                "init(address,address,bool,uint224,uint256,uint256,uint256)",
-                TOKEN_ORACLE,
+                "init(address,address,bool,uint256,uint256,uint256)",
+                ORACLE,
                 TOKEN_COLLATERAL,
                 BASE_TOKEN_0,
-                params.markPrice,
                 params.power,
                 params.a,
                 params.b
@@ -56,26 +58,26 @@ contract DerivablePool is Storage, Constants {
         }
         (uint rA, uint rB, uint rC) = abi.decode(result, (uint, uint, uint));
 
-        IERC1155Supply(s_token1155).mint(
+        IERC1155Supply(TOKEN).mint(
             params.recipient,
             _packID(address(this), KIND_LONG),
             rA,
             ""
         );
-        IERC1155Supply(s_token1155).mint(
+        IERC1155Supply(TOKEN).mint(
             params.recipient,
             _packID(address(this), KIND_SHORT),
             rB,
             ""
         );
         // TODO: remove this
-        IERC1155Supply(s_token1155).mint(
+        IERC1155Supply(TOKEN).mint(
             address(1),
             _packID(address(this), KIND_LP),
             MINIMUM_LIQUIDITY,
             ""
         );
-        IERC1155Supply(s_token1155).mint(
+        IERC1155Supply(TOKEN).mint(
             params.recipient,
             _packID(address(this), KIND_LP),
             rC - MINIMUM_LIQUIDITY,
@@ -95,9 +97,11 @@ contract DerivablePool is Storage, Constants {
 
         (bool success, bytes memory result) = LOGIC.delegatecall(
             abi.encodeWithSignature(
-                "transition(address,bool,(uint256,uint256,uint256),(uint256,uint256,uint256))",
-                TOKEN_ORACLE,
+                "transition(address,address,bool,uint224,(uint256,uint256,uint256),(uint256,uint256,uint256))",
+                ORACLE,
+                TOKEN,
                 BASE_TOKEN_0,
+                MARK_PRICE,
                 param0,
                 param1
             )
@@ -126,14 +130,14 @@ contract DerivablePool is Storage, Constants {
         }
 
         if (dsA > 0) {
-            IERC1155Supply(s_token1155).mint(
+            IERC1155Supply(TOKEN).mint(
                 recipient,
                 _packID(address(this), KIND_LONG),
                 uint(dsA),
                 ""
             );
         } else if (dsA < 0) {
-            IERC1155Supply(s_token1155).burn(
+            IERC1155Supply(TOKEN).burn(
                 msg.sender,
                 _packID(address(this), KIND_LONG),
                 uint(-dsA)
@@ -141,14 +145,14 @@ contract DerivablePool is Storage, Constants {
         }
 
         if (dsB > 0) {
-            IERC1155Supply(s_token1155).mint(
+            IERC1155Supply(TOKEN).mint(
                 recipient,
                 _packID(address(this), KIND_SHORT),
                 uint(dsB),
                 ""
             );
         } else if (dsB < 0) {
-            IERC1155Supply(s_token1155).burn(
+            IERC1155Supply(TOKEN).burn(
                 msg.sender,
                 _packID(address(this), KIND_SHORT),
                 uint(-dsB)
@@ -156,14 +160,14 @@ contract DerivablePool is Storage, Constants {
         }
 
         if (dsC > 0) {
-            IERC1155Supply(s_token1155).mint(
+            IERC1155Supply(TOKEN).mint(
                 recipient,
                 _packID(address(this), KIND_LP),
                 uint(dsC),
                 ""
             );
         } else if (dsC < 0) {
-            IERC1155Supply(s_token1155).burn(
+            IERC1155Supply(TOKEN).burn(
                 msg.sender,
                 _packID(address(this), KIND_LP),
                 uint(-dsC)

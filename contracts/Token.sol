@@ -3,29 +3,17 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts/token/ERC1155/extensions/ERC1155Supply.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 
-contract Derivable1155 is ERC1155Supply {
-    // Contract name
-    string public name;
-    // Contract symbol
-    string public symbol;
+contract Token is ERC1155Supply {
     // Base Metadata URI
     string public METADATA_URI;
 
-    constructor(
-        string memory _name,
-        string memory _symbol,
-        string memory metadataURI
-    ) ERC1155(metadataURI) {
-        name = _name;
-        symbol = _symbol;
+    constructor(string memory metadataURI) ERC1155(metadataURI) {
         METADATA_URI = metadataURI;
     }
 
     modifier onlyDerivablePool(uint id) {
         (address pool, ) = _unpackID(id);
-        if (msg.sender != pool) {
-            revert();
-        }
+        require(msg.sender == pool, "Token: Invalid ID");
         _;
     }
 

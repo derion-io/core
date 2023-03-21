@@ -14,10 +14,8 @@ describe("DDL v2", function () {
         const [owner, otherAccount] = await ethers.getSigners();
         const signer = owner;
         // deploy token1155
-        const Derivable1155 = await ethers.getContractFactory("Derivable1155");
-        const derivable1155 = await Derivable1155.deploy(
-            "Derivable LP",
-            "DDL-LP",
+        const Token = await ethers.getContractFactory("Token");
+        const derivable1155 = await Token.deploy(
             "Test/"
         );
         // deploy pool factory
@@ -86,7 +84,7 @@ describe("DDL v2", function () {
         const poolAddress = await poolFactory.computePoolAddress(params);
         await eth.transfer(poolAddress, numberToWei(10));
         await poolFactory.createPool(params);
-        const derivablePool = await ethers.getContractAt("DerivablePool", await poolFactory.computePoolAddress(params));
+        const derivablePool = await ethers.getContractAt("Pool", await poolFactory.computePoolAddress(params));
 
         return {
             owner,
@@ -96,7 +94,7 @@ describe("DDL v2", function () {
         }
     }
 
-    describe("DerivablePool", function () {
+    describe("Pool", function () {
         it("Transition", async function () {
             const {owner, eth, derivablePool, derivable1155} = await loadFixture(deployDDLv2);
             await time.increase(100);

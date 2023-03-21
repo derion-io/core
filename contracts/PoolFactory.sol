@@ -3,17 +3,17 @@ pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/utils/Create2.sol";
 import "./interfaces/IPoolFactory.sol";
-import "./DerivablePool.sol";
+import "./Pool.sol";
 
 contract PoolFactory is IPoolFactory {
     bytes32 immutable BYTECODE_HASH;
-    address immutable public TOKEN_1155;
+    address immutable public TOKEN;
 
     constructor(
-        address token1155
+        address token
     ) {
-        BYTECODE_HASH = keccak256(type(DerivablePool).creationCode);
-        TOKEN_1155 = token1155;
+        BYTECODE_HASH = keccak256(type(Pool).creationCode);
+        TOKEN = token;
     }
 
     // transient storage
@@ -37,7 +37,7 @@ contract PoolFactory is IPoolFactory {
                 params.b
             )
         );
-        pool = Create2.deploy(0, salt, type(DerivablePool).creationCode);
+        pool = Create2.deploy(0, salt, type(Pool).creationCode);
         delete t_params;
     }
 

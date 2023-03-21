@@ -18,17 +18,15 @@ contract AsymptoticPerpetual is Storage, Constants {
     using OracleLibrary for OracleStore;
 
     function init(
-        address TOKEN_ORACLE,
+        address ORACLE,
         address TOKEN_COLLATERAL,
         bool BASE_TOKEN_0,
-        uint224 markPrice,
         uint power,
         uint a,
         uint b
     ) external returns (uint rA, uint rB, uint rC) {
         require(s_priceScaleTimestamp == 0, "already initialized");
-        s_oracleStore.init(TOKEN_ORACLE, BASE_TOKEN_0);
-        s_markPrice = markPrice;
+        s_oracleStore.init(ORACLE, BASE_TOKEN_0);
         s_power = power;
         uint224 xk = uint224(FixedPoint.Q112);
         DerivableLibrary.Param memory param;
@@ -40,9 +38,10 @@ contract AsymptoticPerpetual is Storage, Constants {
     }
 
     function _xk(
-        OraclePrice memory price
+        OraclePrice memory price,
+        uint224 markPrice
     ) internal view returns (FixedPoint.uq112x112 memory p) {
-        p = price.base.divuq(FixedPoint.uq112x112(s_markPrice));
+        p = price.base.divuq(FixedPoint.uq112x112(markPrice));
         p._x = uint224(_powu(p._x, s_power));
     }
 
@@ -58,7 +57,7 @@ contract AsymptoticPerpetual is Storage, Constants {
                 z = FullMath.mulDiv(z, x, FixedPoint.Q112);
             }
         }
-        require(z <= type(uint224).max, "DerivablePool: upper overflow");
+        require(z <= type(uint224).max, "Pool: upper overflow");
     }
 
     function _packID(address pool, uint kind) internal pure returns (uint id) {
@@ -66,20 +65,22 @@ contract AsymptoticPerpetual is Storage, Constants {
     }
 
     function transition(
-        address TOKEN_ORACLE,
+        address ORACLE,
+        address TOKEN,
         bool BASE_TOKEN_0,
+        uint224 markPrice,
         DerivableLibrary.Param memory param0,
         DerivableLibrary.Param memory param1
     ) external returns (int dsA, int dsB, int dsC) {
         DerivableLibrary.State memory state;
         (OraclePrice memory twap, ) = s_oracleStore.fetchPrice(
-            TOKEN_ORACLE,
+            ORACLE,
             BASE_TOKEN_0
         );
-        state.xk = _xk(twap)._x;
-        state.sA = IERC1155Supply(s_token1155).totalSupply(_packID(address(this), KIND_LONG));
-        state.sB = IERC1155Supply(s_token1155).totalSupply(_packID(address(this), KIND_SHORT));
-        state.sC = IERC1155Supply(s_token1155).totalSupply(_packID(address(this), KIND_LP));
+        state.xk = _xk(twap, markPrice)._x;
+        state.sA = IERC1155Supply(TOKEN).totalSupply(_packID(address(this), KIND_LONG));
+        state.sB = IERC1155Supply(TOKEN).totalSupply(_packID(address(this), KIND_SHORT));
+        state.sC = IERC1155Supply(TOKEN).totalSupply(_packID(address(this), KIND_LP));
         (dsA, dsB, dsC) = DerivableLibrary.transition(state, param0, param1);
     }
 }
