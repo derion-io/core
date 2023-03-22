@@ -9,7 +9,8 @@
     "test": "hardhat test --bail --parallel",
     "test-gas": "hardhat test --bail",
     "testnet": "hardhat run --network testnet",
-    "mainnet": "hardhat run --network mainnet"
+    "mainnet": "hardhat run --network mainnet",
+    "deploy:ganache": "npx hardhat run scripts/AllContracts.ganacheDeploy.js --network ganache"
   },
   "dependencies": {
     "@atixlabs/hardhat-time-n-mine": "^0.0.5",
