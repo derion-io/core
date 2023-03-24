@@ -39,7 +39,7 @@ library DerivableLibrary {
     ) public pure returns (uint rA, uint rB, uint rC) {
         // TODO: pass an assisting flag to decide f or g should be calculated first
         rA = r(xk, param.a, param.R);
-        rB = r(xk, param.b, param.R);
+        rB = r(uint224(FixedPoint.Q224/ xk), param.b, param.R);
         rC = param.R - rA - rB; // revert on overflow
     }
 
