@@ -56,13 +56,16 @@ library DerivableLibrary {
     }
 
     function _g(uint224 xk, uint v, uint R) internal pure returns (uint) {
-        uint denonminator = FullMath.mulDiv(4 * v, uint(xk), FixedPoint.Q112);
-        uint minuend = FullMath.mulDiv(R, R, denonminator);
+        uint denominator = FullMath.mulDiv(4 * v, uint(xk), FixedPoint.Q112);
+        uint minuend = FullMath.mulDiv(R, R, denominator);
         return R - minuend;
     }
 
     function solve(uint224 xk, uint r, uint R) internal pure returns (uint) {
-        // TODO: implement vr here
-        return 0;
+        if(r <= R / 2) {
+            return FullMath.mulDiv(r, FixedPoint.Q112, uint(xk));
+        }
+        uint denominator = FullMath.mulDiv(4 * (R - r), uint(xk), FixedPoint.Q112);
+        return FullMath.mulDiv(R, R, denominator);
     }
 }
