@@ -1,5 +1,5 @@
 {
-  "name": "ddlcore-contracts",
+  "name": "@derivable/core",
   "version": "1.0.0",
   "license": "BSL-1.1",
   "scripts": {
@@ -14,8 +14,8 @@
   },
   "dependencies": {
     "@atixlabs/hardhat-time-n-mine": "^0.0.5",
-    "@derivable/oracle": "git+ssh://git@github.com:derivable-io/oracle-contracts.git#f41d928db109c60846e3cd92b118739d97f5b5d7",
-    "@derivable/utr": "git+ssh://git@github.com:derivable-io/utr.git#db8346767b0e2f12ea697551da9f0bc59acb6252",
+    "@derivable/oracle": "git+ssh://git@github.com:derivable-labs/oracle-contracts.git#f41d928db109c60846e3cd92b118739d97f5b5d7",
+    "@derivable/utr": "git+ssh://git@github.com:derivable-labs/utr.git#db8346767b0e2f12ea697551da9f0bc59acb6252",
     "bn.js": "^5.2.1",
     "canonical-weth": "^1.4.0",
     "config-js": "^1.1.15",
