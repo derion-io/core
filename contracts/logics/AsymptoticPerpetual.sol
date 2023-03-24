@@ -3,7 +3,9 @@ pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@derivable/oracle/contracts/@uniswap/lib/contracts/libraries/FixedPoint.sol";
+import "@derivable/oracle/contracts/Math.sol";
 import "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
+import "@uniswap/lib/contracts/libraries/TransferHelper.sol";
 
 import "../libraries/OracleLibrary.sol";
 import "./DerivableLibrary.sol";
@@ -68,23 +70,7 @@ contract AsymptoticPerpetual is Storage, Constants, IAsymptoticPerpetual {
         id = (kind << 160) + uint160(pool);
     }
 
-    function transition(
-        address TOKEN_COLLATERAL,
-        uint224 xk,
-        Param memory param1
-    ) external returns (int dsA, int dsB, int dsC) {
-        Param memory param0 = Param(IERC20(TOKEN_COLLATERAL).balanceOf(address(this)), s_a, s_b);
-        State memory state = State(
-            xk,
-            IERC1155Supply(TOKEN).totalSupply(_packID(address(this), KIND_LONG)),
-            IERC1155Supply(TOKEN).totalSupply(_packID(address(this), KIND_SHORT)),
-            IERC1155Supply(TOKEN).totalSupply(_packID(address(this), KIND_LP))
-        );
-        (dsA, dsB, dsC) = DerivableLibrary.transition(state, param0, param1);
-    }
-
     // TODO: pack all 3 params into an uint
-    // ORACLE = 
     function _fetch(
         bytes32 ORACLE // 1bit QTI, 31bit reserve, 32bit WINDOW, ... PAIR ADDRESS
     ) internal view returns (uint224 twap, uint224 spot) {
@@ -108,47 +94,72 @@ contract AsymptoticPerpetual is Storage, Constants, IAsymptoticPerpetual {
         uint224 MARK,
         uint kindIn,
         uint amountIn,
-        uint kindOut
-    ) external returns(int dsA, int dsB, int dsC) {
-        Param memory param0 = Param(IERC20(TOKEN_COLLATERAL).balanceOf(address(this)), s_a, s_b);
-        (uint224 price, ) = _fetch(ORACLE);
-        // TODO: select spot vs twap here
-        State memory state = State(
-            _xk(price, MARK),
-            IERC1155Supply(TOKEN).totalSupply(_packID(address(this), KIND_LONG)),
-            IERC1155Supply(TOKEN).totalSupply(_packID(address(this), KIND_SHORT)),
-            IERC1155Supply(TOKEN).totalSupply(_packID(address(this), KIND_LP))
-        );
+        uint kindOut,
+        address recipient
+    ) external override returns(uint amountOut) {
+        State memory state;
+        {
+            (uint224 price, ) = _fetch(ORACLE);
+            // TODO: select spot vs twap here
+            state = State(
+                _xk(price, MARK),
+                IERC1155Supply(TOKEN).totalSupply(_packID(address(this), KIND_LONG)),
+                IERC1155Supply(TOKEN).totalSupply(_packID(address(this), KIND_SHORT)),
+                IERC1155Supply(TOKEN).totalSupply(_packID(address(this), KIND_LP))
+            );
+        }
         // TODO: 1/xk and decay here
+        Param memory param0 = Param(IERC20(TOKEN_COLLATERAL).balanceOf(address(this)), s_a, s_b);
         Param memory param1 = Param(param0.R, param0.a, param0.b);
         (uint rA, uint rB, uint rC) = DerivableLibrary.evaluate(state.xk, param0);
-        if (kindIn == KIND_LONG) {
-            uint drA = rA * amountIn / state.sA;
-            if (kindOut == KIND_C) {
-                param1.R -= drA;
-            }
-            param1.a = DerivableLibrary.solve(state.xk, rA - drA, param1.R);
-        } else if (kindIn == KIND_SHORT) {
-            uint drB = rB * amountIn / state.sB;
-            if (kindOut == KIND_C) {
-                param1.R -= drB;
-            }
-            param1.b = DerivableLibrary.solve(state.xk, rB - drB, param1.R);
-        } else if (kindIn == KIND_LP) {
-            uint drC = rC * amountIn / state.sC;
-            if (kindOut == KIND_C) {
-                param1.R -= drC;
-            }
-        } else { // anything else is R (cToken)
-            require(kindIn == KIND_C && kindOut != KIND_C, "Unknown kind");
+        if (kindIn == KIND_C) {
+            require(kindOut != KIND_C, "UNKOWN_KIND");
             param1.R += amountIn;
             if (kindOut == KIND_LONG) {
                 param1.a = DerivableLibrary.solve(state.xk, rA + amountIn, param1.R);
             } else if (kindOut == KIND_SHORT) {
                 param1.b = DerivableLibrary.solve(state.xk, rB + amountIn, param1.R);
             }
+        } else {
+            if (kindIn == KIND_LONG) {
+                amountOut = rA * amountIn / state.sA;
+                if (kindOut == KIND_C) {
+                    param1.R -= amountOut;
+                }
+                param1.a = DerivableLibrary.solve(state.xk, rA - amountOut, param1.R);
+            } else if (kindIn == KIND_SHORT) {
+                amountOut = rB * amountIn / state.sB;
+                if (kindOut == KIND_C) {
+                    param1.R -= amountOut;
+                }
+                param1.b = DerivableLibrary.solve(state.xk, rB - amountOut, param1.R);
+            } else if (kindIn == KIND_LP) {
+                amountOut = rC * amountIn / state.sC;
+                if (kindOut == KIND_C) {
+                    param1.R -= amountOut;
+                }
+            }
         }
-        // TODO: not all token supply is needed here
-        (dsA, dsB, dsC) = DerivableLibrary.transition(state, param0, param1);
+        if (kindOut != KIND_C) {
+            // TODO: optimize this specific to each case
+            (uint rA1, uint rB1, uint rC1) = DerivableLibrary.evaluate(state.xk, param1);
+            if (kindIn == KIND_LONG) {
+                amountOut = (rA1 - rA) * state.sA / rA;
+            } else if (kindIn == KIND_SHORT) {
+                amountOut = (rB1 - rB) * state.sB / rB;
+            } else if (kindIn == KIND_LP) {
+                amountOut = (rC1 - rC) * state.sC / rC;
+            }
+        }
+        if (kindOut == KIND_C) {
+            TransferHelper.safeTransfer(TOKEN_COLLATERAL, recipient, amountOut);
+        } else {
+            IERC1155Supply(TOKEN).mint(recipient, _packID(address(this), kindOut), amountOut, "");
+        }
+        if (kindIn == KIND_C) {
+            TransferHelper.safeTransferFrom(TOKEN_COLLATERAL, msg.sender, recipient, amountIn);
+        } else {
+            IERC1155Supply(TOKEN).burn(msg.sender, _packID(address(this), kindIn), amountIn);
+        }
     }
 }

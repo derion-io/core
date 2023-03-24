@@ -3,7 +3,7 @@ pragma solidity ^0.8.0;
 
 struct Params {
     address logic;
-    address tokenOracle;
+    bytes32 oracle; // 1bit QTI, 31bit reserve, 32bit WINDOW, ... PAIR ADDRESS
     address tokenCollateral;
     address recipient;
     uint224 markPrice;

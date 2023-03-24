@@ -28,11 +28,10 @@ contract PoolFactory is IPoolFactory {
         bytes32 salt = keccak256(
             abi.encodePacked(
                 params.logic,
-                params.tokenOracle,
+                params.oracle,
                 params.tokenCollateral,
                 params.recipient,
                 params.markPrice,
-                params.time,
                 params.power,
                 params.a,
                 params.b
@@ -48,11 +47,10 @@ contract PoolFactory is IPoolFactory {
         bytes32 salt = keccak256(
             abi.encodePacked(
                 params.logic,
-                params.tokenOracle,
+                params.oracle,
                 params.tokenCollateral,
                 params.recipient,
                 params.markPrice,
-                params.time,
                 params.power,
                 params.a,
                 params.b

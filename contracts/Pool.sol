@@ -3,10 +3,10 @@ pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@uniswap/lib/contracts/libraries/TransferHelper.sol";
-import "@derivable/oracle/contracts/@uniswap/v2-core/contracts/interfaces/IUniswapV2Pair.sol";
 import "./interfaces/IPoolFactory.sol";
 import "./logics/Constants.sol";
 import "./interfaces/IERC1155Supply.sol";
+import "./interfaces/IAsymptoticPerpetual.sol";
 import "./logics/Storage.sol";
 import "hardhat/console.sol";
 
@@ -15,12 +15,10 @@ contract Pool is Storage, Constants {
 
     /// Immutables
     address internal immutable LOGIC;
-    address internal immutable ORACLE;
+    bytes32 internal immutable ORACLE;
     address internal immutable TOKEN;
     address internal immutable TOKEN_COLLATERAL;
-    uint internal immutable QUOTE_TOKEN_INDEX;
     uint224 internal immutable MARK_PRICE;
-    uint32 internal immutable TIME;
 
     struct Param {
         uint R; // current reserve of cToken (base, quote or LP)
@@ -33,12 +31,9 @@ contract Pool is Storage, Constants {
         // TODO: require(4*params.a*params.b <= params.R, "invalid (R,a,b)");
         TOKEN = IPoolFactory(msg.sender).TOKEN();
         LOGIC = params.logic;
-        ORACLE = params.tokenOracle;
-        address t0 = IUniswapV2Pair(ORACLE).token0();
+        ORACLE = params.oracle;
         TOKEN_COLLATERAL = params.tokenCollateral;
-        QUOTE_TOKEN_INDEX = (TOKEN_COLLATERAL == t0) ? 1 : 0;
         MARK_PRICE = params.markPrice;
-        TIME = params.time;
 
         s_a = params.a;
         s_b = params.b;
@@ -90,31 +85,22 @@ contract Pool is Storage, Constants {
         id = (kind << 160) + uint160(pool);
     }
 
-    // function swap(
-    //     int dr,
-    //     int dra,
-    //     int drb
-    // ) external {
-    //     Param memory param0 = Param(
-    //         IERC20(TOKEN_COLLATERAL).balanceOf(address(this)),
-    //         s_a,
-    //         s_b
-    //     );
-    // }
-
-    function transition(Param memory param1, address recipient) public {
-        Param memory param0 = Param(IERC20(TOKEN_COLLATERAL).balanceOf(address(this)), s_a, s_b);
-
+    function exactIn(
+        uint kindIn,
+        uint amountIn,
+        uint kindOut,
+        address recipient
+    ) external returns(uint amountOut) {
         (bool success, bytes memory result) = LOGIC.delegatecall(
-            abi.encodeWithSignature(
-                "transition(address,address,uint256,uint32,uint224,(uint256,uint256,uint256),(uint256,uint256,uint256))",
+            abi.encodeWithSelector(
+                IAsymptoticPerpetual.exactIn.selector,
+                TOKEN_COLLATERAL,
                 ORACLE,
-                TOKEN,
-                QUOTE_TOKEN_INDEX,
-                TIME,
                 MARK_PRICE,
-                param0,
-                param1
+                kindIn,
+                amountIn,
+                kindOut,
+                recipient
             )
         );
         if (!success) {
@@ -122,67 +108,6 @@ contract Pool is Storage, Constants {
                 revert(add(result, 32), mload(result))
             }
         }
-        (int dsA, int dsB, int dsC) = abi.decode(result, (int, int, int));
-
-        s_a = param1.a;
-        s_b = param1.b;
-
-        if (param0.R < param1.R) {
-            uint dR = param1.R - param0.R;
-            TransferHelper.safeTransferFrom(
-                TOKEN_COLLATERAL,
-                msg.sender,
-                address(this),
-                dR
-            );
-        } else if (param0.R > param1.R) {
-            uint dR = param0.R - param1.R;
-            TransferHelper.safeTransfer(TOKEN_COLLATERAL, msg.sender, dR);
-        }
-
-        if (dsA > 0) {
-            IERC1155Supply(TOKEN).mint(
-                recipient,
-                _packID(address(this), KIND_LONG),
-                uint(dsA),
-                ""
-            );
-        } else if (dsA < 0) {
-            IERC1155Supply(TOKEN).burn(
-                msg.sender,
-                _packID(address(this), KIND_LONG),
-                uint(-dsA)
-            );
-        }
-
-        if (dsB > 0) {
-            IERC1155Supply(TOKEN).mint(
-                recipient,
-                _packID(address(this), KIND_SHORT),
-                uint(dsB),
-                ""
-            );
-        } else if (dsB < 0) {
-            IERC1155Supply(TOKEN).burn(
-                msg.sender,
-                _packID(address(this), KIND_SHORT),
-                uint(-dsB)
-            );
-        }
-
-        if (dsC > 0) {
-            IERC1155Supply(TOKEN).mint(
-                recipient,
-                _packID(address(this), KIND_LP),
-                uint(dsC),
-                ""
-            );
-        } else if (dsC < 0) {
-            IERC1155Supply(TOKEN).burn(
-                msg.sender,
-                _packID(address(this), KIND_LP),
-                uint(-dsC)
-            );
-        }
+        amountOut = abi.decode(result, (uint));
     }
 }

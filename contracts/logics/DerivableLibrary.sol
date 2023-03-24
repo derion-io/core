@@ -38,12 +38,12 @@ library DerivableLibrary {
         Param memory param
     ) public pure returns (uint rA, uint rB, uint rC) {
         // TODO: pass an assisting flag to decide f or g should be calculated first
-        rA = _r(xk, param.a, param.R);
-        rB = _r(uint224(FixedPoint.Q224/ xk), param.b, param.R);
+        rA = r(xk, param.a, param.R);
+        rB = r(uint224(FixedPoint.Q224/xk), param.b, param.R);
         rC = param.R - rA - rB; // revert on overflow
     }
 
-    function _r(uint224 xk, uint v, uint R) internal pure returns (uint) {
+    function r(uint224 xk, uint v, uint R) internal pure returns (uint) {
         uint fResult = _f(xk, v);
         if (fResult <= R / 2) {
             return fResult;
