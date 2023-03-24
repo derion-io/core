@@ -56,26 +56,26 @@ contract Pool is Storage, Constants {
 
         IERC1155Supply(TOKEN).mint(
             params.recipient,
-            _packID(address(this), KIND_LONG),
+            _packID(address(this), SIDE_A),
             rA,
             ""
         );
         IERC1155Supply(TOKEN).mint(
             params.recipient,
-            _packID(address(this), KIND_SHORT),
+            _packID(address(this), SIDE_B),
             rB,
             ""
         );
         // TODO: remove this
         IERC1155Supply(TOKEN).mint(
             address(1),
-            _packID(address(this), KIND_LP),
+            _packID(address(this), SIDE_C),
             MINIMUM_LIQUIDITY,
             ""
         );
         IERC1155Supply(TOKEN).mint(
             params.recipient,
-            _packID(address(this), KIND_LP),
+            _packID(address(this), SIDE_C),
             rC - MINIMUM_LIQUIDITY,
             ""
         );
@@ -86,9 +86,9 @@ contract Pool is Storage, Constants {
     }
 
     function exactIn(
-        uint kindIn,
+        uint sideIn,
         uint amountIn,
-        uint kindOut,
+        uint sideOut,
         address recipient
     ) external returns(uint amountOut) {
         (bool success, bytes memory result) = LOGIC.delegatecall(
@@ -97,9 +97,9 @@ contract Pool is Storage, Constants {
                 TOKEN_COLLATERAL,
                 ORACLE,
                 MARK_PRICE,
-                kindIn,
+                sideIn,
                 amountIn,
-                kindOut,
+                sideOut,
                 recipient
             )
         );

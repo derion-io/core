@@ -6,9 +6,9 @@ interface IAsymptoticPerpetual {
         address TOKEN_COLLATERAL,
         bytes32 ORACLE,
         uint224 MARK,
-        uint kindIn,
+        uint sideIn,
         uint amountIn,
-        uint kindOut,
+        uint sideOut,
         address recipient
     ) external returns(uint amountOut);
 }

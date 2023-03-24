@@ -70,7 +70,6 @@ contract AsymptoticPerpetual is Storage, Constants, IAsymptoticPerpetual {
         id = (kind << 160) + uint160(pool);
     }
 
-    // TODO: pack all 3 params into an uint
     function _fetch(
         bytes32 ORACLE // 1bit QTI, 31bit reserve, 32bit WINDOW, ... PAIR ADDRESS
     ) internal view returns (uint224 twap, uint224 spot) {
@@ -92,9 +91,9 @@ contract AsymptoticPerpetual is Storage, Constants, IAsymptoticPerpetual {
         address TOKEN_COLLATERAL,
         bytes32 ORACLE,
         uint224 MARK,
-        uint kindIn,
+        uint sideIn,
         uint amountIn,
-        uint kindOut,
+        uint sideOut,
         address recipient
     ) external override returns(uint amountOut) {
         State memory state;
@@ -103,63 +102,63 @@ contract AsymptoticPerpetual is Storage, Constants, IAsymptoticPerpetual {
             // TODO: select spot vs twap here
             state = State(
                 _xk(price, MARK),
-                IERC1155Supply(TOKEN).totalSupply(_packID(address(this), KIND_LONG)),
-                IERC1155Supply(TOKEN).totalSupply(_packID(address(this), KIND_SHORT)),
-                IERC1155Supply(TOKEN).totalSupply(_packID(address(this), KIND_LP))
+                IERC1155Supply(TOKEN).totalSupply(_packID(address(this), SIDE_A)),
+                IERC1155Supply(TOKEN).totalSupply(_packID(address(this), SIDE_B)),
+                IERC1155Supply(TOKEN).totalSupply(_packID(address(this), SIDE_C))
             );
         }
         // TODO: 1/xk and decay here
         Param memory param0 = Param(IERC20(TOKEN_COLLATERAL).balanceOf(address(this)), s_a, s_b);
         Param memory param1 = Param(param0.R, param0.a, param0.b);
         (uint rA, uint rB, uint rC) = DerivableLibrary.evaluate(state.xk, param0);
-        if (kindIn == KIND_C) {
-            require(kindOut != KIND_C, "UNKOWN_KIND");
+        if (sideIn == SIDE_R) {
+            require(sideOut != SIDE_R, "UNKOWN_KIND");
             param1.R += amountIn;
-            if (kindOut == KIND_LONG) {
+            if (sideOut == SIDE_A) {
                 param1.a = DerivableLibrary.solve(state.xk, rA + amountIn, param1.R);
-            } else if (kindOut == KIND_SHORT) {
+            } else if (sideOut == SIDE_B) {
                 param1.b = DerivableLibrary.solve(state.xk, rB + amountIn, param1.R);
             }
         } else {
-            if (kindIn == KIND_LONG) {
+            if (sideIn == SIDE_A) {
                 amountOut = rA * amountIn / state.sA;
-                if (kindOut == KIND_C) {
+                if (sideOut == SIDE_R) {
                     param1.R -= amountOut;
                 }
                 param1.a = DerivableLibrary.solve(state.xk, rA - amountOut, param1.R);
-            } else if (kindIn == KIND_SHORT) {
+            } else if (sideIn == SIDE_B) {
                 amountOut = rB * amountIn / state.sB;
-                if (kindOut == KIND_C) {
+                if (sideOut == SIDE_R) {
                     param1.R -= amountOut;
                 }
                 param1.b = DerivableLibrary.solve(state.xk, rB - amountOut, param1.R);
-            } else if (kindIn == KIND_LP) {
+            } else if (sideIn == SIDE_C) {
                 amountOut = rC * amountIn / state.sC;
-                if (kindOut == KIND_C) {
+                if (sideOut == SIDE_R) {
                     param1.R -= amountOut;
                 }
             }
         }
-        if (kindOut != KIND_C) {
+        if (sideOut != SIDE_R) {
             // TODO: optimize this specific to each case
             (uint rA1, uint rB1, uint rC1) = DerivableLibrary.evaluate(state.xk, param1);
-            if (kindIn == KIND_LONG) {
+            if (sideIn == SIDE_A) {
                 amountOut = (rA1 - rA) * state.sA / rA;
-            } else if (kindIn == KIND_SHORT) {
+            } else if (sideIn == SIDE_B) {
                 amountOut = (rB1 - rB) * state.sB / rB;
-            } else if (kindIn == KIND_LP) {
+            } else if (sideIn == SIDE_C) {
                 amountOut = (rC1 - rC) * state.sC / rC;
             }
         }
-        if (kindOut == KIND_C) {
+        if (sideOut == SIDE_R) {
             TransferHelper.safeTransfer(TOKEN_COLLATERAL, recipient, amountOut);
         } else {
-            IERC1155Supply(TOKEN).mint(recipient, _packID(address(this), kindOut), amountOut, "");
+            IERC1155Supply(TOKEN).mint(recipient, _packID(address(this), sideOut), amountOut, "");
         }
-        if (kindIn == KIND_C) {
+        if (sideIn == SIDE_R) {
             TransferHelper.safeTransferFrom(TOKEN_COLLATERAL, msg.sender, recipient, amountIn);
         } else {
-            IERC1155Supply(TOKEN).burn(msg.sender, _packID(address(this), kindIn), amountIn);
+            IERC1155Supply(TOKEN).burn(msg.sender, _packID(address(this), sideIn), amountIn);
         }
     }
 }
