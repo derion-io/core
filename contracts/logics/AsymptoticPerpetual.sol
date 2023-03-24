@@ -34,9 +34,9 @@ contract AsymptoticPerpetual is Storage, Constants {
 
     function _xk(
         uint224 price,
-        uint224 markPrice
+        uint224 mark
     ) internal view returns (FixedPoint.uq112x112 memory p) {
-        p = FixedPoint.uq112x112(price).divuq(FixedPoint.uq112x112(markPrice));
+        p = FixedPoint.fraction(price, mark);
         p._x = uint224(_powu(p._x, s_power));
     }
 
