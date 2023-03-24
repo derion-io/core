@@ -5,21 +5,21 @@ import "@derivable/oracle/contracts/@uniswap/lib/contracts/libraries/FixedPoint.
 import "@derivable/oracle/contracts/@uniswap/lib/contracts/libraries/FullMath.sol";
 import "hardhat/console.sol";
 
+struct Param {
+    uint R; // current reserve of cToken (base, quote or LP)
+    uint a; // a param for long derivative
+    uint b; // b param for short derivative
+}
+
+struct State {
+    uint224 xk; // (base / mark)^k
+    uint sA; // current supply of 1155 id A
+    uint sB; // current supply of 1155 id B
+    uint sC; // current supply of 1155 id C (LP token)
+}
+
 library DerivableLibrary {
     using FixedPoint for FixedPoint.uq112x112;
-
-    struct Param {
-        uint R; // current reserve of cToken (base, quote or LP)
-        uint a; // a param for long derivative
-        uint b; // b param for short derivative
-    }
-
-    struct State {
-        uint224 xk; // (base / mark)^k
-        uint sA; // current supply of 1155 id A
-        uint sB; // current supply of 1155 id B
-        uint sC; // current supply of 1155 id C (LP token)
-    }
 
     function transition(
         State memory state,
@@ -38,12 +38,12 @@ library DerivableLibrary {
         Param memory param
     ) public pure returns (uint rA, uint rB, uint rC) {
         // TODO: pass an assisting flag to decide f or g should be calculated first
-        rA = r(xk, param.a, param.R);
-        rB = r(uint224(FixedPoint.Q224/ xk), param.b, param.R);
+        rA = _r(xk, param.a, param.R);
+        rB = _r(uint224(FixedPoint.Q224/ xk), param.b, param.R);
         rC = param.R - rA - rB; // revert on overflow
     }
 
-    function r(uint224 xk, uint v, uint R) internal pure returns (uint) {
+    function _r(uint224 xk, uint v, uint R) internal pure returns (uint) {
         uint fResult = _f(xk, v);
         if (fResult <= R / 2) {
             return fResult;
@@ -59,5 +59,10 @@ library DerivableLibrary {
         uint denonminator = FullMath.mulDiv(4 * v, uint(xk), FixedPoint.Q112);
         uint minuend = FullMath.mulDiv(R, R, denonminator);
         return R - minuend;
+    }
+
+    function solve(uint224 xk, uint r, uint R) internal pure returns (uint) {
+        // TODO: implement vr here
+        return 0;
     }
 }

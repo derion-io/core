@@ -30,6 +30,7 @@ contract Pool is Storage, Constants {
 
     constructor() {
         Params memory params = IPoolFactory(msg.sender).getParams();
+        // TODO: require(4*params.a*params.b <= params.R, "invalid (R,a,b)");
         TOKEN = IPoolFactory(msg.sender).TOKEN();
         LOGIC = params.logic;
         ORACLE = params.tokenOracle;
@@ -89,11 +90,20 @@ contract Pool is Storage, Constants {
         id = (kind << 160) + uint160(pool);
     }
 
-    function transition(Param memory param1, address recipient) external {
-        Param memory param0;
-        param0.R = IERC20(TOKEN_COLLATERAL).balanceOf(address(this));
-        param0.a = s_a;
-        param0.b = s_b;
+    // function swap(
+    //     int dr,
+    //     int dra,
+    //     int drb
+    // ) external {
+    //     Param memory param0 = Param(
+    //         IERC20(TOKEN_COLLATERAL).balanceOf(address(this)),
+    //         s_a,
+    //         s_b
+    //     );
+    // }
+
+    function transition(Param memory param1, address recipient) public {
+        Param memory param0 = Param(IERC20(TOKEN_COLLATERAL).balanceOf(address(this)), s_a, s_b);
 
         (bool success, bytes memory result) = LOGIC.delegatecall(
             abi.encodeWithSignature(
