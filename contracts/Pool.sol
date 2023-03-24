@@ -18,8 +18,9 @@ contract Pool is Storage, Constants {
     address internal immutable ORACLE;
     address internal immutable TOKEN;
     address internal immutable TOKEN_COLLATERAL;
-    bool internal immutable BASE_TOKEN_0;
+    uint internal immutable QUOTE_TOKEN_INDEX;
     uint224 internal immutable MARK_PRICE;
+    uint32 internal immutable TIME;
 
     struct Param {
         uint R; // current reserve of cToken (base, quote or LP)
@@ -34,18 +35,17 @@ contract Pool is Storage, Constants {
         ORACLE = params.tokenOracle;
         address t0 = IUniswapV2Pair(ORACLE).token0();
         TOKEN_COLLATERAL = params.tokenCollateral;
-        BASE_TOKEN_0 = TOKEN_COLLATERAL == t0;
+        QUOTE_TOKEN_INDEX = (TOKEN_COLLATERAL == t0) ? 1 : 0;
         MARK_PRICE = params.markPrice;
+        TIME = params.time;
 
         s_a = params.a;
         s_b = params.b;
 
         (bool success, bytes memory result) = LOGIC.delegatecall(
             abi.encodeWithSignature(
-                "init(address,address,bool,uint256,uint256,uint256)",
-                ORACLE,
+                "init(address,uint256,uint256,uint256)",
                 TOKEN_COLLATERAL,
-                BASE_TOKEN_0,
                 params.power,
                 params.a,
                 params.b
@@ -97,10 +97,11 @@ contract Pool is Storage, Constants {
 
         (bool success, bytes memory result) = LOGIC.delegatecall(
             abi.encodeWithSignature(
-                "transition(address,address,bool,uint224,(uint256,uint256,uint256),(uint256,uint256,uint256))",
+                "transition(address,address,uint256,uint32,uint224,(uint256,uint256,uint256),(uint256,uint256,uint256))",
                 ORACLE,
                 TOKEN,
-                BASE_TOKEN_0,
+                QUOTE_TOKEN_INDEX,
+                TIME,
                 MARK_PRICE,
                 param0,
                 param1

@@ -32,6 +32,8 @@
     "@openzeppelin/contracts": "^4.7.3",
     "@openzeppelin/contracts-upgradeable": "^4.7.3",
     "@openzeppelin/hardhat-upgrades": "^1.19.0",
+    "@uniswap/v3-core": "https://github.com/Uniswap/v3-core.git#0.8",
+    "@uniswap/v3-periphery": "https://github.com/Uniswap/v3-periphery.git#0.8",
     "chai": "^4.3.6",
     "chai-as-promised": "^7.1.1",
     "ethereum-waffle": "^3.4.4",

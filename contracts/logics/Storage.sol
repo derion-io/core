@@ -1,10 +1,7 @@
 // SPDX-License-Identifier: BSL-1.1
 pragma solidity ^0.8.0;
 
-import "@derivable/oracle/contracts/OracleStore.sol";
-
 contract Storage {
-    OracleStore internal s_oracleStore;
     uint32 internal s_priceScaleTimestamp;
 
     uint internal s_a;

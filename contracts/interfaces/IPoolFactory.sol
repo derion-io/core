@@ -7,6 +7,7 @@ struct Params {
     address tokenCollateral;
     address recipient;
     uint224 markPrice;
+    uint32 time;
     uint power;
     uint a;
     uint b;

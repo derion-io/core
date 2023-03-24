@@ -3,9 +3,9 @@ pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@derivable/oracle/contracts/@uniswap/lib/contracts/libraries/FixedPoint.sol";
-import "@derivable/oracle/contracts/PriceLibrary.sol";
-import "@derivable/oracle/contracts/OracleLibrary.sol";
-import "@derivable/oracle/contracts/OracleStore.sol";
+import "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
+
+import "../libraries/OracleLibrary.sol";
 import "./DerivableLibrary.sol";
 import "./Constants.sol";
 import "./Storage.sol";
@@ -14,19 +14,14 @@ import "../interfaces/IPoolFactory.sol";
 
 contract AsymptoticPerpetual is Storage, Constants {
     using FixedPoint for FixedPoint.uq112x112;
-    using PriceLibrary for OraclePrice;
-    using OracleLibrary for OracleStore;
 
     function init(
-        address ORACLE,
         address TOKEN_COLLATERAL,
-        bool BASE_TOKEN_0,
         uint power,
         uint a,
         uint b
     ) external returns (uint rA, uint rB, uint rC) {
         require(s_priceScaleTimestamp == 0, "already initialized");
-        s_oracleStore.init(ORACLE, BASE_TOKEN_0);
         s_power = power;
         uint224 xk = uint224(FixedPoint.Q112);
         DerivableLibrary.Param memory param;
@@ -38,10 +33,10 @@ contract AsymptoticPerpetual is Storage, Constants {
     }
 
     function _xk(
-        OraclePrice memory price,
+        uint224 price,
         uint224 markPrice
     ) internal view returns (FixedPoint.uq112x112 memory p) {
-        p = price.base.divuq(FixedPoint.uq112x112(markPrice));
+        p = FixedPoint.uq112x112(price).divuq(FixedPoint.uq112x112(markPrice));
         p._x = uint224(_powu(p._x, s_power));
     }
 
@@ -67,20 +62,38 @@ contract AsymptoticPerpetual is Storage, Constants {
     function transition(
         address ORACLE,
         address TOKEN,
-        bool BASE_TOKEN_0,
+        uint QUOTE_TOKEN_INDEX,
+        uint32 TIME,
         uint224 markPrice,
         DerivableLibrary.Param memory param0,
         DerivableLibrary.Param memory param1
     ) external returns (int dsA, int dsB, int dsC) {
         DerivableLibrary.State memory state;
-        (OraclePrice memory twap, ) = s_oracleStore.fetchPrice(
+        (uint224 twap, ) = fetch(
             ORACLE,
-            BASE_TOKEN_0
+            QUOTE_TOKEN_INDEX,
+            TIME
         );
         state.xk = _xk(twap, markPrice)._x;
         state.sA = IERC1155Supply(TOKEN).totalSupply(_packID(address(this), KIND_LONG));
         state.sB = IERC1155Supply(TOKEN).totalSupply(_packID(address(this), KIND_SHORT));
         state.sC = IERC1155Supply(TOKEN).totalSupply(_packID(address(this), KIND_LP));
         (dsA, dsB, dsC) = DerivableLibrary.transition(state, param0, param1);
+    }
+
+    function fetch(address pool, uint quoteTokenIndex, uint32 secondAgo) 
+    internal view 
+    returns (uint224 twap, uint224 spot) {
+        (uint160 sqrtSpotX96,,,,,,) = IUniswapV3Pool(pool).slot0();
+
+        (int24 arithmeticMeanTick,) = OracleLibrary.consult(pool, secondAgo);
+        uint160 sqrtTwapX96 = TickMath.getSqrtRatioAtTick(arithmeticMeanTick);
+
+        if (quoteTokenIndex == 0) {
+            sqrtSpotX96 = uint160((1 << 192) / uint(sqrtSpotX96));
+            sqrtTwapX96 = uint160((1 << 192) / uint(sqrtTwapX96));
+        }
+        twap = uint224(FullMath.mulDiv(uint(sqrtTwapX96), uint(sqrtTwapX96), 1 << 80));
+        spot = uint224(FullMath.mulDiv(uint(sqrtSpotX96), uint(sqrtSpotX96), 1 << 80));
     }
 }
