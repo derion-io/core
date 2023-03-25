@@ -115,6 +115,41 @@ contract AsymptoticPerpetual is Storage, Constants, IAsymptoticPerpetual {
         uint b;
     }
 
+    function _tryPrice(
+        ___ memory __,
+        Config memory config,
+        uint224 price
+    ) internal view returns (uint rA, uint rB, uint rC) {
+        __.xkA = _xk(price, config.MARK);
+        __.xkB = uint224(FixedPoint.Q224/__.xkA);
+        // TODO: decay
+        (rA, rB, rC) = _evaluate(__);
+    }
+
+    function _selectPrice(
+        ___ memory __,
+        Config memory config,
+        uint sideIn,
+        uint sideOut
+    ) internal view returns (uint rA, uint rB, uint rC) {
+        (uint224 min, uint224 max) = _fetch(config.ORACLE);
+        if (min > max) {
+            (min, max) = (max, min);
+        }
+        if (sideOut == SIDE_A || sideIn == SIDE_B) {
+            return _tryPrice(__, config, max);
+        }
+        if (sideOut == SIDE_B || sideIn == SIDE_A) {
+            return _tryPrice(__, config, min);
+        }
+        // TODO: assisting flag for min/max
+        (rA, rB, rC) = _tryPrice(__, config, min);
+        if ((sideIn == SIDE_R) == rB > rA) {
+            // TODO: unit test for this case
+            return _tryPrice(__, config, max);
+        }
+    }
+
     function exactIn(
         Config memory config,
         uint sideIn,
@@ -123,17 +158,10 @@ contract AsymptoticPerpetual is Storage, Constants, IAsymptoticPerpetual {
     ) external override returns(uint amountOut) {
         require(sideIn != sideOut, 'SAME_SIDE');
         ___ memory __;
-        {
-            (uint224 price, ) = _fetch(config.ORACLE);
-            // TODO: select spot vs twap here
-            __.xkA = _xk(price, config.MARK);
-            __.xkB = uint224(FixedPoint.Q224/__.xkA);
-            // TODO: decay
-        }
         __.R = IERC20(config.TOKEN_R).balanceOf(address(this));
         __.a = s_a;
         __.b = s_b;
-        (uint rA, uint rB, uint rC) = _evaluate(__);
+        (uint rA, uint rB, uint rC) = _selectPrice(__, config, sideIn, sideOut);
         if (sideIn == SIDE_R) {
             require(sideOut != SIDE_R, "INVALID_SIDE");
             __.R += amountIn;
@@ -161,6 +189,7 @@ contract AsymptoticPerpetual is Storage, Constants, IAsymptoticPerpetual {
                 if (sideOut == SIDE_R) {
                     __.R -= amountOut;
                 }
+                // s_c is not a storage
             }
         }
         if (sideOut != SIDE_R) {
