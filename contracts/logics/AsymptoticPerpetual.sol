@@ -116,10 +116,7 @@ contract AsymptoticPerpetual is Storage, Constants, IAsymptoticPerpetual {
     }
 
     function exactIn(
-        address TOKEN,
-        address TOKEN_R,
-        bytes32 ORACLE,
-        uint224 MARK,
+        Config memory config,
         uint sideIn,
         uint amountIn,
         uint sideOut
@@ -127,13 +124,13 @@ contract AsymptoticPerpetual is Storage, Constants, IAsymptoticPerpetual {
         require(sideIn != sideOut, 'SAME_SIDE');
         ___ memory __;
         {
-            (uint224 price, ) = _fetch(ORACLE);
+            (uint224 price, ) = _fetch(config.ORACLE);
             // TODO: select spot vs twap here
-            __.xkA = _xk(price, MARK);
+            __.xkA = _xk(price, config.MARK);
             __.xkB = uint224(FixedPoint.Q224/__.xkA);
             // TODO: decay
         }
-        __.R = IERC20(TOKEN_R).balanceOf(address(this));
+        __.R = IERC20(config.TOKEN_R).balanceOf(address(this));
         __.a = s_a;
         __.b = s_b;
         (uint rA, uint rB, uint rC) = _evaluate(__);
@@ -146,7 +143,7 @@ contract AsymptoticPerpetual is Storage, Constants, IAsymptoticPerpetual {
                 s_b = __.b = _v(__.xkB, rB + amountIn, __.R);
             }
         } else {
-            uint sIn = _supply(TOKEN, sideIn);
+            uint sIn = _supply(config.TOKEN, sideIn);
             if (sideIn == SIDE_A) {
                 amountOut = rA * amountIn / sIn;
                 if (sideOut == SIDE_R) {
@@ -168,7 +165,7 @@ contract AsymptoticPerpetual is Storage, Constants, IAsymptoticPerpetual {
         }
         if (sideOut != SIDE_R) {
             // TODO: optimize this specific to each case
-            uint sOut = _supply(TOKEN, sideOut);
+            uint sOut = _supply(config.TOKEN, sideOut);
             (uint rA1, uint rB1, uint rC1) = _evaluate(__);
             if (sideOut == SIDE_A) {
                 amountOut = (rA1 - rA) * sOut / rA;

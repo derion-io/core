@@ -75,10 +75,7 @@ contract Pool is Storage, Constants {
         (bool success, bytes memory result) = LOGIC.delegatecall(
             abi.encodeWithSelector(
                 IAsymptoticPerpetual.exactIn.selector,
-                TOKEN,
-                TOKEN_R,
-                ORACLE,
-                MARK,
+                Config(TOKEN, TOKEN_R, ORACLE, MARK),
                 sideIn,
                 amountIn,
                 sideOut
