@@ -67,9 +67,12 @@ contract AsymptoticPerpetual is Storage, Constants, IAsymptoticPerpetual {
         address pool = address(uint160(uint(ORACLE)));
         (uint160 sqrtSpotX96,,,,,,) = IUniswapV3Pool(pool).slot0();
 
-        (int24 arithmeticMeanTick,) = OracleLibrary.consult(pool, uint32(uint(ORACLE) >> 192));
-        uint160 sqrtTwapX96 = TickMath.getSqrtRatioAtTick(arithmeticMeanTick);
+        uint32 minsAgo = uint32(uint(ORACLE) >> 192);
+        uint32 oldestMinsAgo = OracleLibrary.getOldestObservationSecondsAgo(pool);
+        minsAgo = oldestMinsAgo < minsAgo ? oldestMinsAgo : minsAgo;
 
+        (int24 arithmeticMeanTick,) = OracleLibrary.consult(pool, minsAgo);
+        uint160 sqrtTwapX96 = TickMath.getSqrtRatioAtTick(arithmeticMeanTick);
         if (uint(ORACLE) >> 224 == 0) {
             sqrtSpotX96 = uint160((1 << 192) / uint(sqrtSpotX96));
             sqrtTwapX96 = uint160((1 << 192) / uint(sqrtTwapX96));
