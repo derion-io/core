@@ -59,6 +59,8 @@ describe("DDL v3", function () {
       const a = await uniswapPair.initialize(initPriceX96)
       a.wait(1);
 
+      await time.increase(1000);
+
       // await uniswapRouter.addLiquidity(
       //     usdc.address,
       //     eth.address,
@@ -91,8 +93,8 @@ describe("DDL v3", function () {
           recipient: owner.address,
           mark: "7788445287819172527008699396495269118",
           k: 5,
-          a: bn(1).shl(112),
-          b: bn(1).shl(112),
+          a: bn(1).shl(48),
+          b: bn(1).shl(48),
       }
 
       const poolAddress = await poolFactory.computePoolAddress(params);
@@ -120,13 +122,13 @@ describe("DDL v3", function () {
           const LP_ID = packId(0x30, derivablePool.address);
           console.log("R: ", await weth.balanceOf(derivablePool.address));
           console.log("LP: ", await derivable1155.balanceOf(owner.address, LP_ID));
-          await derivablePool.transition(
-              {R: numberToWei(10), a: numberToWei(0), b: numberToWei(1)},
-              owner.address,
-              opts
-          );
-          console.log("R: ", await weth.balanceOf(derivablePool.address));
-          console.log("LP: ", await derivable1155.balanceOf(owner.address, LP_ID));
+          // await derivablePool.transition(
+          //     {R: numberToWei(10), a: numberToWei(0), b: numberToWei(1)},
+          //     owner.address,
+          //     opts
+          // );
+          // console.log("R: ", await weth.balanceOf(derivablePool.address));
+          // console.log("LP: ", await derivable1155.balanceOf(owner.address, LP_ID));
       })
   });
 })

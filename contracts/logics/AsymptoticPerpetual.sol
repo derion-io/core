@@ -10,6 +10,7 @@ import "./Constants.sol";
 import "./Storage.sol";
 import "../interfaces/IERC1155Supply.sol";
 import "../interfaces/IAsymptoticPerpetual.sol";
+import "hardhat/console.sol";
 
 contract AsymptoticPerpetual is Storage, Constants, IAsymptoticPerpetual {
     function init(
@@ -29,7 +30,9 @@ contract AsymptoticPerpetual is Storage, Constants, IAsymptoticPerpetual {
         __.R = IERC20(TOKEN_R).balanceOf(address(this));
         s_a = __.a = a;
         s_b = __.b = b;
+        console.log(111);
         (rA, rB, rC) = _evaluate(__);
+        console.log(111);
         // uint R = IERC20(TOKEN_R).balanceOf(address(this));
         // require(4 * a * b <= R, "INVALID_PARAM");
     }
@@ -67,11 +70,7 @@ contract AsymptoticPerpetual is Storage, Constants, IAsymptoticPerpetual {
         address pool = address(uint160(uint(ORACLE)));
         (uint160 sqrtSpotX96,,,,,,) = IUniswapV3Pool(pool).slot0();
 
-        uint32 minsAgo = uint32(uint(ORACLE) >> 192);
-        uint32 oldestMinsAgo = OracleLibrary.getOldestObservationSecondsAgo(pool);
-        minsAgo = oldestMinsAgo < minsAgo ? oldestMinsAgo : minsAgo;
-
-        (int24 arithmeticMeanTick,) = OracleLibrary.consult(pool, minsAgo);
+        (int24 arithmeticMeanTick,) = OracleLibrary.consult(pool, uint32(uint(ORACLE) >> 192));
         uint160 sqrtTwapX96 = TickMath.getSqrtRatioAtTick(arithmeticMeanTick);
         if (uint(ORACLE) >> 224 == 0) {
             sqrtSpotX96 = uint160((1 << 192) / uint(sqrtSpotX96));
@@ -104,9 +103,10 @@ contract AsymptoticPerpetual is Storage, Constants, IAsymptoticPerpetual {
         return IERC1155Supply(TOKEN).totalSupply(_packID(address(this), side));
     }
 
-    function _evaluate(___ memory __) internal pure returns (uint rA, uint rB, uint rC) {
+    function _evaluate(___ memory __) internal view returns (uint rA, uint rB, uint rC) {
         rA = _r(__.xkA, __.a, __.R);
         rB = _r(__.xkB, __.b, __.R);
+        console.log(__.R, rA, rB);
         rC = __.R - rA - rB;
     }
 
