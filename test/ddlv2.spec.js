@@ -20,9 +20,7 @@ describe("DDL v2", function () {
         );
         // deploy pool factory
         const PoolFactory = await ethers.getContractFactory("PoolFactory");
-        const poolFactory = await PoolFactory.deploy(
-            derivable1155.address
-        );
+        const poolFactory = await PoolFactory.deploy();
         // weth test
         const compiledWETH = require("canonical-weth/build/contracts/WETH9.json")
         const WETH = await new ethers.ContractFactory(compiledWETH.abi, compiledWETH.bytecode, signer);
@@ -57,27 +55,32 @@ describe("DDL v2", function () {
         const pairAddresses = await uniswapFactory.allPairs(0);
         const uniswapPool = new ethers.Contract(pairAddresses, require("@uniswap/v2-core/build/UniswapV2Pair.json").abi, signer);        // deploy Price Library
         
-        const DerivableLibrary = await ethers.getContractFactory("DerivableLibrary", signer);
-        const derivableLibrary = await DerivableLibrary.deploy();
-        await derivableLibrary.deployed();
-        
-        const AsymptoticPerpetual = await ethers.getContractFactory("AsymptoticPerpetual", {
-            signer,
-            libraries: {
-                DerivableLibrary: derivableLibrary.address,
-            },
-        });
+        // const DerivableLibrary = await ethers.getContractFactory("DerivableLibrary", signer);
+        // const derivableLibrary = await DerivableLibrary.deploy();
+        // await derivableLibrary.deployed();
+
+        const AsymptoticPerpetual = await ethers.getContractFactory("AsymptoticPerpetual");
 
         const asymptoticPerpetual = await AsymptoticPerpetual.deploy();
         await asymptoticPerpetual.deployed();
 
+        const oracle = bn(1).shl(255).add(bn(300).shl(256-32)).add(derivable1155.address).toHexString()
         const params = {
+            // logic: asymptoticPerpetual.address,
+            // tokenOracle: pairAddresses,
+            // tokenCollateral: eth.address,
+            // recipient: owner.address,
+            // markPrice: "7788445287819172527008699396495269118",
+            // power: 2,
+            // a: numberToWei(1),
+            // b: numberToWei(1)
+            token: derivable1155.address,
             logic: asymptoticPerpetual.address,
-            tokenOracle: pairAddresses,
-            tokenCollateral: eth.address,
+            oracle,
+            reserveToken: weth.address,
             recipient: owner.address,
-            markPrice: "7788445287819172527008699396495269118",
-            power: 2,
+            mark: "7788445287819172527008699396495269118",
+            k: 5,
             a: numberToWei(1),
             b: numberToWei(1)
         }
