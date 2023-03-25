@@ -56,7 +56,9 @@ describe("DDL v3", function () {
 
       const quoteTokenIndex = weth.address.toLowerCase() < usdc.address.toLowerCase() ? 1 : 0
       const initPriceX96 = encodeSqrtX96(quoteTokenIndex ? 1500 : 1, quoteTokenIndex ? 1 : 1500)
-      await uniswapPair.initialize(initPriceX96)
+      const a = await uniswapPair.initialize(initPriceX96)
+      a.wait(1);
+
       // await uniswapRouter.addLiquidity(
       //     usdc.address,
       //     eth.address,
@@ -80,7 +82,7 @@ describe("DDL v3", function () {
       const asymptoticPerpetual = await AsymptoticPerpetual.deploy();
       await asymptoticPerpetual.deployed();
 
-      const oracle = bn(1).shl(255).add(bn(300).shl(256-32)).add(derivable1155.address).toHexString()
+      const oracle = bn(1).shl(255).add(bn(300).shl(256-32)).add(uniswapPair.address).toHexString()
       const params = {
           token: derivable1155.address,
           logic: asymptoticPerpetual.address,
