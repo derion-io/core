@@ -82,7 +82,7 @@ describe("DDL v3", function () {
       const asymptoticPerpetual = await AsymptoticPerpetual.deploy();
       await asymptoticPerpetual.deployed();
 
-      const oracle = bn(1).shl(255).add(bn(300).shl(256-32)).add(uniswapPair.address).toHexString()
+      const oracle = bn(1).shl(255).add(bn(300).shl(256-64)).add(uniswapPair.address).toHexString()
       const params = {
           token: derivable1155.address,
           logic: asymptoticPerpetual.address,
@@ -91,8 +91,8 @@ describe("DDL v3", function () {
           recipient: owner.address,
           mark: "7788445287819172527008699396495269118",
           k: 5,
-          a: numberToWei(1),
-          b: numberToWei(1)
+          a: bn(1).shl(112),
+          b: bn(1).shl(112),
       }
 
       const poolAddress = await poolFactory.computePoolAddress(params);
