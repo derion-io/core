@@ -181,6 +181,12 @@ const unpackId = (id) => {
     return {k, p}
 }
 
+function encodeSqrtX96(reserve1, reserve0) {
+    return bn((Math.sqrt(reserve1/reserve0)*10**12).toFixed(0))
+        .mul(bn(2).pow(96))
+        .div(10**12)
+}
+
 module.exports = {
     stringToBytes32,
     calculateSwapToPrice,
@@ -192,5 +198,6 @@ module.exports = {
     decodePowers,
     getDeltaSupply,
     packId,
-    unpackId
+    unpackId,
+    encodeSqrtX96
 }
