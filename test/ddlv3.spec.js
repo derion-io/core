@@ -91,17 +91,17 @@ describe("DDL v3", function () {
           oracle,
           reserveToken: weth.address,
           recipient: owner.address,
-          mark: "7788445287819172527008699396495269118",
+          mark: bn(1000).shl(112),
           k: 5,
-          a: bn(1).shl(48),
-          b: bn(1).shl(48),
+          a: numberToWei(0.3),
+          b: numberToWei(0.3),
       }
 
       const poolAddress = await poolFactory.computePoolAddress(params);
       await weth.deposit({
         value: '100000000000000000000000000000'
       })
-      await weth.transfer(poolAddress, numberToWei(10));
+      await weth.transfer(poolAddress, numberToWei(1));
 
       await poolFactory.createPool(params);
 
