@@ -3,44 +3,35 @@ pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@derivable/oracle/contracts/@uniswap/lib/contracts/libraries/FixedPoint.sol";
-import "@derivable/oracle/contracts/Math.sol";
 import "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
-import "@uniswap/lib/contracts/libraries/TransferHelper.sol";
 
 import "../libraries/OracleLibrary.sol";
-import "./DerivableLibrary.sol";
 import "./Constants.sol";
 import "./Storage.sol";
 import "../interfaces/IERC1155Supply.sol";
-import "../interfaces/IPoolFactory.sol";
 import "../interfaces/IAsymptoticPerpetual.sol";
 
 contract AsymptoticPerpetual is Storage, Constants, IAsymptoticPerpetual {
-    using FixedPoint for FixedPoint.uq112x112;
-
-    address internal immutable TOKEN;
-
-    constructor(
-        address token
-    ) {
-        TOKEN = token;
-    }
-
     function init(
-        address TOKEN_COLLATERAL,
-        uint power,
+        address TOKEN_R,
+        bytes32 ORACLE,
+        uint224 MARK,
+        uint k,
         uint a,
         uint b
-    ) external returns (uint rA, uint rB, uint rC) {
-        require(s_priceScaleTimestamp == 0, "already initialized");
-        s_power = power;
-        uint224 xk = uint224(FixedPoint.Q112);
-        Param memory param;
-        param.R = IERC20(TOKEN_COLLATERAL).balanceOf(address(this));
-        param.a = a;
-        param.b = b;
-        (rA, rB, rC) = DerivableLibrary.evaluate(xk, param);
-        s_priceScaleTimestamp = uint32(block.timestamp);
+    ) external override returns (uint rA, uint rB, uint rC) {
+        require(s_k == 0, "ALREADY_INITIALIZED");
+        s_k = k;
+        ___ memory __;
+        (uint224 twap, ) = _fetch(ORACLE);
+        __.xkA = _xk(twap, MARK);
+        __.xkB = uint224(FixedPoint.Q224/__.xkA);
+        __.R = IERC20(TOKEN_R).balanceOf(address(this));
+        s_a = __.a = a;
+        s_b = __.b = b;
+        (rA, rB, rC) = _evaluate(__);
+        // uint R = IERC20(TOKEN_R).balanceOf(address(this));
+        // require(4 * a * b <= R, "INVALID_PARAM");
     }
 
     function _xk(
@@ -48,7 +39,7 @@ contract AsymptoticPerpetual is Storage, Constants, IAsymptoticPerpetual {
         uint224 mark
     ) internal view returns (uint224) {
         uint224 p = FixedPoint.fraction(price, mark)._x;
-        return uint224(_powu(p, s_power));
+        return uint224(_powu(p, s_k));
     }
 
     // TODO: move to price-lib
@@ -87,78 +78,105 @@ contract AsymptoticPerpetual is Storage, Constants, IAsymptoticPerpetual {
         spot = uint224(FullMath.mulDiv(uint(sqrtSpotX96), uint(sqrtSpotX96), 1 << 80));
     }
 
+    // r(v)
+    function _r(uint224 xk, uint v, uint R) internal pure returns (uint r) {
+        r = FullMath.mulDiv(v, xk, FixedPoint.Q112);
+        if (r > R >> 1) {
+            uint denominator = FullMath.mulDiv(v, uint(xk) << 2, FixedPoint.Q112);
+            uint minuend = FullMath.mulDiv(R, R, denominator);
+            r = R - minuend;
+        }
+    }
+
+    // v(r)
+    function _v(uint224 xk, uint r, uint R) internal pure returns (uint v) {
+        if (r <= R / 2) {
+            return FullMath.mulDiv(r, FixedPoint.Q112, xk);
+        }
+        uint denominator = FullMath.mulDiv(R - r, uint(xk) << 2, FixedPoint.Q112);
+        return FullMath.mulDiv(R, R, denominator);
+    }
+
+    function _supply(address TOKEN, uint side) internal view returns (uint s) {
+        return IERC1155Supply(TOKEN).totalSupply(_packID(address(this), side));
+    }
+
+    function _evaluate(___ memory __) internal pure returns (uint rA, uint rB, uint rC) {
+        rA = _r(__.xkA, __.a, __.R);
+        rB = _r(__.xkB, __.b, __.R);
+        rC = __.R - rA - rB;
+    }
+
+    struct ___ {
+        uint224 xkA;
+        uint224 xkB;
+        uint R;
+        uint a;
+        uint b;
+    }
+
     function exactIn(
-        address TOKEN_COLLATERAL,
+        address TOKEN,
+        address TOKEN_R,
         bytes32 ORACLE,
         uint224 MARK,
         uint sideIn,
         uint amountIn,
-        uint sideOut,
-        address recipient
+        uint sideOut
     ) external override returns(uint amountOut) {
-        State memory state;
+        require(sideIn != sideOut, 'SAME_SIDE');
+        ___ memory __;
         {
             (uint224 price, ) = _fetch(ORACLE);
             // TODO: select spot vs twap here
-            state = State(
-                _xk(price, MARK),
-                IERC1155Supply(TOKEN).totalSupply(_packID(address(this), SIDE_A)),
-                IERC1155Supply(TOKEN).totalSupply(_packID(address(this), SIDE_B)),
-                IERC1155Supply(TOKEN).totalSupply(_packID(address(this), SIDE_C))
-            );
+            __.xkA = _xk(price, MARK);
+            __.xkB = uint224(FixedPoint.Q224/__.xkA);
+            // TODO: decay
         }
-        // TODO: 1/xk and decay here
-        Param memory param0 = Param(IERC20(TOKEN_COLLATERAL).balanceOf(address(this)), s_a, s_b);
-        Param memory param1 = Param(param0.R, param0.a, param0.b);
-        (uint rA, uint rB, uint rC) = DerivableLibrary.evaluate(state.xk, param0);
+        __.R = IERC20(TOKEN_R).balanceOf(address(this));
+        __.a = s_a;
+        __.b = s_b;
+        (uint rA, uint rB, uint rC) = _evaluate(__);
         if (sideIn == SIDE_R) {
-            require(sideOut != SIDE_R, "UNKOWN_KIND");
-            param1.R += amountIn;
+            require(sideOut != SIDE_R, "INVALID_SIDE");
+            __.R += amountIn;
             if (sideOut == SIDE_A) {
-                param1.a = DerivableLibrary.solve(state.xk, rA + amountIn, param1.R);
+                s_a = __.a = _v(__.xkA, rA + amountIn, __.R);
             } else if (sideOut == SIDE_B) {
-                param1.b = DerivableLibrary.solve(state.xk, rB + amountIn, param1.R);
+                s_b = __.b = _v(__.xkB, rB + amountIn, __.R);
             }
         } else {
+            uint sIn = _supply(TOKEN, sideIn);
             if (sideIn == SIDE_A) {
-                amountOut = rA * amountIn / state.sA;
+                amountOut = rA * amountIn / sIn;
                 if (sideOut == SIDE_R) {
-                    param1.R -= amountOut;
+                    __.R -= amountOut;
                 }
-                param1.a = DerivableLibrary.solve(state.xk, rA - amountOut, param1.R);
+                s_a = __.a = _v(__.xkA, rA - amountOut, __.R);
             } else if (sideIn == SIDE_B) {
-                amountOut = rB * amountIn / state.sB;
+                amountOut = rB * amountIn / sIn;
                 if (sideOut == SIDE_R) {
-                    param1.R -= amountOut;
+                    __.R -= amountOut;
                 }
-                param1.b = DerivableLibrary.solve(state.xk, rB - amountOut, param1.R);
-            } else if (sideIn == SIDE_C) {
-                amountOut = rC * amountIn / state.sC;
+                s_b = __.b = _v(__.xkB, rB - amountOut, __.R);
+            } else /*if (sideIn == SIDE_C)*/ {
+                amountOut = rC * amountIn / sIn;
                 if (sideOut == SIDE_R) {
-                    param1.R -= amountOut;
+                    __.R -= amountOut;
                 }
             }
         }
         if (sideOut != SIDE_R) {
             // TODO: optimize this specific to each case
-            (uint rA1, uint rB1, uint rC1) = DerivableLibrary.evaluate(state.xk, param1);
-            if (sideIn == SIDE_A) {
-                amountOut = (rA1 - rA) * state.sA / rA;
-            } else if (sideIn == SIDE_B) {
-                amountOut = (rB1 - rB) * state.sB / rB;
-            } else if (sideIn == SIDE_C) {
-                amountOut = (rC1 - rC) * state.sC / rC;
+            uint sOut = _supply(TOKEN, sideOut);
+            (uint rA1, uint rB1, uint rC1) = _evaluate(__);
+            if (sideOut == SIDE_A) {
+                amountOut = (rA1 - rA) * sOut / rA;
+            } else if (sideOut == SIDE_B) {
+                amountOut = (rB1 - rB) * sOut / rB;
+            } else if (sideOut == SIDE_C) {
+                amountOut = (rC1 - rC) * sOut / rC;
             }
-        }
-        if (sideOut == SIDE_R) {
-            TransferHelper.safeTransfer(TOKEN_COLLATERAL, recipient, amountOut);
-        } else {
-            IERC1155Supply(TOKEN).mint(recipient, _packID(address(this), sideOut), amountOut, "");
-        }
-        if (sideIn == SIDE_R) {
-            TransferHelper.safeTransferFrom(TOKEN_COLLATERAL, msg.sender, recipient, amountIn);
-        } else {
-            IERC1155Supply(TOKEN).burn(msg.sender, _packID(address(this), sideIn), amountIn);
         }
     }
 }

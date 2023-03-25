@@ -6,15 +6,7 @@ import "./interfaces/IPoolFactory.sol";
 import "./Pool.sol";
 
 contract PoolFactory is IPoolFactory {
-    bytes32 immutable BYTECODE_HASH;
-    address immutable public TOKEN;
-
-    constructor(
-        address token
-    ) {
-        BYTECODE_HASH = keccak256(type(Pool).creationCode);
-        TOKEN = token;
-    }
+    bytes32 immutable BYTECODE_HASH = keccak256(type(Pool).creationCode);
 
     // transient storage
     Params t_params;
@@ -23,39 +15,28 @@ contract PoolFactory is IPoolFactory {
         return t_params;
     }
 
-    function createPool(Params memory params) external returns (address pool) {
-        t_params = params;
-        bytes32 salt = keccak256(
+    function _salt(Params memory params) internal pure returns (bytes32) {
+        return keccak256(
             abi.encodePacked(
+                params.token,
                 params.logic,
                 params.oracle,
-                params.tokenCollateral,
-                params.recipient,
-                params.markPrice,
-                params.power,
-                params.a,
-                params.b
+                params.reserveToken,
+                params.mark,
+                params.k
             )
         );
-        pool = Create2.deploy(0, salt, type(Pool).creationCode);
+    }
+
+    function createPool(Params memory params) external returns (address pool) {
+        t_params = params;
+        pool = Create2.deploy(0, _salt(params), type(Pool).creationCode);
         delete t_params;
     }
 
     function computePoolAddress(
         Params memory params
     ) external view returns (address pool) {
-        bytes32 salt = keccak256(
-            abi.encodePacked(
-                params.logic,
-                params.oracle,
-                params.tokenCollateral,
-                params.recipient,
-                params.markPrice,
-                params.power,
-                params.a,
-                params.b
-            )
-        );
-        return Create2.computeAddress(salt, BYTECODE_HASH, address(this));
+        return Create2.computeAddress(_salt(params), BYTECODE_HASH, address(this));
     }
 }

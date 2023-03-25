@@ -17,32 +17,25 @@ contract Pool is Storage, Constants {
     address internal immutable LOGIC;
     bytes32 internal immutable ORACLE;
     address internal immutable TOKEN;
-    address internal immutable TOKEN_COLLATERAL;
-    uint224 internal immutable MARK_PRICE;
-
-    struct Param {
-        uint R; // current reserve of cToken (base, quote or LP)
-        uint a; // a param for long derivative
-        uint b; // b param for short derivative
-    }
+    address internal immutable TOKEN_R;
+    uint224 internal immutable MARK;
 
     constructor() {
         Params memory params = IPoolFactory(msg.sender).getParams();
         // TODO: require(4*params.a*params.b <= params.R, "invalid (R,a,b)");
-        TOKEN = IPoolFactory(msg.sender).TOKEN();
+        TOKEN = params.token;
         LOGIC = params.logic;
         ORACLE = params.oracle;
-        TOKEN_COLLATERAL = params.tokenCollateral;
-        MARK_PRICE = params.markPrice;
-
-        s_a = params.a;
-        s_b = params.b;
+        TOKEN_R = params.reserveToken;
+        MARK = params.mark;
 
         (bool success, bytes memory result) = LOGIC.delegatecall(
-            abi.encodeWithSignature(
-                "init(address,uint256,uint256,uint256)",
-                TOKEN_COLLATERAL,
-                params.power,
+            abi.encodeWithSelector(
+                IAsymptoticPerpetual.init.selector,
+                TOKEN_R,
+                ORACLE,
+                MARK,
+                params.k,
                 params.a,
                 params.b
             )
@@ -53,32 +46,20 @@ contract Pool is Storage, Constants {
             }
         }
         (uint rA, uint rB, uint rC) = abi.decode(result, (uint, uint, uint));
+        uint idA = _packID(address(this), SIDE_A);
+        uint idB = _packID(address(this), SIDE_B);
+        uint idC = _packID(address(this), SIDE_C);
 
-        IERC1155Supply(TOKEN).mint(
-            params.recipient,
-            _packID(address(this), SIDE_A),
-            rA,
-            ""
-        );
-        IERC1155Supply(TOKEN).mint(
-            params.recipient,
-            _packID(address(this), SIDE_B),
-            rB,
-            ""
-        );
-        // TODO: remove this
-        IERC1155Supply(TOKEN).mint(
-            address(1),
-            _packID(address(this), SIDE_C),
-            MINIMUM_LIQUIDITY,
-            ""
-        );
-        IERC1155Supply(TOKEN).mint(
-            params.recipient,
-            _packID(address(this), SIDE_C),
-            rC - MINIMUM_LIQUIDITY,
-            ""
-        );
+        // permanently lock MINIMUM_LIQUIDITY for each side
+        // TODO: handle the 0x1 address minting
+        IERC1155Supply(TOKEN).mint(address(1), idA, MINIMUM_LIQUIDITY, "");
+        IERC1155Supply(TOKEN).mint(address(1), idB, MINIMUM_LIQUIDITY, "");
+        IERC1155Supply(TOKEN).mint(address(1), idC, MINIMUM_LIQUIDITY, "");
+
+        // mint tokens to recipient
+        IERC1155Supply(TOKEN).mint(params.recipient, idA, rA - MINIMUM_LIQUIDITY, "");
+        IERC1155Supply(TOKEN).mint(params.recipient, idB, rB - MINIMUM_LIQUIDITY, "");
+        IERC1155Supply(TOKEN).mint(params.recipient, idC, rC - MINIMUM_LIQUIDITY, "");
     }
 
     function _packID(address pool, uint kind) internal pure returns (uint id) {
@@ -94,13 +75,13 @@ contract Pool is Storage, Constants {
         (bool success, bytes memory result) = LOGIC.delegatecall(
             abi.encodeWithSelector(
                 IAsymptoticPerpetual.exactIn.selector,
-                TOKEN_COLLATERAL,
+                TOKEN,
+                TOKEN_R,
                 ORACLE,
-                MARK_PRICE,
+                MARK,
                 sideIn,
                 amountIn,
-                sideOut,
-                recipient
+                sideOut
             )
         );
         if (!success) {
@@ -109,5 +90,17 @@ contract Pool is Storage, Constants {
             }
         }
         amountOut = abi.decode(result, (uint));
+        // TODO: reentrancy guard
+        if (sideOut == SIDE_R) {
+            TransferHelper.safeTransfer(TOKEN_R, recipient, amountOut);
+        } else {
+            IERC1155Supply(TOKEN).mint(recipient, _packID(address(this), sideOut), amountOut, "");
+        }
+        // TODO: flash callback here
+        if (sideIn == SIDE_R) {
+            TransferHelper.safeTransferFrom(TOKEN_R, msg.sender, recipient, amountIn);
+        } else {
+            IERC1155Supply(TOKEN).burn(msg.sender, _packID(address(this), sideIn), amountIn);
+        }
     }
 }
