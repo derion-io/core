@@ -60,8 +60,8 @@ contract AsymptoticPerpetual is Storage, Constants, IAsymptoticPerpetual {
         require(z <= type(uint224).max, "Pool: upper overflow");
     }
 
-    function _packID(address pool, uint kind) internal pure returns (uint id) {
-        id = (kind << 160) + uint160(pool);
+    function _packID(address pool, uint side) internal pure returns (uint id) {
+        id = (side << 160) + uint160(pool);
     }
 
     function _fetch(

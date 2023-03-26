@@ -19,9 +19,9 @@ contract Token is ERC1155Supply {
 
     function _unpackID(
         uint id
-    ) internal pure returns (address pool, uint kind) {
+    ) internal pure returns (address pool, uint side) {
         pool = address(uint160(id));
-        kind = id >> 160;
+        side = id >> 160;
     }
 
     /**

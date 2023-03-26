@@ -62,8 +62,8 @@ contract Pool is Storage, Constants {
         IERC1155Supply(TOKEN).mint(params.recipient, idC, rC - MINIMUM_LIQUIDITY, "");
     }
 
-    function _packID(address pool, uint kind) internal pure returns (uint id) {
-        id = (kind << 160) + uint160(pool);
+    function _packID(address pool, uint side) internal pure returns (uint id) {
+        id = (side << 160) + uint160(pool);
     }
 
     function exactIn(
