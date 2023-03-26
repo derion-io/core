@@ -4,7 +4,6 @@ pragma solidity ^0.8.0;
 import "@derivable/oracle/contracts/PriceLibrary.sol";
 import "@derivable/oracle/contracts/OracleLibrary.sol";
 import "@derivable/oracle/contracts/@uniswap/v2-core/contracts/interfaces/IUniswapV2Pair.sol";
-import "hardhat/console.sol";
 
 /**
     @title Fetch Price

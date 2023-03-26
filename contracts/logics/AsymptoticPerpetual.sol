@@ -10,7 +10,6 @@ import "./Constants.sol";
 import "./Storage.sol";
 import "../interfaces/IERC1155Supply.sol";
 import "../interfaces/IAsymptoticPerpetual.sol";
-import "hardhat/console.sol";
 
 contract AsymptoticPerpetual is Storage, Constants, IAsymptoticPerpetual {
     function init(
@@ -30,9 +29,7 @@ contract AsymptoticPerpetual is Storage, Constants, IAsymptoticPerpetual {
         __.R = IERC20(TOKEN_R).balanceOf(address(this));
         s_a = __.a = a;
         s_b = __.b = b;
-        console.log(111);
         (rA, rB, rC) = _evaluate(__);
-        console.log(111);
         // uint R = IERC20(TOKEN_R).balanceOf(address(this));
         // require(4 * a * b <= R, "INVALID_PARAM");
     }
@@ -106,7 +103,6 @@ contract AsymptoticPerpetual is Storage, Constants, IAsymptoticPerpetual {
     function _evaluate(___ memory __) internal view returns (uint rA, uint rB, uint rC) {
         rA = _r(__.xkA, __.a, __.R);
         rB = _r(__.xkB, __.b, __.R);
-        console.log(__.R, rA, rB);
         rC = __.R - rA - rB;
     }
 

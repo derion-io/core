@@ -8,7 +8,6 @@ import "./logics/Constants.sol";
 import "./interfaces/IERC1155Supply.sol";
 import "./interfaces/IAsymptoticPerpetual.sol";
 import "./logics/Storage.sol";
-import "hardhat/console.sol";
 
 contract Pool is Storage, Constants {
     uint public constant MINIMUM_LIQUIDITY = 10 ** 3;
