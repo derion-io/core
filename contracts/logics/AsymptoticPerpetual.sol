@@ -100,7 +100,7 @@ contract AsymptoticPerpetual is Storage, Constants, IAsymptoticPerpetual {
         return IERC1155Supply(TOKEN).totalSupply(_packID(address(this), side));
     }
 
-    function _evaluate(___ memory __) internal view returns (uint rA, uint rB, uint rC) {
+    function _evaluate(___ memory __) internal pure returns (uint rA, uint rB, uint rC) {
         rA = _r(__.xkA, __.a, __.R);
         rB = _r(__.xkB, __.b, __.R);
         rC = __.R - rA - rB;
