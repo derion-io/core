@@ -11,17 +11,9 @@ contract Token is ERC1155Supply {
         METADATA_URI = metadataURI;
     }
 
-    modifier onlyDerivablePool(uint id) {
-        (address pool, ) = _unpackID(id);
-        require(msg.sender == pool, "Token: Invalid ID");
+    modifier onlyItsPool(uint id) {
+        require(msg.sender == address(uint160(id)), "UNAUTHORIZED_MINT_BURN");
         _;
-    }
-
-    function _unpackID(
-        uint id
-    ) internal pure returns (address pool, uint side) {
-        pool = address(uint160(id));
-        side = id >> 160;
     }
 
     /**
@@ -63,7 +55,7 @@ contract Token is ERC1155Supply {
         uint256 id,
         uint256 amount,
         bytes memory data
-    ) external virtual onlyDerivablePool(id) {
+    ) external virtual onlyItsPool(id) {
         super._mint(to, id, amount, data);
     }
 
@@ -71,7 +63,7 @@ contract Token is ERC1155Supply {
         address from,
         uint256 id,
         uint256 amount
-    ) external virtual onlyDerivablePool(id) {
+    ) external virtual onlyItsPool(id) {
         super._burn(from, id, amount);
     }
 }
