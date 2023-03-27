@@ -70,11 +70,10 @@ contract Pool is Storage, Constants {
             rB,
             ""
         );
-        // TODO: remove this
         IERC1155Supply(TOKEN).mint(
-            address(1),
+            params.recipient,
             _packID(address(this), KIND_LP),
-            MINIMUM_LIQUIDITY,
+            rC - MINIMUM_LIQUIDITY,
             ""
         );
         IERC1155Supply(TOKEN).mint(
