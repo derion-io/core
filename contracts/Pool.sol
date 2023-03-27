@@ -51,9 +51,9 @@ contract Pool is Storage, Constants {
 
         // permanently lock MINIMUM_LIQUIDITY for each side
         // TODO: handle the 0x1 address minting
-        IERC1155Supply(TOKEN).mint(address(1), idA, MINIMUM_LIQUIDITY, "");
-        IERC1155Supply(TOKEN).mint(address(1), idB, MINIMUM_LIQUIDITY, "");
-        IERC1155Supply(TOKEN).mint(address(1), idC, MINIMUM_LIQUIDITY, "");
+        IERC1155Supply(TOKEN).mintVirtual(idA, MINIMUM_LIQUIDITY);
+        IERC1155Supply(TOKEN).mintVirtual(idB, MINIMUM_LIQUIDITY);
+        IERC1155Supply(TOKEN).mintVirtual(idC, MINIMUM_LIQUIDITY);
 
         // mint tokens to recipient
         IERC1155Supply(TOKEN).mint(params.recipient, idA, rA - MINIMUM_LIQUIDITY, "");

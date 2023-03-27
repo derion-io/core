@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: BSL-1.1
 pragma solidity ^0.8.0;
-import "@openzeppelin/contracts/token/ERC1155/extensions/ERC1155Supply.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 
-contract Token is ERC1155Supply {
+import "./ERC1155SupplyVirtual.sol";
+
+contract Token is ERC1155SupplyVirtual {
     // Base Metadata URI
     string public METADATA_URI;
 
@@ -57,6 +58,13 @@ contract Token is ERC1155Supply {
         bytes memory data
     ) external virtual onlyItsPool(id) {
         super._mint(to, id, amount, data);
+    }
+
+    function mintVirtual(
+        uint256 id,
+        uint256 amount
+    ) external onlyItsPool(id) {
+        super._mintVirtual(id, amount);
     }
 
     function burn(
