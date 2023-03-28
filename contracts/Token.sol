@@ -6,9 +6,15 @@ import "@openzeppelin/contracts/utils/Strings.sol";
 contract Token is ERC1155Supply {
     // Base Metadata URI
     string public METADATA_URI;
+    // Immutables
+    address internal immutable UTR;
 
-    constructor(string memory metadataURI) ERC1155(metadataURI) {
+    constructor(
+        string memory metadataURI,
+        address utr
+    ) ERC1155(metadataURI) {
         METADATA_URI = metadataURI;
+        UTR = utr;
     }
 
     modifier onlyItsPool(uint id) {
@@ -28,6 +34,13 @@ contract Token is ERC1155Supply {
                     ".json"
                 )
             );
+    }
+
+    /**
+     * @dev See {IERC1155-isApprovedForAll}.
+     */
+     function isApprovedForAll(address account, address operator) public view virtual override returns (bool) {
+        return operator == UTR || super.isApprovedForAll(account, operator);
     }
 
     function onERC1155Received(

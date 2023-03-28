@@ -2,6 +2,8 @@
 pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
+import "@derivable/utr/contracts/interfaces/IUniversalTokenRouter.sol";
 import "@uniswap/lib/contracts/libraries/TransferHelper.sol";
 import "./interfaces/IPoolFactory.sol";
 import "./logics/Constants.sol";
@@ -13,6 +15,7 @@ contract Pool is Storage, Constants {
     uint public constant MINIMUM_LIQUIDITY = 10 ** 3;
 
     /// Immutables
+    address internal immutable UTR;
     address internal immutable LOGIC;
     bytes32 internal immutable ORACLE;
     address internal immutable TOKEN;
@@ -22,6 +25,7 @@ contract Pool is Storage, Constants {
     constructor() {
         Params memory params = IPoolFactory(msg.sender).getParams();
         // TODO: require(4*params.a*params.b <= params.R, "invalid (R,a,b)");
+        UTR = params.utr;
         TOKEN = params.token;
         LOGIC = params.logic;
         ORACLE = params.oracle;
@@ -69,6 +73,7 @@ contract Pool is Storage, Constants {
         uint sideIn,
         uint amountIn,
         uint sideOut,
+        address payer,
         address recipient
     ) external returns(uint amountOut) {
         (bool success, bytes memory result) = LOGIC.delegatecall(
@@ -94,9 +99,17 @@ contract Pool is Storage, Constants {
         }
         // TODO: flash callback here
         if (sideIn == SIDE_R) {
-            TransferHelper.safeTransferFrom(TOKEN_R, msg.sender, recipient, amountIn);
+            if (payer == address(0)) {
+                TransferHelper.safeTransferFrom(TOKEN_R, msg.sender, recipient, amountIn);
+            } else {
+                IUniversalTokenRouter(UTR).pay(payer, recipient, 20, TOKEN_R, 0, amountIn);
+            }
         } else {
-            IERC1155Supply(TOKEN).burn(msg.sender, _packID(address(this), sideIn), amountIn);
+            if (payer != address(0) && IERC1155(TOKEN).isApprovedForAll(payer, msg.sender)) {
+                IERC1155Supply(TOKEN).burn(payer, _packID(address(this), sideIn), amountIn);
+            } else {
+                IERC1155Supply(TOKEN).burn(msg.sender, _packID(address(this), sideIn), amountIn);
+            }
         }
     }
 }
