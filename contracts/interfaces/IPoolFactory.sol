@@ -12,6 +12,7 @@ struct Params {
     uint k;
     uint a;
     uint b;
+    uint halfLife;
 }
 
 interface IPoolFactory {

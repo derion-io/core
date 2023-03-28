@@ -122,6 +122,8 @@ contract AsymptoticPerpetual is Storage, Constants, IAsymptoticPerpetual {
         __.xkA = _xk(price, config.MARK);
         __.xkB = uint224(FixedPoint.Q224/__.xkA);
         // TODO: decay
+        __.xkA = uint224(decay(uint(__.xkA), config.TIMESTAMP, config.HALF_LIFE));
+        __.xkB = uint224(decay(uint(__.xkB), config.TIMESTAMP, config.HALF_LIFE));
         (rA, rB, rC) = _evaluate(__);
     }
 
@@ -147,6 +149,12 @@ contract AsymptoticPerpetual is Storage, Constants, IAsymptoticPerpetual {
             // TODO: unit test for this case
             return _tryPrice(__, config, max);
         }
+    }
+
+    function decay(uint value, uint t, uint halfLife) public pure returns (uint) {
+        value >>= (t / halfLife);
+        t %= halfLife;
+        return value - value * t / halfLife / 2;
     }
 
     function exactIn(

@@ -23,7 +23,8 @@ contract PoolFactory is IPoolFactory {
                 params.oracle,
                 params.reserveToken,
                 params.mark,
-                params.k
+                params.k,
+                params.halfLife
             )
         );
     }
