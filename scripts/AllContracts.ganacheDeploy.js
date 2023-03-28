@@ -1,7 +1,7 @@
 const { ethers } = require("hardhat");
 const fs = require('fs');
 const path = require('path');
-const { bn, encodePowers } = require("../test/shared/utilities");
+const { bn } = require("../test/shared/utilities");
 const { MaxUint256, AddressZero } = ethers.constants;
 const SECONDS_PER_YEAR = 31536000;
 const opts = {

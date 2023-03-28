@@ -1,14 +1,14 @@
 const ethers = require('ethers')
 
 const stringToBytes32 = (text) => {
-    let result = hre.ethers.utils.hexlify(hre.ethers.utils.toUtf8Bytes(text));
-    while (result.length < 66) { result += '0'; }
-    if (result.length !== 66) { throw new Error("invalid implicit bytes32"); }
-    return result;
+    let result = hre.ethers.utils.hexlify(hre.ethers.utils.toUtf8Bytes(text))
+    while (result.length < 66) { result += '0' }
+    if (result.length !== 66) { throw new Error("invalid implicit bytes32") }
+    return result
 }
 
-const ONE = ethers.BigNumber.from(1);
-const TWO = ethers.BigNumber.from(2);
+const ONE = ethers.BigNumber.from(1)
+const TWO = ethers.BigNumber.from(2)
 
 const bn = ethers.BigNumber.from
 const numberToWei = (number, decimal = 18) => {
@@ -22,7 +22,7 @@ const weiToNumber = (number, decimal = 18) => {
 const calculateSwapToPrice = ({ r0, r1, token0, token1 }, targetPrice, quoteToken) => {
     targetPrice = numberToWei(targetPrice)
 
-    const [rb, rq] = quoteToken === token0 ? [r1, r0] : [r0, r1];
+    const [rb, rq] = quoteToken === token0 ? [r1, r0] : [r0, r1]
     const oldPrice = rq.mul(numberToWei(1)).div(rb)
 
     if (targetPrice.gt(oldPrice)) {
@@ -62,8 +62,8 @@ const calculateSwapToPrice = ({ r0, r1, token0, token1 }, targetPrice, quoteToke
 }
 
 function getPriceAfterSwap(rI, rO, amountIn, tokenInIsQuote = true) {
-    const amountInWithFee = amountIn.mul(997);
-    const amountOut = amountInWithFee.mul(rO).div(rI.mul(1000).add(amountInWithFee));
+    const amountInWithFee = amountIn.mul(997)
+    const amountOut = amountInWithFee.mul(rO).div(rI.mul(1000).add(amountInWithFee))
     return tokenInIsQuote ?
         rI.add(amountIn).mul(numberToWei(1)).div(rO.sub(amountOut))
         :
@@ -71,19 +71,19 @@ function getPriceAfterSwap(rI, rO, amountIn, tokenInIsQuote = true) {
 }
 
 function sqrt(value) {
-    const x = ethers.BigNumber.from(value);
-    let z = x.add(ONE).div(TWO);
-    let y = x;
+    const x = ethers.BigNumber.from(value)
+    let z = x.add(ONE).div(TWO)
+    let y = x
     while (z.sub(y).isNegative()) {
-        y = z;
-        z = x.div(z).add(z).div(TWO);
+        y = z
+        z = x.div(z).add(z).div(TWO)
     }
-    return y;
+    return y
 }
 
 
 function quadraticEquation(a, b, c) {
-    var x1, x2;
+    var x1, x2
     // delta = b^2 - 4ac
     const delta = b.mul(b).sub(bn(4).mul(a).mul(c))
     if (delta.isZero()) {
@@ -127,49 +127,6 @@ async function swapToSetPrice({ account, uniswapPool, uniswapRouter, quoteToken,
     await tx.wait(1)
 }
 
-function encodePowers(powers) {
-    let powersBytes = []
-    for (let i = powers.length-1; i >= 0; --i) {
-        let power = powers[i]
-        if (power < 0) {
-            power = 0x8000 - power
-        }
-        powersBytes.push(...ethers.utils.zeroPad(power, 2))
-    }
-    const encoded = ethers.utils.hexZeroPad(powers.length, 2) + ethers.utils.hexZeroPad(powersBytes, 30).slice(2)
-    return encoded
-}
-
-function decodePowers(powersBytes) {
-    powersBytes = ethers.utils.stripZeros(powersBytes.slice(4))
-    const raws = powersBytes.match(/.{1,4}/g)
-    const powers = []
-    for (let i = raws.length-1; i >= 0; --i) {
-        let power = Number('0x'+raws[i])
-        if (power > 0x8000) {
-            power = 0x8000 - power
-        }
-        powers.push(power)
-    }
-    return powers
-}
-
-const getDeltaSupply = ({
-    state: {xk, s},
-    param0: {v: v0, R: R0},
-    param1: {v: v1, R: R1}
-}) => {
-    const h0 = h(v0, R0, xk)
-    const h1 = h(v1, R1, xk)
-    return (h1 - h0) * s / h0;
-}
-
-const h = (v, R, xk) => {
-    const f = v * xk
-    const g = R - Math.pow(R, 2) / (4 * v * xk)
-    return f < (R / 2) ? f : g
-}
-
 const packId = (kind, address) => {
     const k = bn(kind)
     return k.shl(160).add(address)
@@ -178,13 +135,13 @@ const packId = (kind, address) => {
 const unpackId = (id) => {
     const k = ethers.utils.hexlify(id.shr(160))
     const p = ethers.utils.getAddress(ethers.utils.hexlify(id.mod(bn(1).shl(160))))
-    return {k, p}
+    return { k, p }
 }
 
 function encodeSqrtX96(reserve1, reserve0) {
-    return bn((Math.sqrt(reserve1/reserve0)*10**12).toFixed(0))
+    return bn((Math.sqrt(reserve1 / reserve0) * 10 ** 12).toFixed(0))
         .mul(bn(2).pow(96))
-        .div(10**12)
+        .div(10 ** 12)
 }
 
 module.exports = {
@@ -194,9 +151,6 @@ module.exports = {
     numberToWei,
     bn,
     swapToSetPrice,
-    encodePowers,
-    decodePowers,
-    getDeltaSupply,
     packId,
     unpackId,
     encodeSqrtX96
