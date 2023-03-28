@@ -100,9 +100,9 @@ contract Pool is Storage, Constants {
         // TODO: flash callback here
         if (sideIn == SIDE_R) {
             if (payer == address(0)) {
-                TransferHelper.safeTransferFrom(TOKEN_R, msg.sender, recipient, amountIn);
+                TransferHelper.safeTransferFrom(TOKEN_R, msg.sender, address(this), amountIn);
             } else {
-                IUniversalTokenRouter(UTR).pay(payer, recipient, 20, TOKEN_R, 0, amountIn);
+                IUniversalTokenRouter(UTR).pay(payer, address(this), 20, TOKEN_R, 0, amountIn);
             }
         } else {
             if (payer != address(0) && IERC1155(TOKEN).isApprovedForAll(payer, msg.sender)) {
