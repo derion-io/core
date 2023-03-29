@@ -122,8 +122,8 @@ contract AsymptoticPerpetual is Storage, Constants, IAsymptoticPerpetual {
         __.xkA = _xk(price, config.MARK);
         __.xkB = uint224(FixedPoint.Q224/__.xkA);
         // TODO: decay
-        __.xkA = uint224(decay(uint(__.xkA), config.TIMESTAMP, config.HALF_LIFE));
-        __.xkB = uint224(decay(uint(__.xkB), config.TIMESTAMP, config.HALF_LIFE));
+        __.xkA = uint224(decay(uint(__.xkA), block.timestamp - config.TIMESTAMP, config.HALF_LIFE));
+        __.xkB = uint224(decay(uint(__.xkB), block.timestamp - config.TIMESTAMP, config.HALF_LIFE));
         (rA, rB, rC) = _evaluate(__);
     }
 
