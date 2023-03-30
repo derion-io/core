@@ -98,8 +98,8 @@ const {
             halfLife: HALF_LIFE // ten years
         }
         const poolAddress = await poolFactory.computePoolAddress(params);
-        const txSignerA = weth.connect(accountA);
-        const txSignerB = weth.connect(accountB);
+        let txSignerA = weth.connect(accountA);
+        let txSignerB = weth.connect(accountB);
         await txSignerA.deposit({
           value: '100000000000000000000000000000'
         })
@@ -113,101 +113,122 @@ const {
         await poolFactory.createPool(params);
         const derivablePool = await ethers.getContractAt("Pool", await poolFactory.computePoolAddress(params));
         
+        await time.increase(100);
+        const A_ID = packId(0x10, derivablePool.address);
+        const B_ID = packId(0x20, derivablePool.address);
+        const R_ID = packId(0x00, derivablePool.address);
+        await weth.approve(derivablePool.address, '100000000000000000000000000');
+        
+        txSignerA = weth.connect(accountA);
+        txSignerB = weth.connect(accountB);
+        await txSignerA.approve(derivablePool.address, '100000000000000000000000000');
+        await txSignerB.approve(derivablePool.address, '100000000000000000000000000');
+        txSignerA = derivable1155.connect(accountA);
+        await txSignerA.setApprovalForAll(derivablePool.address, true);
+        txSignerB = derivable1155.connect(accountB);
+        await txSignerB.setApprovalForAll(derivablePool.address, true);
+        txSignerA = derivablePool.connect(accountA);
+        txSignerB = derivablePool.connect(accountB);
+
+        async function swapAndRedeemInHalfLife(period) {
+          await txSignerA.exactIn(
+            0x00,
+            numberToWei(0.01),
+            0x10,
+            '0x0000000000000000000000000000000000000000',
+            accountA.address
+          );
+          await txSignerB.exactIn(
+            0x00,
+            numberToWei(0.01),
+            0x20,
+            '0x0000000000000000000000000000000000000000',
+            accountB.address
+          );
+          
+          if (period != 0)
+            await time.increase(period * HALF_LIFE)
+          const aTokenAmount = await derivable1155.balanceOf(accountA.address, A_ID)
+          const bTokenAmount = await derivable1155.balanceOf(accountB.address, B_ID)
+          const aBefore = await weth.balanceOf(accountA.address)
+          const bBefore = await weth.balanceOf(accountB.address)
+
+          await txSignerA.exactIn(
+            0x10,
+            aTokenAmount,
+            0x00,
+            '0x0000000000000000000000000000000000000000',
+            accountA.address
+          )
+          await txSignerB.exactIn(
+            0x20,
+            bTokenAmount,
+            0x00,
+            '0x0000000000000000000000000000000000000000',
+            accountB.address
+          )
+
+          const aAfter = await weth.balanceOf(accountA.address)
+          const bAfter = await weth.balanceOf(accountB.address)
+          return {
+            long: aAfter.sub(aBefore),
+            short: bAfter.sub(bBefore)
+          }
+        }
+
+        async function compare(period) {
+          const origin = await swapAndRedeemInHalfLife(0)
+          const after = await swapAndRedeemInHalfLife(period)
+          const long = origin.long.sub(
+            after.long.mul(Math.floor(2**period*1000000000000000))
+            .div(1000000000000000)
+          )
+          const short = origin.short.sub(
+            after.short.mul(Math.floor(2**period*1000000000000000))
+            .div(1000000000000000)
+          )
+          expect(Math.abs(long.toNumber())).to.lessThan(10)
+          expect(Math.abs(short.toNumber())).to.lessThan(10)
+        }
+
         return {
             owner,
             weth,
             derivablePool,
             derivable1155,
             accountA,
-            accountB
+            accountB,
+            txSignerA,
+            txSignerB,
+            swapAndRedeemInHalfLife,
+            compare
         }
     }
   
     describe("Pool", function () {
-        it("Decay", async function () {
-            const {owner, accountA, accountB, weth, derivablePool, derivable1155} = await loadFixture(deployDDLv2);
-            await time.increase(100);
-            const A_ID = packId(0x10, derivablePool.address);
-            const B_ID = packId(0x20, derivablePool.address);
-            const R_ID = packId(0x00, derivablePool.address);
-            await weth.approve(derivablePool.address, '100000000000000000000000000');
-            
-            let txSignerA = weth.connect(accountA);
-            let txSignerB = weth.connect(accountB);
-            await txSignerA.approve(derivablePool.address, '100000000000000000000000000');
-            await txSignerB.approve(derivablePool.address, '100000000000000000000000000');
-            txSignerA = derivable1155.connect(accountA);
-            await txSignerA.setApprovalForAll(derivablePool.address, true);
-            txSignerB = derivable1155.connect(accountB);
-            await txSignerB.setApprovalForAll(derivablePool.address, true);
-            txSignerA = derivablePool.connect(accountA);
-            txSignerB = derivablePool.connect(accountB);
-            async function swapAndRedeemInHalfLife(period) {
-              await txSignerA.exactIn(
-                0x00,
-                numberToWei(0.01),
-                0x10,
-                '0x0000000000000000000000000000000000000000',
-                accountA.address
-              );
-              await txSignerB.exactIn(
-                0x00,
-                numberToWei(0.01),
-                0x20,
-                '0x0000000000000000000000000000000000000000',
-                accountB.address
-              );
-              
-              if (period != 0)
-                await time.increase(period * HALF_LIFE)
-              const aTokenAmount = await derivable1155.balanceOf(accountA.address, A_ID)
-              const bTokenAmount = await derivable1155.balanceOf(accountB.address, B_ID)
-              const aBefore = await weth.balanceOf(accountA.address)
-              const bBefore = await weth.balanceOf(accountB.address)
-
-              await txSignerA.exactIn(
-                0x10,
-                aTokenAmount,
-                0x00,
-                '0x0000000000000000000000000000000000000000',
-                accountA.address
-              )
-              await txSignerB.exactIn(
-                0x20,
-                bTokenAmount,
-                0x00,
-                '0x0000000000000000000000000000000000000000',
-                accountB.address
-              )
-  
-              const aAfter = await weth.balanceOf(accountA.address)
-              const bAfter = await weth.balanceOf(accountB.address)
-              return {
-                long: aAfter.sub(aBefore),
-                short: bAfter.sub(bBefore)
-              }
-            }
-
-            async function compare(period) {
-              const origin = await swapAndRedeemInHalfLife(0)
-              const after = await swapAndRedeemInHalfLife(period)
-              const long = origin.long
-                .mul(100000000)
-                .div(after.long)
-                .div(Math.floor(2**period*100000000))
-              const short = origin.short
-                .mul(100000000)
-                .div(after.short)
-                .div(Math.floor(2**period*100000000))
-              expect(long.toNumber()).to.equal(1)
-              expect(short.toNumber()).to.equal(1)
-            }
-
+        it("Decay 0.3", async function () {
+            const {compare} = await loadFixture(deployDDLv2);
             await compare(0.3)
-            await compare(0.5)
-            await compare(1)
-            await compare(2)
-            
+        })
+        it("Decay 0.5", async function () {
+          const {compare} = await loadFixture(deployDDLv2);
+          await compare(0.5)
+        })
+        it("Decay 1", async function () {
+          const {compare} = await loadFixture(deployDDLv2);
+          await compare(1)
+        })
+        it("Decay 2", async function () {
+          const {compare} = await loadFixture(deployDDLv2);
+          await compare(2)
+        })
+        it("Decay same range, different time", async function () {
+          const {swapAndRedeemInHalfLife} = await loadFixture(deployDDLv2);
+          const before = await swapAndRedeemInHalfLife(0.1)
+          await time.increase(10*HALF_LIFE)
+          const after = await swapAndRedeemInHalfLife(0.1)
+          expect(Math.abs(before.long.sub(after.long).toNumber())).to.be.lessThan(10)
+          expect(Math.abs(before.short.sub(after.short).toNumber())).to.be.lessThan(10)
         })
     });
   })
