@@ -21,6 +21,8 @@ contract Pool is Storage, Constants {
     address internal immutable TOKEN;
     address internal immutable TOKEN_R;
     uint224 internal immutable MARK;
+    uint internal immutable TIMESTAMP;
+    uint internal immutable HALF_LIFE;
 
     constructor() {
         Params memory params = IPoolFactory(msg.sender).getParams();
@@ -31,6 +33,8 @@ contract Pool is Storage, Constants {
         ORACLE = params.oracle;
         TOKEN_R = params.reserveToken;
         MARK = params.mark;
+        HALF_LIFE = params.halfLife;
+        TIMESTAMP = block.timestamp;
 
         (bool success, bytes memory result) = LOGIC.delegatecall(
             abi.encodeWithSelector(
@@ -79,7 +83,7 @@ contract Pool is Storage, Constants {
         (bool success, bytes memory result) = LOGIC.delegatecall(
             abi.encodeWithSelector(
                 IAsymptoticPerpetual.exactIn.selector,
-                Config(TOKEN, TOKEN_R, ORACLE, MARK),
+                Config(TOKEN, TOKEN_R, ORACLE, MARK, TIMESTAMP, HALF_LIFE),
                 sideIn,
                 amountIn,
                 sideOut

@@ -10,6 +10,8 @@ import "./Constants.sol";
 import "./Storage.sol";
 import "../interfaces/IERC1155Supply.sol";
 import "../interfaces/IAsymptoticPerpetual.sol";
+import "../libraries/ABDKMath64x64.sol";
+
 
 contract AsymptoticPerpetual is Storage, Constants, IAsymptoticPerpetual {
     function init(
@@ -114,16 +116,26 @@ contract AsymptoticPerpetual is Storage, Constants, IAsymptoticPerpetual {
         uint b;
     }
 
-    function _tryPrice(
+    function _tryPrice (
         ___ memory __,
         Config memory config,
         uint224 price
     ) internal view returns (uint rA, uint rB, uint rC) {
         __.xkA = _xk(price, config.MARK);
         __.xkB = uint224(FixedPoint.Q224/__.xkA);
-        // TODO: decay
+        uint rate = _decayRate(block.timestamp - config.TIMESTAMP, config.HALF_LIFE);
+        __.xkA = uint224(FullMath.mulDiv(__.xkA, 1 << 64, rate));
+        __.xkB = uint224(FullMath.mulDiv(__.xkB, 1 << 64, rate));
         (rA, rB, rC) = _evaluate(__);
     }
+
+    function _decayRate (
+        uint t,
+        uint HALF_LIFE
+    ) internal pure returns (uint urate) {
+        int128 rate = ABDKMath64x64.exp_2(int128(int((t << 64) / HALF_LIFE)));
+        urate = uint(int(rate));
+    } 
 
     function _selectPrice(
         ___ memory __,
@@ -147,6 +159,12 @@ contract AsymptoticPerpetual is Storage, Constants, IAsymptoticPerpetual {
             // TODO: unit test for this case
             return _tryPrice(__, config, max);
         }
+    }
+
+    function decay(uint value, uint t, uint halfLife) public pure returns (uint) {
+        value >>= (t / halfLife);
+        t %= halfLife;
+        return value - value * t / halfLife / 2;
     }
 
     function exactIn(
