@@ -14,6 +14,8 @@ import "../libraries/ABDKMath64x64.sol";
 
 
 contract AsymptoticPerpetual is Storage, Constants, IAsymptoticPerpetual {
+    using ABDKMath64x64 for int128;
+
     function init(
         address TOKEN_R,
         bytes32 ORACLE,
@@ -123,18 +125,18 @@ contract AsymptoticPerpetual is Storage, Constants, IAsymptoticPerpetual {
     ) internal view returns (uint rA, uint rB, uint rC) {
         __.xkA = _xk(price, config.MARK);
         __.xkB = uint224(FixedPoint.Q224/__.xkA);
-        int128 rate = ABDKMath64x64.exp_2(int128(int(((block.timestamp - config.TIMESTAMP) << 64) / config.HALF_LIFE)));
-        uint urate = uint(int(rate));
-        __.xkA = uint224(FullMath.mulDiv(__.xkA, 1 << 64, urate));
-        __.xkB = uint224(FullMath.mulDiv(__.xkB, 1 << 64, urate));
+        uint rateX64 = _decayRate(block.timestamp - config.TIMESTAMP, config.HALF_LIFE);
+        __.xkA = uint224(FullMath.mulDiv(__.xkA, 1 << 64, rateX64));
+        __.xkB = uint224(FullMath.mulDiv(__.xkB, 1 << 64, rateX64));
         (rA, rB, rC) = _evaluate(__);
     }
 
     function _decayRate (
-        uint t,
+        uint elapsed,
         uint HALF_LIFE
-    ) internal pure returns (uint urate) {
-        
+    ) internal pure returns (uint rateX64) {
+        int128 rate = int128(int((elapsed << 64) / HALF_LIFE)).exp_2();
+        return uint(int(rate));
     } 
 
     function _selectPrice(
