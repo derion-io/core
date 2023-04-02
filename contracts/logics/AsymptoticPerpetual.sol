@@ -73,12 +73,13 @@ contract AsymptoticPerpetual is Storage, Constants, IAsymptoticPerpetual {
 
         (int24 arithmeticMeanTick,) = OracleLibrary.consult(pool, uint32(uint(ORACLE) >> 192));
         uint160 sqrtTwapX96 = TickMath.getSqrtRatioAtTick(arithmeticMeanTick);
+        
         if (uint(ORACLE) >> 224 == 0) {
-            sqrtSpotX96 = uint160((1 << 192) / uint(sqrtSpotX96));
-            sqrtTwapX96 = uint160((1 << 192) / uint(sqrtTwapX96));
+            sqrtSpotX96 = uint160(Q192 / uint(sqrtSpotX96));
+            sqrtTwapX96 = uint160(Q192 / uint(sqrtTwapX96));
         }
-        twap = uint224(FullMath.mulDiv(uint(sqrtTwapX96), uint(sqrtTwapX96), 1 << 80));
-        spot = uint224(FullMath.mulDiv(uint(sqrtSpotX96), uint(sqrtSpotX96), 1 << 80));
+        twap = uint224(FullMath.mulDiv(sqrtTwapX96, sqrtTwapX96, Q80));
+        spot = uint224(FullMath.mulDiv(sqrtSpotX96, sqrtSpotX96, Q80));
     }
 
     // r(v)
@@ -126,8 +127,8 @@ contract AsymptoticPerpetual is Storage, Constants, IAsymptoticPerpetual {
         __.xkA = _xk(price, config.MARK);
         __.xkB = uint224(FixedPoint.Q224/__.xkA);
         uint rateX64 = _decayRate(block.timestamp - config.TIMESTAMP, config.HALF_LIFE);
-        __.xkA = uint224(FullMath.mulDiv(__.xkA, 1 << 64, rateX64));
-        __.xkB = uint224(FullMath.mulDiv(__.xkB, 1 << 64, rateX64));
+        __.xkA = uint224(FullMath.mulDiv(__.xkA, Q64, rateX64));
+        __.xkB = uint224(FullMath.mulDiv(__.xkB, Q64, rateX64));
         (rA, rB, rC) = _evaluate(__);
     }
 
