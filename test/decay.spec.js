@@ -83,7 +83,10 @@ const {
         await derivable1155.deployed()
 
         // deploy ddl pool
-        const oracle = bn(1).shl(255).add(bn(300).shl(256-64)).add(uniswapPair.address).toHexString()
+        const oracle = ethers.utils.hexZeroPad(
+          bn(0).shl(255).add(bn(300).shl(256-64)).add(uniswapPair.address).toHexString(),
+          32,
+        )
         const params = {
             utr: utr.address,
             token: derivable1155.address,
@@ -91,7 +94,7 @@ const {
             oracle,
             reserveToken: weth.address,
             recipient: owner.address,
-            mark: bn(1500).shl(112),
+            mark: bn(38).shl(112),
             k: 5,
             a: '30000000000',
             b: '30000000000',
