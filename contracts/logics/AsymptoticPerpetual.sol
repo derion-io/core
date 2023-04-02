@@ -112,6 +112,7 @@ contract AsymptoticPerpetual is Storage, Constants, IAsymptoticPerpetual {
         rC = __.R - rA - rB;
     }
 
+    // TODO: rename this struct
     struct ___ {
         uint224 xkA;
         uint224 xkB;
