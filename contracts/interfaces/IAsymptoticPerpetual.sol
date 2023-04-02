@@ -6,8 +6,8 @@ struct Config {
     address TOKEN_R;
     bytes32 ORACLE;
     uint224 MARK;
-    uint TIMESTAMP;
-    uint HALF_LIFE;
+    uint TIMESTAMP; // TODO: change to uint32
+    uint HALF_LIFE; // TODO: change to uint32
 }
 
 interface IAsymptoticPerpetual {
