@@ -143,6 +143,130 @@ describe("Decay funding rate", function () {
       accountA.address
     );
 
+    async function swapAndWait(period, waitingTime, amountA, amountB) {
+      await txSignerA.exactIn(
+        0x00,
+        amountA,
+        0x10,
+        '0x0000000000000000000000000000000000000000',
+        accountA.address
+      );
+      await txSignerB.exactIn(
+        0x00,
+        amountB,
+        0x20,
+        '0x0000000000000000000000000000000000000000',
+        accountB.address
+      );
+      const aTokenAmount = await derivable1155.balanceOf(accountA.address, A_ID)
+      const bTokenAmount = await derivable1155.balanceOf(accountB.address, B_ID)
+
+      const aFirstBefore = await txSignerA.callStatic.exactIn(
+        0x10,
+        aTokenAmount,
+        0x00,
+        '0x0000000000000000000000000000000000000000',
+        accountA.address
+      )
+      const bFirstBefore = await txSignerB.callStatic.exactIn(
+        0x20,
+        bTokenAmount,
+        0x00,
+        '0x0000000000000000000000000000000000000000',
+        accountB.address
+      )
+      await time.increase(period)
+      const aFirstAfter = await txSignerA.callStatic.exactIn(
+        0x10,
+        aTokenAmount,
+        0x00,
+        '0x0000000000000000000000000000000000000000',
+        accountA.address
+      )
+      const bFirstAfter = await txSignerB.callStatic.exactIn(
+        0x20,
+        bTokenAmount,
+        0x00,
+        '0x0000000000000000000000000000000000000000',
+        accountB.address
+      )
+
+      await time.increase(waitingTime)
+      const aSecondBefore = await txSignerA.callStatic.exactIn(
+        0x10,
+        aTokenAmount,
+        0x00,
+        '0x0000000000000000000000000000000000000000',
+        accountA.address
+      )
+      const bSecondBefore = await txSignerB.callStatic.exactIn(
+        0x20,
+        bTokenAmount,
+        0x00,
+        '0x0000000000000000000000000000000000000000',
+        accountB.address
+      )
+      await time.increase(period)
+      const aSecondAfter = await txSignerA.callStatic.exactIn(
+        0x10,
+        aTokenAmount,
+        0x00,
+        '0x0000000000000000000000000000000000000000',
+        accountA.address
+      )
+      const bSecondAfter = await txSignerB.callStatic.exactIn(
+        0x20,
+        bTokenAmount,
+        0x00,
+        '0x0000000000000000000000000000000000000000',
+        accountB.address
+      )
+
+      const secondLongRate = Number(weiToNumber(aSecondAfter))/Number(weiToNumber(aSecondBefore))
+      const firstLongRate = Number(weiToNumber(aFirstAfter))/Number(weiToNumber(aFirstBefore))
+
+      const secondShortRate = Number(weiToNumber(bSecondAfter))/Number(weiToNumber(bSecondBefore))
+      const firstShortRate = Number(weiToNumber(bFirstAfter))/Number(weiToNumber(bFirstBefore))
+      
+      expect(secondLongRate).to.be.closeTo(firstLongRate, 0.000001)
+      expect(secondShortRate).to.be.closeTo(firstShortRate, 0.000001)
+    }
+
+    async function instantSwapBack(amountA, amountB) {
+      await txSignerA.exactIn(
+        0x00,
+        amountA,
+        0x10,
+        '0x0000000000000000000000000000000000000000',
+        accountA.address
+      );
+      await txSignerB.exactIn(
+        0x00,
+        amountB,
+        0x20,
+        '0x0000000000000000000000000000000000000000',
+        accountB.address
+      );
+      const aTokenAmount = await derivable1155.balanceOf(accountA.address, A_ID)
+      const bTokenAmount = await derivable1155.balanceOf(accountB.address, B_ID)
+      const valueA = await txSignerA.callStatic.exactIn(
+        0x10,
+        aTokenAmount,
+        0x00,
+        '0x0000000000000000000000000000000000000000',
+        accountA.address
+      )
+      const valueB = await txSignerB.callStatic.exactIn(
+        0x20,
+        bTokenAmount,
+        0x00,
+        '0x0000000000000000000000000000000000000000',
+        accountB.address
+      )
+      expect(amountA.gte(valueA)).to.be.true
+      expect(amountB.gte(valueB)).to.be.true
+    }
+
     async function swapAndRedeemInHalfLife(period, amountA, amountB) {
       await txSignerA.exactIn(
         0x00,
@@ -247,7 +371,9 @@ describe("Decay funding rate", function () {
       swapAndRedeemInHalfLife,
       compareBalance,
       compareMuchMoreLong,
-      compareMuchMoreShort
+      compareMuchMoreShort,
+      swapAndWait,
+      instantSwapBack
     }
   }
 
@@ -273,21 +399,17 @@ describe("Decay funding rate", function () {
       expect(afterLPValue.gt(originLPValue)).to.be.true
     })
     describe("Pool balance:", function () {
-      it("Decay 0.3", async function () {
-        const { compareBalance } = await loadFixture(deployDDLv2);
-        await compareBalance(0.3)
+      it("1 day - wait 1 halflife", async function () {
+        const { swapAndWait } = await loadFixture(deployDDLv2);
+        await swapAndWait(86400, HALF_LIFE, numberToWei(0.5), numberToWei(0.5))
       })
-      it("Decay 0.5", async function () {
-        const { compareBalance } = await loadFixture(deployDDLv2);
-        await compareBalance(0.5)
+      it("1 month - wait 1 halflife", async function () {
+        const { swapAndWait } = await loadFixture(deployDDLv2);
+        await swapAndWait(30*86400, HALF_LIFE, numberToWei(0.5), numberToWei(0.5))
       })
-      it("Decay 1", async function () {
-        const { compareBalance } = await loadFixture(deployDDLv2);
-        await compareBalance(1)
-      })
-      it("Decay 2", async function () {
-        const { compareBalance } = await loadFixture(deployDDLv2);
-        await compareBalance(2)
+      it("1 day - wait 10 halflife", async function () {
+        const { swapAndWait } = await loadFixture(deployDDLv2);
+        await swapAndWait(86400, 10*HALF_LIFE, numberToWei(0.5), numberToWei(0.5))
       })
       it("Decay same range, different time", async function () {
         const { swapAndRedeemInHalfLife } = await loadFixture(deployDDLv2);
@@ -297,60 +419,44 @@ describe("Decay funding rate", function () {
         expect(Math.abs(before.long.sub(after.long).toNumber())).to.be.lessThanOrEqual(2)
         expect(Math.abs(before.short.sub(after.short).toNumber())).to.be.lessThanOrEqual(2)
       })  
+      
     })
 
     describe("Pool long > R/2:", function () {
-      it("Decay 0.3", async function () {
-        const { compareMuchMoreLong } = await loadFixture(deployDDLv2);
-        await compareMuchMoreLong(0.3)
+      it("1 day - wait 1 halflife", async function () {
+        const { swapAndWait } = await loadFixture(deployDDLv2);
+        await swapAndWait(86400, HALF_LIFE, numberToWei(2.5), numberToWei(0.5))
       })
-      it("Decay 0.5", async function () {
-        const { compareMuchMoreLong } = await loadFixture(deployDDLv2);
-        await compareMuchMoreLong(0.5)
+      it("1 month - wait 1 halflife", async function () {
+        const { swapAndWait } = await loadFixture(deployDDLv2);
+        await swapAndWait(30*86400, HALF_LIFE, numberToWei(2.5), numberToWei(0.5))
       })
-      it("Decay 1", async function () {
-        const { compareMuchMoreLong } = await loadFixture(deployDDLv2);
-        await compareMuchMoreLong(1)
+      it("1 day - wait 10 halflife", async function () {
+        const { swapAndWait } = await loadFixture(deployDDLv2);
+        await swapAndWait(86400, 10*HALF_LIFE, numberToWei(2.5), numberToWei(0.5))
       })
-      it("Decay 2", async function () {
-        const { compareMuchMoreLong } = await loadFixture(deployDDLv2);
-        await compareMuchMoreLong(2)
+      it("Instant swap back", async function () {
+        const {instantSwapBack} = await loadFixture(deployDDLv2)
+        await instantSwapBack(numberToWei(2.5), numberToWei(0.5))
       })
-      it("Decay same range, different time", async function () {
-        const { swapAndRedeemInHalfLife } = await loadFixture(deployDDLv2);
-        const before = await swapAndRedeemInHalfLife(0.1, numberToWei(2.5), numberToWei(1))
-        await time.increase(10 * HALF_LIFE)
-        const after = await swapAndRedeemInHalfLife(0.1, numberToWei(2.5), numberToWei(1))
-        expect(Math.abs(before.long.sub(after.long).toNumber())).to.be.lessThanOrEqual(2)
-        expect(Math.abs(before.short.sub(after.short).toNumber())).to.be.lessThanOrEqual(2)
-      })
-
     })
 
     describe("Pool short > R/2:", function () {
-      it("Decay 0.3", async function () {
-        const { compareMuchMoreShort } = await loadFixture(deployDDLv2);
-        await compareMuchMoreShort(0.3)
+      it("1 day - wait 1 halflife", async function () {
+        const { swapAndWait } = await loadFixture(deployDDLv2);
+        await swapAndWait(86400, HALF_LIFE, numberToWei(0.5), numberToWei(2.5))
       })
-      it("Decay 0.5", async function () {
-        const { compareMuchMoreShort } = await loadFixture(deployDDLv2);
-        await compareMuchMoreShort(0.5)
+      it("1 month - wait 1 halflife", async function () {
+        const { swapAndWait } = await loadFixture(deployDDLv2);
+        await swapAndWait(30*86400, HALF_LIFE, numberToWei(0.5), numberToWei(2.5))
       })
-      it("Decay 1", async function () {
-        const { compareMuchMoreShort } = await loadFixture(deployDDLv2);
-        await compareMuchMoreShort(1)
+      it("1 day - wait 10 halflife", async function () {
+        const { swapAndWait } = await loadFixture(deployDDLv2);
+        await swapAndWait(86400, 10*HALF_LIFE, numberToWei(0.5), numberToWei(2.5))
       })
-      it("Decay 2", async function () {
-        const { compareMuchMoreShort } = await loadFixture(deployDDLv2);
-        await compareMuchMoreShort(2)
-      })
-      it("Decay same range, different time", async function () {
-        const { swapAndRedeemInHalfLife } = await loadFixture(deployDDLv2);
-        const before = await swapAndRedeemInHalfLife(0.1, numberToWei(1), numberToWei(2.5))
-        await time.increase(10 * HALF_LIFE)
-        const after = await swapAndRedeemInHalfLife(0.1, numberToWei(1), numberToWei(2.5))
-        expect(Math.abs(before.long.sub(after.long).toNumber())).to.be.lessThanOrEqual(2)
-        expect(Math.abs(before.short.sub(after.short).toNumber())).to.be.lessThanOrEqual(2)
+      it("Instant swap back", async function () {
+        const {instantSwapBack} = await loadFixture(deployDDLv2)
+        await instantSwapBack(numberToWei(0.5), numberToWei(2.5))
       })
     })
   });
