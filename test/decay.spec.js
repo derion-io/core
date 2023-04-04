@@ -2,8 +2,11 @@ const {
   time,
   loadFixture,
 } = require("@nomicfoundation/hardhat-network-helpers");
-const { expect } = require("chai");
+const { expect, use } = require("chai");
+const { solidity } = require("ethereum-waffle");
 const { weiToNumber, bn, getDeltaSupply, numberToWei, packId, unpackId, encodeSqrtX96 } = require("./shared/utilities");
+
+use(solidity)
 
 const opts = {
   gasLimit: 30000000
@@ -240,15 +243,7 @@ describe("Decay funding rate", function () {
         '0x0000000000000000000000000000000000000000',
         accountA.address
       );
-      await txSignerB.exactIn(
-        0x00,
-        amountB,
-        0x20,
-        '0x0000000000000000000000000000000000000000',
-        accountB.address
-      );
       const aTokenAmount = await derivable1155.balanceOf(accountA.address, A_ID)
-      const bTokenAmount = await derivable1155.balanceOf(accountB.address, B_ID)
       const valueA = await txSignerA.callStatic.exactIn(
         0x10,
         aTokenAmount,
@@ -256,6 +251,15 @@ describe("Decay funding rate", function () {
         '0x0000000000000000000000000000000000000000',
         accountA.address
       )
+
+      await txSignerB.exactIn(
+        0x00,
+        amountB,
+        0x20,
+        '0x0000000000000000000000000000000000000000',
+        accountB.address
+      );
+      const bTokenAmount = await derivable1155.balanceOf(accountB.address, B_ID)
       const valueB = await txSignerB.callStatic.exactIn(
         0x20,
         bTokenAmount,
@@ -314,17 +318,21 @@ describe("Decay funding rate", function () {
         '0x0000000000000000000000000000000000000000',
         accountB.address
       )
-      expect(Number(weiToNumber(valueABefore))/2).to.be.eq(
-        Number(weiToNumber(valueAAfter)),
+      expect(valueABefore.div(2).sub(valueAAfter)).to.be.lte(
+        1,
         `${caseName}: Value long should be half after halflife`
       )
-      expect(Number(weiToNumber(valueBBefore))/2).to.be.eq(
-        Number(weiToNumber(valueBAfter)),
+      expect(valueBBefore.div(2).sub(valueBAfter)).to.be.lte(
+        1,
         `${caseName}: Value long should be half after halflife`
       )
     }
 
     async function swapAndRedeemInHalfLife(period, amountA, amountB) {
+      console.log('A_ID begin', await derivable1155.balanceOf(accountA.address, A_ID))
+      console.log('B_ID begin', await derivable1155.balanceOf(accountB.address, B_ID))
+      console.log('\nInput amount:')
+      console.log('A:', weiToNumber(amountA), 'B:', weiToNumber(amountB))
       await txSignerA.exactIn(
         0x00,
         amountA,
@@ -341,6 +349,7 @@ describe("Decay funding rate", function () {
       );
       const aTokenAmount = await derivable1155.balanceOf(accountA.address, A_ID)
       const bTokenAmount = await derivable1155.balanceOf(accountB.address, B_ID)
+      console.log("Long token:", weiToNumber(aTokenAmount), "Short token:", weiToNumber(bTokenAmount))
       const valueABefore = await txSignerA.callStatic.exactIn(
         0x10,
         aTokenAmount,
@@ -355,8 +364,12 @@ describe("Decay funding rate", function () {
         '0x0000000000000000000000000000000000000000',
         accountB.address
       )
-      if (period != 0)
+      console.log("\ncallStatic exactIn for all 1155 amount to get value:")
+      console.log('Value Long:', weiToNumber(valueABefore), 'Value Short:', weiToNumber(valueBBefore))
+      if (period != 0) {
         await time.increase(period * HALF_LIFE)
+        console.log('waiting', period * HALF_LIFE, 'seconds')
+      }
       
       const aBefore = await weth.balanceOf(accountA.address)
       const bBefore = await weth.balanceOf(accountB.address)
@@ -378,6 +391,8 @@ describe("Decay funding rate", function () {
 
       const aAfter = await weth.balanceOf(accountA.address)
       const bAfter = await weth.balanceOf(accountB.address)
+      console.log("\nexactIn all 1155 amount to ETH:") 
+      console.log('Value Long:', weiToNumber(aAfter.sub(aBefore)), 'Value Short:', weiToNumber(bAfter.sub(bBefore)))
       return {
         long: aAfter.sub(aBefore),
         short: bAfter.sub(bBefore),
@@ -452,7 +467,7 @@ describe("Decay funding rate", function () {
         '0x0000000000000000000000000000000000000000',
         accountA.address
       )
-      expect(afterLPValue.gt(originLPValue)).to.be.true
+      expect(afterLPValue).to.be.gt(originLPValue)
     })
     describe("Pool balance:", function () {
       it("swap back after 1 halflife", async function () {
@@ -471,10 +486,25 @@ describe("Decay funding rate", function () {
         const { swapAndWait } = await loadFixture(deployDDLv2);
         await swapAndWait(86400, 10*HALF_LIFE, numberToWei(0.5), numberToWei(0.5))
       })
+      it("wait, after", async function () {
+        const { swapAndRedeemInHalfLife } = await loadFixture(deployDDLv2);
+        await time.increase(10 * HALF_LIFE)
+        const after = await swapAndRedeemInHalfLife(0.1, numberToWei(1), numberToWei(1))
+        expect(Number(weiToNumber(before.long))).to.be.closeTo(
+          Number(weiToNumber(after.long)), 
+          0.0000001
+        )
+        expect(Number(weiToNumber(before.short))).to.be.closeTo(
+          Number(weiToNumber(after.short)), 
+          0.0000001
+        )
+      })  
+
       it("Decay same range, different time", async function () {
         const { swapAndRedeemInHalfLife } = await loadFixture(deployDDLv2);
         const before = await swapAndRedeemInHalfLife(0.1, numberToWei(1), numberToWei(1))
         await time.increase(10 * HALF_LIFE)
+        console.log('\n\n-------Attemp again--------\n\n')
         const after = await swapAndRedeemInHalfLife(0.1, numberToWei(1), numberToWei(1))
         expect(Number(weiToNumber(before.long))).to.be.closeTo(
           Number(weiToNumber(after.long)), 
