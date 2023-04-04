@@ -267,6 +267,63 @@ describe("Decay funding rate", function () {
       expect(amountB.gte(valueB)).to.be.true
     }
 
+    async function swapBackInAHalfLife(amountA, amountB, caseName) {
+      await txSignerA.exactIn(
+        0x00,
+        amountA,
+        0x10,
+        '0x0000000000000000000000000000000000000000',
+        accountA.address
+      );
+      await txSignerB.exactIn(
+        0x00,
+        amountB,
+        0x20,
+        '0x0000000000000000000000000000000000000000',
+        accountB.address
+      );
+
+      const aTokenAmount = await derivable1155.balanceOf(accountA.address, A_ID)
+      const bTokenAmount = await derivable1155.balanceOf(accountB.address, B_ID)
+      const valueABefore = await txSignerA.callStatic.exactIn(
+        0x10,
+        aTokenAmount,
+        0x00,
+        '0x0000000000000000000000000000000000000000',
+        accountA.address
+      )
+      const valueBBefore = await txSignerB.callStatic.exactIn(
+        0x20,
+        bTokenAmount,
+        0x00,
+        '0x0000000000000000000000000000000000000000',
+        accountB.address
+      )
+      await time.increase(HALF_LIFE)
+      const valueAAfter = await txSignerA.callStatic.exactIn(
+        0x10,
+        aTokenAmount,
+        0x00,
+        '0x0000000000000000000000000000000000000000',
+        accountA.address
+      )
+      const valueBAfter = await txSignerB.callStatic.exactIn(
+        0x20,
+        bTokenAmount,
+        0x00,
+        '0x0000000000000000000000000000000000000000',
+        accountB.address
+      )
+      expect(Number(weiToNumber(valueABefore))/2).to.be.eq(
+        Number(weiToNumber(valueAAfter)),
+        `${caseName}: Value long should be half after halflife`
+      )
+      expect(Number(weiToNumber(valueBBefore))/2).to.be.eq(
+        Number(weiToNumber(valueBAfter)),
+        `${caseName}: Value long should be half after halflife`
+      )
+    }
+
     async function swapAndRedeemInHalfLife(period, amountA, amountB) {
       await txSignerA.exactIn(
         0x00,
@@ -351,8 +408,6 @@ describe("Decay funding rate", function () {
       const origin = await swapAndRedeemInHalfLife(1, numberToWei(0.5), numberToWei(2.5))
       const after = await swapAndRedeemInHalfLife(period, numberToWei(0.5), numberToWei(2.5))
       const expectRatio = (1-0.5)/(1-0.5**period)
-      console.log(origin)
-      console.log(after)
 
       expect(Number(weiToNumber(origin.longFee)/Number(weiToNumber(after.longFee)))).to.be.closeTo(expectRatio,  0.000001)
       expect(Number(weiToNumber(origin.shortFee)/Number(weiToNumber(after.shortFee)))).to.be.closeTo(expectRatio,  0.000001)
@@ -373,7 +428,8 @@ describe("Decay funding rate", function () {
       compareMuchMoreLong,
       compareMuchMoreShort,
       swapAndWait,
-      instantSwapBack
+      instantSwapBack,
+      swapBackInAHalfLife
     }
   }
 
@@ -399,6 +455,10 @@ describe("Decay funding rate", function () {
       expect(afterLPValue.gt(originLPValue)).to.be.true
     })
     describe("Pool balance:", function () {
+      it("swap back after 1 halflife", async function () {
+        const {swapBackInAHalfLife} = await loadFixture(deployDDLv2)
+        await swapBackInAHalfLife(numberToWei(0.5), numberToWei(0.5), "Pool balance")
+      }) 
       it("1 day - wait 1 halflife", async function () {
         const { swapAndWait } = await loadFixture(deployDDLv2);
         await swapAndWait(86400, HALF_LIFE, numberToWei(0.5), numberToWei(0.5))
@@ -416,13 +476,23 @@ describe("Decay funding rate", function () {
         const before = await swapAndRedeemInHalfLife(0.1, numberToWei(1), numberToWei(1))
         await time.increase(10 * HALF_LIFE)
         const after = await swapAndRedeemInHalfLife(0.1, numberToWei(1), numberToWei(1))
-        expect(Math.abs(before.long.sub(after.long).toNumber())).to.be.lessThanOrEqual(2)
-        expect(Math.abs(before.short.sub(after.short).toNumber())).to.be.lessThanOrEqual(2)
+        expect(Number(weiToNumber(before.long))).to.be.closeTo(
+          Number(weiToNumber(after.long)), 
+          0.0000001
+        )
+        expect(Number(weiToNumber(before.short))).to.be.closeTo(
+          Number(weiToNumber(after.short)), 
+          0.0000001
+        )
       })  
       
     })
 
     describe("Pool long > R/2:", function () {
+      it("swap back after 1 halflife", async function () {
+        const {swapBackInAHalfLife} = await loadFixture(deployDDLv2)
+        await swapBackInAHalfLife(numberToWei(2.5), numberToWei(0.5), "Pool long > R/2")
+      }) 
       it("1 day - wait 1 halflife", async function () {
         const { swapAndWait } = await loadFixture(deployDDLv2);
         await swapAndWait(86400, HALF_LIFE, numberToWei(2.5), numberToWei(0.5))
@@ -442,6 +512,10 @@ describe("Decay funding rate", function () {
     })
 
     describe("Pool short > R/2:", function () {
+      it("swap back after 1 halflife", async function () {
+        const {swapBackInAHalfLife} = await loadFixture(deployDDLv2)
+        await swapBackInAHalfLife(numberToWei(0.5), numberToWei(2.5), "Pool short > R/2")
+      }) 
       it("1 day - wait 1 halflife", async function () {
         const { swapAndWait } = await loadFixture(deployDDLv2);
         await swapAndWait(86400, HALF_LIFE, numberToWei(0.5), numberToWei(2.5))
