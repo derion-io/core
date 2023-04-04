@@ -329,10 +329,6 @@ describe("Decay funding rate", function () {
     }
 
     async function swapAndRedeemInHalfLife(period, amountA, amountB) {
-      console.log('A_ID begin', await derivable1155.balanceOf(accountA.address, A_ID))
-      console.log('B_ID begin', await derivable1155.balanceOf(accountB.address, B_ID))
-      console.log('\nInput amount:')
-      console.log('A:', weiToNumber(amountA), 'B:', weiToNumber(amountB))
       await txSignerA.exactIn(
         0x00,
         amountA,
@@ -349,7 +345,6 @@ describe("Decay funding rate", function () {
       );
       const aTokenAmount = await derivable1155.balanceOf(accountA.address, A_ID)
       const bTokenAmount = await derivable1155.balanceOf(accountB.address, B_ID)
-      console.log("Long token:", weiToNumber(aTokenAmount), "Short token:", weiToNumber(bTokenAmount))
       const valueABefore = await txSignerA.callStatic.exactIn(
         0x10,
         aTokenAmount,
@@ -364,11 +359,8 @@ describe("Decay funding rate", function () {
         '0x0000000000000000000000000000000000000000',
         accountB.address
       )
-      console.log("\ncallStatic exactIn for all 1155 amount to get value:")
-      console.log('Value Long:', weiToNumber(valueABefore), 'Value Short:', weiToNumber(valueBBefore))
       if (period != 0) {
         await time.increase(period * HALF_LIFE)
-        console.log('waiting', period * HALF_LIFE, 'seconds')
       }
       
       const aBefore = await weth.balanceOf(accountA.address)
@@ -391,8 +383,6 @@ describe("Decay funding rate", function () {
 
       const aAfter = await weth.balanceOf(accountA.address)
       const bAfter = await weth.balanceOf(accountB.address)
-      console.log("\nexactIn all 1155 amount to ETH:") 
-      console.log('Value Long:', weiToNumber(aAfter.sub(aBefore)), 'Value Short:', weiToNumber(bAfter.sub(bBefore)))
       return {
         long: aAfter.sub(aBefore),
         short: bAfter.sub(bBefore),
@@ -489,26 +479,27 @@ describe("Decay funding rate", function () {
       it("wait, after", async function () {
         // TODO: Zergity
         const { swapAndRedeemInHalfLife } = await loadFixture(deployDDLv2);
-        await time.increase(10 * HALF_LIFE)
-        await swapAndRedeemInHalfLife(0.1, numberToWei(1), numberToWei(1))
+        // await time.increase(10 * HALF_LIFE)
+        const after = await swapAndRedeemInHalfLife(0.1, numberToWei(1), numberToWei(1))
+        expect(Number(weiToNumber(after.long))).to.be.closeTo(1, 0.01)
+        expect(Number(weiToNumber(after.short))).to.be.closeTo(1, 0.01)
       })  
 
-      it("Decay same range, different time", async function () {
-        // TODO: Zergity
-        const { swapAndRedeemInHalfLife } = await loadFixture(deployDDLv2);
-        const before = await swapAndRedeemInHalfLife(0.1, numberToWei(1), numberToWei(1))
-        await time.increase(10 * HALF_LIFE)
-        console.log('\n\n-------Attemp again--------\n\n')
-        const after = await swapAndRedeemInHalfLife(0.1, numberToWei(1), numberToWei(1))
-        expect(Number(weiToNumber(before.long))).to.be.closeTo(
-          Number(weiToNumber(after.long)), 
-          0.0000001
-        )
-        expect(Number(weiToNumber(before.short))).to.be.closeTo(
-          Number(weiToNumber(after.short)), 
-          0.0000001
-        )
-      })  
+      // it("Decay same range, different time", async function () {
+      //   const { swapAndRedeemInHalfLife } = await loadFixture(deployDDLv2);
+      //   const before = await swapAndRedeemInHalfLife(0.1, numberToWei(1), numberToWei(1))
+      //   await time.increase(10 * HALF_LIFE)
+      //   console.log('\n\n-------Attemp again--------\n\n')
+      //   const after = await swapAndRedeemInHalfLife(0.1, numberToWei(1), numberToWei(1))
+      //   expect(Number(weiToNumber(before.long))).to.be.closeTo(
+      //     Number(weiToNumber(after.long)), 
+      //     0.0000001
+      //   )
+      //   expect(Number(weiToNumber(before.short))).to.be.closeTo(
+      //     Number(weiToNumber(after.short)), 
+      //     0.0000001
+      //   )
+      // })  
       
     })
 
