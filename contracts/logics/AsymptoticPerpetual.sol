@@ -136,6 +136,8 @@ contract AsymptoticPerpetual is Storage, Constants, IAsymptoticPerpetual {
         uint elapsed,
         uint HALF_LIFE
     ) internal pure returns (uint rateX64) {
+        if (HALF_LIFE == 0) 
+            return Q64;
         int128 rate = int128(int((elapsed << 64) / HALF_LIFE)).exp_2();
         return uint(int(rate));
     } 
