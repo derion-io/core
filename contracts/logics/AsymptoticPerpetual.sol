@@ -17,9 +17,7 @@ contract AsymptoticPerpetual is Storage, Constants, IAsymptoticPerpetual {
     using ABDKMath64x64 for int128;
 
     function init(
-        address TOKEN_R,
-        bytes32 ORACLE,
-        uint224 MARK,
+        Config memory config,
         uint k,
         uint a,
         uint b
@@ -27,13 +25,17 @@ contract AsymptoticPerpetual is Storage, Constants, IAsymptoticPerpetual {
         require(s_k == 0, "ALREADY_INITIALIZED");
         s_k = k;
         ___ memory __;
-        (uint224 twap, ) = _fetch(ORACLE);
-        __.xkA = _xk(twap, MARK);
-        __.xkB = uint224(FixedPoint.Q224/__.xkA);
-        __.R = IERC20(TOKEN_R).balanceOf(address(this));
+        __.R = IERC20(config.TOKEN_R).balanceOf(address(this));
         s_a = __.a = a;
         s_b = __.b = b;
-        (rA, rB, rC) = _evaluate(__);
+        (uint224 twap, ) = _fetch(config.ORACLE);
+        (rA, rB) = _tryPrice(__, config, twap);
+        if (block.timestamp != config.TIMESTAMP) {
+            uint decayRateX64 = _decayRate(block.timestamp - config.TIMESTAMP, config.HALF_LIFE);
+            rA = uint224(FullMath.mulDiv(rA, Q64, decayRateX64));
+            rB = uint224(FullMath.mulDiv(rB, Q64, decayRateX64));
+        }
+        rC = __.R - rA - rB;
         // uint R = IERC20(TOKEN_R).balanceOf(address(this));
         // require(4 * a * b <= R, "INVALID_PARAM");
     }
@@ -106,10 +108,9 @@ contract AsymptoticPerpetual is Storage, Constants, IAsymptoticPerpetual {
         return IERC1155Supply(TOKEN).totalSupply(_packID(address(this), side));
     }
 
-    function _evaluate(___ memory __) internal pure returns (uint rA, uint rB, uint rC) {
+    function _evaluate(___ memory __) internal pure returns (uint rA, uint rB) {
         rA = _r(__.xkA, __.a, __.R);
         rB = _r(__.xkB, __.b, __.R);
-        rC = __.R - rA - rB;
     }
 
     // TODO: rename this struct
@@ -125,19 +126,19 @@ contract AsymptoticPerpetual is Storage, Constants, IAsymptoticPerpetual {
         ___ memory __,
         Config memory config,
         uint224 price
-    ) internal view returns (uint rA, uint rB, uint rC) {
+    ) internal view returns (uint rA, uint rB) {
         __.xkA = _xk(price, config.MARK);
         __.xkB = uint224(FixedPoint.Q224/__.xkA);
-        uint rateX64 = _decayRate(block.timestamp - config.TIMESTAMP, config.HALF_LIFE);
-        __.xkA = uint224(FullMath.mulDiv(__.xkA, Q64, rateX64));
-        __.xkB = uint224(FullMath.mulDiv(__.xkB, Q64, rateX64));
-        (rA, rB, rC) = _evaluate(__);
+        (rA, rB) = _evaluate(__);
     }
 
     function _decayRate (
         uint elapsed,
         uint HALF_LIFE
     ) internal pure returns (uint rateX64) {
+        if (HALF_LIFE == 0) {
+            return Q64;
+        }
         int128 rate = int128(int((elapsed << 64) / HALF_LIFE)).exp_2();
         return uint(int(rate));
     } 
@@ -147,7 +148,7 @@ contract AsymptoticPerpetual is Storage, Constants, IAsymptoticPerpetual {
         Config memory config,
         uint sideIn,
         uint sideOut
-    ) internal view returns (uint rA, uint rB, uint rC) {
+    ) internal view returns (uint rA, uint rB) {
         (uint224 min, uint224 max) = _fetch(config.ORACLE);
         if (min > max) {
             (min, max) = (max, min);
@@ -159,7 +160,7 @@ contract AsymptoticPerpetual is Storage, Constants, IAsymptoticPerpetual {
             return _tryPrice(__, config, min);
         }
         // TODO: assisting flag for min/max
-        (rA, rB, rC) = _tryPrice(__, config, min);
+        (rA, rB) = _tryPrice(__, config, min);
         if ((sideIn == SIDE_R) == rB > rA) {
             // TODO: unit test for this case
             return _tryPrice(__, config, max);
@@ -177,7 +178,11 @@ contract AsymptoticPerpetual is Storage, Constants, IAsymptoticPerpetual {
         __.R = IERC20(config.TOKEN_R).balanceOf(address(this));
         __.a = s_a;
         __.b = s_b;
-        (uint rA, uint rB, uint rC) = _selectPrice(__, config, sideIn, sideOut);
+        (uint rA, uint rB) = _selectPrice(__, config, sideIn, sideOut);
+        uint decayRateX64 = _decayRate(block.timestamp - config.TIMESTAMP, config.HALF_LIFE);
+        rA = FullMath.mulDiv(rA, Q64, decayRateX64);
+        rB = FullMath.mulDiv(rB, Q64, decayRateX64);
+        uint rC = __.R - rA - rB; // R might be changed to R1 after this
         if (sideIn == SIDE_R) {
             require(sideOut != SIDE_R, "INVALID_SIDE");
             __.R += amountIn;
@@ -211,12 +216,15 @@ contract AsymptoticPerpetual is Storage, Constants, IAsymptoticPerpetual {
         if (sideOut != SIDE_R) {
             // TODO: optimize this specific to each case
             uint sOut = _supply(config.TOKEN, sideOut);
-            (uint rA1, uint rB1, uint rC1) = _evaluate(__);
+            (uint rA1, uint rB1) = _evaluate(__);
+            rA1 = FullMath.mulDiv(rA1, Q64, decayRateX64);
+            rB1 = FullMath.mulDiv(rB1, Q64, decayRateX64);
             if (sideOut == SIDE_A) {
                 amountOut = (rA1 - rA) * sOut / rA;
             } else if (sideOut == SIDE_B) {
                 amountOut = (rB1 - rB) * sOut / rB;
             } else if (sideOut == SIDE_C) {
+                uint rC1 = __.R - rA1 - rB1;
                 amountOut = (rC1 - rC) * sOut / rC;
             }
         }

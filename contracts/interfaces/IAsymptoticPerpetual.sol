@@ -12,9 +12,7 @@ struct Config {
 
 interface IAsymptoticPerpetual {
     function init(
-        address TOKEN_R,
-        bytes32 ORACLE,
-        uint224 MARK,
+        Config memory config,
         uint power,
         uint a,
         uint b
