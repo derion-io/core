@@ -9,9 +9,10 @@ import "./interfaces/IPoolFactory.sol";
 import "./logics/Constants.sol";
 import "./interfaces/IERC1155Supply.sol";
 import "./interfaces/IAsymptoticPerpetual.sol";
+import "./interfaces/IPool.sol";
 import "./logics/Storage.sol";
 
-contract Pool is Storage, Constants {
+contract Pool is IPool, Storage, Constants {
     uint public constant MINIMUM_LIQUIDITY = 10 ** 3;
 
     /// Immutables
@@ -84,7 +85,7 @@ contract Pool is Storage, Constants {
         uint sideOut,
         address payer,
         address recipient
-    ) external returns(uint amountOut) {
+    ) external override returns(uint amountOut) {
         (bool success, bytes memory result) = LOGIC.delegatecall(
             abi.encodeWithSelector(
                 IAsymptoticPerpetual.exactIn.selector,
