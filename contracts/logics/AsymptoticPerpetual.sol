@@ -179,9 +179,9 @@ contract AsymptoticPerpetual is Storage, Constants, IAsymptoticPerpetual {
         __.a = s_a;
         __.b = s_b;
         (uint rA, uint rB) = _selectPrice(__, config, sideIn, sideOut);
-        uint decayRateX64 = _decayRate(block.timestamp - config.TIMESTAMP, config.HALF_LIFE);
-        rA = FullMath.mulDiv(rA, Q64, decayRateX64);
-        rB = FullMath.mulDiv(rB, Q64, decayRateX64);
+        // uint decayRateX64 = _decayRate(block.timestamp - config.TIMESTAMP, config.HALF_LIFE);
+        // rA = FullMath.mulDiv(rA, Q64, decayRateX64);
+        // rB = FullMath.mulDiv(rB, Q64, decayRateX64);
         uint rC = __.R - rA - rB; // R might be changed to R1 after this
         if (sideIn == SIDE_R) {
             require(sideOut != SIDE_R, "INVALID_SIDE");
@@ -217,8 +217,8 @@ contract AsymptoticPerpetual is Storage, Constants, IAsymptoticPerpetual {
             // TODO: optimize this specific to each case
             uint sOut = _supply(config.TOKEN, sideOut);
             (uint rA1, uint rB1) = _evaluate(__);
-            rA1 = FullMath.mulDiv(rA1, Q64, decayRateX64);
-            rB1 = FullMath.mulDiv(rB1, Q64, decayRateX64);
+            // rA1 = FullMath.mulDiv(rA1, Q64, decayRateX64);
+            // rB1 = FullMath.mulDiv(rB1, Q64, decayRateX64);
             if (sideOut == SIDE_A) {
                 amountOut = (rA1 - rA) * sOut / rA;
             } else if (sideOut == SIDE_B) {
