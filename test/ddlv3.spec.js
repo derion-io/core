@@ -38,7 +38,7 @@ const HALF_LIFE = 10 * 365 * 24 * 60 * 60
 
 describe("DDL v3", function () {
     async function deployDDLv2() {
-        const [owner] = await ethers.getSigners();
+        const [owner, accountA] = await ethers.getSigners();
         const signer = owner;
         // deploy pool factory
         const PoolFactory = await ethers.getContractFactory("PoolFactory")
@@ -58,7 +58,7 @@ describe("DDL v3", function () {
         // erc20 factory
         const compiledERC20 = require("@uniswap/v2-core/build/ERC20.json");
         const erc20Factory = new ethers.ContractFactory(compiledERC20.abi, compiledERC20.bytecode, signer);
-        const usdc = await erc20Factory.deploy(numberToWei(100000000));
+        const usdc = await erc20Factory.deploy(numberToWei(10000000000));
         // uniswap factory
         const compiledUniswapFactory = require("./compiled/UniswapV3Factory.json");
         const UniswapFactory = await new ethers.ContractFactory(compiledUniswapFactory.abi, compiledUniswapFactory.bytecode, signer);
@@ -123,7 +123,7 @@ describe("DDL v3", function () {
             oracle,
             reserveToken: weth.address,
             recipient: owner.address,
-            mark: bn(1500).shl(112),
+            mark: bn(38).shl(112),
             k: 5,
             a: pe(1),
             b: pe(1),
@@ -143,8 +143,14 @@ describe("DDL v3", function () {
             derivable1155.address
         )
         await derivableHelper.deployed()
+        // setup accA
+        await weth.connect(accountA).deposit({
+            value: pe("1000000")
+        })
+        await usdc.transfer(accountA.address, pe("100000000"))
         return {
             owner,
+            accountA,
             weth,
             usdc,
             utr,
@@ -157,13 +163,13 @@ describe("DDL v3", function () {
         }
     }
 
-    async function swapToSetPriceV3({ account, quoteToken, baseToken, uniswapRouter, targetPrice }) {
+    async function swapToSetPriceV3({ account, quoteToken, baseToken, uniswapRouter, initPrice, targetPrice }) {
         const quoteTokenIndex = baseToken.address.toLowerCase() < quoteToken.address.toLowerCase() ? 1 : 0
         const priceX96 = encodeSqrtX96(quoteTokenIndex ? targetPrice : 1, quoteTokenIndex ? 1 : targetPrice)
-        const tx = await uniswapRouter.exactInputSingle({
+        const tx = await uniswapRouter.connect(account).exactInputSingle({
             payer: account.address,
-            tokenIn: quoteToken.address,
-            tokenOut: baseToken.address,
+            tokenIn: (initPrice < targetPrice) ? quoteToken.address : baseToken.address,
+            tokenOut: (initPrice < targetPrice) ? baseToken.address : quoteToken.address,
             fee: 500,
             sqrtPriceLimitX96: priceX96,
             recipient: account.address,
@@ -379,36 +385,36 @@ describe("DDL v3", function () {
             await testRInROut(SIDE_C, "20")
         })
 
-        async function testExposure() {
-            const { owner, weth, uniswapRouter, usdc, derivablePool, derivable1155 } = await loadFixture(deployDDLv2)
+        async function testPriceChange(isLong = true, wethAmountIn, priceChange, expected) {
+            const { owner, weth, uniswapRouter, usdc, derivablePool, derivable1155, accountA } = await loadFixture(deployDDLv2)
             // swap weth -> long
             await weth.approve(derivablePool.address, MaxUint256)
             const wethBefore = await weth.balanceOf(owner.address)
-            const tokenBefore = await derivable1155.balanceOf(owner.address, convertId(SIDE_A, derivablePool.address))
+            const tokenBefore = await derivable1155.balanceOf(owner.address, convertId(isLong ? SIDE_A : SIDE_B, derivablePool.address))
             await derivablePool.exactIn(
                 SIDE_R,
-                pe("1"),
-                SIDE_A,
+                pe(wethAmountIn),
+                isLong ? SIDE_A : SIDE_B,
                 AddressZero,
                 owner.address,
                 opts
             )
-            const tokenAfter = await derivable1155.balanceOf(owner.address, convertId(SIDE_A, derivablePool.address))
+            const tokenAfter = await derivable1155.balanceOf(owner.address, convertId(isLong ? SIDE_A : SIDE_B, derivablePool.address))
             // change price
-            await weth.approve(uniswapRouter.address, MaxUint256)
-            await usdc.approve(uniswapRouter.address, MaxUint256)
+            await weth.connect(accountA).approve(uniswapRouter.address, MaxUint256)
+            await usdc.connect(accountA).approve(uniswapRouter.address, MaxUint256)
             await swapToSetPriceV3({
-                account: owner,
+                account: accountA,
                 baseToken: weth,
                 quoteToken: usdc,
                 uniswapRouter: uniswapRouter,
-                targetPrice: 1700
+                initPrice: 1500,
+                targetPrice: priceChange
             })
             await time.increase(1000);
-            console.log(tokenAfter.sub(tokenBefore))
             // swap back long -> weth
             await derivablePool.exactIn(
-                SIDE_A,
+                isLong ? SIDE_A : SIDE_B,
                 tokenAfter.sub(tokenBefore),
                 SIDE_R,
                 AddressZero,
@@ -416,11 +422,58 @@ describe("DDL v3", function () {
                 opts
             )
             const wethAfter = await weth.balanceOf(owner.address)
-            console.log(wethAfter.sub(wethBefore))
+            const actual = Number(fe(wethAfter.sub(wethBefore)))
+            // console.log(actual)
+            return expect(actual / expected).to.be.closeTo(1, 0.01)
         }
 
-        it("Exposure", async function () {
-            await testExposure()
+        it("Long +10%", async function () {
+            await testPriceChange(true, 1, 1500 + (1500 * 10 / 100), 0.269)
+        })
+        it("Long +20%", async function () {
+            await testPriceChange(true, 1, 1500 + (1500 * 20 / 100), 0.577)
+        })
+        it("Long +50%", async function () {
+            await testPriceChange(true, 1, 1500 + (1500 * 50 / 100), 1.755)
+        })
+        it("Long +100%", async function () {
+            await testPriceChange(true, 1, 1500 + (1500 * 100 / 100), 4.656)
+        })
+        it("Long -10%", async function () {
+            await testPriceChange(true, 1, 1500 - (1500 * 10 / 100), -0.231)
+        })
+        it("Long -20%", async function () {
+            await testPriceChange(true, 1, 1500 - (1500 * 20 / 100), -0.427)
+        })
+        it("Long -50%", async function () {
+            await testPriceChange(true, 1, 1500 - (1500 * 50 / 100), -0.823)
+        })
+        it("Long -99%", async function () {
+            await testPriceChange(true, 1, 1500 - (1500 * 99 / 100), -0.999)
+        })
+        it("Short +10%", async function () {
+            await testPriceChange(false, 1, 1500 + (1500 * 10 / 100), -0.212)
+        })
+        it("Short +20%", async function () {
+            await testPriceChange(false, 1, 1500 + (1500 * 20 / 100), -0.366)
+        })
+        it("Short +50%", async function () {
+            await testPriceChange(false, 1, 1500 + (1500 * 50 / 100), -0.637)
+        })
+        it("Short +100%", async function () {
+            await testPriceChange(false, 1, 1500 + (1500 * 100 / 100), -0.823)
+        })
+        it("Short -10%", async function () {
+            await testPriceChange(false, 1, 1500 - (1500 * 10 / 100), 0.301)
+        })
+        it("Short -20%", async function () {
+            await testPriceChange(false, 1, 1500 - (1500 * 20 / 100), 0.746)
+        })
+        it("Short -50%", async function () {
+            await testPriceChange(false, 1, 1500 - (1500 * 50 / 100), 4.655)
+        })
+        it("Short -99%", async function () {
+            await testPriceChange(false, 1, 1500 - (1500 * 99 / 100), 5168.547)
         })
     })
 })
