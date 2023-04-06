@@ -101,16 +101,16 @@ describe("DDL v2", function () {
         it("Transition", async function () {
             const {owner, eth, derivablePool, derivable1155} = await loadFixture(deployDDLv2);
             await time.increase(100);
-            const LP_ID = packId(0x30, derivablePool.address);
+            const C_ID = packId(0x30, derivablePool.address);
             console.log("R: ", await eth.balanceOf(derivablePool.address));
-            console.log("LP: ", await derivable1155.balanceOf(owner.address, LP_ID));
+            console.log("LP: ", await derivable1155.balanceOf(owner.address, C_ID));
             await derivablePool.transition(
                 {R: numberToWei(10), a: numberToWei(0), b: numberToWei(1)},
                 owner.address,
                 opts
             );
             console.log("R: ", await eth.balanceOf(derivablePool.address));
-            console.log("LP: ", await derivable1155.balanceOf(owner.address, LP_ID));
+            console.log("LP: ", await derivable1155.balanceOf(owner.address, C_ID));
         })
     });
 })

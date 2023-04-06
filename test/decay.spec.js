@@ -144,7 +144,7 @@ describe("Decay funding rate", function () {
     const A_ID = packId(0x10, derivablePool.address);
     const B_ID = packId(0x20, derivablePool.address);
     const R_ID = packId(0x00, derivablePool.address);
-    const LP_ID = packId(0x30, derivablePool.address);
+    const C_ID = packId(0x30, derivablePool.address);
     await weth.approve(derivablePool.address, '100000000000000000000000000');
 
     txSignerA = weth.connect(accountA);
@@ -610,7 +610,7 @@ describe("Decay funding rate", function () {
     }
 
     return {
-      LP_ID,
+      C_ID,
       utr,
       owner,
       weth,
@@ -635,8 +635,8 @@ describe("Decay funding rate", function () {
 
   describe("Pool", function () {
     it("LP increase over time", async function () {
-      const { swapAndRedeemInHalfLife, accountA, txSignerA, derivable1155, LP_ID } = await loadFixture(deployDDLv2);
-      const lpAmount = await derivable1155.balanceOf(accountA.address, LP_ID)
+      const { swapAndRedeemInHalfLife, accountA, txSignerA, derivable1155, C_ID } = await loadFixture(deployDDLv2);
+      const lpAmount = await derivable1155.balanceOf(accountA.address, C_ID)
       const originLPValue = await txSignerA.callStatic.exactIn(
         0x30,
         lpAmount,
