@@ -12,6 +12,19 @@ const opts = {
   gasLimit: 30000000
 }
 
+const TRANSFER_FROM_SENDER = 0
+const TRANSFER_FROM_ROUTER = 1
+const TRANSFER_CALL_VALUE = 2
+const IN_TX_PAYMENT = 4
+const ALLOWANCE_BRIDGE = 8
+const AMOUNT_EXACT = 0
+const AMOUNT_ALL = 1
+const EIP_ETH = 0
+const ID_721_ALL = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("UniversalTokenRouter.ID_721_ALL"))
+const ACTION_IGNORE_ERROR = 1
+const ACTION_RECORD_CALL_RESULT = 2
+const ACTION_INJECT_CALL_RESULT = 4
+
 const HALF_LIFE = 0
 
 describe("Decay funding rate", function () {
@@ -121,6 +134,13 @@ describe("Decay funding rate", function () {
     const derivablePool = await ethers.getContractAt("Pool", await poolFactory.computePoolAddress(params));
 
     await time.increase(100);
+    // deploy helper
+    const DerivableHelper = await ethers.getContractFactory("Helper")
+    const derivableHelper = await DerivableHelper.deploy(
+      derivablePool.address,
+      derivable1155.address
+    )
+    await derivableHelper.deployed()
     const A_ID = packId(0x10, derivablePool.address);
     const B_ID = packId(0x20, derivablePool.address);
     const R_ID = packId(0x00, derivablePool.address);
@@ -237,7 +257,173 @@ describe("Decay funding rate", function () {
       expect(secondShortRate).to.be.closeTo(firstShortRate, 0.000001)
     }
 
-    async function instantSwapBack(amountA, amountB) {
+    async function instantSwapBackUTR(amountA, amountB) {
+      // Acc A
+      txSignerA = weth.connect(accountA);
+      const beforeA = await weth.balanceOf(accountA.address)
+      await txSignerA.approve(utr.address, ethers.constants.MaxUint256)
+      txSignerA = utr.connect(accountA);
+      await txSignerA.exec([],
+        [
+          {
+            inputs: [{
+              mode: IN_TX_PAYMENT,
+              eip: 20,
+              token: weth.address,
+              id: 0,
+              amountSource: AMOUNT_EXACT,
+              amountInMax: amountA,
+              recipient: derivablePool.address,
+            }],
+            flags: 0,
+            code: derivablePool.address,
+            data: (await derivablePool.populateTransaction.exactIn(
+              0x00,
+              amountA,
+              0x10,
+              accountA.address,
+              derivableHelper.address
+            )).data,
+          },
+          {
+            inputs: [],
+            flags: 0,
+            code: derivableHelper.address,
+            data: (await derivableHelper.populateTransaction.swapInAll(
+              0x10,
+              0x00,
+              ethers.constants.AddressZero,
+              accountA.address
+            )).data,
+          }
+        ], opts)
+      const afterA = await weth.balanceOf(accountA.address)
+      expect(beforeA.gte(afterA)).to.be.true
+      // Acc B
+      txSignerB = weth.connect(accountB);
+      const beforeB = await weth.balanceOf(accountB.address)
+      await txSignerB.approve(utr.address, ethers.constants.MaxUint256)
+      txSignerB = utr.connect(accountB);
+      await txSignerB.exec([],
+        [
+          {
+            inputs: [{
+              mode: IN_TX_PAYMENT,
+              eip: 20,
+              token: weth.address,
+              id: 0,
+              amountSource: AMOUNT_EXACT,
+              amountInMax: amountB,
+              recipient: derivablePool.address,
+            }],
+            flags: 0,
+            code: derivablePool.address,
+            data: (await derivablePool.populateTransaction.exactIn(
+              0x00,
+              amountB,
+              0x20,
+              accountB.address,
+              derivableHelper.address
+            )).data,
+          },
+          {
+            inputs: [],
+            flags: 0,
+            code: derivableHelper.address,
+            data: (await derivableHelper.populateTransaction.swapInAll(
+              0x20,
+              0x00,
+              ethers.constants.AddressZero,
+              accountB.address
+            )).data,
+          }
+        ], opts)
+      const afterB = await weth.balanceOf(accountB.address)
+      expect(beforeB.gte(afterB)).to.be.true
+    }
+
+    async function groupSwapBack(amountA, amountB) {
+      txSignerA = weth.connect(accountA);
+      const beforeA = await weth.balanceOf(accountA.address)
+      const beforeB = await weth.balanceOf(accountB.address)
+      await txSignerA.approve(utr.address, ethers.constants.MaxUint256)
+      txSignerA = utr.connect(accountA);
+      await txSignerA.exec([],
+        [
+          {
+            inputs: [{
+              mode: IN_TX_PAYMENT,
+              eip: 20,
+              token: weth.address,
+              id: 0,
+              amountSource: AMOUNT_EXACT,
+              amountInMax: amountB,
+              recipient: derivablePool.address,
+            }],
+            flags: 0,
+            code: derivablePool.address,
+            data: (await derivablePool.populateTransaction.exactIn(
+              0x00,
+              amountB,
+              0x20,
+              accountA.address,
+              derivableHelper.address
+            )).data,
+          },
+          {
+            inputs: [{
+              mode: IN_TX_PAYMENT,
+              eip: 20,
+              token: weth.address,
+              id: 0,
+              amountSource: AMOUNT_EXACT,
+              amountInMax: amountA,
+              recipient: derivablePool.address,
+            }],
+            flags: 0,
+            code: derivablePool.address,
+            data: (await derivablePool.populateTransaction.exactIn(
+              0x00,
+              amountA,
+              0x10,
+              accountA.address,
+              derivableHelper.address
+            )).data,
+          },
+          {
+            inputs: [],
+            flags: 0,
+            code: derivableHelper.address,
+            data: (await derivableHelper.populateTransaction.swapInAll(
+              0x10,
+              0x00,
+              ethers.constants.AddressZero,
+              accountA.address
+            )).data,
+          },
+          {
+            inputs: [],
+            flags: 0,
+            code: derivableHelper.address,
+            data: (await derivableHelper.populateTransaction.swapInAll(
+              0x20,
+              0x00,
+              ethers.constants.AddressZero,
+              accountB.address
+            )).data,
+          }
+        ], opts)
+        const afterA = await weth.balanceOf(accountA.address)
+        const afterB = await weth.balanceOf(accountB.address)
+        const changeOfA = beforeA.sub(amountB).sub(afterA)
+        const changeOfB = afterB.sub(beforeB)
+        console.log(changeOfA)
+        console.log(changeOfB)
+        // expect(amountB.gte(changeOfB)).to.be.true
+    }
+
+    async function instantSwapBackNonUTR(amountA, amountB) {
+      txSignerA = derivablePool.connect(accountA)
       await txSignerA.exactIn(
         0x00,
         amountA,
@@ -253,7 +439,7 @@ describe("Decay funding rate", function () {
         '0x0000000000000000000000000000000000000000',
         accountA.address
       )
-
+      txSignerB = derivablePool.connect(accountB)
       await txSignerB.exactIn(
         0x00,
         amountB,
@@ -274,6 +460,7 @@ describe("Decay funding rate", function () {
     }
 
     async function swapBackInAHalfLife(amountA, amountB, caseName) {
+      txSignerA = derivablePool.connect(accountA)
       await txSignerA.exactIn(
         0x00,
         amountA,
@@ -281,6 +468,7 @@ describe("Decay funding rate", function () {
         '0x0000000000000000000000000000000000000000',
         accountA.address
       );
+      txSignerB = derivablePool.connect(accountB)
       await txSignerB.exactIn(
         0x00,
         amountB,
@@ -423,10 +611,12 @@ describe("Decay funding rate", function () {
 
     return {
       LP_ID,
+      utr,
       owner,
       weth,
       derivablePool,
       derivable1155,
+      derivableHelper,
       accountA,
       accountB,
       txSignerA,
@@ -436,7 +626,9 @@ describe("Decay funding rate", function () {
       compareMuchMoreLong,
       compareMuchMoreShort,
       swapAndWait,
-      instantSwapBack,
+      instantSwapBackUTR,
+      groupSwapBack,
+      instantSwapBackNonUTR,
       swapBackInAHalfLife
     }
   }
@@ -524,8 +716,8 @@ describe("Decay funding rate", function () {
         await swapAndWait(86400, 10 * HALF_LIFE, numberToWei(2.5), numberToWei(0.5))
       })
       it("Instant swap back", async function () {
-        const { instantSwapBack } = await loadFixture(deployDDLv2)
-        await instantSwapBack(numberToWei(2.5), numberToWei(0.5))
+        const { instantSwapBackUTR } = await loadFixture(deployDDLv2)
+        await instantSwapBackUTR(numberToWei(2.5), numberToWei(0.5))
       })
     })
 
@@ -547,8 +739,17 @@ describe("Decay funding rate", function () {
         await swapAndWait(86400, 10 * HALF_LIFE, numberToWei(0.5), numberToWei(2.5))
       })
       it("Instant swap back", async function () {
-        const { instantSwapBack } = await loadFixture(deployDDLv2)
-        await instantSwapBack(numberToWei(0.5), numberToWei(2.5))
+        const { instantSwapBackUTR } = await loadFixture(deployDDLv2)
+        await instantSwapBackUTR(numberToWei(0.5), numberToWei(2.5))
+      })
+      // TODO: Zergity verify this
+      it("Group swap back", async function () {
+        const { groupSwapBack } = await loadFixture(deployDDLv2)
+        await groupSwapBack(numberToWei(2.5), numberToWei(2.5))
+      })
+      it("Instant swap back", async function () {
+        const { instantSwapBackNonUTR } = await loadFixture(deployDDLv2)
+        await instantSwapBackNonUTR(numberToWei(2.5), numberToWei(0.5))
       })
     })
   });
