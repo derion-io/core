@@ -1,4 +1,6 @@
 const ethers = require('ethers')
+const bnjs = require('bignumber.js')
+bnjs.config({ EXPONENTIAL_AT: 999999, DECIMAL_PLACES: 40 })
 
 const stringToBytes32 = (text) => {
     let result = hre.ethers.utils.hexlify(hre.ethers.utils.toUtf8Bytes(text))
@@ -144,6 +146,17 @@ function encodeSqrtX96(reserve1, reserve0) {
         .div(10 ** 12)
 }
 
+function encodePriceSqrt(reserve1, reserve0) {
+    return ethers.BigNumber.from(
+      new bnjs(reserve1.toString())
+        .div(reserve0.toString())
+        .sqrt()
+        .multipliedBy(new bnjs(2).pow(96))
+        .integerValue(3)
+        .toString()
+    )
+}
+
 module.exports = {
     stringToBytes32,
     calculateSwapToPrice,
@@ -153,5 +166,6 @@ module.exports = {
     swapToSetPrice,
     packId,
     unpackId,
-    encodeSqrtX96
+    encodeSqrtX96,
+    encodePriceSqrt
 }
