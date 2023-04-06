@@ -2,6 +2,12 @@ const { ethers } = require("hardhat");
 const fs = require('fs');
 const path = require('path');
 const { bn } = require("../test/shared/utilities");
+const compiledUniswapFactory = require("./compiled/UniswapV3Factory.json");
+const compiledUniswapv3Router = require("./compiled/SwapRouter.json");
+const compiledUniswapv3PositionManager = require("./compiled/NonfungiblePositionManager.json");
+const {numberToWei, encodeSqrtX96, packId, delay} = require("./shared/utilities");
+const compiledUniswapPool = require("./compiled/UniswapV3Pool.json");
+const {time} = require("@nomicfoundation/hardhat-network-helpers");
 const { MaxUint256, AddressZero } = ethers.constants;
 const SECONDS_PER_YEAR = 31536000;
 const opts = {
@@ -30,103 +36,138 @@ async function main() {
     };
     const [owner, acc1] = await ethers.getSigners();
     const signer = owner;
+
+    // deploy utr
+    const UTR = require("@derivable/utr/build/UniversalTokenRouter.json")
+    const UniversalRouter = new ethers.ContractFactory(UTR.abi, UTR.bytecode, owner)
+    const utr = await UniversalRouter.deploy()
+    await utr.deployed()
+    console.log('utr: ', utr.address)
+    addressList["utr"] = utr.address;
+
+    // deploy pool factory
+    const PoolFactory = await ethers.getContractFactory("PoolFactory")
+    const poolFactory = await PoolFactory.deploy()
+    console.log('poolFactory: ', poolFactory.address)
+    addressList["poolFactory"] = poolFactory.address;
+
     // UNISWAP
     // weth test
     const compiledWETH = require("canonical-weth/build/contracts/WETH9.json")
     const WETH = await new ethers.ContractFactory(compiledWETH.abi, compiledWETH.bytecode, signer);
     // uniswap factory
-    const compiledUniswapFactory = require("@uniswap/v2-core/build/UniswapV2Factory.json");
-    const UniswapFactory = await new ethers.ContractFactory(compiledUniswapFactory.interface, compiledUniswapFactory.bytecode, signer);
+    const compiledUniswapFactory = require("./compiled/UniswapV3Factory.json")
+    const UniswapFactory = await new ethers.ContractFactory(compiledUniswapFactory.abi, compiledUniswapFactory.bytecode, signer)
     // uniswap router
-    const compiledUniswapRouter = require("@uniswap/v2-periphery/build/UniswapV2Router02");
-    const UniswapRouter = await new ethers.ContractFactory(compiledUniswapRouter.abi, compiledUniswapRouter.bytecode, signer);
+    const compiledUniswapv3Router = require("./compiled/SwapRouter.json")
+    const UniswapRouter = new ethers.ContractFactory(compiledUniswapv3Router.abi, compiledUniswapv3Router.bytecode, signer)
+    // uniswap PM
+    const compiledUniswapv3PositionManager = require("./compiled/NonfungiblePositionManager.json")
+    const UniswapPositionManager = new ethers.ContractFactory(compiledUniswapv3PositionManager.abi, compiledUniswapv3PositionManager.bytecode, signer)
     // erc20 factory
-    const compiledERC20 = require("@openzeppelin/contracts/build/contracts/ERC20PresetFixedSupply.json");
+    const compiledERC20 = require("@uniswap/v2-core/build/ERC20.json")
     const erc20Factory = new ethers.ContractFactory(compiledERC20.abi, compiledERC20.bytecode, signer);
     // setup uniswap
-    const busd = await erc20Factory.deploy("USDC", "USDC", pe("200000000"), owner.address);
-    console.log(`busd: ${busd.address}`);
-    addressList["busd"] = busd.address;
-
-    const weth = await WETH.deploy();
-    console.log(`weth: ${weth.address}`);
+    const usdc = await erc20Factory.deploy(numberToWei(100000000000))
+    const weth = await WETH.deploy()
+    console.log('usdc: ', usdc.address)
+    addressList["usdc"] = usdc.address;
+    console.log('weth: ', weth.address)
     addressList["weth"] = weth.address;
-    const uniswapFactory = await UniswapFactory.deploy(busd.address);
-    console.log(`uniswapFactory: ${uniswapFactory.address}`);
-    addressList["uniswapFactory"] = uniswapFactory.address;
-    const uniswapRouter = await UniswapRouter.deploy(uniswapFactory.address, weth.address);
-    console.log(`uniswapRouter: ${uniswapRouter.address}`);
+
+    const uniswapFactory = await UniswapFactory.deploy()
+    const uniswapRouter = await UniswapRouter.deploy(uniswapFactory.address, weth.address)
+    console.log('uniswapRouter: ', uniswapRouter.address)
     addressList["uniswapRouter"] = uniswapRouter.address;
+    const uniswapPositionManager = await UniswapPositionManager.deploy(uniswapFactory.address, weth.address, '0x0000000000000000000000000000000000000000')
+    console.log('uniswapPositionManager: ', uniswapPositionManager.address)
+    addressList["uniswapPositionManager"] = uniswapPositionManager.address;
 
-    const a = await busd.approve(uniswapRouter.address, MaxUint256);
-    a.wait(1);
+    await uniswapFactory.createPool(usdc.address, weth.address, 500)
 
-    await uniswapRouter.addLiquidityETH(
-        busd.address,
-        '10480444925500000000000000',
-        '10480444925000000000000000',
-        '6986963283651477901852',
-        owner.address,
-        new Date().getTime() + 100000,
-        {
-            value: '6986963283651477901852',
-        }
-    );
-    const pairAddresses = await uniswapFactory.allPairs(0);
-    const uniswapPool = new ethers.Contract(pairAddresses, require("@uniswap/v2-core/build/UniswapV2Pair.json").abi, signer);
-    console.log(`uniswapPool: ${uniswapPool.address}`);
-    addressList["uniswapPool"] = uniswapPool.address;
+    const compiledUniswapPool = require("./compiled/UniswapV3Pool.json")
+    const pairAddress = await uniswapFactory.getPool(usdc.address, weth.address, 500)
+    const uniswapPair = new ethers.Contract(pairAddress, compiledUniswapPool.abi, signer)
 
-    // deploy token1155
-    const Token = await ethers.getContractFactory("Token");
-    const derivable1155 = await Token.deploy(
-        "Test/"
-    );
-    console.log(`token: ${derivable1155.address}`);
-    addressList["token"] = derivable1155.address;
-    // deploy pool factory
-    const PoolFactory = await ethers.getContractFactory("PoolFactory");
-    const poolFactory = await PoolFactory.deploy(
-        derivable1155.address
-    );
-    console.log(`poolFactory: ${poolFactory.address}`);
-    addressList["poolFactory"] = poolFactory.address;
-    // deploy Logic
-    const DerivableLibrary = await ethers.getContractFactory("DerivableLibrary", signer);
-        const derivableLibrary = await DerivableLibrary.deploy();
-        await derivableLibrary.deployed();
-        
-        const AsymptoticPerpetual = await ethers.getContractFactory("AsymptoticPerpetual", {
-            signer,
-            libraries: {
-                DerivableLibrary: derivableLibrary.address,
-            },
-        });
+    await usdc.approve(uniswapRouter.address, ethers.constants.MaxUint256)
+    await weth.approve(uniswapRouter.address, ethers.constants.MaxUint256)
 
-        const asymptoticPerpetual = await AsymptoticPerpetual.deploy();
-        await asymptoticPerpetual.deployed();
-    console.log(`logic: ${asymptoticPerpetual.address}`);
+    const quoteTokenIndex = weth.address.toLowerCase() < usdc.address.toLowerCase() ? 1 : 0
+    const initPriceX96 = encodeSqrtX96(quoteTokenIndex ? 1500 : 1, quoteTokenIndex ? 1 : 1500)
+    const a = await uniswapPair.initialize(initPriceX96)
+    a.wait(1)
+
+    // await time.increase(1000)
+    await delay(1000)
+
+
+    const AsymptoticPerpetual = await ethers.getContractFactory("AsymptoticPerpetual")
+
+    const asymptoticPerpetual = await AsymptoticPerpetual.deploy()
+    await asymptoticPerpetual.deployed()
+    console.log('logic: ', asymptoticPerpetual.address)
     addressList["logic"] = asymptoticPerpetual.address;
 
-    // deploy pool
+    // deploy token1155
+    const Token = await ethers.getContractFactory("Token")
+    const derivable1155 = await Token.deploy(
+        "Test/",
+        utr.address
+    )
+    await derivable1155.deployed()
+
+    // deploy ddl pool
+    const oracle = bn(1).shl(255).add(bn(1).shl(256 - 64)).add(uniswapPair.address).toHexString()
     const params = {
+        utr: utr.address,
+        token: derivable1155.address,
         logic: asymptoticPerpetual.address,
-        tokenOracle: pairAddresses,
-        tokenCollateral: weth.address,
+        oracle,
+        reserveToken: weth.address,
         recipient: owner.address,
-        markPrice: "7788445287819172527008699396495269118",
-        power: 2,
-        a: pe("1"),
-        b: pe("1")
+        mark: bn(1000).shl(112),
+        k: 5,
+        a: numberToWei(1),
+        b: numberToWei(1)
     }
-    const poolAddress = await poolFactory.computePoolAddress(params);
-    await weth.deposit({value: pe("1000")});
-    await weth.transfer(poolAddress, pe("10"));
-    const res = await poolFactory.createPool(params);
-    res.wait(1);
-    const derivablePool = await ethers.getContractAt("Pool", await poolFactory.computePoolAddress(params));
+    const poolAddress = await poolFactory.computePoolAddress(params)
+    await weth.deposit({
+        value: pe("100")
+    })
+    await weth.transfer(poolAddress, pe("10"))
+    await poolFactory.createPool(params, {
+        gasLimit: 3000000
+    })
+    const derivablePool = await ethers.getContractAt("Pool", await poolFactory.computePoolAddress(params))
     console.log(`pool: ${derivablePool.address}`);
     addressList["pool"] = derivablePool.address;
+
+
+
+    // deploy ddl pool
+    const params1 = {
+        utr: utr.address,
+        token: derivable1155.address,
+        logic: asymptoticPerpetual.address,
+        oracle,
+        reserveToken: weth.address,
+        recipient: owner.address,
+        mark: bn(1000).shl(112),
+        k: 2,
+        a: numberToWei(1),
+        b: numberToWei(1)
+    }
+    const poolAddress1 = await poolFactory.computePoolAddress(params1)
+    await weth.deposit({
+        value: pe("100")
+    })
+    await weth.transfer(poolAddress1, pe("10"))
+    await poolFactory.createPool(params1, {
+        gasLimit: 3000000
+    })
+    const derivablePool1 = await ethers.getContractAt("Pool", await poolFactory.computePoolAddress(params))
+    console.log(`pool1: ${derivablePool1.address}`);
+    addressList["pool1"] = derivablePool1.address;
 
     // deploy test price
     const TestPrice = await ethers.getContractFactory("TestPrice");
@@ -159,12 +200,12 @@ async function main() {
 
     exportData(addressList);
     // init pool store
-    const tx = await testPrice.testFetchPrice(pairAddresses, weth.address);
-    await tx.wait(1);
+    // const tx = await testPrice.testFetchPrice(pairAddresses, weth.address);
+    // await tx.wait(1);
     // get price before update price
     // base price = 1, naive price = 1, cumulative price = 1
-    const initPrice = formatFetchPriceResponse(await testPrice.callStatic.testFetchPrice(pairAddresses, weth.address));
-    console.log("initPrice: ", initPrice);
+    // const initPrice = formatFetchPriceResponse(await testPrice.callStatic.testFetchPrice(pairAddresses, weth.address));
+    // console.log("initPrice: ", initPrice);
 }
 
 function convertFixedToNumber(fixed) {
