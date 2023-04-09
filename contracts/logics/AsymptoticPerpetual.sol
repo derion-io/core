@@ -30,7 +30,7 @@ contract AsymptoticPerpetual is Storage, Constants, IAsymptoticPerpetual {
         s_b = __.b = b;
         (uint224 twap, ) = _fetch(config.ORACLE);
         uint decayRateX64 = _decayRate(block.timestamp - config.TIMESTAMP, config.HALF_LIFE);
-        (rA, rB) = _tryPrice(__, config, decayRateX64, twap);
+        (rA, rB) = _usePrice(__, config, decayRateX64, twap);
         rC = __.R - rA - rB;
         // uint R = IERC20(TOKEN_R).balanceOf(address(this));
         // require(4 * a * b <= R, "INVALID_PARAM");
@@ -118,7 +118,7 @@ contract AsymptoticPerpetual is Storage, Constants, IAsymptoticPerpetual {
         uint b;
     }
 
-    function _tryPrice (
+    function _usePrice (
         ___ memory __,
         Config memory config,
         uint decayRateX64,
@@ -153,16 +153,16 @@ contract AsymptoticPerpetual is Storage, Constants, IAsymptoticPerpetual {
             (min, max) = (max, min);
         }
         if (sideOut == SIDE_A || sideIn == SIDE_B) {
-            return _tryPrice(__, config, decayRateX64, max);
+            return _usePrice(__, config, decayRateX64, max);
         }
         if (sideOut == SIDE_B || sideIn == SIDE_A) {
-            return _tryPrice(__, config, decayRateX64, min);
+            return _usePrice(__, config, decayRateX64, min);
         }
         // TODO: assisting flag for min/max
-        (rA, rB) = _tryPrice(__, config, decayRateX64, min);
+        (rA, rB) = _usePrice(__, config, decayRateX64, min);
         if ((sideIn == SIDE_R) == rB > rA) {
             // TODO: unit test for this case
-            return _tryPrice(__, config, decayRateX64, max);
+            return _usePrice(__, config, decayRateX64, max);
         }
     }
 
