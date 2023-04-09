@@ -3,6 +3,7 @@ pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@derivable/oracle/contracts/@uniswap/lib/contracts/libraries/FixedPoint.sol";
+import "@derivable/oracle/contracts/Math.sol";
 import "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 
 import "../libraries/OracleLibrary.sol";
@@ -14,37 +15,24 @@ import "../libraries/ABDKMath64x64.sol";
 
 
 contract AsymptoticPerpetual is Storage, Constants, IAsymptoticPerpetual {
-    using ABDKMath64x64 for int128;
-
     function init(
         Config memory config,
-        uint k,
         uint a,
         uint b
     ) external override returns (uint rA, uint rB, uint rC) {
-        require(s_k == 0, "ALREADY_INITIALIZED");
-        s_k = k;
-        ___ memory __;
-        __.R = IERC20(config.TOKEN_R).balanceOf(address(this));
-        s_a = __.a = a;
-        s_b = __.b = b;
+        require(s_a == 0, "ALREADY_INITIALIZED");
         (uint224 twap, ) = _fetch(config.ORACLE);
         uint decayRateX64 = _decayRate(block.timestamp - config.TIMESTAMP, config.HALF_LIFE);
-        (rA, rB) = _usePrice(__, config, decayRateX64, twap);
-        rC = __.R - rA - rB;
+        State memory state = State(_reserve(config.TOKEN_R), a, b);
+        Market memory market = _market(config.K, config.MARK, decayRateX64, twap);
+        (rA, rB) = _evaluate(market, state);
+        rC = state.R - rA - rB;
         // uint R = IERC20(TOKEN_R).balanceOf(address(this));
         // require(4 * a * b <= R, "INVALID_PARAM");
+        s_a = a;
+        s_b = b;
     }
 
-    function _xk(
-        uint224 price,
-        uint224 mark
-    ) internal view returns (uint224) {
-        uint224 p = FixedPoint.fraction(price, mark)._x;
-        return uint224(_powu(p, s_k));
-    }
-
-    // TODO: move to price-lib
     function _powu(uint x, uint y) internal pure returns (uint z) {
         // Calculate the first iteration of the loop in advance.
         z = y & 1 > 0 ? x : FixedPoint.Q112;
@@ -82,21 +70,21 @@ contract AsymptoticPerpetual is Storage, Constants, IAsymptoticPerpetual {
     }
 
     // r(v)
-    function _r(uint224 xk, uint v, uint R) internal pure returns (uint r) {
+    function _r(uint xk, uint v, uint R) internal pure returns (uint r) {
         r = FullMath.mulDiv(v, xk, FixedPoint.Q112);
         if (r > R >> 1) {
-            uint denominator = FullMath.mulDiv(v, uint(xk) << 2, FixedPoint.Q112);
+            uint denominator = FullMath.mulDiv(v, xk << 2, FixedPoint.Q112);
             uint minuend = FullMath.mulDiv(R, R, denominator);
             r = R - minuend;
         }
     }
 
     // v(r)
-    function _v(uint224 xk, uint r, uint R) internal pure returns (uint v) {
+    function _v(uint xk, uint r, uint R) internal pure returns (uint v) {
         if (r <= R / 2) {
             return FullMath.mulDiv(r, FixedPoint.Q112, xk);
         }
-        uint denominator = FullMath.mulDiv(R - r, uint(xk) << 2, FixedPoint.Q112);
+        uint denominator = FullMath.mulDiv(R - r, xk << 2, FixedPoint.Q112);
         return FullMath.mulDiv(R, R, denominator);
     }
 
@@ -104,30 +92,24 @@ contract AsymptoticPerpetual is Storage, Constants, IAsymptoticPerpetual {
         return IERC1155Supply(TOKEN).totalSupply(_packID(address(this), side));
     }
 
-    function _evaluate(___ memory __) internal pure returns (uint rA, uint rB) {
-        rA = _r(__.xkA, __.a, __.R);
-        rB = _r(__.xkB, __.b, __.R);
+    function _reserve(address TOKEN_R) internal view returns (uint R) {
+        return IERC20(TOKEN_R).balanceOf(address(this));
     }
 
-    // TODO: rename this struct
-    struct ___ {
-        uint224 xkA;
-        uint224 xkB;
-        uint R;
-        uint a;
-        uint b;
+    function _evaluate(Market memory market, State memory state) internal pure returns (uint rA, uint rB) {
+        rA = _r(market.xkA, state.a, state.R);
+        rB = _r(market.xkB, state.b, state.R);
     }
 
-    function _usePrice (
-        ___ memory __,
-        Config memory config,
+    function _market(
+        uint K,
+        uint MARK,
         uint decayRateX64,
         uint224 price
-    ) internal view returns (uint rA, uint rB) {
-        __.xkA = _xk(price, config.MARK);
-        __.xkB = uint224(FullMath.mulDiv(FixedPoint.Q224/__.xkA, Q64, decayRateX64));
-        __.xkA = uint224(FullMath.mulDiv(__.xkA, Q64, decayRateX64));
-        (rA, rB) = _evaluate(__);
+    ) internal pure returns (Market memory market) {
+        market.xkA = _powu(FixedPoint.fraction(price, MARK)._x, K);
+        market.xkB = uint224(FullMath.mulDiv(FixedPoint.Q224/market.xkA, Q64, decayRateX64));
+        market.xkA = uint224(FullMath.mulDiv(market.xkA, Q64, decayRateX64));
     }
 
     function _decayRate (
@@ -137,89 +119,113 @@ contract AsymptoticPerpetual is Storage, Constants, IAsymptoticPerpetual {
         if (HALF_LIFE == 0) {
             return Q64;
         }
-        int128 rate = int128(int((elapsed << 64) / HALF_LIFE)).exp_2();
+        int128 rate = ABDKMath64x64.exp_2(int128(int((elapsed << 64) / HALF_LIFE)));
         return uint(int(rate));
     } 
 
     function _selectPrice(
-        ___ memory __,
         Config memory config,
+        State memory state,
         uint sideIn,
         uint sideOut
-    ) internal view returns (uint rA, uint rB) {
+    ) internal view returns (Market memory market, uint rA, uint rB) {
         uint decayRateX64 = _decayRate(block.timestamp - config.TIMESTAMP, config.HALF_LIFE);
         (uint224 min, uint224 max) = _fetch(config.ORACLE);
         if (min > max) {
             (min, max) = (max, min);
         }
         if (sideOut == SIDE_A || sideIn == SIDE_B) {
-            return _usePrice(__, config, decayRateX64, max);
-        }
-        if (sideOut == SIDE_B || sideIn == SIDE_A) {
-            return _usePrice(__, config, decayRateX64, min);
-        }
-        // TODO: assisting flag for min/max
-        (rA, rB) = _usePrice(__, config, decayRateX64, min);
-        if ((sideIn == SIDE_R) == rB > rA) {
-            // TODO: unit test for this case
-            return _usePrice(__, config, decayRateX64, max);
+            market = _market(config.K, config.MARK, decayRateX64, max);
+            (rA, rB) = _evaluate(market, state);
+        } else if (sideOut == SIDE_B || sideIn == SIDE_A) {
+            market = _market(config.K, config.MARK, decayRateX64, min);
+            (rA, rB) = _evaluate(market, state);
+        } else {
+            // TODO: assisting flag for min/max
+            market = _market(config.K, config.MARK, decayRateX64, min);
+            (rA, rB) = _evaluate(market, state);
+            if ((sideIn == SIDE_R) == rB > rA) {
+                // TODO: unit test for this case
+                market = _market(config.K, config.MARK, decayRateX64, max);
+                (rA, rB) = _evaluate(market, state);
+            }
         }
     }
 
     function exactIn(
         Config memory config,
         uint sideIn,
-        uint amountIn,
+        uint amountInDesired,
         uint sideOut
-    ) external override returns(uint amountOut) {
+    ) external override returns(uint amountIn, uint amountOut) {
+        // [PREPARATION]
         require(sideIn != sideOut, 'SAME_SIDE');
-        ___ memory __;
-        __.R = IERC20(config.TOKEN_R).balanceOf(address(this));
-        __.a = s_a;
-        __.b = s_b;
-        (uint rA, uint rB) = _selectPrice(__, config, sideIn, sideOut);
-        uint rC = __.R - rA - rB; // R might be changed to R1 after this
+        State memory state = State(_reserve(config.TOKEN_R), s_a, s_b);
+        (Market memory market, uint rA, uint rB) = _selectPrice(config, state, sideIn, sideOut);
+        uint rC = state.R - rA - rB;
+        uint s; // use for sIn then sOut
+        // [CALCULATION]
+        // TODO: move this part to Helper
+        State memory state1 = State(state.R, state.a, state.b);
         if (sideIn == SIDE_R) {
-            require(sideOut != SIDE_R, "INVALID_SIDE");
-            __.R += amountIn;
+            state1.R += amountInDesired;
             if (sideOut == SIDE_A) {
-                s_a = __.a = _v(__.xkA, rA + amountIn, __.R);
+                state1.a = _v(market.xkA, rA + amountInDesired, state1.R);
             } else if (sideOut == SIDE_B) {
-                s_b = __.b = _v(__.xkB, rB + amountIn, __.R);
+                state1.b = _v(market.xkB, rB + amountInDesired, state1.R);
             }
         } else {
-            uint sIn = _supply(config.TOKEN, sideIn);
+            s = _supply(config.TOKEN, sideIn);
             if (sideIn == SIDE_A) {
-                amountOut = rA * amountIn / sIn;
+                uint rOut = FullMath.mulDiv(rA, amountInDesired, s);
                 if (sideOut == SIDE_R) {
-                    __.R -= amountOut;
+                    state1.R -= rOut;
                 }
-                s_a = __.a = _v(__.xkA, rA - amountOut, __.R);
+                state1.a = _v(market.xkA, rA - rOut, state1.R);
             } else if (sideIn == SIDE_B) {
-                amountOut = rB * amountIn / sIn;
+                uint rOut = FullMath.mulDiv(rB, amountInDesired, s);
                 if (sideOut == SIDE_R) {
-                    __.R -= amountOut;
+                    state1.R -= rOut;
                 }
-                s_b = __.b = _v(__.xkB, rB - amountOut, __.R);
+                state1.b = _v(market.xkB, rB - rOut, state1.R);
             } else /*if (sideIn == SIDE_C)*/ {
-                amountOut = rC * amountIn / sIn;
                 if (sideOut == SIDE_R) {
-                    __.R -= amountOut;
+                    uint rOut = FullMath.mulDiv(rC, amountInDesired, s);
+                    state1.R -= rOut;
                 }
-                // s_c is not a storage
+                // state1.c
             }
         }
-        if (sideOut != SIDE_R) {
-            // TODO: optimize this specific to each case
-            uint sOut = _supply(config.TOKEN, sideOut);
-            (uint rA1, uint rB1) = _evaluate(__);
+        // [TRANSITION]
+        (uint rA1, uint rB1) = _evaluate(market, state1);
+        if (sideIn == SIDE_R) {
+            amountIn = state1.R - state.R;
+        } else {
+            // s = _supply(config.TOKEN, sideIn);
+            if (sideIn == SIDE_A) {
+                amountIn = FullMath.mulDiv(rA - rA1, s, rA);
+                s_a = state1.a;
+            } else if (sideIn == SIDE_B) {
+                amountIn = FullMath.mulDiv(rB - rB1, s, rB);
+                s_b = state1.b;
+            } else if (sideIn == SIDE_C) {
+                uint rC1 = state1.R - rA1 - rB1;
+                amountIn = FullMath.mulDiv(rC - rC1, s, rC);
+            }
+        }
+        if (sideOut == SIDE_R) {
+            amountOut = state.R - state1.R;
+        } else {
+            s = _supply(config.TOKEN, sideOut);
             if (sideOut == SIDE_A) {
-                amountOut = (rA1 - rA) * sOut / rA;
+                amountOut = FullMath.mulDiv(rA1 - rA, s, rA);
+                s_a = state1.a;
             } else if (sideOut == SIDE_B) {
-                amountOut = (rB1 - rB) * sOut / rB;
+                amountOut = FullMath.mulDiv(rB1 - rB, s, rB);
+                s_b = state1.b;
             } else if (sideOut == SIDE_C) {
-                uint rC1 = __.R - rA1 - rB1;
-                amountOut = (rC1 - rC) * sOut / rC;
+                uint rC1 = state1.R - rA1 - rB1;
+                amountOut = FullMath.mulDiv(rC1 - rC, s, rC);
             }
         }
     }

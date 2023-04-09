@@ -2,7 +2,6 @@
 pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
 import "@derivable/utr/contracts/interfaces/IUniversalTokenRouter.sol";
 import "@uniswap/lib/contracts/libraries/TransferHelper.sol";
 import "./interfaces/IPoolFactory.sol";
@@ -19,6 +18,7 @@ contract Pool is IPool, Storage, Constants {
     address internal immutable UTR;
     address internal immutable LOGIC;
     bytes32 internal immutable ORACLE;
+    uint internal immutable K;
     address internal immutable TOKEN;
     address internal immutable TOKEN_R;
     uint224 internal immutable MARK;
@@ -33,6 +33,7 @@ contract Pool is IPool, Storage, Constants {
         LOGIC = params.logic;
         ORACLE = params.oracle;
         TOKEN_R = params.reserveToken;
+        K = params.k;
         MARK = params.mark;
         HALF_LIFE = params.halfLife;
         TIMESTAMP = block.timestamp;
@@ -44,11 +45,11 @@ contract Pool is IPool, Storage, Constants {
                     TOKEN,
                     TOKEN_R,
                     ORACLE,
+                    K,
                     MARK,
                     TIMESTAMP,
                     HALF_LIFE
                 ),
-                params.k,
                 params.a,
                 params.b
             )
@@ -89,7 +90,7 @@ contract Pool is IPool, Storage, Constants {
         (bool success, bytes memory result) = LOGIC.delegatecall(
             abi.encodeWithSelector(
                 IAsymptoticPerpetual.exactIn.selector,
-                Config(TOKEN, TOKEN_R, ORACLE, MARK, TIMESTAMP, HALF_LIFE),
+                Config(TOKEN, TOKEN_R, ORACLE, K, MARK, TIMESTAMP, HALF_LIFE),
                 sideIn,
                 amountIn,
                 sideOut
@@ -100,7 +101,7 @@ contract Pool is IPool, Storage, Constants {
                 revert(add(result, 32), mload(result))
             }
         }
-        amountOut = abi.decode(result, (uint));
+        (amountIn, amountOut) = abi.decode(result, (uint, uint));
         // TODO: reentrancy guard
         if (sideOut == SIDE_R) {
             TransferHelper.safeTransfer(TOKEN_R, recipient, amountOut);
