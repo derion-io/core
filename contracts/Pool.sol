@@ -2,6 +2,7 @@
 pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
 import "@derivable/utr/contracts/interfaces/IUniversalTokenRouter.sol";
 import "@uniswap/lib/contracts/libraries/TransferHelper.sol";
 import "./interfaces/IPoolFactory.sol";
@@ -11,7 +12,7 @@ import "./interfaces/IAsymptoticPerpetual.sol";
 import "./interfaces/IPool.sol";
 import "./logics/Storage.sol";
 
-contract Pool is IPool, Storage, Constants {
+contract Pool is IPool, ERC1155Holder, Storage, Constants {
     uint public constant MINIMUM_LIQUIDITY = 10 ** 3;
 
     /// Immutables
