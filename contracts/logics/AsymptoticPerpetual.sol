@@ -20,7 +20,7 @@ contract AsymptoticPerpetual is Storage, Constants, IAsymptoticPerpetual {
         uint a,
         uint b
     ) external override returns (uint rA, uint rB, uint rC) {
-        require(s_a == 0, "ALREADY_INITIALIZED");
+        require(s_a == 0 && s_b == 0, "ALREADY_INITIALIZED");
         (uint224 twap, ) = _fetch(config.ORACLE);
         uint decayRateX64 = _decayRate(block.timestamp - config.TIMESTAMP, config.HALF_LIFE);
         State memory state = State(_reserve(config.TOKEN_R), a, b);
@@ -81,11 +81,11 @@ contract AsymptoticPerpetual is Storage, Constants, IAsymptoticPerpetual {
 
     // v(r)
     function _v(uint xk, uint r, uint R) internal pure returns (uint v) {
-        if (r <= R / 2) {
-            return FullMath.mulDiv(r, FixedPoint.Q112, xk);
+        if (r <= R >> 1) {
+            return FullMath.mulDiv(r, FixedPoint.Q112, xk) + 1;
         }
         uint denominator = FullMath.mulDiv(R - r, xk << 2, FixedPoint.Q112);
-        return FullMath.mulDiv(R, R, denominator);
+        return FullMath.mulDiv(R, R, denominator) + 1;
     }
 
     function _supply(address TOKEN, uint side) internal view returns (uint s) {
@@ -165,7 +165,7 @@ contract AsymptoticPerpetual is Storage, Constants, IAsymptoticPerpetual {
         uint rC = state.R - rA - rB;
         uint s; // use for sIn then sOut
         // [CALCULATION]
-        // TODO: move this part to Helper
+        // TODO: allow Helper contract to override this section
         State memory state1 = State(state.R, state.a, state.b);
         if (sideIn == SIDE_R) {
             state1.R += amountInDesired;
@@ -212,6 +212,8 @@ contract AsymptoticPerpetual is Storage, Constants, IAsymptoticPerpetual {
                 uint rC1 = state1.R - rA1 - rB1;
                 amountIn = FullMath.mulDiv(rC - rC1, s, rC);
             }
+            // add a single missing wei due to integer division
+            ++amountIn;
         }
         if (sideOut == SIDE_R) {
             amountOut = state.R - state1.R;
