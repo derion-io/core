@@ -199,7 +199,7 @@ describe("Decay funding rate", function () {
 
   scenerios.forEach(scene => {
     describe(`Pool ${scene.desc}`, function () {
-      async function amountInMustGteAmountInDesired(longAmount, rateLongSwapback, shortAmount, rateShortSwapback, period, prefix) {
+      async function amountInMustGteAmountInDesired(longAmount, rateLongSwapback, shortAmount, rateShortSwapback, period, prefix = '( )') {
         const { accountB, accountA, txSignerA, txSignerB, weth, derivable1155, A_ID, B_ID } = await loadFixture(scene.scenerio);
         await txSignerA.exactIn(
           0x00,
@@ -253,8 +253,8 @@ describe("Decay funding rate", function () {
         );
         const tokenAAmountAfter = await derivable1155.balanceOf(accountA.address, A_ID)
         const tokenBAmountAfter = await derivable1155.balanceOf(accountB.address, B_ID)
-        expect(tokenAAmountBefore.sub(tokenAAmountAfter)).to.be.lte(amountAIn, `${prefix}: Long A->R In > Desired`)
-        expect(tokenBAmountBefore.sub(tokenBAmountAfter)).to.be.lte(amountBIn, `${prefix}: Long B->R In > Desired`)
+        expect(tokenAAmountBefore.sub(tokenAAmountAfter), `${prefix}: amountInA`).lte(amountAIn)
+        expect(tokenBAmountBefore.sub(tokenBAmountAfter), `${prefix}: amountInB`).lte(amountBIn)
       }
       describe(`${scene.desc} ` + "In > Desired", function () {
         it("1e Long - 100% back, 1e Short - 100% back", async function () {
