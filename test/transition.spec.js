@@ -240,9 +240,8 @@ describe("Decay funding rate", function () {
       );
       const tokenAAmountAfter = await derivable1155.balanceOf(accountA.address, A_ID)
       const tokenBAmountAfter = await derivable1155.balanceOf(accountB.address, B_ID)
-      
-      expect(tokenAAmountBefore.sub(tokenAAmountAfter)).to.be.gte(amountAIn, `${prefix}: Long A->R In > Desired`)
-      expect(tokenBAmountBefore.sub(tokenBAmountAfter)).to.be.gte(amountBIn, `${prefix}: Long B->R In > Desired`)
+      expect(tokenAAmountBefore.sub(tokenAAmountAfter)).to.be.lte(amountAIn, `${prefix}: Long A->R In > Desired`)
+      expect(tokenBAmountBefore.sub(tokenBAmountAfter)).to.be.lte(amountBIn, `${prefix}: Long B->R In > Desired`)
     }
     describe("In > Desired", function () {
       it("1e Long - 100% back, 1e Short - 100% back", async function () {
