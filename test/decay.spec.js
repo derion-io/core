@@ -413,13 +413,13 @@ describe("Decay funding rate", function () {
             )).data,
           }
         ], opts)
-        const afterA = await weth.balanceOf(accountA.address)
-        const afterB = await weth.balanceOf(accountB.address)
-        const changeOfA = beforeA.sub(amountB).sub(afterA)
-        const changeOfB = afterB.sub(beforeB)
-        console.log(changeOfA)
-        console.log(changeOfB)
-        // expect(amountB.gte(changeOfB)).to.be.true
+      const afterA = await weth.balanceOf(accountA.address)
+      const afterB = await weth.balanceOf(accountB.address)
+      const changeOfA = beforeA.sub(amountB).sub(afterA)
+      const changeOfB = afterB.sub(beforeB)
+      console.log(changeOfA)
+      console.log(changeOfB)
+      // expect(amountB.gte(changeOfB)).to.be.true
     }
 
     async function instantSwapBackNonUTR(amountA, amountB) {
@@ -520,6 +520,8 @@ describe("Decay funding rate", function () {
     }
 
     async function swapAndRedeemInHalfLife(period, amountA, amountB) {
+      txSignerA = derivablePool.connect(accountA)
+      txSignerB = derivablePool.connect(accountB)
       await txSignerA.exactIn(
         0x00,
         amountA,
@@ -680,21 +682,21 @@ describe("Decay funding rate", function () {
         expect(Number(weiToNumber(after.short))).to.be.closeTo(1, 0.01)
       })
 
-      // it("Decay same range, different time", async function () {
-      //   const { swapAndRedeemInHalfLife } = await loadFixture(deployDDLv2);
-      //   const before = await swapAndRedeemInHalfLife(0.1, numberToWei(1), numberToWei(1))
-      //   await time.increase(10 * HALF_LIFE)
-      //   console.log('\n\n-------Attemp again--------\n\n')
-      //   const after = await swapAndRedeemInHalfLife(0.1, numberToWei(1), numberToWei(1))
-      //   expect(Number(weiToNumber(before.long))).to.be.closeTo(
-      //     Number(weiToNumber(after.long)), 
-      //     0.0000001
-      //   )
-      //   expect(Number(weiToNumber(before.short))).to.be.closeTo(
-      //     Number(weiToNumber(after.short)), 
-      //     0.0000001
-      //   )
-      // })  
+      it("Decay same range, different time", async function () {
+        const { swapAndRedeemInHalfLife } = await loadFixture(deployDDLv2);
+        const before = await swapAndRedeemInHalfLife(0.1, numberToWei(1), numberToWei(1))
+        if (HALF_LIFE > 0)
+          await time.increase(10 * HALF_LIFE)
+        const after = await swapAndRedeemInHalfLife(0.1, numberToWei(1), numberToWei(1))
+        expect(Number(weiToNumber(before.long))).to.be.closeTo(
+          Number(weiToNumber(after.long)),
+          0.0000001
+        )
+        expect(Number(weiToNumber(before.short))).to.be.closeTo(
+          Number(weiToNumber(after.short)),
+          0.0000001
+        )
+      })
 
     })
 
@@ -719,6 +721,21 @@ describe("Decay funding rate", function () {
         const { instantSwapBackUTR } = await loadFixture(deployDDLv2)
         await instantSwapBackUTR(numberToWei(2.5), numberToWei(0.5))
       })
+      it("Decay same range, different time", async function () {
+        const { swapAndRedeemInHalfLife } = await loadFixture(deployDDLv2);
+        const before = await swapAndRedeemInHalfLife(0.1, numberToWei(2.5), numberToWei(0.5))
+        if (HALF_LIFE > 0)
+          await time.increase(10 * HALF_LIFE)
+        const after = await swapAndRedeemInHalfLife(0.1, numberToWei(2.5), numberToWei(0.5))
+        expect(Number(weiToNumber(before.long))).to.be.closeTo(
+          Number(weiToNumber(after.long)),
+          0.0000001
+        )
+        expect(Number(weiToNumber(before.short))).to.be.closeTo(
+          Number(weiToNumber(after.short)),
+          0.0000001
+        )
+      })
     })
 
     describe("Pool short > R/2:", function () {
@@ -741,6 +758,21 @@ describe("Decay funding rate", function () {
       it("Instant swap back", async function () {
         const { instantSwapBackUTR } = await loadFixture(deployDDLv2)
         await instantSwapBackUTR(numberToWei(0.5), numberToWei(2.5))
+      })
+      it("Decay same range, different time", async function () {
+        const { swapAndRedeemInHalfLife } = await loadFixture(deployDDLv2);
+        const before = await swapAndRedeemInHalfLife(0.1, numberToWei(0.5), numberToWei(2.5))
+        if (HALF_LIFE > 0)
+          await time.increase(10 * HALF_LIFE)
+        const after = await swapAndRedeemInHalfLife(0.1, numberToWei(0.5), numberToWei(2.5))
+        expect(Number(weiToNumber(before.long))).to.be.closeTo(
+          Number(weiToNumber(after.long)),
+          0.0000001
+        )
+        expect(Number(weiToNumber(before.short))).to.be.closeTo(
+          Number(weiToNumber(after.short)),
+          0.0000001
+        )
       })
       // TODO: Zergity verify this
       it("Group swap back", async function () {
