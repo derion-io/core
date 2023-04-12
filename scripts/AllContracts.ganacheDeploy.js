@@ -15,6 +15,7 @@ const opts = {
 };
 const fe = (x) => Number(ethers.utils.formatEther(x));
 const pe = (x) => ethers.utils.parseEther(String(x));
+const HALF_LIFE = 10 * 365 * 24 * 60 * 60
 
 async function main() {
     const addressList = {
@@ -114,6 +115,8 @@ async function main() {
         "Test/",
         utr.address
     )
+    console.log('token: ', derivable1155.address)
+    addressList["token"] = derivable1155.address;
     await derivable1155.deployed()
 
     // deploy ddl pool
@@ -125,10 +128,11 @@ async function main() {
         oracle,
         reserveToken: weth.address,
         recipient: owner.address,
-        mark: bn(1000).shl(112),
+        mark: '0x05dbdef6832deed3ff7964322f50a2d6',
         k: 5,
         a: numberToWei(1),
-        b: numberToWei(1)
+        b: numberToWei(1),
+        halfLife: HALF_LIFE
     }
     const poolAddress = await poolFactory.computePoolAddress(params)
     await weth.deposit({
@@ -136,13 +140,11 @@ async function main() {
     })
     await weth.transfer(poolAddress, pe("10"))
     await poolFactory.createPool(params, {
-        gasLimit: 3000000
+        gasLimit: 6000000
     })
     const derivablePool = await ethers.getContractAt("Pool", await poolFactory.computePoolAddress(params))
     console.log(`pool: ${derivablePool.address}`);
     addressList["pool"] = derivablePool.address;
-
-
 
     // deploy ddl pool
     const params1 = {
@@ -152,10 +154,11 @@ async function main() {
         oracle,
         reserveToken: weth.address,
         recipient: owner.address,
-        mark: bn(1000).shl(112),
+        mark: '0x05dbdef6832deed3ff7964322f50a2d6',
         k: 2,
         a: numberToWei(1),
-        b: numberToWei(1)
+        b: numberToWei(1),
+        halfLife: HALF_LIFE
     }
     const poolAddress1 = await poolFactory.computePoolAddress(params1)
     await weth.deposit({
@@ -163,7 +166,7 @@ async function main() {
     })
     await weth.transfer(poolAddress1, pe("10"))
     await poolFactory.createPool(params1, {
-        gasLimit: 3000000
+        gasLimit: 6000000
     })
     const derivablePool1 = await ethers.getContractAt("Pool", await poolFactory.computePoolAddress(params))
     console.log(`pool1: ${derivablePool1.address}`);

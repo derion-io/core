@@ -6,6 +6,8 @@ import "./logics/Constants.sol";
 import "./logics/Storage.sol";
 import "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 import "./libraries/OracleLibrary.sol";
+import "@derivable/oracle/contracts/@uniswap/lib/contracts/libraries/FixedPoint.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 interface IERC1155Supply {
     /**
@@ -31,10 +33,14 @@ contract View is Storage, Constants {
     struct StateView {
         uint sA;
         uint sB;
-        uint sK;
+        uint sC;
+        uint R;
         uint rA;
         uint rB;
         uint rC;
+        uint a;
+        uint b;
+        uint224 xk;
         uint224 twap;
         uint224 spot;
         bytes32 ORACLE;
@@ -44,20 +50,26 @@ contract View is Storage, Constants {
         test = 1000;
     }
 
-    function getStates(bytes32 ORACLE, address TOKEN) external view returns (StateView memory states) {
+    function getStates(bytes32 ORACLE, uint224 MARK, address TOKEN_R, uint k, address TOKEN) external view returns (StateView memory states) {
         (states.twap, states.spot) = _fetch(ORACLE);
 
         uint idA = _packID(address(this), SIDE_A);
         uint idB = _packID(address(this), SIDE_B);
         uint idC = _packID(address(this), SIDE_C);
 
-        states.rA =  IERC1155Supply(TOKEN).balanceOf(address(this), idA);
-        states.rC = IERC1155Supply(TOKEN).balanceOf(address(this), idB);
-        states.rB = IERC1155Supply(TOKEN).balanceOf(address(this), idC);
+        states.a = s_a;
+        states.b = s_b;
 
-        states.sA = s_a;
-        states.sB = s_b;
-        states.sK = s_k;
+        uint224 xk = _xk(states.twap, MARK, k);
+        states.xk = xk;
+
+        states.R = IERC20(TOKEN_R).balanceOf(address(this));
+        states.rA = _r(xk, s_a, states.R);
+        states.rB = _r(xk, s_b, states.R);
+
+        states.sA = IERC1155Supply(TOKEN).totalSupply(idA);
+        states.sB = IERC1155Supply(TOKEN).totalSupply(idB);
+        states.sC = IERC1155Supply(TOKEN).totalSupply(idC);
     }
 
     function _fetch(
@@ -68,15 +80,49 @@ contract View is Storage, Constants {
 
         (int24 arithmeticMeanTick,) = OracleLibrary.consult(pool, uint32(uint(ORACLE) >> 192));
         uint160 sqrtTwapX96 = TickMath.getSqrtRatioAtTick(arithmeticMeanTick);
-        if (uint(ORACLE) >> 224 == 0) {
-            sqrtSpotX96 = uint160((1 << 192) / uint(sqrtSpotX96));
-            sqrtTwapX96 = uint160((1 << 192) / uint(sqrtTwapX96));
+
+        spot = uint224(sqrtSpotX96) << 16;
+        twap = uint224(sqrtTwapX96) << 16;
+
+        if (uint(ORACLE) & Q255 > 0) {
+            spot = uint224(FixedPoint.Q224 / spot);
+            twap = uint224(FixedPoint.Q224 / twap);
         }
-        twap = uint224(FullMath.mulDiv(uint(sqrtTwapX96), uint(sqrtTwapX96), 1 << 80));
-        spot = uint224(FullMath.mulDiv(uint(sqrtSpotX96), uint(sqrtSpotX96), 1 << 80));
     }
 
     function _packID(address pool, uint side) internal pure returns (uint id) {
         id = (side << 160) + uint160(pool);
+    }
+
+    function _xk(
+        uint224 price,
+        uint224 mark,
+        uint k
+    ) internal view returns (uint224) {
+        uint224 p = FixedPoint.fraction(price, mark)._x;
+        return uint224(_powu(p, k));
+    }
+
+    function _r(uint224 xk, uint v, uint R) internal pure returns (uint r) {
+        r = FullMath.mulDiv(v, xk, FixedPoint.Q112);
+        if (r > R >> 1) {
+            uint denominator = FullMath.mulDiv(v, uint(xk) << 2, FixedPoint.Q112);
+            uint minuend = FullMath.mulDiv(R, R, denominator);
+            r = R - minuend;
+        }
+    }
+
+    function _powu(uint x, uint y) internal pure returns (uint z) {
+        // Calculate the first iteration of the loop in advance.
+        z = y & 1 > 0 ? x : FixedPoint.Q112;
+        // Equivalent to "for(y /= 2; y > 0; y /= 2)" but faster.
+        for (y >>= 1; y > 0; y >>= 1) {
+            x = FullMath.mulDiv(x, x, FixedPoint.Q112);
+            // Equivalent to "y % 2 == 1" but faster.
+            if (y & 1 > 0) {
+                z = FullMath.mulDiv(z, x, FixedPoint.Q112);
+            }
+        }
+        require(z <= type(uint224).max, "Pool: upper overflow");
     }
 }
