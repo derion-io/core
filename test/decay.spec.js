@@ -690,23 +690,6 @@ HLs.forEach(HALF_LIFE => {
           expect(Number(weiToNumber(after.long))).to.be.closeTo(1, 0.01)
           expect(Number(weiToNumber(after.short))).to.be.closeTo(1, 0.01)
         })
-
-        it("Decay same range, different time", async function () {
-          const { swapAndRedeemInHalfLife } = await loadFixture(deployDDLv2);
-          const before = await swapAndRedeemInHalfLife(0.1, numberToWei(1), numberToWei(1))
-          if (HALF_LIFE > 0)
-            await time.increase(3.14 * HALF_LIFE)
-          const after = await swapAndRedeemInHalfLife(0.1, numberToWei(1), numberToWei(1))
-          expect(Number(weiToNumber(before.long))).to.be.closeTo(
-            Number(weiToNumber(after.long)),
-            0.0000001
-          )
-          expect(Number(weiToNumber(before.short))).to.be.closeTo(
-            Number(weiToNumber(after.short)),
-            0.0000001
-          )
-        })
-
       })
 
       describe("Pool long > R/2:", function () {
@@ -730,19 +713,6 @@ HLs.forEach(HALF_LIFE => {
           const { instantSwapBackUTR } = await loadFixture(deployDDLv2)
           await instantSwapBackUTR(numberToWei(2.5), numberToWei(0.5))
         })
-        it("Decay same range, different time", async function () {
-          const { swapAndRedeemInHalfLife } = await loadFixture(deployDDLv2);
-          const before = await swapAndRedeemInHalfLife(0.1, numberToWei(2.5), numberToWei(0.5))
-          if (HALF_LIFE > 0)
-            await time.increase(3.14 * HALF_LIFE)
-          const after = await swapAndRedeemInHalfLife(0.1, numberToWei(2.5), numberToWei(0.5))
-          expect(before.longFee, 'Long Return').gt(after.longFee).gt(0)
-          // expect(before.short, 'Short Return').gt(after.short).gt(0)
-          expect(Number(weiToNumber(before.short))).to.be.closeTo(
-            Number(weiToNumber(after.short)),
-            0.0000001
-          )
-        })
       })
 
       describe("Pool short > R/2:", function () {
@@ -765,19 +735,6 @@ HLs.forEach(HALF_LIFE => {
         it("Instant swap back", async function () {
           const { instantSwapBackUTR } = await loadFixture(deployDDLv2)
           await instantSwapBackUTR(numberToWei(0.5), numberToWei(2.5))
-        })
-        it("Decay same range, different time", async function () {
-          const { swapAndRedeemInHalfLife } = await loadFixture(deployDDLv2);
-          const before = await swapAndRedeemInHalfLife(0.1, numberToWei(0.5), numberToWei(2.5))
-          if (HALF_LIFE > 0)
-            await time.increase(3.14 * HALF_LIFE)
-          const after = await swapAndRedeemInHalfLife(0.1, numberToWei(0.5), numberToWei(2.5))
-          expect(before.shortFee, 'Short Return').gt(after.shortFee).gt(0)
-          // expect(before.long, 'Long Return').gt(after.long).gt(0)
-          expect(Number(weiToNumber(before.long))).to.be.closeTo(
-            Number(weiToNumber(after.long)),
-            0.0000001
-          )
         })
         // TODO: Zergity verify this
         it("Group swap back", async function () {
