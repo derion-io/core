@@ -12,11 +12,12 @@ const opts = {
   gasLimit: 30000000
 }
 
-const TRANSFER_FROM_SENDER = 0
-const TRANSFER_FROM_ROUTER = 1
-const TRANSFER_CALL_VALUE = 2
-const IN_TX_PAYMENT = 4
-const ALLOWANCE_BRIDGE = 8
+const FROM_ROUTER   = 10;
+const PAYMENT       = 0;
+const TRANSFER      = 1;
+const ALLOWANCE     = 2;
+const CALL_VALUE    = 3;
+
 const AMOUNT_EXACT = 0
 const AMOUNT_ALL = 1
 const EIP_ETH = 0
@@ -276,7 +277,7 @@ HLs.forEach(HALF_LIFE => {
           [
             {
               inputs: [{
-                mode: IN_TX_PAYMENT,
+                mode: PAYMENT,
                 eip: 20,
                 token: weth.address,
                 id: 0,
@@ -317,7 +318,7 @@ HLs.forEach(HALF_LIFE => {
           [
             {
               inputs: [{
-                mode: IN_TX_PAYMENT,
+                mode: PAYMENT,
                 eip: 20,
                 token: weth.address,
                 id: 0,
@@ -361,7 +362,7 @@ HLs.forEach(HALF_LIFE => {
           [
             {
               inputs: [{
-                mode: IN_TX_PAYMENT,
+                mode: PAYMENT,
                 eip: 20,
                 token: weth.address,
                 id: 0,
@@ -381,7 +382,7 @@ HLs.forEach(HALF_LIFE => {
             },
             {
               inputs: [{
-                mode: IN_TX_PAYMENT,
+                mode: PAYMENT,
                 eip: 20,
                 token: weth.address,
                 id: 0,
