@@ -6,8 +6,8 @@
     "clean": "rimraf ./build/ ./cache/ ./artifacts/",
     "prettier": "prettier --write **/*.sol",
     "compile": "hardhat compile",
-    "test": "hardhat test --bail --parallel",
-    "test-gas": "hardhat test --bail",
+    "test": "hardhat test --parallel",
+    "test-gas": "hardhat test",
     "testnet": "hardhat run --network testnet",
     "mainnet": "hardhat run --network mainnet",
     "deploy:ganache": "npx hardhat run scripts/AllContracts.ganacheDeploy.js --network ganache"
