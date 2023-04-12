@@ -680,12 +680,12 @@ HLs.forEach(HALF_LIFE => {
         })
         it("1 day - wait 10 halflife", async function () {
           const { swapAndWait } = await loadFixture(deployDDLv2);
-          await swapAndWait(86400, 10 * HALF_LIFE, numberToWei(0.5), numberToWei(0.5))
+          await swapAndWait(86400, 3.14 * HALF_LIFE, numberToWei(0.5), numberToWei(0.5))
         })
         it("wait, after", async function () {
           // TODO: Zergity
           const { swapAndRedeemInHalfLife } = await loadFixture(deployDDLv2);
-          // await time.increase(10 * HALF_LIFE)
+          // await time.increase(3.14 * HALF_LIFE)
           const after = await swapAndRedeemInHalfLife(0, numberToWei(1), numberToWei(1))
           expect(Number(weiToNumber(after.long))).to.be.closeTo(1, 0.01)
           expect(Number(weiToNumber(after.short))).to.be.closeTo(1, 0.01)
@@ -695,7 +695,7 @@ HLs.forEach(HALF_LIFE => {
           const { swapAndRedeemInHalfLife } = await loadFixture(deployDDLv2);
           const before = await swapAndRedeemInHalfLife(0.1, numberToWei(1), numberToWei(1))
           if (HALF_LIFE > 0)
-            await time.increase(10 * HALF_LIFE)
+            await time.increase(3.14 * HALF_LIFE)
           const after = await swapAndRedeemInHalfLife(0.1, numberToWei(1), numberToWei(1))
           expect(Number(weiToNumber(before.long))).to.be.closeTo(
             Number(weiToNumber(after.long)),
@@ -724,7 +724,7 @@ HLs.forEach(HALF_LIFE => {
         })
         it("1 day - wait 10 halflife", async function () {
           const { swapAndWait } = await loadFixture(deployDDLv2);
-          await swapAndWait(86400, 10 * HALF_LIFE, numberToWei(2.5), numberToWei(0.5))
+          await swapAndWait(86400, 3.14 * HALF_LIFE, numberToWei(2.5), numberToWei(0.5))
         })
         it("Instant swap back", async function () {
           const { instantSwapBackUTR } = await loadFixture(deployDDLv2)
@@ -734,7 +734,7 @@ HLs.forEach(HALF_LIFE => {
           const { swapAndRedeemInHalfLife } = await loadFixture(deployDDLv2);
           const before = await swapAndRedeemInHalfLife(0.1, numberToWei(2.5), numberToWei(0.5))
           if (HALF_LIFE > 0)
-            await time.increase(10 * HALF_LIFE)
+            await time.increase(3.14 * HALF_LIFE)
           const after = await swapAndRedeemInHalfLife(0.1, numberToWei(2.5), numberToWei(0.5))
           expect(before.longFee, 'Long Return').gt(after.longFee).gt(0)
           // expect(before.short, 'Short Return').gt(after.short).gt(0)
@@ -760,7 +760,7 @@ HLs.forEach(HALF_LIFE => {
         })
         it("1 day - wait 10 halflife", async function () {
           const { swapAndWait } = await loadFixture(deployDDLv2);
-          await swapAndWait(86400, 10 * HALF_LIFE, numberToWei(0.5), numberToWei(2.5))
+          await swapAndWait(86400, 3.14 * HALF_LIFE, numberToWei(0.5), numberToWei(2.5))
         })
         it("Instant swap back", async function () {
           const { instantSwapBackUTR } = await loadFixture(deployDDLv2)
@@ -770,7 +770,7 @@ HLs.forEach(HALF_LIFE => {
           const { swapAndRedeemInHalfLife } = await loadFixture(deployDDLv2);
           const before = await swapAndRedeemInHalfLife(0.1, numberToWei(0.5), numberToWei(2.5))
           if (HALF_LIFE > 0)
-            await time.increase(10 * HALF_LIFE)
+            await time.increase(3.14 * HALF_LIFE)
           const after = await swapAndRedeemInHalfLife(0.1, numberToWei(0.5), numberToWei(2.5))
           expect(before.shortFee, 'Short Return').gt(after.shortFee).gt(0)
           // expect(before.long, 'Long Return').gt(after.long).gt(0)
