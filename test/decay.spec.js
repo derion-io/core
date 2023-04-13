@@ -424,10 +424,10 @@ HLs.forEach(HALF_LIFE => {
           ], opts)
         const afterA = await weth.balanceOf(accountA.address)
         const afterB = await weth.balanceOf(accountB.address)
-        const changeOfA = beforeA.sub(amountB).sub(afterA)
-        const changeOfB = afterB.sub(beforeB)
-        console.log(changeOfA)
-        console.log(changeOfB)
+        // const changeOfA = beforeA.sub(amountB).sub(afterA)
+        // const changeOfB = afterB.sub(beforeB)
+        // console.log(changeOfA)
+        // console.log(changeOfB)
         // expect(amountB.gte(changeOfB)).to.be.true
       }
 
