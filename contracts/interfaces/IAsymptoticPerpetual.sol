@@ -29,10 +29,14 @@ interface IAsymptoticPerpetual {
         uint b
     ) external returns (uint rA, uint rB, uint rC);
 
-    function exactIn(
-        Config memory config,
+    /**
+     * @param payload passed to Helper.swapToState callback, should not used by this function
+     */
+    function swap(
+        Config calldata config,
         uint sideIn,
-        uint amountInDesired,
-        uint sideOut
+        uint sideOut,
+        address helper,
+        bytes calldata payload
     ) external returns(uint amountIn, uint amountOut);
 }

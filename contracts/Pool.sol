@@ -80,20 +80,22 @@ contract Pool is IPool, Storage, Constants {
         id = (side << 160) + uint160(pool);
     }
 
-    function exactIn(
+    function swap(
         uint sideIn,
-        uint amountIn,
         uint sideOut,
+        address helper,
+        bytes calldata payload,
         address payer,
         address recipient
-    ) external override returns(uint amountOut) {
+    ) external override returns(uint amountIn, uint amountOut) {
         (bool success, bytes memory result) = LOGIC.delegatecall(
             abi.encodeWithSelector(
-                IAsymptoticPerpetual.exactIn.selector,
+                IAsymptoticPerpetual.swap.selector,
                 Config(TOKEN, TOKEN_R, ORACLE, K, MARK, TIMESTAMP, HALF_LIFE),
                 sideIn,
-                amountIn,
-                sideOut
+                sideOut,
+                helper,
+                payload
             )
         );
         if (!success) {
