@@ -163,7 +163,6 @@ contract AsymptoticPerpetual is Storage, Constants, IAsymptoticPerpetual {
         State memory state = State(_reserve(config.TOKEN_R), s_a, s_b);
         (Market memory market, uint rA, uint rB) = _selectPrice(config, state, sideIn, sideOut);
         uint rC = state.R - rA - rB;
-        uint s; // use for sIn then sOut
         // [CALCULATION]
         // TODO: allow Helper contract to override this section
         State memory state1 = State(state.R, state.a, state.b);
@@ -175,7 +174,7 @@ contract AsymptoticPerpetual is Storage, Constants, IAsymptoticPerpetual {
                 state1.b = _v(market.xkB, rB + amountInDesired, state1.R);
             }
         } else {
-            s = _supply(config.TOKEN, sideIn);
+            uint s = _supply(config.TOKEN, sideIn);
             if (sideIn == SIDE_A) {
                 uint rOut = FullMath.mulDiv(rA, amountInDesired, s);
                 if (sideOut == SIDE_R) {
@@ -201,7 +200,7 @@ contract AsymptoticPerpetual is Storage, Constants, IAsymptoticPerpetual {
         if (sideIn == SIDE_R) {
             amountIn = state1.R - state.R;
         } else {
-            // s = _supply(config.TOKEN, sideIn);
+            uint s = _supply(config.TOKEN, sideIn);
             if (sideIn == SIDE_A) {
                 amountIn = FullMath.mulDiv(rA - rA1, s, rA);
                 s_a = state1.a;
@@ -218,7 +217,7 @@ contract AsymptoticPerpetual is Storage, Constants, IAsymptoticPerpetual {
         if (sideOut == SIDE_R) {
             amountOut = state.R - state1.R;
         } else {
-            s = _supply(config.TOKEN, sideOut);
+            uint s = _supply(config.TOKEN, sideOut);
             if (sideOut == SIDE_A) {
                 amountOut = FullMath.mulDiv(rA1 - rA, s, rA);
                 s_a = state1.a;
