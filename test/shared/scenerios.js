@@ -4,7 +4,7 @@ const {
 } = require("@nomicfoundation/hardhat-network-helpers");
 const { expect, use } = require("chai");
 const { solidity } = require("ethereum-waffle");
-const { weiToNumber, bn, getDeltaSupply, numberToWei, packId, unpackId, encodeSqrtX96 } = require("./utilities");
+const { weiToNumber, bn, getDeltaSupply, numberToWei, packId, unpackId, encodeSqrtX96, encodePayload } = require("./utilities");
 
 use(solidity)
 
@@ -137,10 +137,15 @@ async function scenerio01() {
 
   await time.increase(100);
   // deploy helper
-  const DerivableHelper = await ethers.getContractFactory("Helper")
+  const StateCalHelper = await ethers.getContractFactory("contracts/Helper.sol:Helper")
+  const stateCalHelper = await StateCalHelper.deploy()
+  await stateCalHelper.deployed()
+
+  const DerivableHelper = await ethers.getContractFactory("contracts/test/Helper.sol:Helper")
   const derivableHelper = await DerivableHelper.deploy(
     derivablePool.address,
-    derivable1155.address
+    derivable1155.address,
+    stateCalHelper.address
   )
   await derivableHelper.deployed()
   const A_ID = packId(0x10, derivablePool.address);
@@ -160,10 +165,11 @@ async function scenerio01() {
   txSignerA = derivablePool.connect(accountA);
   txSignerB = derivablePool.connect(accountB);
 
-  await txSignerA.exactIn(
+  await txSignerA.swap(
     0x00,
-    numberToWei(0.5),
     0x30,
+    stateCalHelper.address,
+    encodePayload(0, 0x00, 0x30, numberToWei(0.5), derivable1155.address),
     '0x0000000000000000000000000000000000000000',
     accountA.address
   );
@@ -181,7 +187,8 @@ async function scenerio01() {
     accountA,
     accountB,
     txSignerA,
-    txSignerB
+    txSignerB,
+    stateCalHelper
   }
 }
 
@@ -292,10 +299,15 @@ async function scenerio02() {
 
   await time.increase(100);
   // deploy helper
-  const DerivableHelper = await ethers.getContractFactory("Helper")
+  const StateCalHelper = await ethers.getContractFactory("contracts/Helper.sol:Helper")
+  const stateCalHelper = await StateCalHelper.deploy()
+  await stateCalHelper.deployed()
+
+  const DerivableHelper = await ethers.getContractFactory("contracts/test/Helper.sol:Helper")
   const derivableHelper = await DerivableHelper.deploy(
     derivablePool.address,
-    derivable1155.address
+    derivable1155.address,
+    stateCalHelper.address
   )
   await derivableHelper.deployed()
   const A_ID = packId(0x10, derivablePool.address);
@@ -315,10 +327,11 @@ async function scenerio02() {
   txSignerA = derivablePool.connect(accountA);
   txSignerB = derivablePool.connect(accountB);
 
-  await txSignerA.exactIn(
+  await txSignerA.swap(
     0x00,
-    numberToWei(0.5),
     0x30,
+    stateCalHelper.address,
+    encodePayload(0, 0x00, 0x30, numberToWei(0.5), derivable1155.address),
     '0x0000000000000000000000000000000000000000',
     accountA.address
   );
@@ -336,7 +349,8 @@ async function scenerio02() {
     accountA,
     accountB,
     txSignerA,
-    txSignerB
+    txSignerB,
+    stateCalHelper
   }
 }
 

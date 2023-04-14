@@ -4,8 +4,8 @@ const {
 } = require("@nomicfoundation/hardhat-network-helpers");
 const { expect, use } = require("chai");
 const { solidity } = require("ethereum-waffle");
-const { weiToNumber, bn, getDeltaSupply, numberToWei, packId, unpackId, encodeSqrtX96 } = require("./shared/utilities");
-const {scenerio01, scenerio02} = require("./shared/scenerios");
+const { weiToNumber, bn, getDeltaSupply, numberToWei, packId, unpackId, encodeSqrtX96, encodePayload } = require("./shared/utilities");
+const { scenerio01, scenerio02 } = require("./shared/scenerios");
 
 use(solidity)
 
@@ -149,10 +149,15 @@ describe("Decay funding rate", function () {
 
     await time.increase(100);
     // deploy helper
-    const DerivableHelper = await ethers.getContractFactory("Helper")
+    const StateCalHelper = await ethers.getContractFactory("contracts/Helper.sol:Helper")
+    const stateCalHelper = await StateCalHelper.deploy()
+    await stateCalHelper.deployed()
+
+    const DerivableHelper = await ethers.getContractFactory("contracts/test/Helper.sol:Helper")
     const derivableHelper = await DerivableHelper.deploy(
       derivablePool.address,
-      derivable1155.address
+      derivable1155.address,
+      stateCalHelper.address
     )
     await derivableHelper.deployed()
     const A_ID = packId(0x10, derivablePool.address);
@@ -172,10 +177,11 @@ describe("Decay funding rate", function () {
     txSignerA = derivablePool.connect(accountA);
     txSignerB = derivablePool.connect(accountB);
 
-    await txSignerA.exactIn(
+    await txSignerA.swap(
       0x00,
-      numberToWei(0.5),
       0x30,
+      stateCalHelper.address,
+      encodePayload(0, 0x00, 0x30, numberToWei(0.5), derivable1155.address),
       '0x0000000000000000000000000000000000000000',
       accountA.address
     );
@@ -193,34 +199,38 @@ describe("Decay funding rate", function () {
       accountA,
       accountB,
       txSignerA,
-      txSignerB
+      txSignerB,
+      stateCalHelper
     }
   }
 
   scenerios.forEach(scene => {
     describe(`Pool ${scene.desc}`, function () {
       async function amountInMustGteAmountInDesired(longAmount, rateLongSwapback, shortAmount, rateShortSwapback, period, prefix = '( )') {
-        const { accountB, accountA, txSignerA, txSignerB, weth, derivable1155, A_ID, B_ID } = await loadFixture(scene.scenerio);
-        await txSignerA.exactIn(
+        const { accountB, accountA, txSignerA, txSignerB, weth, derivable1155, A_ID, B_ID, stateCalHelper } = await loadFixture(scene.scenerio);
+        await txSignerA.swap(
           0x00,
-          numberToWei(1),
           0x30,
+          stateCalHelper.address,
+          encodePayload(0, 0x00, 0x30, numberToWei(1), derivable1155.address),
           '0x0000000000000000000000000000000000000000',
           accountA.address
         );
         const wethABegin = await weth.balanceOf(accountA.address)
         const wethBBegin = await weth.balanceOf(accountB.address)
-        await txSignerA.exactIn(
+        await txSignerA.swap(
           0x00,
-          longAmount,
           0x10,
+          stateCalHelper.address,
+          encodePayload(0, 0x00, 0x10, longAmount, derivable1155.address),
           '0x0000000000000000000000000000000000000000',
           accountA.address
         );
-        await txSignerB.exactIn(
+        await txSignerB.swap(
           0x00,
-          shortAmount,
           0x20,
+          stateCalHelper.address,
+          encodePayload(0, 0x00, 0x20, shortAmount, derivable1155.address),
           '0x0000000000000000000000000000000000000000',
           accountB.address
         );
@@ -231,23 +241,25 @@ describe("Decay funding rate", function () {
         }
         expect(wethABegin.sub(wethAAfter)).to.be.lte(longAmount, `${prefix}: Long R->A In > Desired`)
         expect(wethBBegin.sub(wethBAfter)).to.be.lte(shortAmount, `${prefix}: Long R->B In > Desired`)
-  
+
         const tokenAAmountBefore = await derivable1155.balanceOf(accountA.address, A_ID)
         const tokenBAmountBefore = await derivable1155.balanceOf(accountB.address, B_ID)
-        
+
         const amountAIn = tokenAAmountBefore.mul(rateLongSwapback).div(100)
         const amountBIn = tokenBAmountBefore.mul(rateShortSwapback).div(100)
-        await txSignerA.exactIn(
+        await txSignerA.swap(
           0x10,
-          amountAIn,
           0x00,
+          stateCalHelper.address,
+          encodePayload(0, 0x10, 0x00, amountAIn, derivable1155.address),
           '0x0000000000000000000000000000000000000000',
           accountA.address
         );
-        await txSignerB.exactIn(
+        await txSignerB.swap(
           0x20,
-          amountBIn,
           0x00,
+          stateCalHelper.address,
+          encodePayload(0, 0x20, 0x00, amountBIn, derivable1155.address),
           '0x0000000000000000000000000000000000000000',
           accountB.address
         );

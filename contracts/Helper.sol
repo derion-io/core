@@ -28,7 +28,7 @@ contract Helper is Constants, IHelper {
     }
 
     function _supply(address TOKEN, uint side) internal view returns (uint s) {
-        return IERC1155Supply(TOKEN).totalSupply(_packID(address(this), side));
+        return IERC1155Supply(TOKEN).totalSupply(_packID(msg.sender, side));
     }
 
     function swapToState(
@@ -56,6 +56,7 @@ contract Helper is Constants, IHelper {
             }
         } else {
             uint s = _supply(TOKEN, sideIn);
+            
             if (sideIn == SIDE_A) {
                 uint rOut = FullMath.mulDiv(rA, amount, s);
                 if (sideOut == SIDE_R) {

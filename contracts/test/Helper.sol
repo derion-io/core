@@ -9,10 +9,12 @@ contract Helper {
 
     address private immutable POOL;
     address private immutable TOKEN;
+    address private immutable HELPER;
 
-    constructor(address pool, address token) {
+    constructor(address pool, address token, address helper) {
         POOL = pool;
         TOKEN = token;
+        HELPER = helper;
     }
 
     function onERC1155Received(
@@ -42,7 +44,6 @@ contract Helper {
     function swapInAll(
         uint sideIn,
         uint sideOut,
-        address helper,
         address payer,
         address recipient
     ) external returns (uint, uint) {
@@ -57,7 +58,7 @@ contract Helper {
         return IPool(POOL).swap(
             sideIn,
             sideOut,
-            helper,
+            HELPER,
             payload,
             payer,
             recipient

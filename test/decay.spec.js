@@ -4,7 +4,7 @@ const {
 } = require("@nomicfoundation/hardhat-network-helpers");
 const { expect, use } = require("chai");
 const { solidity } = require("ethereum-waffle");
-const { weiToNumber, bn, getDeltaSupply, numberToWei, packId, unpackId, encodeSqrtX96 } = require("./shared/utilities");
+const { weiToNumber, bn, getDeltaSupply, numberToWei, packId, unpackId, encodeSqrtX96, encodePayload, attemptSwap, attemptStaticSwap } = require("./shared/utilities");
 
 use(solidity)
 
@@ -113,7 +113,7 @@ HLs.forEach(HALF_LIFE => {
         oracle,
         reserveToken: weth.address,
         recipient: owner.address,
-        mark: bn(25).shl(112).div(1000),
+        mark: bn(38).shl(112).div(1000),
         k: 5,
         a: '30000000000',
         b: '30000000000',
@@ -138,12 +138,18 @@ HLs.forEach(HALF_LIFE => {
 
       await time.increase(100);
       // deploy helper
-      const DerivableHelper = await ethers.getContractFactory("Helper")
+      const StateCalHelper = await ethers.getContractFactory("contracts/Helper.sol:Helper")
+      const stateCalHelper = await StateCalHelper.deploy()
+      await stateCalHelper.deployed()
+
+      const DerivableHelper = await ethers.getContractFactory("contracts/test/Helper.sol:Helper")
       const derivableHelper = await DerivableHelper.deploy(
         derivablePool.address,
-        derivable1155.address
+        derivable1155.address,
+        stateCalHelper.address
       )
       await derivableHelper.deployed()
+
       const A_ID = packId(0x10, derivablePool.address);
       const B_ID = packId(0x20, derivablePool.address);
       const R_ID = packId(0x00, derivablePool.address);
@@ -161,91 +167,138 @@ HLs.forEach(HALF_LIFE => {
       txSignerA = derivablePool.connect(accountA);
       txSignerB = derivablePool.connect(accountB);
 
-      await txSignerA.exactIn(
+      await attemptSwap(
+        txSignerA,
+        0,
         0x00,
-        numberToWei(0.5),
         0x30,
+        numberToWei(0.5),
+        derivable1155.address,
+        stateCalHelper.address,
         '0x0000000000000000000000000000000000000000',
         accountA.address
-      );
+      )
 
       async function swapAndWait(period, waitingTime, amountA, amountB) {
-        await txSignerA.exactIn(
+        await attemptSwap(
+          txSignerA,
+          0,
           0x00,
+          0x10,
           amountA,
-          0x10,
-          '0x0000000000000000000000000000000000000000',
-          accountA.address
-        );
-        await txSignerB.exactIn(
-          0x00,
-          amountB,
-          0x20,
-          '0x0000000000000000000000000000000000000000',
-          accountB.address
-        );
-        const aTokenAmount = await derivable1155.balanceOf(accountA.address, A_ID)
-        const bTokenAmount = await derivable1155.balanceOf(accountB.address, B_ID)
-
-        const aFirstBefore = await txSignerA.callStatic.exactIn(
-          0x10,
-          aTokenAmount,
-          0x00,
+          derivable1155.address,
+          stateCalHelper.address,
           '0x0000000000000000000000000000000000000000',
           accountA.address
         )
-        const bFirstBefore = await txSignerB.callStatic.exactIn(
-          0x20,
-          bTokenAmount,
+        await attemptSwap(
+          txSignerB,
+          0,
           0x00,
+          0x20,
+          amountB,
+          derivable1155.address,
+          stateCalHelper.address,
+          '0x0000000000000000000000000000000000000000',
+          accountB.address
+        )
+        const aTokenAmount = await derivable1155.balanceOf(accountA.address, A_ID)
+        const bTokenAmount = await derivable1155.balanceOf(accountB.address, B_ID)
+
+        const aFirstBefore = await attemptStaticSwap(
+          txSignerA,
+          0,
+          0x10,
+          0x00,
+          aTokenAmount,
+          derivable1155.address,
+          stateCalHelper.address,
+          '0x0000000000000000000000000000000000000000',
+          accountA.address
+        )
+        
+        const bFirstBefore = await attemptStaticSwap(
+          txSignerB,
+          0,
+          0x20,
+          0x00,
+          bTokenAmount,
+          derivable1155.address,
+          stateCalHelper.address,
           '0x0000000000000000000000000000000000000000',
           accountB.address
         )
         if (period > 0)
           await time.increase(period)
-        const aFirstAfter = await txSignerA.callStatic.exactIn(
+          
+        const aFirstAfter = await attemptStaticSwap(
+          txSignerA,
+          0,
           0x10,
-          aTokenAmount,
           0x00,
+          aTokenAmount,
+          derivable1155.address,
+          stateCalHelper.address,
           '0x0000000000000000000000000000000000000000',
           accountA.address
         )
-        const bFirstAfter = await txSignerB.callStatic.exactIn(
+        
+        const bFirstAfter = await attemptStaticSwap(
+          txSignerB,
+          0,
           0x20,
-          bTokenAmount,
           0x00,
+          bTokenAmount,
+          derivable1155.address,
+          stateCalHelper.address,
           '0x0000000000000000000000000000000000000000',
           accountB.address
         )
         if (waitingTime > 0)
           await time.increase(waitingTime)
-        const aSecondBefore = await txSignerA.callStatic.exactIn(
+        const aSecondBefore = await attemptStaticSwap(
+          txSignerA,
+          0,
           0x10,
-          aTokenAmount,
           0x00,
+          aTokenAmount,
+          derivable1155.address,
+          stateCalHelper.address,
           '0x0000000000000000000000000000000000000000',
           accountA.address
         )
-        const bSecondBefore = await txSignerB.callStatic.exactIn(
+        const bSecondBefore = await attemptStaticSwap(
+          txSignerB,
+          0,
           0x20,
-          bTokenAmount,
           0x00,
+          bTokenAmount,
+          derivable1155.address,
+          stateCalHelper.address,
           '0x0000000000000000000000000000000000000000',
           accountB.address
         )
         if (period > 0)
           await time.increase(period)
-        const aSecondAfter = await txSignerA.callStatic.exactIn(
+        const aSecondAfter = await attemptStaticSwap(
+          txSignerA,
+          0,
           0x10,
-          aTokenAmount,
           0x00,
+          aTokenAmount,
+          derivable1155.address,
+          stateCalHelper.address,
           '0x0000000000000000000000000000000000000000',
           accountA.address
         )
-        const bSecondAfter = await txSignerB.callStatic.exactIn(
+        const bSecondAfter = await attemptStaticSwap(
+          txSignerB,
+          0,
           0x20,
-          bTokenAmount,
           0x00,
+          bTokenAmount,
+          derivable1155.address,
+          stateCalHelper.address,
           '0x0000000000000000000000000000000000000000',
           accountB.address
         )
@@ -287,10 +340,11 @@ HLs.forEach(HALF_LIFE => {
               }],
               flags: 0,
               code: derivablePool.address,
-              data: (await derivablePool.populateTransaction.exactIn(
+              data: (await derivablePool.populateTransaction.swap(
                 0x00,
-                amountA,
                 0x10,
+                stateCalHelper.address,
+                encodePayload(0, 0x00, 0x10, amountA, derivable1155.address),
                 accountA.address,
                 derivableHelper.address
               )).data,
@@ -328,10 +382,11 @@ HLs.forEach(HALF_LIFE => {
               }],
               flags: 0,
               code: derivablePool.address,
-              data: (await derivablePool.populateTransaction.exactIn(
+              data: (await derivablePool.populateTransaction.swap(
                 0x00,
-                amountB,
                 0x20,
+                stateCalHelper.address,
+                encodePayload(0, 0x00, 0x20, amountB, derivable1155.address),
                 accountB.address,
                 derivableHelper.address
               )).data,
@@ -372,10 +427,11 @@ HLs.forEach(HALF_LIFE => {
               }],
               flags: 0,
               code: derivablePool.address,
-              data: (await derivablePool.populateTransaction.exactIn(
+              data: (await derivablePool.populateTransaction.swap(
                 0x00,
-                amountB,
                 0x20,
+                stateCalHelper.address,
+                encodePayload(0, 0x00, 0x20, amountB, derivable1155.address),
                 accountA.address,
                 derivableHelper.address
               )).data,
@@ -392,10 +448,11 @@ HLs.forEach(HALF_LIFE => {
               }],
               flags: 0,
               code: derivablePool.address,
-              data: (await derivablePool.populateTransaction.exactIn(
+              data: (await derivablePool.populateTransaction.swap(
                 0x00,
-                amountA,
                 0x10,
+                stateCalHelper.address,
+                encodePayload(0, 0x00, 0x10, amountA, derivable1155.address),
                 accountA.address,
                 derivableHelper.address
               )).data,
@@ -434,34 +491,50 @@ HLs.forEach(HALF_LIFE => {
 
       async function instantSwapBackNonUTR(amountA, amountB) {
         txSignerA = derivablePool.connect(accountA)
-        await txSignerA.exactIn(
+        await attemptSwap(
+          txSignerA,
+          0,
           0x00,
-          amountA,
           0x10,
+          amountA,
+          derivable1155.address,
+          stateCalHelper.address,
           '0x0000000000000000000000000000000000000000',
           accountA.address
-        );
+        )
         const aTokenAmount = await derivable1155.balanceOf(accountA.address, A_ID)
-        const valueA = await txSignerA.callStatic.exactIn(
+        const valueA = await attemptStaticSwap(
+          txSignerA,
+          0,
           0x10,
-          aTokenAmount,
           0x00,
+          aTokenAmount,
+          derivable1155.address,
+          stateCalHelper.address,
           '0x0000000000000000000000000000000000000000',
           accountA.address
         )
         txSignerB = derivablePool.connect(accountB)
-        await txSignerB.exactIn(
+        await attemptSwap(
+          txSignerB,
+          0,
           0x00,
-          amountB,
           0x20,
+          amountB,
+          derivable1155.address,
+          stateCalHelper.address,
           '0x0000000000000000000000000000000000000000',
           accountB.address
-        );
+        )
         const bTokenAmount = await derivable1155.balanceOf(accountB.address, B_ID)
-        const valueB = await txSignerB.callStatic.exactIn(
+        const valueB = await attemptStaticSwap(
+          txSignerB,
+          0,
           0x20,
-          bTokenAmount,
           0x00,
+          bTokenAmount,
+          derivable1155.address,
+          stateCalHelper.address,
           '0x0000000000000000000000000000000000000000',
           accountB.address
         )
@@ -471,51 +544,75 @@ HLs.forEach(HALF_LIFE => {
 
       async function swapBackInAHalfLife(amountA, amountB, caseName) {
         txSignerA = derivablePool.connect(accountA)
-        await txSignerA.exactIn(
+        await attemptSwap(
+          txSignerA,
+          0,
           0x00,
+          0x10,
           amountA,
-          0x10,
-          '0x0000000000000000000000000000000000000000',
-          accountA.address
-        );
-        txSignerB = derivablePool.connect(accountB)
-        await txSignerB.exactIn(
-          0x00,
-          amountB,
-          0x20,
-          '0x0000000000000000000000000000000000000000',
-          accountB.address
-        );
-
-        const aTokenAmount = await derivable1155.balanceOf(accountA.address, A_ID)
-        const bTokenAmount = await derivable1155.balanceOf(accountB.address, B_ID)
-        const valueABefore = await txSignerA.callStatic.exactIn(
-          0x10,
-          aTokenAmount,
-          0x00,
+          derivable1155.address,
+          stateCalHelper.address,
           '0x0000000000000000000000000000000000000000',
           accountA.address
         )
-        const valueBBefore = await txSignerB.callStatic.exactIn(
-          0x20,
-          bTokenAmount,
+        txSignerB = derivablePool.connect(accountB)
+        await attemptSwap(
+          txSignerB,
+          0,
           0x00,
+          0x20,
+          amountB,
+          derivable1155.address,
+          stateCalHelper.address,
+          '0x0000000000000000000000000000000000000000',
+          accountB.address
+        )
+
+        const aTokenAmount = await derivable1155.balanceOf(accountA.address, A_ID)
+        const bTokenAmount = await derivable1155.balanceOf(accountB.address, B_ID)
+        const valueABefore = await attemptStaticSwap(
+          txSignerA,
+          0,
+          0x10,
+          0x00,
+          aTokenAmount,
+          derivable1155.address,
+          stateCalHelper.address,
+          '0x0000000000000000000000000000000000000000',
+          accountA.address
+        )
+        const valueBBefore = await attemptStaticSwap(
+          txSignerB,
+          0,
+          0x20,
+          0x00,
+          bTokenAmount,
+          derivable1155.address,
+          stateCalHelper.address,
           '0x0000000000000000000000000000000000000000',
           accountB.address
         )
         if (HALF_LIFE > 0)
           await time.increase(HALF_LIFE)
-        const valueAAfter = await txSignerA.callStatic.exactIn(
+        const valueAAfter = await attemptStaticSwap(
+          txSignerA,
+          0,
           0x10,
-          aTokenAmount,
           0x00,
+          aTokenAmount,
+          derivable1155.address,
+          stateCalHelper.address,
           '0x0000000000000000000000000000000000000000',
           accountA.address
         )
-        const valueBAfter = await txSignerB.callStatic.exactIn(
+        const valueBAfter = await attemptStaticSwap(
+          txSignerB,
+          0,
           0x20,
-          bTokenAmount,
           0x00,
+          bTokenAmount,
+          derivable1155.address,
+          stateCalHelper.address,
           '0x0000000000000000000000000000000000000000',
           accountB.address
         )
@@ -532,33 +629,52 @@ HLs.forEach(HALF_LIFE => {
       async function swapAndRedeemInHalfLife(period, amountA, amountB) {
         txSignerA = derivablePool.connect(accountA)
         txSignerB = derivablePool.connect(accountB)
-        await txSignerA.exactIn(
+
+        
+        await attemptSwap(
+          txSignerA,
+          0,
           0x00,
+          0x10,
           amountA,
-          0x10,
-          '0x0000000000000000000000000000000000000000',
-          accountA.address
-        );
-        await txSignerB.exactIn(
-          0x00,
-          amountB,
-          0x20,
-          '0x0000000000000000000000000000000000000000',
-          accountB.address
-        );
-        const aTokenAmount = await derivable1155.balanceOf(accountA.address, A_ID)
-        const bTokenAmount = await derivable1155.balanceOf(accountB.address, B_ID)
-        const valueABefore = await txSignerA.callStatic.exactIn(
-          0x10,
-          aTokenAmount,
-          0x00,
+          derivable1155.address,
+          stateCalHelper.address,
           '0x0000000000000000000000000000000000000000',
           accountA.address
         )
-        const valueBBefore = await txSignerB.callStatic.exactIn(
-          0x20,
-          bTokenAmount,
+        await attemptSwap(
+          txSignerB,
+          0,
           0x00,
+          0x20,
+          amountB,
+          derivable1155.address,
+          stateCalHelper.address,
+          '0x0000000000000000000000000000000000000000',
+          accountB.address
+        )
+        const aTokenAmount = await derivable1155.balanceOf(accountA.address, A_ID)
+        const bTokenAmount = await derivable1155.balanceOf(accountB.address, B_ID)
+        
+        const valueABefore = await attemptStaticSwap(
+          txSignerA,
+          0,
+          0x10,
+          0x00,
+          aTokenAmount,
+          derivable1155.address,
+          stateCalHelper.address,
+          '0x0000000000000000000000000000000000000000',
+          accountA.address
+        )
+        const valueBBefore = await attemptStaticSwap(
+          txSignerB,
+          0,
+          0x20,
+          0x00,
+          bTokenAmount,
+          derivable1155.address,
+          stateCalHelper.address,
           '0x0000000000000000000000000000000000000000',
           accountB.address
         )
@@ -569,17 +685,25 @@ HLs.forEach(HALF_LIFE => {
         const aBefore = await weth.balanceOf(accountA.address)
         const bBefore = await weth.balanceOf(accountB.address)
 
-        await txSignerA.exactIn(
+        await attemptSwap(
+          txSignerA,
+          0,
           0x10,
-          aTokenAmount,
           0x00,
+          aTokenAmount,
+          derivable1155.address,
+          stateCalHelper.address,
           '0x0000000000000000000000000000000000000000',
           accountA.address
         )
-        await txSignerB.exactIn(
+        await attemptSwap(
+          txSignerB,
+          0,
           0x20,
-          bTokenAmount,
           0x00,
+          bTokenAmount,
+          derivable1155.address,
+          stateCalHelper.address,
           '0x0000000000000000000000000000000000000000',
           accountB.address
         )
@@ -641,26 +765,36 @@ HLs.forEach(HALF_LIFE => {
         instantSwapBackUTR,
         groupSwapBack,
         instantSwapBackNonUTR,
-        swapBackInAHalfLife
+        swapBackInAHalfLife,
+        stateCalHelper
       }
     }
 
     describe("Pool", function () {
       it("LP increase over time", async function () {
-        const { swapAndRedeemInHalfLife, accountA, txSignerA, derivable1155, C_ID } = await loadFixture(deployDDLv2);
+        const { swapAndRedeemInHalfLife, accountA, txSignerA, derivable1155, C_ID, stateCalHelper } = await loadFixture(deployDDLv2);
         const lpAmount = await derivable1155.balanceOf(accountA.address, C_ID)
-        const originLPValue = await txSignerA.callStatic.exactIn(
+        const originLPValue = await attemptStaticSwap(
+          txSignerA,
+          0,
           0x30,
-          lpAmount,
           0x00,
+          lpAmount,
+          derivable1155.address,
+          stateCalHelper.address,
           '0x0000000000000000000000000000000000000000',
           accountA.address
         )
         await swapAndRedeemInHalfLife(1, numberToWei(1), numberToWei(1))
-        const afterLPValue = await txSignerA.callStatic.exactIn(
+        
+        const afterLPValue = await attemptStaticSwap(
+          txSignerA,
+          0,
           0x30,
-          lpAmount,
           0x00,
+          lpAmount,
+          derivable1155.address,
+          stateCalHelper.address,
           '0x0000000000000000000000000000000000000000',
           accountA.address
         )
