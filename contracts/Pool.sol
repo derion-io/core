@@ -2,7 +2,6 @@
 pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
 import "@derivable/utr/contracts/interfaces/IUniversalTokenRouter.sol";
 import "@uniswap/lib/contracts/libraries/TransferHelper.sol";
 import "./interfaces/IPoolFactory.sol";
@@ -19,6 +18,7 @@ contract Pool is IPool, Storage, Constants {
     address internal immutable UTR;
     address internal immutable LOGIC;
     bytes32 internal immutable ORACLE;
+    uint internal immutable K;
     address internal immutable TOKEN;
     address internal immutable TOKEN_R;
     uint224 internal immutable MARK;
@@ -33,6 +33,7 @@ contract Pool is IPool, Storage, Constants {
         LOGIC = params.logic;
         ORACLE = params.oracle;
         TOKEN_R = params.reserveToken;
+        K = params.k;
         MARK = params.mark;
         HALF_LIFE = params.halfLife;
         TIMESTAMP = block.timestamp;
@@ -44,11 +45,11 @@ contract Pool is IPool, Storage, Constants {
                     TOKEN,
                     TOKEN_R,
                     ORACLE,
+                    K,
                     MARK,
                     TIMESTAMP,
                     HALF_LIFE
                 ),
-                params.k,
                 params.a,
                 params.b
             )
@@ -79,20 +80,22 @@ contract Pool is IPool, Storage, Constants {
         id = (side << 160) + uint160(pool);
     }
 
-    function exactIn(
+    function swap(
         uint sideIn,
-        uint amountIn,
         uint sideOut,
+        address helper,
+        bytes calldata payload,
         address payer,
         address recipient
-    ) external override returns(uint amountOut) {
+    ) external override returns(uint amountIn, uint amountOut) {
         (bool success, bytes memory result) = LOGIC.delegatecall(
             abi.encodeWithSelector(
-                IAsymptoticPerpetual.exactIn.selector,
-                Config(TOKEN, TOKEN_R, ORACLE, MARK, TIMESTAMP, HALF_LIFE),
+                IAsymptoticPerpetual.swap.selector,
+                Config(TOKEN, TOKEN_R, ORACLE, K, MARK, TIMESTAMP, HALF_LIFE),
                 sideIn,
-                amountIn,
-                sideOut
+                sideOut,
+                helper,
+                payload
             )
         );
         if (!success) {
@@ -100,7 +103,7 @@ contract Pool is IPool, Storage, Constants {
                 revert(add(result, 32), mload(result))
             }
         }
-        amountOut = abi.decode(result, (uint));
+        (amountIn, amountOut) = abi.decode(result, (uint, uint));
         // TODO: reentrancy guard
         if (sideOut == SIDE_R) {
             TransferHelper.safeTransfer(TOKEN_R, recipient, amountOut);
@@ -109,16 +112,18 @@ contract Pool is IPool, Storage, Constants {
         }
         // TODO: flash callback here
         if (sideIn == SIDE_R) {
-            if (payer == address(0)) {
-                TransferHelper.safeTransferFrom(TOKEN_R, msg.sender, address(this), amountIn);
-            } else {
+            if (payer != address(0)) {
                 IUniversalTokenRouter(UTR).pay(payer, address(this), 20, TOKEN_R, 0, amountIn);
+            } else {
+                TransferHelper.safeTransferFrom(TOKEN_R, msg.sender, address(this), amountIn);
             }
         } else {
-            if (payer != address(0) && IERC1155(TOKEN).isApprovedForAll(payer, msg.sender)) {
-                IERC1155Supply(TOKEN).burn(payer, _packID(address(this), sideIn), amountIn);
+            uint idIn = _packID(address(this), sideIn);
+            if (payer != address(0)) {
+                IUniversalTokenRouter(UTR).discard(payer, 1155, TOKEN, idIn, amountIn);
+                IERC1155Supply(TOKEN).burn(payer, idIn, amountIn);
             } else {
-                IERC1155Supply(TOKEN).burn(msg.sender, _packID(address(this), sideIn), amountIn);
+                IERC1155Supply(TOKEN).burn(msg.sender, idIn, amountIn);
             }
         }
     }

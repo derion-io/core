@@ -2,6 +2,8 @@ const ethers = require('ethers')
 const bnjs = require('bignumber.js')
 bnjs.config({ EXPONENTIAL_AT: 999999, DECIMAL_PLACES: 40 })
 
+const abiCoder = new ethers.utils.AbiCoder()
+
 const stringToBytes32 = (text) => {
     let result = hre.ethers.utils.hexlify(hre.ethers.utils.toUtf8Bytes(text))
     while (result.length < 66) { result += '0' }
@@ -157,6 +159,43 @@ function encodePriceSqrt(reserve1, reserve0) {
     )
 }
 
+function encodePayload(swapType, sideIn, sideOut, amount, token1155) {
+    return abiCoder.encode(
+        ["uint", "uint", "uint", "uint", "address"],
+        [swapType, sideIn, sideOut, amount, token1155]
+    )
+}
+
+async function attemptSwap(signer, swapType, sideIn, sideOut, amount, token1155, helper, payer, recipient) {
+    const payload = abiCoder.encode(
+        ["uint", "uint", "uint", "uint", "address"],
+        [swapType, sideIn, sideOut, amount, token1155]
+    )
+    return await signer.swap(
+        sideIn,
+        sideOut,
+        helper,
+        payload,
+        payer,
+        recipient
+    )
+}
+
+async function attemptStaticSwap(signer, swapType, sideIn, sideOut, amount, token1155, helper, payer, recipient) {
+    const payload = abiCoder.encode(
+        ["uint", "uint", "uint", "uint", "address"],
+        [swapType, sideIn, sideOut, amount, token1155]
+    )
+    return (await signer.callStatic.swap(
+        sideIn,
+        sideOut,
+        helper,
+        payload,
+        payer,
+        recipient
+    )).amountOut
+}
+
 module.exports = {
     stringToBytes32,
     calculateSwapToPrice,
@@ -167,5 +206,8 @@ module.exports = {
     packId,
     unpackId,
     encodeSqrtX96,
-    encodePriceSqrt
+    encodePriceSqrt,
+    encodePayload,
+    attemptSwap,
+    attemptStaticSwap
 }

@@ -5,12 +5,16 @@ import "../interfaces/IPool.sol";
 import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
 
 contract Helper {
+    uint constant MAX_IN = 0;
+
     address private immutable POOL;
     address private immutable TOKEN;
+    address private immutable HELPER;
 
-    constructor(address pool, address token) {
+    constructor(address pool, address token, address helper) {
         POOL = pool;
         TOKEN = token;
+        HELPER = helper;
     }
 
     function onERC1155Received(
@@ -42,15 +46,22 @@ contract Helper {
         uint sideOut,
         address payer,
         address recipient
-    ) external returns (uint) {
+    ) external returns (uint, uint) {
         IERC1155(TOKEN).setApprovalForAll(POOL, true);
-        return
-            IPool(POOL).exactIn(
-                sideIn,
-                IERC1155(TOKEN).balanceOf(address(this), _packID(POOL, sideIn)),
-                sideOut,
-                payer,
-                recipient
-            );
+        bytes memory payload = abi.encode(
+            MAX_IN,
+            sideIn,
+            sideOut,
+            IERC1155(TOKEN).balanceOf(address(this), _packID(POOL, sideIn)),
+            TOKEN
+        );
+        return IPool(POOL).swap(
+            sideIn,
+            sideOut,
+            HELPER,
+            payload,
+            payer,
+            recipient
+        );
     }
 }

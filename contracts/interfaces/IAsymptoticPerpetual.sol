@@ -5,23 +5,38 @@ struct Config {
     address TOKEN;
     address TOKEN_R;
     bytes32 ORACLE;
+    uint K;
     uint224 MARK;
     uint TIMESTAMP; // TODO: change to uint32
     uint HALF_LIFE; // TODO: change to uint32
 }
 
+struct Market {
+    uint xkA;
+    uint xkB;
+}
+
+struct State {
+    uint R;
+    uint a;
+    uint b;
+}
+
 interface IAsymptoticPerpetual {
     function init(
         Config memory config,
-        uint power,
         uint a,
         uint b
     ) external returns (uint rA, uint rB, uint rC);
 
-    function exactIn(
-        Config memory config,
+    /**
+     * @param payload passed to Helper.swapToState callback, should not used by this function
+     */
+    function swap(
+        Config calldata config,
         uint sideIn,
-        uint amountIn,
-        uint sideOut
-    ) external returns(uint amountOut);
+        uint sideOut,
+        address helper,
+        bytes calldata payload
+    ) external returns(uint amountIn, uint amountOut);
 }

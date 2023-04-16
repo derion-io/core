@@ -2,11 +2,12 @@
 pragma solidity ^0.8.0;
 
 interface IPool {
-    function exactIn(
+    function swap(
         uint sideIn,
-        uint amountIn,
         uint sideOut,
+        address helper,
+        bytes calldata payload,
         address payer,
         address recipient
-    ) external returns(uint amountOut);
+    ) external returns(uint amountIn, uint amountOut);
 }

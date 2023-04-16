@@ -7,7 +7,7 @@ const { solidity } = require("ethereum-waffle")
 chai.use(solidity)
 const expect = chai.expect
 const { AddressZero, MaxUint256 } = ethers.constants
-const { bn, numberToWei, packId, encodeSqrtX96, encodePriceSqrt } = require("./shared/utilities")
+const { bn, numberToWei, packId, encodeSqrtX96, encodePriceSqrt, encodePayload } = require("./shared/utilities")
 
 const fe = (x) => Number(ethers.utils.formatEther(x))
 const pe = (x) => ethers.utils.parseEther(String(x))
@@ -21,15 +21,14 @@ const SIDE_A = 0x10
 const SIDE_B = 0x20
 const SIDE_C = 0x30
 
-const TRANSFER_FROM_SENDER = 0
-const TRANSFER_FROM_ROUTER = 1
-const TRANSFER_CALL_VALUE = 2
-const IN_TX_PAYMENT = 4
-const ALLOWANCE_BRIDGE = 8
-const AMOUNT_EXACT = 0
-const AMOUNT_ALL = 1
+const FROM_ROUTER   = 10;
+const PAYMENT       = 0;
+const TRANSFER      = 1;
+const ALLOWANCE     = 2;
+const CALL_VALUE    = 3;
+
 const EIP_ETH = 0
-const ID_721_ALL = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("UniversalTokenRouter.ID_721_ALL"))
+const ERC_721_BALANCE = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("UniversalTokenRouter.ERC_721_BALANCE"))
 const ACTION_IGNORE_ERROR = 1
 const ACTION_RECORD_CALL_RESULT = 2
 const ACTION_INJECT_CALL_RESULT = 4
@@ -137,10 +136,15 @@ describe("DDL v3", function () {
         await poolFactory.createPool(params);
         const derivablePool = await ethers.getContractAt("Pool", await poolFactory.computePoolAddress(params))
         // deploy helper
-        const DerivableHelper = await ethers.getContractFactory("Helper")
+        const StateCalHelper = await ethers.getContractFactory("contracts/Helper.sol:Helper")
+        const stateCalHelper = await StateCalHelper.deploy()
+        await stateCalHelper.deployed()
+
+        const DerivableHelper = await ethers.getContractFactory("contracts/test/Helper.sol:Helper")
         const derivableHelper = await DerivableHelper.deploy(
             derivablePool.address,
-            derivable1155.address
+            derivable1155.address,
+            stateCalHelper.address
         )
         await derivableHelper.deployed()
         // setup accA
@@ -159,7 +163,8 @@ describe("DDL v3", function () {
             derivable1155,
             uniswapRouter,
             derivableHelper,
-            uniswapPositionManager
+            uniswapPositionManager,
+            stateCalHelper
         }
     }
 
@@ -197,7 +202,7 @@ describe("DDL v3", function () {
 
     describe("Pool", function () {
         async function testRIn(sideIn, amountIn, sideOut, isUseUTR) {
-            const { owner, weth, derivablePool, utr } = await loadFixture(deployDDLv2)
+            const { owner, weth, derivablePool, utr, derivable1155, stateCalHelper } = await loadFixture(deployDDLv2)
             await weth.approve(derivablePool.address, MaxUint256)
             const payer = isUseUTR ? owner.address : AddressZero
             const wethBefore = await weth.balanceOf(owner.address)
@@ -205,20 +210,20 @@ describe("DDL v3", function () {
                 await weth.approve(utr.address, MaxUint256)
                 await utr.exec([], [{
                     inputs: [{
-                        mode: IN_TX_PAYMENT,
+                        mode: PAYMENT,
                         eip: 20,
                         token: weth.address,
                         id: 0,
-                        amountSource: AMOUNT_EXACT,
-                        amountInMax: pe(amountIn),
+                        amountIn: pe(amountIn),
                         recipient: derivablePool.address,
                     }],
                     flags: 0,
                     code: derivablePool.address,
-                    data: (await derivablePool.populateTransaction.exactIn(
+                    data: (await derivablePool.populateTransaction.swap(
                         sideIn,
-                        pe(amountIn),
                         sideOut,
+                        stateCalHelper.address,
+                        encodePayload(0, sideIn, sideOut, pe(amountIn), derivable1155.address),
                         payer,
                         owner.address
                     )).data,
@@ -226,10 +231,11 @@ describe("DDL v3", function () {
             }
             else {
                 await weth.approve(derivablePool.address, MaxUint256)
-                await derivablePool.exactIn(
+                await derivablePool.swap(
                     sideIn,
-                    pe(amountIn),
                     sideOut,
+                    stateCalHelper.address,
+                    encodePayload(0, sideIn, sideOut, pe(amountIn), derivable1155.address),
                     payer,
                     owner.address,
                     opts
@@ -260,7 +266,7 @@ describe("DDL v3", function () {
         })
 
         async function testROut(sideIn, amountIn, sideOut, isUseUTR) {
-            const { owner, weth, derivablePool, derivable1155, utr } = await loadFixture(deployDDLv2)
+            const { owner, weth, derivablePool, derivable1155, utr, stateCalHelper } = await loadFixture(deployDDLv2)
             const convertedId = convertId(sideIn, derivablePool.address)
             const payer = isUseUTR ? owner.address : AddressZero
             await weth.approve(derivablePool.address, MaxUint256)
@@ -269,29 +275,30 @@ describe("DDL v3", function () {
                 await weth.approve(utr.address, MaxUint256)
                 await utr.exec([], [{
                     inputs: [{
-                        mode: IN_TX_PAYMENT,
+                        mode: PAYMENT,
                         eip: 1155,
                         token: derivable1155.address,
                         id: convertedId,
-                        amountSource: AMOUNT_EXACT,
-                        amountInMax: pe(amountIn),
+                        amountIn: pe(amountIn),
                         recipient: derivablePool.address,
                     }],
                     flags: 0,
                     code: derivablePool.address,
-                    data: (await derivablePool.populateTransaction.exactIn(
+                    data: (await derivablePool.populateTransaction.swap(
                         sideIn,
-                        pe(amountIn),
                         sideOut,
+                        stateCalHelper.address,
+                        encodePayload(0, sideIn, sideOut, pe(amountIn), derivable1155.address),
                         payer,
                         owner.address
                     )).data,
                 }], opts)
             } else {
-                await derivablePool.exactIn(
+                await derivablePool.swap(
                     sideIn,
-                    pe(amountIn),
                     sideOut,
+                    stateCalHelper.address,
+                    encodePayload(0, sideIn, sideOut, pe(amountIn), derivable1155.address),
                     AddressZero,
                     owner.address,
                     opts
@@ -322,27 +329,27 @@ describe("DDL v3", function () {
         })
 
         async function testRInROut(side, amount) {
-            const { owner, weth, derivablePool, utr, derivableHelper } = await loadFixture(deployDDLv2)
+            const { owner, weth, derivablePool, utr, derivableHelper, stateCalHelper, derivable1155 } = await loadFixture(deployDDLv2)
             const before = await weth.balanceOf(owner.address)
             await weth.approve(utr.address, MaxUint256)
             await utr.exec([],
                 [
                     {
                         inputs: [{
-                            mode: IN_TX_PAYMENT,
+                            mode: PAYMENT,
                             eip: 20,
                             token: weth.address,
                             id: 0,
-                            amountSource: AMOUNT_EXACT,
-                            amountInMax: pe(amount),
+                            amountIn: pe(amount),
                             recipient: derivablePool.address,
                         }],
                         flags: 0,
                         code: derivablePool.address,
-                        data: (await derivablePool.populateTransaction.exactIn(
+                        data: (await derivablePool.populateTransaction.swap(
                             SIDE_R,
-                            pe(amount),
                             side,
+                            stateCalHelper.address,
+                            encodePayload(0, SIDE_R, side, pe(amount), derivable1155.address),
                             owner.address,
                             derivableHelper.address
                         )).data,
@@ -386,15 +393,16 @@ describe("DDL v3", function () {
         })
 
         async function testPriceChange(isLong = true, wethAmountIn, priceChange, expected) {
-            const { owner, weth, uniswapRouter, usdc, derivablePool, derivable1155, accountA } = await loadFixture(deployDDLv2)
+            const { owner, weth, uniswapRouter, usdc, derivablePool, derivable1155, accountA, stateCalHelper } = await loadFixture(deployDDLv2)
             // swap weth -> long
             await weth.approve(derivablePool.address, MaxUint256)
             const wethBefore = await weth.balanceOf(owner.address)
             const tokenBefore = await derivable1155.balanceOf(owner.address, convertId(isLong ? SIDE_A : SIDE_B, derivablePool.address))
-            await derivablePool.exactIn(
+            await derivablePool.swap(
                 SIDE_R,
-                pe(wethAmountIn),
                 isLong ? SIDE_A : SIDE_B,
+                stateCalHelper.address,
+                encodePayload(0, SIDE_R, isLong ? SIDE_A : SIDE_B, pe(wethAmountIn), derivable1155.address),
                 AddressZero,
                 owner.address,
                 opts
@@ -413,10 +421,11 @@ describe("DDL v3", function () {
             })
             await time.increase(1000);
             // swap back long -> weth
-            await derivablePool.exactIn(
+            await derivablePool.swap(
                 isLong ? SIDE_A : SIDE_B,
-                tokenAfter.sub(tokenBefore),
                 SIDE_R,
+                stateCalHelper.address,
+                encodePayload(0, isLong ? SIDE_A : SIDE_B, SIDE_R, tokenAfter.sub(tokenBefore), derivable1155.address),
                 AddressZero,
                 owner.address,
                 opts
