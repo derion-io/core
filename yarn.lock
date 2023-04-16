@@ -36,9 +36,20 @@
   resolved "https://registry.yarnpkg.com/@colors/colors/-/colors-1.5.0.tgz#bb504579c1cae923e6576a4f5da43d25f97bdbd9"
   integrity sha512-ooWCrlZP11i8GImSjTHYHLkvFDP48nS4+204nGb1RiX/WXYHmJA2III9/e2DWVabCESdW7hBAEzHRqUn9OUVvQ==
 
-"@derivable/utr@git+ssh://git@github.com:derivable-labs/utr.git#9fab367b86faf9ff926f49d81f4b8ccb65c13393":
+"@derivable/oracle@git+ssh://git@github.com:derivable-labs/oracle-contracts.git#f41d928db109c60846e3cd92b118739d97f5b5d7":
   version "1.0.0"
-  resolved "git+ssh://git@github.com:derivable-labs/utr.git#9fab367b86faf9ff926f49d81f4b8ccb65c13393"
+  resolved "git+ssh://git@github.com:derivable-labs/oracle-contracts.git#f41d928db109c60846e3cd92b118739d97f5b5d7"
+  dependencies:
+    "@openzeppelin/contracts" "^4.7.3"
+    "@uniswap/lib" "^4.0.1-alpha"
+    "@uniswap/v2-core" "^1.0.1"
+    "@uniswap/v2-periphery" "^1.1.0-beta.0"
+    canonical-weth "^1.4.0"
+    hardhat "^2.11.2"
+
+"@derivable/utr@git+ssh://git@github.com:derivable-labs/utr.git#0eeb99af08f5ad076ec52536ba473087f2179ed5":
+  version "1.0.0"
+  resolved "git+ssh://git@github.com:derivable-labs/utr.git#0eeb99af08f5ad076ec52536ba473087f2179ed5"
   dependencies:
     "@atixlabs/hardhat-time-n-mine" "^0.0.5"
     "@uniswap/lib" "^4.0.1-alpha"
