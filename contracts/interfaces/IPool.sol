@@ -2,6 +2,7 @@
 pragma solidity ^0.8.0;
 
 interface IPool {
+    function TOKEN_R() external returns (address);
     function swap(
         uint sideIn,
         uint sideOut,
