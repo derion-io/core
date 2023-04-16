@@ -27,10 +27,8 @@ const TRANSFER      = 1;
 const ALLOWANCE     = 2;
 const CALL_VALUE    = 3;
 
-const AMOUNT_EXACT = 0
-const AMOUNT_ALL = 1
 const EIP_ETH = 0
-const ID_721_ALL = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("UniversalTokenRouter.ID_721_ALL"))
+const ERC_721_BALANCE = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("UniversalTokenRouter.ERC_721_BALANCE"))
 const ACTION_IGNORE_ERROR = 1
 const ACTION_RECORD_CALL_RESULT = 2
 const ACTION_INJECT_CALL_RESULT = 4
@@ -216,8 +214,7 @@ describe("DDL v3", function () {
                         eip: 20,
                         token: weth.address,
                         id: 0,
-                        amountSource: AMOUNT_EXACT,
-                        amountInMax: pe(amountIn),
+                        amountIn: pe(amountIn),
                         recipient: derivablePool.address,
                     }],
                     flags: 0,
@@ -282,8 +279,7 @@ describe("DDL v3", function () {
                         eip: 1155,
                         token: derivable1155.address,
                         id: convertedId,
-                        amountSource: AMOUNT_EXACT,
-                        amountInMax: pe(amountIn),
+                        amountIn: pe(amountIn),
                         recipient: derivablePool.address,
                     }],
                     flags: 0,
@@ -344,8 +340,7 @@ describe("DDL v3", function () {
                             eip: 20,
                             token: weth.address,
                             id: 0,
-                            amountSource: AMOUNT_EXACT,
-                            amountInMax: pe(amount),
+                            amountIn: pe(amount),
                             recipient: derivablePool.address,
                         }],
                         flags: 0,

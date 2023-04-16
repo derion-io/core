@@ -24,19 +24,6 @@ const opts = {
   gasLimit: 30000000
 }
 
-const TRANSFER_FROM_SENDER = 0
-const TRANSFER_FROM_ROUTER = 1
-const TRANSFER_CALL_VALUE = 2
-const IN_TX_PAYMENT = 4
-const ALLOWANCE_BRIDGE = 8
-const AMOUNT_EXACT = 0
-const AMOUNT_ALL = 1
-const EIP_ETH = 0
-const ID_721_ALL = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("UniversalTokenRouter.ID_721_ALL"))
-const ACTION_IGNORE_ERROR = 1
-const ACTION_RECORD_CALL_RESULT = 2
-const ACTION_INJECT_CALL_RESULT = 4
-
 const HALF_LIFE = 10 * 365 * 24 * 60 * 60
 
 // const HALF_LIFE = 0
@@ -46,11 +33,6 @@ describe("Decay funding rate", function () {
     const [owner, accountA, accountB] = await ethers.getSigners();
     const signer = owner;
     // deploy token1155
-
-    const UTR = require("@derivable/utr/build/UniversalTokenRouter.json")
-    const UniversalRouter = new ethers.ContractFactory(UTR.abi, UTR.bytecode, owner)
-    const utr = await UniversalRouter.deploy()
-    await utr.deployed()
 
     // deploy pool factory
     const PoolFactory = await ethers.getContractFactory("PoolFactory");
@@ -190,7 +172,6 @@ describe("Decay funding rate", function () {
       C_ID,
       A_ID,
       B_ID,
-      utr,
       owner,
       weth,
       derivablePool,
