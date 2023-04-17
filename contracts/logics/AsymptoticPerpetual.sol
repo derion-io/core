@@ -44,7 +44,7 @@ contract AsymptoticPerpetual is Storage, Constants, IAsymptoticPerpetual {
                 z = FullMath.mulDiv(z, x, Q112);
             }
         }
-        require(z <= type(uint).max, "Pool: upper overflow");
+        // require(z <= type(uint).max, "Pool: upper overflow");
     }
 
     function _packID(address pool, uint side) internal pure returns (uint id) {
@@ -58,14 +58,14 @@ contract AsymptoticPerpetual is Storage, Constants, IAsymptoticPerpetual {
         (uint160 sqrtSpotX96,,,,,,) = IUniswapV3Pool(pool).slot0();
 
         (int24 arithmeticMeanTick,) = OracleLibrary.consult(pool, uint32(uint(ORACLE) >> 192));
-        uint160 sqrtTwapX96 = TickMath.getSqrtRatioAtTick(arithmeticMeanTick);
+        uint sqrtTwapX96 = TickMath.getSqrtRatioAtTick(arithmeticMeanTick);
 
-        spot = uint(sqrtSpotX96) << 16;
-        twap = uint(sqrtTwapX96) << 16;
+        spot = sqrtSpotX96 << 32;
+        twap = sqrtTwapX96 << 32;
 
         if (uint(ORACLE) & Q255 > 0) {
-            spot = uint(Q224 / spot);
-            twap = uint(Q224 / twap);
+            spot = Q224 / spot;
+            twap = Q224 / twap;
         }
     }
 

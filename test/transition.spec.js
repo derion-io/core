@@ -106,7 +106,7 @@ describe("Decay funding rate", function () {
       oracle,
       reserveToken: weth.address,
       recipient: owner.address,
-      mark: bn(50).shl(112).div(1000),
+      mark: bn(50).shl(128).div(1000),
       k: 5,
       a: '30000000000',
       b: '30000000000',

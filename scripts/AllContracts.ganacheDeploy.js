@@ -172,7 +172,7 @@ function convertFixedToNumber(fixed) {
 
     return bn(fixed)
         .mul(unit)
-        .shr(112)
+        .shr(128)
         .toNumber() / unit
 }
 
