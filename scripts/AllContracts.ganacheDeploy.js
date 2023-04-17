@@ -168,7 +168,7 @@ async function main() {
     await poolFactory.createPool(params1, {
         gasLimit: 6000000
     })
-    const derivablePool1 = await ethers.getContractAt("Pool", await poolFactory.computePoolAddress(params))
+    const derivablePool1 = await ethers.getContractAt("Pool", await poolFactory.computePoolAddress(params1))
     console.log(`pool1: ${derivablePool1.address}`);
     addressList["pool1"] = derivablePool1.address;
 
@@ -200,6 +200,13 @@ async function main() {
     await multicall3.deployed();
     console.log(`multicall3: ${multicall3.address}`);
     addressList["multicall3"] = multicall3.address;
+
+    // deploy helper
+    const StateCalHelper = await ethers.getContractFactory("contracts/Helper.sol:Helper")
+    const stateCalHelper = await StateCalHelper.deploy()
+    await stateCalHelper.deployed()
+    console.log(`stateCalHelper: ${stateCalHelper.address}`);
+    addressList["stateCalHelper"] = stateCalHelper.address;
 
     exportData(addressList);
     // init pool store
