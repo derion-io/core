@@ -12,14 +12,9 @@ import "./interfaces/IAsymptoticPerpetual.sol";
 import "./interfaces/IERC1155Supply.sol";
 import "./interfaces/IHelper.sol";
 import "./interfaces/IPool.sol";
-import "hardhat/console.sol";
 
 contract Helper is Constants, IHelper {
     uint constant MAX_IN = 0;
-
-//    constructor(address _TOKEN) {
-//        TOKEN = _TOKEN;
-//    }
 
     struct SwapParams {
         uint sideIn;
@@ -52,14 +47,14 @@ contract Helper is Constants, IHelper {
 
     function swap(SwapParams memory params) external returns (uint amountOut){
         // swap poolIn/sideIn to poolIn/R
-        bytes memory payload = abi.encodePacked(
+        bytes memory payload = abi.encode(
             uint(0),
             params.sideIn,
             SIDE_R,
             params.amountIn,
             params.TOKEN
         );
-        console.log(payload);
+
         (, amountOut) = IPool(params.poolIn).swap(
             params.sideIn,
             SIDE_R,
@@ -69,8 +64,12 @@ contract Helper is Constants, IHelper {
             address(this)
         );
 
+        // TOKEN_R approve poolOut
+        address TOKEN_R = IPool(params.poolIn).TOKEN_R();
+        IERC20(TOKEN_R).approve(params.poolOut, amountOut);
+
         // swap (poolIn|PoolOut)/R to poolOut/SideOut
-        payload = abi.encodePacked(
+        payload = abi.encode(
             uint(0),
             SIDE_R,
             params.sideOut,
@@ -87,7 +86,6 @@ contract Helper is Constants, IHelper {
         );
 
         // check leftOver
-        address TOKEN_R = IPool(params.poolIn).TOKEN_R();
         uint leftOver = IERC20(TOKEN_R).balanceOf(address(this));
         if (leftOver > 0) {
             TransferHelper.safeTransfer(TOKEN_R, params.payer, leftOver);
