@@ -2,10 +2,10 @@
 pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@derivable/oracle/contracts/@uniswap/lib/contracts/libraries/FixedPoint.sol";
-import "@derivable/oracle/contracts/Math.sol";
 import "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 
+import "./libraries/Math.sol";
+import "./libraries/FullMath.sol";
 import "./logics/Constants.sol";
 import "./interfaces/IAsymptoticPerpetual.sol";
 import "./interfaces/IERC1155Supply.sol";
@@ -21,9 +21,9 @@ contract Helper is Constants, IHelper {
     // v(r)
     function _v(uint xk, uint r, uint R) internal pure returns (uint v) {
         if (r <= R >> 1) {
-            return FullMath.mulDiv(r, FixedPoint.Q112, xk) + 1;
+            return FullMath.mulDiv(r, Q112, xk) + 1;
         }
-        uint denominator = FullMath.mulDiv(R - r, xk << 2, FixedPoint.Q112);
+        uint denominator = FullMath.mulDiv(R - r, xk << 2, Q112);
         return FullMath.mulDiv(R, R, denominator) + 1;
     }
 

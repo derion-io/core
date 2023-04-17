@@ -2,11 +2,10 @@
 pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@derivable/oracle/contracts/@uniswap/lib/contracts/libraries/FixedPoint.sol";
-import "@derivable/oracle/contracts/Math.sol";
 import "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 
 import "../libraries/OracleLibrary.sol";
+import "../libraries/Math.sol";
 import "./Constants.sol";
 import "./Storage.sol";
 import "../interfaces/IHelper.sol";
@@ -36,13 +35,13 @@ contract AsymptoticPerpetual is Storage, Constants, IAsymptoticPerpetual {
 
     function _powu(uint x, uint y) internal pure returns (uint z) {
         // Calculate the first iteration of the loop in advance.
-        z = y & 1 > 0 ? x : FixedPoint.Q112;
+        z = y & 1 > 0 ? x : Q112;
         // Equivalent to "for(y /= 2; y > 0; y /= 2)" but faster.
         for (y >>= 1; y > 0; y >>= 1) {
-            x = FullMath.mulDiv(x, x, FixedPoint.Q112);
+            x = FullMath.mulDiv(x, x, Q112);
             // Equivalent to "y % 2 == 1" but faster.
             if (y & 1 > 0) {
-                z = FullMath.mulDiv(z, x, FixedPoint.Q112);
+                z = FullMath.mulDiv(z, x, Q112);
             }
         }
         require(z <= type(uint224).max, "Pool: upper overflow");
@@ -65,16 +64,16 @@ contract AsymptoticPerpetual is Storage, Constants, IAsymptoticPerpetual {
         twap = uint224(sqrtTwapX96) << 16;
 
         if (uint(ORACLE) & Q255 > 0) {
-            spot = uint224(FixedPoint.Q224 / spot);
-            twap = uint224(FixedPoint.Q224 / twap);
+            spot = uint224(Q224 / spot);
+            twap = uint224(Q224 / twap);
         }
     }
 
     // r(v)
     function _r(uint xk, uint v, uint R) internal pure returns (uint r) {
-        r = FullMath.mulDiv(v, xk, FixedPoint.Q112);
+        r = FullMath.mulDiv(v, xk, Q112);
         if (r > R >> 1) {
-            uint denominator = FullMath.mulDiv(v, xk << 2, FixedPoint.Q112);
+            uint denominator = FullMath.mulDiv(v, xk << 2, Q112);
             uint minuend = FullMath.mulDiv(R, R, denominator);
             r = R - minuend;
         }
@@ -99,8 +98,8 @@ contract AsymptoticPerpetual is Storage, Constants, IAsymptoticPerpetual {
         uint decayRateX64,
         uint224 price
     ) internal pure returns (Market memory market) {
-        market.xkA = _powu(FixedPoint.fraction(price, MARK)._x, K);
-        market.xkB = uint224(FullMath.mulDiv(FixedPoint.Q224/market.xkA, Q64, decayRateX64));
+        market.xkA = _powu(FullMath.mulDiv(price, Q112, MARK), K);
+        market.xkB = uint224(FullMath.mulDiv(Q224/market.xkA, Q64, decayRateX64));
         market.xkA = uint224(FullMath.mulDiv(market.xkA, Q64, decayRateX64));
     }
 
