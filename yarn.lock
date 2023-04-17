@@ -47,9 +47,9 @@
     canonical-weth "^1.4.0"
     hardhat "^2.11.2"
 
-"@derivable/utr@git+ssh://git@github.com:derivable-labs/utr.git#9fab367b86faf9ff926f49d81f4b8ccb65c13393":
+"@derivable/utr@git+ssh://git@github.com:derivable-labs/utr.git#5b4613814b5c9dbd82d2ad46aef44d34436fe315":
   version "1.0.0"
-  resolved "git+ssh://git@github.com:derivable-labs/utr.git#9fab367b86faf9ff926f49d81f4b8ccb65c13393"
+  resolved "git+ssh://git@github.com:derivable-labs/utr.git#5b4613814b5c9dbd82d2ad46aef44d34436fe315"
   dependencies:
     "@atixlabs/hardhat-time-n-mine" "^0.0.5"
     "@uniswap/lib" "^4.0.1-alpha"
