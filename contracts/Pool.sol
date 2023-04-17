@@ -21,7 +21,7 @@ contract Pool is IPool, Storage, Constants {
     uint internal immutable K;
     address internal immutable TOKEN;
     address internal immutable TOKEN_R;
-    uint224 internal immutable MARK;
+    uint internal immutable MARK;
     uint internal immutable INIT_TIME;
     uint internal immutable HALF_LIFE;
 

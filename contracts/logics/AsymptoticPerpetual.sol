@@ -21,7 +21,7 @@ contract AsymptoticPerpetual is Storage, Constants, IAsymptoticPerpetual {
         uint b
     ) external override returns (uint rA, uint rB, uint rC) {
         require(s_a == 0 && s_b == 0, "ALREADY_INITIALIZED");
-        (uint224 twap, ) = _fetch(config.ORACLE);
+        (uint twap, ) = _fetch(config.ORACLE);
         uint decayRateX64 = _decayRate(block.timestamp - config.INIT_TIME, config.HALF_LIFE);
         State memory state = State(_reserve(config.TOKEN_R), a, b);
         Market memory market = _market(config.K, config.MARK, decayRateX64, twap);
@@ -44,7 +44,7 @@ contract AsymptoticPerpetual is Storage, Constants, IAsymptoticPerpetual {
                 z = FullMath.mulDiv(z, x, Q112);
             }
         }
-        require(z <= type(uint224).max, "Pool: upper overflow");
+        require(z <= type(uint).max, "Pool: upper overflow");
     }
 
     function _packID(address pool, uint side) internal pure returns (uint id) {
@@ -53,19 +53,19 @@ contract AsymptoticPerpetual is Storage, Constants, IAsymptoticPerpetual {
 
     function _fetch(
         bytes32 ORACLE // 1bit QTI, 31bit reserve, 32bit WINDOW, ... PAIR ADDRESS
-    ) internal view returns (uint224 twap, uint224 spot) {
+    ) internal view returns (uint twap, uint spot) {
         address pool = address(uint160(uint(ORACLE)));
         (uint160 sqrtSpotX96,,,,,,) = IUniswapV3Pool(pool).slot0();
 
         (int24 arithmeticMeanTick,) = OracleLibrary.consult(pool, uint32(uint(ORACLE) >> 192));
         uint160 sqrtTwapX96 = TickMath.getSqrtRatioAtTick(arithmeticMeanTick);
 
-        spot = uint224(sqrtSpotX96) << 16;
-        twap = uint224(sqrtTwapX96) << 16;
+        spot = uint(sqrtSpotX96) << 16;
+        twap = uint(sqrtTwapX96) << 16;
 
         if (uint(ORACLE) & Q255 > 0) {
-            spot = uint224(Q224 / spot);
-            twap = uint224(Q224 / twap);
+            spot = uint(Q224 / spot);
+            twap = uint(Q224 / twap);
         }
     }
 
@@ -96,11 +96,11 @@ contract AsymptoticPerpetual is Storage, Constants, IAsymptoticPerpetual {
         uint K,
         uint MARK,
         uint decayRateX64,
-        uint224 price
+        uint price
     ) internal pure returns (Market memory market) {
         market.xkA = _powu(FullMath.mulDiv(price, Q112, MARK), K);
-        market.xkB = uint224(FullMath.mulDiv(Q224/market.xkA, Q64, decayRateX64));
-        market.xkA = uint224(FullMath.mulDiv(market.xkA, Q64, decayRateX64));
+        market.xkB = uint(FullMath.mulDiv(Q224/market.xkA, Q64, decayRateX64));
+        market.xkA = uint(FullMath.mulDiv(market.xkA, Q64, decayRateX64));
     }
 
     function _decayRate (
@@ -121,7 +121,7 @@ contract AsymptoticPerpetual is Storage, Constants, IAsymptoticPerpetual {
         uint sideOut
     ) internal view returns (Market memory market, uint rA, uint rB) {
         uint decayRateX64 = _decayRate(block.timestamp - config.INIT_TIME, config.HALF_LIFE);
-        (uint224 min, uint224 max) = _fetch(config.ORACLE);
+        (uint min, uint max) = _fetch(config.ORACLE);
         if (min > max) {
             (min, max) = (max, min);
         }
