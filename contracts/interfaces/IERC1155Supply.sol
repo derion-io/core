@@ -25,7 +25,7 @@ interface IERC1155Supply {
         uint256 amount
     ) external;
 
-    function mintVirtual(
+    function mintVirtualSupply(
         uint256 id,
         uint256 amount
     ) external;

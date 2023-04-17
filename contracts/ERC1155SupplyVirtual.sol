@@ -65,7 +65,7 @@ abstract contract ERC1155SupplyVirtual is ERC1155 {
     /**
      * @dev Increase the supply of token that belongs to no owner.
      */
-    function _mintVirtual(
+    function _mintVirtualSupply(
       uint256 id,
       uint256 amount
     ) internal {
