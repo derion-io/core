@@ -23,7 +23,7 @@ contract AsymptoticPerpetual is Storage, Constants, IAsymptoticPerpetual {
     ) external override returns (uint rA, uint rB, uint rC) {
         require(s_a == 0 && s_b == 0, "ALREADY_INITIALIZED");
         (uint224 twap, ) = _fetch(config.ORACLE);
-        uint decayRateX64 = _decayRate(block.timestamp - config.TIMESTAMP, config.HALF_LIFE);
+        uint decayRateX64 = _decayRate(block.timestamp - config.INIT_TIME, config.HALF_LIFE);
         State memory state = State(_reserve(config.TOKEN_R), a, b);
         Market memory market = _market(config.K, config.MARK, decayRateX64, twap);
         (rA, rB) = _evaluate(market, state);
@@ -121,7 +121,7 @@ contract AsymptoticPerpetual is Storage, Constants, IAsymptoticPerpetual {
         uint sideIn,
         uint sideOut
     ) internal view returns (Market memory market, uint rA, uint rB) {
-        uint decayRateX64 = _decayRate(block.timestamp - config.TIMESTAMP, config.HALF_LIFE);
+        uint decayRateX64 = _decayRate(block.timestamp - config.INIT_TIME, config.HALF_LIFE);
         (uint224 min, uint224 max) = _fetch(config.ORACLE);
         if (min > max) {
             (min, max) = (max, min);

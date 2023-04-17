@@ -116,6 +116,7 @@ async function scenerio01() {
     k: 5,
     a: '30000000000',
     b: '30000000000',
+    initTime: await time.latest(),
     halfLife: HALF_LIFE // ten years
   }
   const poolAddress = await poolFactory.computePoolAddress(params);
@@ -278,6 +279,7 @@ async function scenerio02() {
     k: 5,
     a: '30000000000',
     b: '30000000000',
+    initTime: await time.latest(),
     halfLife: HALF_LIFE // ten years
   }
   const poolAddress = await poolFactory.computePoolAddress(params);

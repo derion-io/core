@@ -7,7 +7,7 @@ struct Config {
     bytes32 ORACLE;
     uint K;
     uint224 MARK;
-    uint TIMESTAMP; // TODO: change to uint32
+    uint INIT_TIME; // TODO: change to uint32
     uint HALF_LIFE; // TODO: change to uint32
 }
 

@@ -22,7 +22,7 @@ contract Pool is IPool, Storage, Constants {
     address internal immutable TOKEN;
     address internal immutable TOKEN_R;
     uint224 internal immutable MARK;
-    uint internal immutable TIMESTAMP;
+    uint internal immutable INIT_TIME;
     uint internal immutable HALF_LIFE;
 
     constructor() {
@@ -36,7 +36,8 @@ contract Pool is IPool, Storage, Constants {
         K = params.k;
         MARK = params.mark;
         HALF_LIFE = params.halfLife;
-        TIMESTAMP = block.timestamp;
+        INIT_TIME = params.initTime > 0 ? params.initTime : block.timestamp;
+        require(block.timestamp >= INIT_TIME, "PAST_INIT_TIME");
 
         (bool success, bytes memory result) = LOGIC.delegatecall(
             abi.encodeWithSelector(
@@ -47,7 +48,7 @@ contract Pool is IPool, Storage, Constants {
                     ORACLE,
                     K,
                     MARK,
-                    TIMESTAMP,
+                    INIT_TIME,
                     HALF_LIFE
                 ),
                 params.a,
@@ -91,7 +92,7 @@ contract Pool is IPool, Storage, Constants {
         (bool success, bytes memory result) = LOGIC.delegatecall(
             abi.encodeWithSelector(
                 IAsymptoticPerpetual.swap.selector,
-                Config(TOKEN, TOKEN_R, ORACLE, K, MARK, TIMESTAMP, HALF_LIFE),
+                Config(TOKEN, TOKEN_R, ORACLE, K, MARK, INIT_TIME, HALF_LIFE),
                 sideIn,
                 sideOut,
                 helper,

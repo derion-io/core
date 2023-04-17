@@ -126,6 +126,7 @@ describe("DDL v3", function () {
             k: 5,
             a: pe(1),
             b: pe(1),
+            initTime: 0,
             halfLife: HALF_LIFE // ten years
         }
         const poolAddress = await poolFactory.computePoolAddress(params)

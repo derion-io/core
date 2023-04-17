@@ -9,10 +9,11 @@ struct Params {
     address reserveToken;
     address recipient;
     uint224 mark;
+    uint32  initTime;
+    uint    halfLife;
     uint k;
     uint a;
     uint b;
-    uint halfLife;
 }
 
 interface IPoolFactory {
