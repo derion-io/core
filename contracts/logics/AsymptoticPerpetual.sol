@@ -35,13 +35,13 @@ contract AsymptoticPerpetual is Storage, Constants, IAsymptoticPerpetual {
 
     function _powu(uint x, uint y) internal pure returns (uint z) {
         // Calculate the first iteration of the loop in advance.
-        z = y & 1 > 0 ? x : Q112;
+        z = y & 1 > 0 ? x : Q128;
         // Equivalent to "for(y /= 2; y > 0; y /= 2)" but faster.
         for (y >>= 1; y > 0; y >>= 1) {
-            x = FullMath.mulDiv(x, x, Q112);
+            x = FullMath.mulDiv(x, x, Q128);
             // Equivalent to "y % 2 == 1" but faster.
             if (y & 1 > 0) {
-                z = FullMath.mulDiv(z, x, Q112);
+                z = FullMath.mulDiv(z, x, Q128);
             }
         }
         // require(z <= type(uint).max, "Pool: upper overflow");
@@ -64,16 +64,16 @@ contract AsymptoticPerpetual is Storage, Constants, IAsymptoticPerpetual {
         twap = sqrtTwapX96 << 32;
 
         if (uint(ORACLE) & Q255 > 0) {
-            spot = Q224 / spot;
-            twap = Q224 / twap;
+            spot = Q256M / spot;
+            twap = Q256M / twap;
         }
     }
 
     // r(v)
     function _r(uint xk, uint v, uint R) internal pure returns (uint r) {
-        r = FullMath.mulDiv(v, xk, Q112);
+        r = FullMath.mulDiv(v, xk, Q128);
         if (r > R >> 1) {
-            uint denominator = FullMath.mulDiv(v, xk << 2, Q112);
+            uint denominator = FullMath.mulDiv(v, xk << 2, Q128);
             uint minuend = FullMath.mulDiv(R, R, denominator);
             r = R - minuend;
         }
@@ -98,8 +98,8 @@ contract AsymptoticPerpetual is Storage, Constants, IAsymptoticPerpetual {
         uint decayRateX64,
         uint price
     ) internal pure returns (Market memory market) {
-        market.xkA = _powu(FullMath.mulDiv(price, Q112, MARK), K);
-        market.xkB = uint(FullMath.mulDiv(Q224/market.xkA, Q64, decayRateX64));
+        market.xkA = _powu(FullMath.mulDiv(price, Q128, MARK), K);
+        market.xkB = uint(FullMath.mulDiv(Q256M/market.xkA, Q64, decayRateX64));
         market.xkA = uint(FullMath.mulDiv(market.xkA, Q64, decayRateX64));
     }
 

@@ -21,10 +21,10 @@ contract Helper is Constants, IHelper {
     // v(r)
     function _v(uint xk, uint r, uint R) internal pure returns (uint v) {
         if (r <= R >> 1) {
-            return FullMath.mulDivRoundingUp(r, Q112, xk);
+            return FullMath.mulDivRoundingUp(r, Q128, xk);
         }
         // TODO: denominator should be rounding up or down?
-        uint denominator = FullMath.mulDiv(R - r, xk << 2, Q112);
+        uint denominator = FullMath.mulDiv(R - r, xk << 2, Q128);
         return FullMath.mulDivRoundingUp(R, R, denominator);
     }
 
