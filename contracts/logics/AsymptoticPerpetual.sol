@@ -163,18 +163,16 @@ contract AsymptoticPerpetual is Storage, Constants, IAsymptoticPerpetual {
         } else {
             uint s = _supply(config.TOKEN, sideIn);
             if (sideIn == SIDE_A) {
-                amountIn = FullMath.mulDiv(rA - rA1, s, rA);
+                amountIn = FullMath.mulDivRoundingUp(rA - rA1, s, rA);
                 s_a = state1.a;
             } else if (sideIn == SIDE_B) {
-                amountIn = FullMath.mulDiv(rB - rB1, s, rB);
+                amountIn = FullMath.mulDivRoundingUp(rB - rB1, s, rB);
                 s_b = state1.b;
             } else if (sideIn == SIDE_C) {
                 uint rC = state.R - rA - rB;
                 uint rC1 = state1.R - rA1 - rB1;
-                amountIn = FullMath.mulDiv(rC - rC1, s, rC);
+                amountIn = FullMath.mulDivRoundingUp(rC - rC1, s, rC);
             }
-            // add a single missing wei due to integer division
-            ++amountIn;
         }
         if (sideOut == SIDE_R) {
             amountOut = state.R - state1.R;
