@@ -2,7 +2,7 @@ const { ethers } = require("hardhat")
 const fs = require('fs')
 const path = require('path')
 const { bn } = require("../test/shared/utilities")
-const { numberToWei, encodeSqrtX96, packId, delay } = require("./shared/utilities")
+const { numberToWei, encodeSqrtX96, packId, delay} = require("./shared/utilities")
 const { MaxUint256, AddressZero } = ethers.constants
 const opts = {
     gasLimit: 30000000
@@ -17,6 +17,16 @@ const PAYMENT       = 0
 const TRANSFER      = 1
 const ALLOWANCE     = 2
 const CALL_VALUE    = 3
+
+const abiCoder = new ethers.utils.AbiCoder()
+
+function encodePayload(swapType, sideIn, sideOut, amount, token1155) {
+    return abiCoder.encode(
+        ["uint", "uint", "uint", "uint", "address"],
+        [swapType, sideIn, sideOut, amount, token1155]
+    )
+}
+
 
 async function main() {
     const addressList = {
@@ -119,7 +129,10 @@ async function main() {
     await derivable1155.deployed()
 
     // deploy ddl pool
-    const oracle = bn(1).shl(255).add(bn(1).shl(256 - 64)).add(uniswapPair.address).toHexString()
+    const oracle = ethers.utils.hexZeroPad(
+        bn(1).shl(255).add(bn(300).shl(256 - 64)).add(uniswapPair.address).toHexString(),
+        32,
+    )
     const params = {
         utr: utr.address,
         token: derivable1155.address,
@@ -127,7 +140,7 @@ async function main() {
         oracle,
         reserveToken: weth.address,
         recipient: owner.address,
-        mark: '0x05dbdef6832deed3ff7964322f50a2d6',
+        mark: bn(38).shl(112),
         k: 5,
         a: numberToWei(1),
         b: numberToWei(1),
@@ -135,6 +148,11 @@ async function main() {
     }
     const poolAddress = await poolFactory.computePoolAddress(params)
     await delay(1000)
+    // await weth.deposit({
+    //     value: pe("100")
+    // })
+    // await weth.transfer(poolAddress, pe("10"))
+
     await utr.exec(
         [],
         [
@@ -190,13 +208,17 @@ async function main() {
         oracle,
         reserveToken: weth.address,
         recipient: owner.address,
-        mark: '0x05dbdef6832deed3ff7964322f50a2d6',
+        mark: bn(38).shl(112),
         k: 2,
         a: numberToWei(1),
         b: numberToWei(1),
         halfLife: HALF_LIFE
     }
     const poolAddress1 = await poolFactory.computePoolAddress(params1)
+    // await weth.deposit({
+    //     value: pe("100")
+    // })
+    // await weth.transfer(poolAddress, pe("10"))
     await delay(1000)
     await utr.exec(
         [],
@@ -279,6 +301,10 @@ async function main() {
     await pairDetailsV3.deployed()
     console.log(`pairDetailsV3: ${pairDetailsV3.address}`)
     addressList["pairDetailsV3"] = pairDetailsV3.address
+
+    await weth.deposit({
+        value: numberToWei(10) })
+    await weth.approve(utr.address, numberToWei('0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF'))
 
     exportData(addressList)
 }
