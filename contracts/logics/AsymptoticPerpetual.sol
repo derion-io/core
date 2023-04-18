@@ -63,7 +63,7 @@ contract AsymptoticPerpetual is Storage, Constants, IAsymptoticPerpetual {
         spot = sqrtSpotX96 << 32;
         twap = sqrtTwapX96 << 32;
 
-        if (uint(ORACLE) & Q255 > 0) {
+        if (uint(ORACLE) & Q255 == 0) {
             spot = Q256M / spot;
             twap = Q256M / twap;
         }

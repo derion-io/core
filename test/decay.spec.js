@@ -113,7 +113,7 @@ HLs.forEach(HALF_LIFE => {
         oracle,
         reserveToken: weth.address,
         recipient: owner.address,
-        mark: bn(38).shl(128).div(1000),
+        mark: bn(1000).shl(128).div(38),
         k: 5,
         a: '30000000000',
         b: '30000000000',

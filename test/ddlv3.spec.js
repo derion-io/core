@@ -112,7 +112,7 @@ describe("DDL v3", function () {
         await asymptoticPerpetual.deployed()
         // deploy ddl pool
         const oracle = ethers.utils.hexZeroPad(
-            bn(1).shl(255).add(bn(300).shl(256 - 64)).add(uniswapPair.address).toHexString(),
+            bn(quoteTokenIndex).shl(255).add(bn(300).shl(256 - 64)).add(uniswapPair.address).toHexString(),
             32,
         )
         const params = {
