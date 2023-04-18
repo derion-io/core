@@ -21,10 +21,11 @@ contract Helper is Constants, IHelper {
     // v(r)
     function _v(uint xk, uint r, uint R) internal pure returns (uint v) {
         if (r <= R >> 1) {
-            return FullMath.mulDiv(r, Q112, xk) + 1;
+            return FullMath.mulDivRoundingUp(r, Q128, xk);
         }
-        uint denominator = FullMath.mulDiv(R - r, xk << 2, Q112);
-        return FullMath.mulDiv(R, R, denominator) + 1;
+        // TODO: denominator should be rounding up or down?
+        uint denominator = FullMath.mulDiv(R - r, xk << 2, Q128);
+        return FullMath.mulDivRoundingUp(R, R, denominator);
     }
 
     function _supply(address TOKEN, uint side) internal view returns (uint s) {
