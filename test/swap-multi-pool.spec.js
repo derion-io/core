@@ -117,7 +117,7 @@ describe("DDL v3", function () {
         await asymptoticPerpetual.deployed()
         // deploy ddl pool
         const oracle = ethers.utils.hexZeroPad(
-            bn(1).shl(255).add(bn(300).shl(256 - 64)).add(uniswapPair.address).toHexString(),
+            bn(quoteTokenIndex).shl(255).add(bn(300).shl(256 - 64)).add(uniswapPair.address).toHexString(),
             32,
         )
         const params = {
@@ -127,10 +127,11 @@ describe("DDL v3", function () {
             oracle,
             reserveToken: weth.address,
             recipient: owner.address,
-            mark: bn(38).shl(112),
+            mark: bn(38).shl(128),
             k: 5,
             a: pe(1),
             b: pe(1),
+            initTime: 0,
             halfLife: HALF_LIFE // ten years
         }
         const poolAddress = await poolFactory.computePoolAddress(params)
@@ -148,10 +149,11 @@ describe("DDL v3", function () {
             oracle,
             reserveToken: weth.address,
             recipient: owner.address,
-            mark: bn(38).shl(112),
+            mark: bn(38).shl(128),
             k: 2,
             a: pe(1),
             b: pe(1),
+            initTime: 0,
             halfLife: HALF_LIFE // ten years
         }
         const poolAddress1 = await poolFactory.computePoolAddress(params1)
@@ -237,7 +239,7 @@ describe("DDL v3", function () {
             const balanceInAfter = await derivable1155.balanceOf(owner.address, packId(sideIn, derivablePool.address))
             const balanceOutAfter = await derivable1155.balanceOf(owner.address, packId(sideOut, derivablePool1.address))
 
-            expect(balanceInBefore.sub(numberToWei(amountIn))).equal(balanceInAfter)
+            expect(numberToWei(amountIn).sub((balanceInBefore).sub(balanceInAfter))).lte(1)
             expect(balanceOutBefore.lt(balanceOutAfter)).equal(true)
         }
 

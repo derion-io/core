@@ -24,7 +24,7 @@ abstract contract Events {
         address LOGIC;
         bytes32 ORACLE;
         address TOKEN_R;
-        uint224 MARK;
+        uint256 MARK;
         uint256 k;
     }
 

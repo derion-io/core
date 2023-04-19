@@ -92,7 +92,7 @@ contract Helper is Constants, IHelper {
         }
     }
 
-    function unpackId(uint id) view public returns (uint, address) {
+    function unpackId(uint id) pure public returns (uint, address) {
         uint k = id >> 160;
         address p = address(uint160(uint256(id - k)));
         return (k, p);

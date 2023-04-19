@@ -130,7 +130,7 @@ async function main() {
 
     // deploy ddl pool
     const oracle = ethers.utils.hexZeroPad(
-        bn(1).shl(255).add(bn(300).shl(256 - 64)).add(uniswapPair.address).toHexString(),
+        bn(quoteTokenIndex).shl(255).add(bn(300).shl(256 - 64)).add(uniswapPair.address).toHexString(),
         32,
     )
     const params = {
@@ -140,10 +140,11 @@ async function main() {
         oracle,
         reserveToken: weth.address,
         recipient: owner.address,
-        mark: bn(38).shl(112),
+        mark: bn(38).shl(128),
         k: 5,
         a: numberToWei(1),
         b: numberToWei(1),
+        initTime: 0,
         halfLife: HALF_LIFE
     }
     const poolAddress = await poolFactory.computePoolAddress(params)
@@ -208,10 +209,11 @@ async function main() {
         oracle,
         reserveToken: weth.address,
         recipient: owner.address,
-        mark: bn(38).shl(112),
+        mark: bn(38).shl(128),
         k: 2,
         a: numberToWei(1),
         b: numberToWei(1),
+        initTime: 0,
         halfLife: HALF_LIFE
     }
     const poolAddress1 = await poolFactory.computePoolAddress(params1)
@@ -304,7 +306,7 @@ async function main() {
 
     await weth.deposit({
         value: numberToWei(10) })
-    await weth.approve(utr.address, numberToWei('0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF'))
+    await weth.approve(utr.address, MaxUint256)
 
     exportData(addressList)
 }

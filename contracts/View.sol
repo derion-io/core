@@ -6,7 +6,6 @@ import "./logics/Constants.sol";
 import "./logics/Storage.sol";
 import "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 import "./libraries/OracleLibrary.sol";
-import "@derivable/oracle/contracts/@uniswap/lib/contracts/libraries/FixedPoint.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 interface IERC1155Supply {
@@ -24,11 +23,11 @@ interface IERC1155Supply {
 }
 
 contract View is Storage, Constants {
-    address internal UTR;
-    address internal LOGIC;
-    address internal TOKEN;
-    address internal TOKEN_R;
-    uint224 internal MARK;
+    // address internal UTR;
+    // address internal LOGIC;
+    // address internal TOKEN;
+    // address internal TOKEN_R;
+    // uint internal MARK;
 
     struct StateView {
         uint sA;
@@ -40,17 +39,17 @@ contract View is Storage, Constants {
         uint rC;
         uint a;
         uint b;
-        uint224 xk;
-        uint224 twap;
-        uint224 spot;
+        uint xk;
+        uint twap;
+        uint spot;
         bytes32 ORACLE;
     }
 
-    function test() external view returns (uint test) {
-        test = 1000;
+    function test() external pure returns (uint) {
+        return 1000;
     }
 
-    function getStates(bytes32 ORACLE, uint224 MARK, address TOKEN_R, uint k, address TOKEN) external view returns (StateView memory states) {
+    function getStates(bytes32 ORACLE, uint MARK, address TOKEN_R, uint k, address TOKEN) external view returns (StateView memory states) {
         (states.twap, states.spot) = _fetch(ORACLE);
 
         uint idA = _packID(address(this), SIDE_A);
@@ -60,7 +59,7 @@ contract View is Storage, Constants {
         states.a = s_a;
         states.b = s_b;
 
-        uint224 xk = _xk(states.twap, MARK, k);
+        uint xk = _xk(states.twap, MARK, k);
         states.xk = xk;
 
         states.R = IERC20(TOKEN_R).balanceOf(address(this));
@@ -74,19 +73,19 @@ contract View is Storage, Constants {
 
     function _fetch(
         bytes32 ORACLE // 1bit QTI, 31bit reserve, 32bit WINDOW, ... PAIR ADDRESS
-    ) internal view returns (uint224 twap, uint224 spot) {
+    ) internal view returns (uint twap, uint spot) {
         address pool = address(uint160(uint(ORACLE)));
         (uint160 sqrtSpotX96,,,,,,) = IUniswapV3Pool(pool).slot0();
 
         (int24 arithmeticMeanTick,) = OracleLibrary.consult(pool, uint32(uint(ORACLE) >> 192));
-        uint160 sqrtTwapX96 = TickMath.getSqrtRatioAtTick(arithmeticMeanTick);
+        uint sqrtTwapX96 = TickMath.getSqrtRatioAtTick(arithmeticMeanTick);
 
-        spot = uint224(sqrtSpotX96) << 16;
-        twap = uint224(sqrtTwapX96) << 16;
+        spot = sqrtSpotX96 << 32;
+        twap = sqrtTwapX96 << 32;
 
-        if (uint(ORACLE) & Q255 > 0) {
-            spot = uint224(FixedPoint.Q224 / spot);
-            twap = uint224(FixedPoint.Q224 / twap);
+        if (uint(ORACLE) & Q255 == 0) {
+            spot = Q256M / spot;
+            twap = Q256M / twap;
         }
     }
 
@@ -95,18 +94,18 @@ contract View is Storage, Constants {
     }
 
     function _xk(
-        uint224 price,
-        uint224 mark,
+        uint price,
+        uint mark,
         uint k
-    ) internal view returns (uint224) {
-        uint224 p = FixedPoint.fraction(price, mark)._x;
-        return uint224(_powu(p, k));
+    ) internal pure returns (uint) {
+        uint p = FullMath.mulDiv(price, Q128, mark);
+        return uint(_powu(p, k));
     }
 
-    function _r(uint224 xk, uint v, uint R) internal pure returns (uint r) {
-        r = FullMath.mulDiv(v, xk, FixedPoint.Q112);
+    function _r(uint xk, uint v, uint R) internal pure returns (uint r) {
+        r = FullMath.mulDiv(v, xk, Q128);
         if (r > R >> 1) {
-            uint denominator = FullMath.mulDiv(v, uint(xk) << 2, FixedPoint.Q112);
+            uint denominator = FullMath.mulDiv(v, xk << 2, Q128);
             uint minuend = FullMath.mulDiv(R, R, denominator);
             r = R - minuend;
         }
@@ -114,15 +113,15 @@ contract View is Storage, Constants {
 
     function _powu(uint x, uint y) internal pure returns (uint z) {
         // Calculate the first iteration of the loop in advance.
-        z = y & 1 > 0 ? x : FixedPoint.Q112;
+        z = y & 1 > 0 ? x : Q128;
         // Equivalent to "for(y /= 2; y > 0; y /= 2)" but faster.
         for (y >>= 1; y > 0; y >>= 1) {
-            x = FullMath.mulDiv(x, x, FixedPoint.Q112);
+            x = FullMath.mulDiv(x, x, Q128);
             // Equivalent to "y % 2 == 1" but faster.
             if (y & 1 > 0) {
-                z = FullMath.mulDiv(z, x, FixedPoint.Q112);
+                z = FullMath.mulDiv(z, x, Q128);
             }
         }
-        require(z <= type(uint224).max, "Pool: upper overflow");
+        // require(z <= type(uint).max, "Pool: upper overflow");
     }
 }
