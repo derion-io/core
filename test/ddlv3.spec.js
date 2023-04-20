@@ -555,7 +555,7 @@ describe("DDL v3", function () {
                         AddressZero,
                         owner.address,
                         opts
-                    )).to.be.reverted
+                    ), `side(${side}) -> R`).to.be.reverted
                 else
                     await derivablePool.swap(
                         side,
