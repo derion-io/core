@@ -7,7 +7,7 @@ const { solidity } = require("ethereum-waffle")
 chai.use(solidity)
 const expect = chai.expect
 const { AddressZero, MaxUint256 } = ethers.constants
-const { bn, numberToWei, packId, encodeSqrtX96, encodePriceSqrt, encodePayload } = require("./shared/utilities")
+const { bn, numberToWei, packId, encodeSqrtX96, encodePriceSqrt, encodePayload, weiToNumber } = require("./shared/utilities")
 
 const fe = (x) => Number(ethers.utils.formatEther(x))
 const pe = (x) => ethers.utils.parseEther(String(x))
@@ -57,7 +57,7 @@ describe("DDL v3", function () {
         // erc20 factory
         const compiledERC20 = require("@uniswap/v2-core/build/ERC20.json");
         const erc20Factory = new ethers.ContractFactory(compiledERC20.abi, compiledERC20.bytecode, signer);
-        const usdc = await erc20Factory.deploy(numberToWei(1000000000000));
+        const usdc = await erc20Factory.deploy(numberToWei('100000000000000000000'));
         // uniswap factory
         const compiledUniswapFactory = require("./compiled/UniswapV3Factory.json");
         const UniswapFactory = await new ethers.ContractFactory(compiledUniswapFactory.abi, compiledUniswapFactory.bytecode, signer);
@@ -131,7 +131,7 @@ describe("DDL v3", function () {
         }
         const poolAddress = await poolFactory.computePoolAddress(params)
         await weth.deposit({
-            value: pe("1000000")
+            value: pe("10000000000000000000")
         })
         await weth.transfer(poolAddress, pe("10000"));
         await poolFactory.createPool(params);
@@ -152,14 +152,14 @@ describe("DDL v3", function () {
         await derivableHelper.deployed()
         // setup accA
         await weth.connect(accountA).deposit({
-            value: pe("100000000")
+            value: pe("10000000000000000000")
         })
-        await usdc.transfer(accountA.address, pe("100000000000"))
+        await usdc.transfer(accountA.address, pe("10000000000000000000"))
         // setup accB
         await weth.connect(accountB).deposit({
-            value: pe("100000000")
+            value: pe("10000000000000000000")
         })
-        await usdc.transfer(accountB.address, pe("100000000000"))
+        await usdc.transfer(accountB.address, pe("10000000000000000000"))
         return {
             owner,
             accountA,
@@ -188,7 +188,7 @@ describe("DDL v3", function () {
             sqrtPriceLimitX96: priceX96,
             recipient: account.address,
             deadline: new Date().getTime() + 100000,
-            amountIn: pe("1000000000"),
+            amountIn: pe("1000000000000000000"),
             amountOutMinimum: 0,
         }, opts)
         await tx.wait(1)
@@ -495,8 +495,8 @@ describe("DDL v3", function () {
         })
         describe("Price change drastically", function () {
             const ZERO = 0.000001;
-            const INFI1 = 29999999999;
-            const INFI2 = 39999999999;
+            const INFI1 = 20999999999;
+            const INFI2 = 3099999999999999;
     
             async function testSinglePositionPriceChangeDrastically(side, amountIn, priceChange, waitRecover) {
                 const { owner, weth, uniswapRouter, usdc, derivablePool, accountA, derivable1155, stateCalHelper } = await loadFixture(deployDDLv2)
@@ -611,7 +611,7 @@ describe("DDL v3", function () {
                 // swap eth -> c
                 const wethBefore = await weth.balanceOf(owner.address)
                 const tokenBefore = await derivable1155.balanceOf(owner.address, convertId(SIDE_C, derivablePool.address))
-                await txSignerA.swap(
+                await derivablePool.swap(
                     SIDE_R,
                     SIDE_C,
                     stateCalHelper.address,
@@ -702,6 +702,7 @@ describe("DDL v3", function () {
                     owner.address,
                     opts
                 ), `side(${SIDE_C}) -> R`).not.to.be.reverted
+                
                 const wethAfter = await weth.balanceOf(owner.address)
                 const actual = Number(fe(wethAfter.sub(wethBefore)))
                 // console.log(actual)
@@ -784,29 +785,54 @@ describe("DDL v3", function () {
                     await testMultiPositonPriceChangeDrastically(0.1, 0.1, 100, ZERO, false)
                 })
     
-                it("Long 1e - short 1e - c 1e - price ~infi - wait price recover", async function () {
+                it("Long 1e - short 1e - c 1e - price ~infi1 - wait price recover", async function () {
                     await testMultiPositonPriceChangeDrastically(1, 1, 1, INFI1, true)
                 })
-                it("Long 0.1e - short 1e - c 0.1e - price ~infi - wait price recover", async function () {
+                it("Long 0.1e - short 1e - c 0.1e - price ~infi1 - wait price recover", async function () {
                     await testMultiPositonPriceChangeDrastically(0.1, 1, 0.1, INFI1, true)
                 })
-                it("Long 1e - short 0.1e - c 0.1e - price ~infi - wait price recover", async function () {
+                it("Long 1e - short 0.1e - c 0.1e - price ~infi1 - wait price recover", async function () {
                     await testMultiPositonPriceChangeDrastically(1, 0.1, 0.1, INFI1, true)
                 })
-                it("Long 0.1e - short 0.1e - c 100e - price ~infi - wait price recover", async function () {
+                it("Long 0.1e - short 0.1e - c 100e - price ~infi1 - wait price recover", async function () {
                     await testMultiPositonPriceChangeDrastically(0.1, 0.1, 100, INFI1, true)
                 })
-                it("Long 1e - short 1e - c 1e - price ~infi", async function () {
+                it("Long 1e - short 1e - c 1e - price ~infi1", async function () {
                     await testMultiPositonPriceChangeDrastically(1, 1, 1, INFI1, false)
                 })
-                it("Long 0.1e - short 1e - c 0.1e - price ~infi", async function () {
+                it("Long 0.1e - short 1e - c 0.1e - price ~infi1", async function () {
                     await testMultiPositonPriceChangeDrastically(0.1, 1, 0.1, INFI1, false)
                 })
-                it("Long 1e - short 0.1e - c 0.1e - price ~infi", async function () {
+                it("Long 1e - short 0.1e - c 0.1e - price ~infi1", async function () {
                     await testMultiPositonPriceChangeDrastically(1, 0.1, 0.1, INFI1, false)
                 })
-                it("Long 0.1e - short 0.1e - c 100e - price ~infi", async function () {
+                it("Long 0.1e - short 0.1e - c 100e - price ~infi1", async function () {
                     await testMultiPositonPriceChangeDrastically(0.1, 0.1, 100, INFI1, false)
+                })
+
+                it("Long 1e - short 1e - c 1e - price ~infi2 - wait price recover", async function () {
+                    await testMultiPositonPriceChangeDrastically(1, 1, 1, INFI2, true)
+                })
+                it("Long 0.1e - short 1e - c 0.1e - price ~infi2 - wait price recover", async function () {
+                    await testMultiPositonPriceChangeDrastically(0.1, 1, 0.1, INFI2, true)
+                })
+                it("Long 1e - short 0.1e - c 0.1e - price ~infi2 - wait price recover", async function () {
+                    await testMultiPositonPriceChangeDrastically(1, 0.1, 0.1, INFI2, true)
+                })
+                // it("Long 0.1e - short 0.1e - c 100e - price ~infi2 - wait price recover", async function () {
+                //     await testMultiPositonPriceChangeDrastically(0.1, 0.1, 100, INFI2, true)
+                // })
+                it("Long 1e - short 1e - c 1e - price ~infi2", async function () {
+                    await testMultiPositonPriceChangeDrastically(1, 1, 1, INFI2, false)
+                })
+                it("Long 0.1e - short 1e - c 0.1e - price ~infi2", async function () {
+                    await testMultiPositonPriceChangeDrastically(0.1, 1, 0.1, INFI2, false)
+                })
+                it("Long 1e - short 0.1e - c 0.1e - price ~infi2", async function () {
+                    await testMultiPositonPriceChangeDrastically(1, 0.1, 0.1, INFI2, false)
+                })
+                it("Long 0.1e - short 0.1e - c 100e - price ~infi2", async function () {
+                    await testMultiPositonPriceChangeDrastically(0.1, 0.1, 100, INFI2, false)
                 })
             })
         })
