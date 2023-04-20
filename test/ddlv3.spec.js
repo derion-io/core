@@ -21,11 +21,11 @@ const SIDE_A = 0x10
 const SIDE_B = 0x20
 const SIDE_C = 0x30
 
-const FROM_ROUTER   = 10;
-const PAYMENT       = 0;
-const TRANSFER      = 1;
-const ALLOWANCE     = 2;
-const CALL_VALUE    = 3;
+const FROM_ROUTER = 10;
+const PAYMENT = 0;
+const TRANSFER = 1;
+const ALLOWANCE = 2;
+const CALL_VALUE = 3;
 
 const EIP_ETH = 0
 const ERC_721_BALANCE = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("UniversalTokenRouter.ERC_721_BALANCE"))
@@ -37,7 +37,7 @@ const HALF_LIFE = 10 * 365 * 24 * 60 * 60
 
 describe("DDL v3", function () {
     async function deployDDLv2() {
-        const [owner, accountA] = await ethers.getSigners();
+        const [owner, accountA, accountB] = await ethers.getSigners();
         const signer = owner;
         // deploy pool factory
         const PoolFactory = await ethers.getContractFactory("PoolFactory")
@@ -57,7 +57,7 @@ describe("DDL v3", function () {
         // erc20 factory
         const compiledERC20 = require("@uniswap/v2-core/build/ERC20.json");
         const erc20Factory = new ethers.ContractFactory(compiledERC20.abi, compiledERC20.bytecode, signer);
-        const usdc = await erc20Factory.deploy(numberToWei(10000000000));
+        const usdc = await erc20Factory.deploy(numberToWei(1000000000000));
         // uniswap factory
         const compiledUniswapFactory = require("./compiled/UniswapV3Factory.json");
         const UniswapFactory = await new ethers.ContractFactory(compiledUniswapFactory.abi, compiledUniswapFactory.bytecode, signer);
@@ -152,12 +152,18 @@ describe("DDL v3", function () {
         await derivableHelper.deployed()
         // setup accA
         await weth.connect(accountA).deposit({
-            value: pe("1000000")
+            value: pe("100000000")
         })
-        await usdc.transfer(accountA.address, pe("100000000"))
+        await usdc.transfer(accountA.address, pe("100000000000"))
+        // setup accB
+        await weth.connect(accountB).deposit({
+            value: pe("100000000")
+        })
+        await usdc.transfer(accountB.address, pe("100000000000"))
         return {
             owner,
             accountA,
+            accountB,
             weth,
             usdc,
             utr,
@@ -486,6 +492,311 @@ describe("DDL v3", function () {
         })
         it("Short -99%", async function () {
             await testPriceChange(false, 1, 1500 - (1500 * 99 / 100), 5168.547)
+        })
+    })
+
+    describe("Price change drastically", function () {
+        const ZERO = 0.000001;
+        const INFI = 999999999;
+
+        async function testSinglePositionPriceChangeDrastically(side, amountIn, priceChange, waitRecover) {
+            const { owner, weth, uniswapRouter, usdc, derivablePool, accountA, derivable1155, stateCalHelper } = await loadFixture(deployDDLv2)
+
+            await weth.approve(derivablePool.address, MaxUint256)
+            const wethBefore = await weth.balanceOf(owner.address)
+            const tokenBefore = await derivable1155.balanceOf(owner.address, convertId(side, derivablePool.address))
+            await derivablePool.swap(
+                SIDE_R,
+                side,
+                stateCalHelper.address,
+                encodePayload(0, SIDE_R, side, pe(amountIn), derivable1155.address),
+                AddressZero,
+                owner.address,
+                opts
+            )
+            const tokenAfter = await derivable1155.balanceOf(owner.address, convertId(side, derivablePool.address))
+
+            // change price
+            await weth.connect(accountA).approve(uniswapRouter.address, MaxUint256)
+            await usdc.connect(accountA).approve(uniswapRouter.address, MaxUint256)
+            await swapToSetPriceV3({
+                account: accountA,
+                baseToken: weth,
+                quoteToken: usdc,
+                uniswapRouter: uniswapRouter,
+                initPrice: 1500,
+                targetPrice: priceChange
+            })
+            await time.increase(1000);
+            // price recover
+            if (waitRecover) {
+                await swapToSetPriceV3({
+                    account: accountA,
+                    baseToken: weth,
+                    quoteToken: usdc,
+                    uniswapRouter: uniswapRouter,
+                    initPrice: priceChange,
+                    targetPrice: 1500
+                })
+                await time.increase(1000);
+            }
+
+            // swap back
+            if ((
+                ((priceChange == ZERO) && (side == SIDE_A)) ||
+                ((priceChange == INFI) && (side == SIDE_B))
+            ) &&
+                !waitRecover
+            )
+                await expect(derivablePool.swap(
+                    side,
+                    SIDE_R,
+                    stateCalHelper.address,
+                    encodePayload(0, side, SIDE_R, tokenAfter.sub(tokenBefore), derivable1155.address),
+                    AddressZero,
+                    owner.address,
+                    opts
+                )).to.be.reverted
+            else
+                await derivablePool.swap(
+                    side,
+                    SIDE_R,
+                    stateCalHelper.address,
+                    encodePayload(0, side, SIDE_R, tokenAfter.sub(tokenBefore), derivable1155.address),
+                    AddressZero,
+                    owner.address,
+                    opts
+                )
+        }
+
+        async function testMultiPositonPriceChangeDrastically(longIn, shortIn, cIn, priceChange, waitRecover) {
+            const { owner, weth, uniswapRouter, usdc, derivablePool, derivable1155, accountA, accountB, stateCalHelper } = await loadFixture(deployDDLv2)
+
+            let txSignerA = await weth.connect(accountA)
+            let txSignerB = await weth.connect(accountB)
+            await weth.approve(derivablePool.address, MaxUint256)
+            await txSignerA.approve(derivablePool.address, MaxUint256)
+            await txSignerB.approve(derivablePool.address, MaxUint256)
+
+            txSignerA = await derivablePool.connect(accountA)
+            txSignerB = await derivablePool.connect(accountB)
+
+            // swap eth -> long
+            const aWethBefore = await weth.balanceOf(accountA.address)
+            const longTokenBefore = await derivable1155.balanceOf(accountA.address, convertId(SIDE_A, derivablePool.address))
+            await txSignerA.swap(
+                SIDE_R,
+                SIDE_A,
+                stateCalHelper.address,
+                encodePayload(0, SIDE_R, SIDE_A, pe(longIn), derivable1155.address),
+                AddressZero,
+                accountA.address,
+                opts
+            )
+            const longTokenAfter = await derivable1155.balanceOf(accountA.address, convertId(SIDE_A, derivablePool.address))
+            // swap eth -> short
+            const bWethBefore = await weth.balanceOf(accountB.address)
+            const shortTokenBefore = await derivable1155.balanceOf(accountB.address, convertId(SIDE_B, derivablePool.address))
+            await txSignerB.swap(
+                SIDE_R,
+                SIDE_B,
+                stateCalHelper.address,
+                encodePayload(0, SIDE_R, SIDE_B, pe(shortIn), derivable1155.address),
+                AddressZero,
+                accountB.address,
+                opts
+            )
+            const shortTokenAfter = await derivable1155.balanceOf(accountB.address, convertId(SIDE_B, derivablePool.address))
+            // swap eth -> c
+            const wethBefore = await weth.balanceOf(owner.address)
+            const tokenBefore = await derivable1155.balanceOf(owner.address, convertId(SIDE_C, derivablePool.address))
+            await txSignerA.swap(
+                SIDE_R,
+                SIDE_C,
+                stateCalHelper.address,
+                encodePayload(0, SIDE_R, SIDE_C, pe(cIn), derivable1155.address),
+                AddressZero,
+                owner.address,
+                opts
+            )
+            const tokenAfter = await derivable1155.balanceOf(owner.address, convertId(SIDE_C, derivablePool.address))
+            // change price
+            await weth.connect(accountA).approve(uniswapRouter.address, MaxUint256)
+            await usdc.connect(accountA).approve(uniswapRouter.address, MaxUint256)
+            await swapToSetPriceV3({
+                account: accountA,
+                baseToken: weth,
+                quoteToken: usdc,
+                uniswapRouter: uniswapRouter,
+                initPrice: 1500,
+                targetPrice: priceChange
+            })
+            await time.increase(1000);
+            // price recover
+            if (waitRecover) {
+                await swapToSetPriceV3({
+                    account: accountA,
+                    baseToken: weth,
+                    quoteToken: usdc,
+                    uniswapRouter: uniswapRouter,
+                    initPrice: priceChange,
+                    targetPrice: 1500
+                })
+                await time.increase(1000);
+            }
+            // swap back long -> weth
+            if ((priceChange == ZERO) && (!waitRecover)) {
+                await expect(txSignerA.swap(
+                    SIDE_A,
+                    SIDE_R,
+                    stateCalHelper.address,
+                    encodePayload(0, SIDE_A, SIDE_R, longTokenAfter.sub(longTokenBefore), derivable1155.address),
+                    AddressZero,
+                    accountA.address,
+                    opts
+                )).to.be.reverted
+            } else {
+                await txSignerA.swap(
+                    SIDE_A,
+                    SIDE_R,
+                    stateCalHelper.address,
+                    encodePayload(0, SIDE_A, SIDE_R, longTokenAfter.sub(longTokenBefore), derivable1155.address),
+                    AddressZero,
+                    accountA.address,
+                    opts
+                )
+            }
+            const aWethAfter = await weth.balanceOf(accountA.address)
+            // swap back short -> weth
+            if ((priceChange == INFI) && (!waitRecover)) {
+                await expect(txSignerB.swap(
+                    SIDE_B,
+                    SIDE_R,
+                    stateCalHelper.address,
+                    encodePayload(0, SIDE_B, SIDE_R, shortTokenAfter.sub(shortTokenBefore), derivable1155.address),
+                    AddressZero,
+                    accountB.address,
+                    opts
+                )).to.be.reverted
+            }
+            else {
+                await txSignerB.swap(
+                    SIDE_B,
+                    SIDE_R,
+                    stateCalHelper.address,
+                    encodePayload(0, SIDE_B, SIDE_R, shortTokenAfter.sub(shortTokenBefore), derivable1155.address),
+                    AddressZero,
+                    accountB.address,
+                    opts
+                )
+            }
+            const bWethAfter = await weth.balanceOf(accountB.address)
+            // swap back c -> weth
+            await derivablePool.swap(
+                SIDE_C,
+                SIDE_R,
+                stateCalHelper.address,
+                encodePayload(0, SIDE_C, SIDE_R, tokenAfter.sub(tokenBefore), derivable1155.address),
+                AddressZero,
+                owner.address,
+                opts
+            )
+            const wethAfter = await weth.balanceOf(owner.address)
+            const actual = Number(fe(wethAfter.sub(wethBefore)))
+            // console.log(actual)
+            // return expect(actual / expected).to.be.closeTo(1, 0.01)
+        }
+
+        describe("Single position", function () {
+            it("Long 1e - price ~zero - wait price recover", async function () {
+                await testSinglePositionPriceChangeDrastically(SIDE_A, 1, ZERO, true)
+            })
+            it("Long 1e - price ~zero", async function () {
+                await testSinglePositionPriceChangeDrastically(SIDE_A, 1, ZERO, false)
+            })
+            it("Short 1e - price ~zero - wait price recover", async function () {
+                await testSinglePositionPriceChangeDrastically(SIDE_B, 1, ZERO, true)
+            })
+            it("Short 1e - price ~zero", async function () {
+                await testSinglePositionPriceChangeDrastically(SIDE_B, 1, ZERO, false)
+            })
+            it("C 1e - price ~zero - wait price recover", async function () {
+                await testSinglePositionPriceChangeDrastically(SIDE_C, 1, ZERO, true)
+            })
+            it("C 1e - price ~zero", async function () {
+                await testSinglePositionPriceChangeDrastically(SIDE_C, 1, ZERO, false)
+            })
+
+            it("Long 1e - price ~infi - wait price recover", async function () {
+                await testSinglePositionPriceChangeDrastically(SIDE_A, 1, INFI, true)
+            })
+            it("Long 1e - price ~infi", async function () {
+                await testSinglePositionPriceChangeDrastically(SIDE_A, 1, INFI, false)
+            })
+            it("Short 1e - price ~infi - wait price recover", async function () {
+                await testSinglePositionPriceChangeDrastically(SIDE_B, 1, INFI, true)
+            })
+            it("Short 1e - price ~infi", async function () {
+                await testSinglePositionPriceChangeDrastically(SIDE_B, 1, INFI, false)
+            })
+            it("C 1e - price ~infi - wait price recover", async function () {
+                await testSinglePositionPriceChangeDrastically(SIDE_C, 1, INFI, true)
+            })
+            it("C 1e - price ~infi", async function () {
+                await testSinglePositionPriceChangeDrastically(SIDE_C, 1, INFI, false)
+            })
+        })
+
+        describe("Multi position", function () {
+            it("Long 1e - short 1e - c 1e - price ~zero - wait price recover", async function () {
+                await testMultiPositonPriceChangeDrastically(1, 1, 1, ZERO, true)
+            })
+            it("Long 0.1e - short 1e - c 0.1e - price ~zero - wait price recover", async function () {
+                await testMultiPositonPriceChangeDrastically(0.1, 1, 0.1, ZERO, true)
+            })
+            it("Long 1e - short 0.1e - c 0.1e - price ~zero - wait price recover", async function () {
+                await testMultiPositonPriceChangeDrastically(1, 0.1, 0.1, ZERO, true)
+            })
+            it("Long 0.1e - short 0.1e - c 100e - price ~zero - wait price recover", async function () {
+                await testMultiPositonPriceChangeDrastically(0.1, 0.1, 100, ZERO, true)
+            })
+            it("Long 1e - short 1e - c 1e - price ~zero", async function () {
+                await testMultiPositonPriceChangeDrastically(1, 1, 1, ZERO, false)
+            })
+            it("Long 0.1e - short 1e - c 0.1e - price ~zero", async function () {
+                await testMultiPositonPriceChangeDrastically(0.1, 1, 0.1, ZERO, false)
+            })
+            it("Long 1e - short 0.1e - c 0.1e - price ~zero", async function () {
+                await testMultiPositonPriceChangeDrastically(1, 0.1, 0.1, ZERO, false)
+            })
+            it("Long 0.1e - short 0.1e - c 100e - price ~zero", async function () {
+                await testMultiPositonPriceChangeDrastically(0.1, 0.1, 100, ZERO, false)
+            })
+
+            it("Long 1e - short 1e - c 1e - price ~infi - wait price recover", async function () {
+                await testMultiPositonPriceChangeDrastically(1, 1, 1, INFI, true)
+            })
+            it("Long 0.1e - short 1e - c 0.1e - price ~infi - wait price recover", async function () {
+                await testMultiPositonPriceChangeDrastically(0.1, 1, 0.1, INFI, true)
+            })
+            it("Long 1e - short 0.1e - c 0.1e - price ~infi - wait price recover", async function () {
+                await testMultiPositonPriceChangeDrastically(1, 0.1, 0.1, INFI, true)
+            })
+            it("Long 0.1e - short 0.1e - c 100e - price ~infi - wait price recover", async function () {
+                await testMultiPositonPriceChangeDrastically(0.1, 0.1, 100, INFI, true)
+            })
+            it("Long 1e - short 1e - c 1e - price ~infi", async function () {
+                await testMultiPositonPriceChangeDrastically(1, 1, 1, INFI, false)
+            })
+            it("Long 0.1e - short 1e - c 0.1e - price ~infi", async function () {
+                await testMultiPositonPriceChangeDrastically(0.1, 1, 0.1, INFI, false)
+            })
+            it("Long 1e - short 0.1e - c 0.1e - price ~infi", async function () {
+                await testMultiPositonPriceChangeDrastically(1, 0.1, 0.1, INFI, false)
+            })
+            it("Long 0.1e - short 0.1e - c 100e - price ~infi", async function () {
+                await testMultiPositonPriceChangeDrastically(0.1, 0.1, 100, INFI, false)
+            })
         })
     })
 })
