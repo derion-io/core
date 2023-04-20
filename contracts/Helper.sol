@@ -3,6 +3,7 @@ pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
+import "@uniswap/lib/contracts/libraries/TransferHelper.sol";
 
 import "./libraries/Math.sol";
 import "./libraries/FullMath.sol";
@@ -10,9 +11,25 @@ import "./logics/Constants.sol";
 import "./interfaces/IAsymptoticPerpetual.sol";
 import "./interfaces/IERC1155Supply.sol";
 import "./interfaces/IHelper.sol";
+import "./interfaces/IPool.sol";
 
 contract Helper is Constants, IHelper {
     uint constant MAX_IN = 0;
+    address internal immutable TOKEN;
+
+    constructor(address token) {
+        TOKEN = token;
+    }
+
+    struct SwapParams {
+        uint sideIn;
+        address poolIn;
+        uint sideOut;
+        address poolOut;
+        uint amountIn;
+        address payer;
+        address recipient;
+    }
 
     function _packID(address pool, uint side) internal pure returns (uint id) {
         id = (side << 160) + uint160(pool);
@@ -28,8 +45,59 @@ contract Helper is Constants, IHelper {
         return FullMath.mulDivRoundingUp(R, R, denominator);
     }
 
-    function _supply(address TOKEN, uint side) internal view returns (uint s) {
+    function _supply(uint side) internal view returns (uint s) {
         return IERC1155Supply(TOKEN).totalSupply(_packID(msg.sender, side));
+    }
+
+    function swap(SwapParams memory params) external returns (uint amountOut){
+        // swap poolIn/sideIn to poolIn/R
+        bytes memory payload = abi.encode(
+            uint(0),
+            params.sideIn,
+            SIDE_R,
+            params.amountIn
+        );
+
+        (, amountOut) = IPool(params.poolIn).swap(
+            params.sideIn,
+            SIDE_R,
+            address(this),
+            payload,
+            params.payer,
+            address(this)
+        );
+
+        // TOKEN_R approve poolOut
+        address TOKEN_R = IPool(params.poolIn).TOKEN_R();
+        IERC20(TOKEN_R).approve(params.poolOut, amountOut);
+
+        // swap (poolIn|PoolOut)/R to poolOut/SideOut
+        payload = abi.encode(
+            uint(0),
+            SIDE_R,
+            params.sideOut,
+            amountOut
+        );
+        (, amountOut) = IPool(params.poolOut).swap(
+            SIDE_R,
+            params.sideOut,
+            address(this),
+            payload,
+            address(0),
+            params.recipient
+        );
+
+        // check leftOver
+        uint leftOver = IERC20(TOKEN_R).balanceOf(address(this));
+        if (leftOver > 0) {
+            TransferHelper.safeTransfer(TOKEN_R, params.payer, leftOver);
+        }
+    }
+
+    function unpackId(uint id) pure public returns (uint, address) {
+        uint k = id >> 160;
+        address p = address(uint160(uint256(id - k)));
+        return (k, p);
     }
 
     function swapToState(
@@ -38,14 +106,13 @@ contract Helper is Constants, IHelper {
         uint rA,
         uint rB,
         bytes calldata payload
-    ) external view override returns(State memory state1) {
+    ) external view override returns (State memory state1) {
         (
-            uint swapType,
-            uint sideIn,
-            uint sideOut,
-            uint amount,
-            address TOKEN
-        ) = abi.decode(payload, (uint, uint, uint, uint, address));
+        uint swapType,
+        uint sideIn,
+        uint sideOut,
+        uint amount
+        ) = abi.decode(payload, (uint, uint, uint, uint));
         require(swapType == MAX_IN, 'Helper: UNSUPPORTED_SWAP_TYPE');
         state1 = State(state.R, state.a, state.b);
         if (sideIn == SIDE_R) {
@@ -56,8 +123,8 @@ contract Helper is Constants, IHelper {
                 state1.b = _v(market.xkB, rB + amount, state1.R);
             }
         } else {
-            uint s = _supply(TOKEN, sideIn);
-            
+            uint s = _supply(sideIn);
+
             if (sideIn == SIDE_A) {
                 uint rOut = FullMath.mulDiv(rA, amount, s);
                 if (sideOut == SIDE_R) {

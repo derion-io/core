@@ -10,8 +10,9 @@ import "./interfaces/IERC1155Supply.sol";
 import "./interfaces/IAsymptoticPerpetual.sol";
 import "./interfaces/IPool.sol";
 import "./logics/Storage.sol";
+import "./logics/Events.sol";
 
-contract Pool is IPool, Storage, Constants {
+contract Pool is IPool, Storage, Events, Constants {
     uint public constant MINIMUM_LIQUIDITY = 10 ** 3;
 
     /// Immutables
@@ -20,7 +21,7 @@ contract Pool is IPool, Storage, Constants {
     bytes32 internal immutable ORACLE;
     uint internal immutable K;
     address internal immutable TOKEN;
-    address internal immutable TOKEN_R;
+    address public immutable TOKEN_R;
     uint internal immutable MARK;
     uint internal immutable INIT_TIME;
     uint internal immutable HALF_LIFE;
@@ -74,6 +75,22 @@ contract Pool is IPool, Storage, Constants {
         IERC1155Supply(TOKEN).mint(params.recipient, idA, rA - MINIMUM_LIQUIDITY, "");
         IERC1155Supply(TOKEN).mint(params.recipient, idB, rB - MINIMUM_LIQUIDITY, "");
         IERC1155Supply(TOKEN).mint(params.recipient, idC, rC - MINIMUM_LIQUIDITY, "");
+
+
+        emit Derivable(
+            'PoolCreated',                 // topic1: eventName
+            _addressToBytes32(msg.sender), // topic2: factory
+            _addressToBytes32(LOGIC),      // topic3: logic
+            abi.encode(PoolCreated(
+                UTR,
+                TOKEN,
+                LOGIC,
+                ORACLE,
+                TOKEN_R,
+                MARK,
+                params.k
+            ))
+        );
     }
 
     function _packID(address pool, uint side) internal pure returns (uint id) {

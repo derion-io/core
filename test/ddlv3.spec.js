@@ -138,7 +138,9 @@ describe("DDL v3", function () {
         const derivablePool = await ethers.getContractAt("Pool", await poolFactory.computePoolAddress(params))
         // deploy helper
         const StateCalHelper = await ethers.getContractFactory("contracts/Helper.sol:Helper")
-        const stateCalHelper = await StateCalHelper.deploy()
+        const stateCalHelper = await StateCalHelper.deploy(
+            derivable1155.address
+        )
         await stateCalHelper.deployed()
 
         const DerivableHelper = await ethers.getContractFactory("contracts/test/Helper.sol:Helper")
@@ -203,7 +205,7 @@ describe("DDL v3", function () {
 
     describe("Pool", function () {
         async function testRIn(sideIn, amountIn, sideOut, isUseUTR) {
-            const { owner, weth, derivablePool, utr, derivable1155, stateCalHelper } = await loadFixture(deployDDLv2)
+            const { owner, weth, derivablePool, utr, stateCalHelper } = await loadFixture(deployDDLv2)
             await weth.approve(derivablePool.address, MaxUint256)
             const payer = isUseUTR ? owner.address : AddressZero
             const wethBefore = await weth.balanceOf(owner.address)
@@ -224,7 +226,7 @@ describe("DDL v3", function () {
                         sideIn,
                         sideOut,
                         stateCalHelper.address,
-                        encodePayload(0, sideIn, sideOut, pe(amountIn), derivable1155.address),
+                        encodePayload(0, sideIn, sideOut, pe(amountIn)),
                         payer,
                         owner.address
                     )).data,
@@ -236,7 +238,7 @@ describe("DDL v3", function () {
                     sideIn,
                     sideOut,
                     stateCalHelper.address,
-                    encodePayload(0, sideIn, sideOut, pe(amountIn), derivable1155.address),
+                    encodePayload(0, sideIn, sideOut, pe(amountIn)),
                     payer,
                     owner.address,
                     opts
@@ -289,7 +291,7 @@ describe("DDL v3", function () {
                         sideIn,
                         sideOut,
                         stateCalHelper.address,
-                        encodePayload(0, sideIn, sideOut, pe(amountIn), derivable1155.address),
+                        encodePayload(0, sideIn, sideOut, pe(amountIn)),
                         payer,
                         owner.address
                     )).data,
@@ -299,7 +301,7 @@ describe("DDL v3", function () {
                     sideIn,
                     sideOut,
                     stateCalHelper.address,
-                    encodePayload(0, sideIn, sideOut, pe(amountIn), derivable1155.address),
+                    encodePayload(0, sideIn, sideOut, pe(amountIn)),
                     AddressZero,
                     owner.address,
                     opts
@@ -330,7 +332,7 @@ describe("DDL v3", function () {
         })
 
         async function testRInROut(side, amount) {
-            const { owner, weth, derivablePool, utr, derivableHelper, stateCalHelper, derivable1155 } = await loadFixture(deployDDLv2)
+            const { owner, weth, derivablePool, utr, derivableHelper, stateCalHelper } = await loadFixture(deployDDLv2)
             const before = await weth.balanceOf(owner.address)
             await weth.approve(utr.address, MaxUint256)
             await utr.exec([],
@@ -350,7 +352,7 @@ describe("DDL v3", function () {
                             SIDE_R,
                             side,
                             stateCalHelper.address,
-                            encodePayload(0, SIDE_R, side, pe(amount), derivable1155.address),
+                            encodePayload(0, SIDE_R, side, pe(amount)),
                             owner.address,
                             derivableHelper.address
                         )).data,
@@ -403,7 +405,7 @@ describe("DDL v3", function () {
                 SIDE_R,
                 isLong ? SIDE_A : SIDE_B,
                 stateCalHelper.address,
-                encodePayload(0, SIDE_R, isLong ? SIDE_A : SIDE_B, pe(wethAmountIn), derivable1155.address),
+                encodePayload(0, SIDE_R, isLong ? SIDE_A : SIDE_B, pe(wethAmountIn)),
                 AddressZero,
                 owner.address,
                 opts
@@ -426,7 +428,7 @@ describe("DDL v3", function () {
                 isLong ? SIDE_A : SIDE_B,
                 SIDE_R,
                 stateCalHelper.address,
-                encodePayload(0, isLong ? SIDE_A : SIDE_B, SIDE_R, tokenAfter.sub(tokenBefore), derivable1155.address),
+                encodePayload(0, isLong ? SIDE_A : SIDE_B, SIDE_R, tokenAfter.sub(tokenBefore)),
                 AddressZero,
                 owner.address,
                 opts
