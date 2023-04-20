@@ -166,7 +166,9 @@ describe("DDL v3", function () {
 
         // deploy helper
         const StateCalHelper = await ethers.getContractFactory("contracts/Helper.sol:Helper")
-        const stateCalHelper = await StateCalHelper.deploy()
+        const stateCalHelper = await StateCalHelper.deploy(
+            derivable1155.address
+        )
         await stateCalHelper.deployed()
 
         const DerivableHelper = await ethers.getContractFactory("contracts/test/Helper.sol:Helper")
@@ -231,8 +233,7 @@ describe("DDL v3", function () {
                     poolOut: derivablePool1.address,
                     amountIn: pe(amountIn),
                     payer: owner.address,
-                    recipient: owner.address,
-                    TOKEN: derivable1155.address
+                    recipient: owner.address
                 })).data,
             }], opts)
 

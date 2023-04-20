@@ -52,8 +52,7 @@ contract Helper {
             MAX_IN,
             sideIn,
             sideOut,
-            IERC1155(TOKEN).balanceOf(address(this), _packID(POOL, sideIn)),
-            TOKEN
+            IERC1155(TOKEN).balanceOf(address(this), _packID(POOL, sideIn))
         );
         return IPool(POOL).swap(
             sideIn,

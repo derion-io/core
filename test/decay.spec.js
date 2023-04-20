@@ -140,7 +140,9 @@ HLs.forEach(HALF_LIFE => {
       await time.increase(100);
       // deploy helper
       const StateCalHelper = await ethers.getContractFactory("contracts/Helper.sol:Helper")
-      const stateCalHelper = await StateCalHelper.deploy()
+      const stateCalHelper = await StateCalHelper.deploy(
+        derivable1155.address
+      )
       await stateCalHelper.deployed()
 
       const DerivableHelper = await ethers.getContractFactory("contracts/test/Helper.sol:Helper")
@@ -174,7 +176,6 @@ HLs.forEach(HALF_LIFE => {
         0x00,
         0x30,
         numberToWei(0.5),
-        derivable1155.address,
         stateCalHelper.address,
         '0x0000000000000000000000000000000000000000',
         accountA.address
@@ -187,7 +188,6 @@ HLs.forEach(HALF_LIFE => {
           0x00,
           0x10,
           amountA,
-          derivable1155.address,
           stateCalHelper.address,
           '0x0000000000000000000000000000000000000000',
           accountA.address
@@ -198,7 +198,6 @@ HLs.forEach(HALF_LIFE => {
           0x00,
           0x20,
           amountB,
-          derivable1155.address,
           stateCalHelper.address,
           '0x0000000000000000000000000000000000000000',
           accountB.address
@@ -212,7 +211,6 @@ HLs.forEach(HALF_LIFE => {
           0x10,
           0x00,
           aTokenAmount,
-          derivable1155.address,
           stateCalHelper.address,
           '0x0000000000000000000000000000000000000000',
           accountA.address
@@ -224,7 +222,6 @@ HLs.forEach(HALF_LIFE => {
           0x20,
           0x00,
           bTokenAmount,
-          derivable1155.address,
           stateCalHelper.address,
           '0x0000000000000000000000000000000000000000',
           accountB.address
@@ -238,7 +235,6 @@ HLs.forEach(HALF_LIFE => {
           0x10,
           0x00,
           aTokenAmount,
-          derivable1155.address,
           stateCalHelper.address,
           '0x0000000000000000000000000000000000000000',
           accountA.address
@@ -250,7 +246,6 @@ HLs.forEach(HALF_LIFE => {
           0x20,
           0x00,
           bTokenAmount,
-          derivable1155.address,
           stateCalHelper.address,
           '0x0000000000000000000000000000000000000000',
           accountB.address
@@ -263,7 +258,6 @@ HLs.forEach(HALF_LIFE => {
           0x10,
           0x00,
           aTokenAmount,
-          derivable1155.address,
           stateCalHelper.address,
           '0x0000000000000000000000000000000000000000',
           accountA.address
@@ -274,7 +268,6 @@ HLs.forEach(HALF_LIFE => {
           0x20,
           0x00,
           bTokenAmount,
-          derivable1155.address,
           stateCalHelper.address,
           '0x0000000000000000000000000000000000000000',
           accountB.address
@@ -287,7 +280,6 @@ HLs.forEach(HALF_LIFE => {
           0x10,
           0x00,
           aTokenAmount,
-          derivable1155.address,
           stateCalHelper.address,
           '0x0000000000000000000000000000000000000000',
           accountA.address
@@ -298,7 +290,6 @@ HLs.forEach(HALF_LIFE => {
           0x20,
           0x00,
           bTokenAmount,
-          derivable1155.address,
           stateCalHelper.address,
           '0x0000000000000000000000000000000000000000',
           accountB.address
@@ -344,7 +335,7 @@ HLs.forEach(HALF_LIFE => {
                 0x00,
                 0x10,
                 stateCalHelper.address,
-                encodePayload(0, 0x00, 0x10, amountA, derivable1155.address),
+                encodePayload(0, 0x00, 0x10, amountA),
                 accountA.address,
                 derivableHelper.address
               )).data,
@@ -385,7 +376,7 @@ HLs.forEach(HALF_LIFE => {
                 0x00,
                 0x20,
                 stateCalHelper.address,
-                encodePayload(0, 0x00, 0x20, amountB, derivable1155.address),
+                encodePayload(0, 0x00, 0x20, amountB),
                 accountB.address,
                 derivableHelper.address
               )).data,
@@ -429,7 +420,7 @@ HLs.forEach(HALF_LIFE => {
                 0x00,
                 0x20,
                 stateCalHelper.address,
-                encodePayload(0, 0x00, 0x20, amountB, derivable1155.address),
+                encodePayload(0, 0x00, 0x20, amountB),
                 accountA.address,
                 derivableHelper.address
               )).data,
@@ -449,7 +440,7 @@ HLs.forEach(HALF_LIFE => {
                 0x00,
                 0x10,
                 stateCalHelper.address,
-                encodePayload(0, 0x00, 0x10, amountA, derivable1155.address),
+                encodePayload(0, 0x00, 0x10, amountA),
                 accountA.address,
                 derivableHelper.address
               )).data,
@@ -494,7 +485,6 @@ HLs.forEach(HALF_LIFE => {
           0x00,
           0x10,
           amountA,
-          derivable1155.address,
           stateCalHelper.address,
           '0x0000000000000000000000000000000000000000',
           accountA.address
@@ -506,7 +496,6 @@ HLs.forEach(HALF_LIFE => {
           0x10,
           0x00,
           aTokenAmount,
-          derivable1155.address,
           stateCalHelper.address,
           '0x0000000000000000000000000000000000000000',
           accountA.address
@@ -518,7 +507,6 @@ HLs.forEach(HALF_LIFE => {
           0x00,
           0x20,
           amountB,
-          derivable1155.address,
           stateCalHelper.address,
           '0x0000000000000000000000000000000000000000',
           accountB.address
@@ -530,7 +518,6 @@ HLs.forEach(HALF_LIFE => {
           0x20,
           0x00,
           bTokenAmount,
-          derivable1155.address,
           stateCalHelper.address,
           '0x0000000000000000000000000000000000000000',
           accountB.address
@@ -547,7 +534,6 @@ HLs.forEach(HALF_LIFE => {
           0x00,
           0x10,
           amountA,
-          derivable1155.address,
           stateCalHelper.address,
           '0x0000000000000000000000000000000000000000',
           accountA.address
@@ -559,7 +545,6 @@ HLs.forEach(HALF_LIFE => {
           0x00,
           0x20,
           amountB,
-          derivable1155.address,
           stateCalHelper.address,
           '0x0000000000000000000000000000000000000000',
           accountB.address
@@ -573,7 +558,6 @@ HLs.forEach(HALF_LIFE => {
           0x10,
           0x00,
           aTokenAmount,
-          derivable1155.address,
           stateCalHelper.address,
           '0x0000000000000000000000000000000000000000',
           accountA.address
@@ -584,7 +568,6 @@ HLs.forEach(HALF_LIFE => {
           0x20,
           0x00,
           bTokenAmount,
-          derivable1155.address,
           stateCalHelper.address,
           '0x0000000000000000000000000000000000000000',
           accountB.address
@@ -597,7 +580,6 @@ HLs.forEach(HALF_LIFE => {
           0x10,
           0x00,
           aTokenAmount,
-          derivable1155.address,
           stateCalHelper.address,
           '0x0000000000000000000000000000000000000000',
           accountA.address
@@ -608,7 +590,6 @@ HLs.forEach(HALF_LIFE => {
           0x20,
           0x00,
           bTokenAmount,
-          derivable1155.address,
           stateCalHelper.address,
           '0x0000000000000000000000000000000000000000',
           accountB.address
@@ -634,7 +615,6 @@ HLs.forEach(HALF_LIFE => {
           0x00,
           0x10,
           amountA,
-          derivable1155.address,
           stateCalHelper.address,
           '0x0000000000000000000000000000000000000000',
           accountA.address
@@ -645,7 +625,6 @@ HLs.forEach(HALF_LIFE => {
           0x00,
           0x20,
           amountB,
-          derivable1155.address,
           stateCalHelper.address,
           '0x0000000000000000000000000000000000000000',
           accountB.address
@@ -659,7 +638,6 @@ HLs.forEach(HALF_LIFE => {
           0x10,
           0x00,
           aTokenAmount,
-          derivable1155.address,
           stateCalHelper.address,
           '0x0000000000000000000000000000000000000000',
           accountA.address
@@ -670,7 +648,6 @@ HLs.forEach(HALF_LIFE => {
           0x20,
           0x00,
           bTokenAmount,
-          derivable1155.address,
           stateCalHelper.address,
           '0x0000000000000000000000000000000000000000',
           accountB.address
@@ -688,7 +665,6 @@ HLs.forEach(HALF_LIFE => {
           0x10,
           0x00,
           aTokenAmount,
-          derivable1155.address,
           stateCalHelper.address,
           '0x0000000000000000000000000000000000000000',
           accountA.address
@@ -699,7 +675,6 @@ HLs.forEach(HALF_LIFE => {
           0x20,
           0x00,
           bTokenAmount,
-          derivable1155.address,
           stateCalHelper.address,
           '0x0000000000000000000000000000000000000000',
           accountB.address
@@ -777,7 +752,6 @@ HLs.forEach(HALF_LIFE => {
           0x30,
           0x00,
           lpAmount,
-          derivable1155.address,
           stateCalHelper.address,
           '0x0000000000000000000000000000000000000000',
           accountA.address
@@ -790,7 +764,6 @@ HLs.forEach(HALF_LIFE => {
           0x30,
           0x00,
           lpAmount,
-          derivable1155.address,
           stateCalHelper.address,
           '0x0000000000000000000000000000000000000000',
           accountA.address

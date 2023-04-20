@@ -139,7 +139,9 @@ async function scenerio01() {
   await time.increase(100);
   // deploy helper
   const StateCalHelper = await ethers.getContractFactory("contracts/Helper.sol:Helper")
-  const stateCalHelper = await StateCalHelper.deploy()
+  const stateCalHelper = await StateCalHelper.deploy(
+    derivable1155.address
+  )
   await stateCalHelper.deployed()
 
   const DerivableHelper = await ethers.getContractFactory("contracts/test/Helper.sol:Helper")
@@ -170,7 +172,7 @@ async function scenerio01() {
     0x00,
     0x30,
     stateCalHelper.address,
-    encodePayload(0, 0x00, 0x30, numberToWei(0.5), derivable1155.address),
+    encodePayload(0, 0x00, 0x30, numberToWei(0.5)),
     '0x0000000000000000000000000000000000000000',
     accountA.address
   );
@@ -302,7 +304,9 @@ async function scenerio02() {
   await time.increase(100);
   // deploy helper
   const StateCalHelper = await ethers.getContractFactory("contracts/Helper.sol:Helper")
-  const stateCalHelper = await StateCalHelper.deploy()
+  const stateCalHelper = await StateCalHelper.deploy(
+    derivable1155.address
+  )
   await stateCalHelper.deployed()
 
   const DerivableHelper = await ethers.getContractFactory("contracts/test/Helper.sol:Helper")
@@ -333,7 +337,7 @@ async function scenerio02() {
     0x00,
     0x30,
     stateCalHelper.address,
-    encodePayload(0, 0x00, 0x30, numberToWei(0.5), derivable1155.address),
+    encodePayload(0, 0x00, 0x30, numberToWei(0.5)),
     '0x0000000000000000000000000000000000000000',
     accountA.address
   );

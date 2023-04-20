@@ -15,6 +15,11 @@ import "./interfaces/IPool.sol";
 
 contract Helper is Constants, IHelper {
     uint constant MAX_IN = 0;
+    address internal immutable TOKEN;
+
+    constructor(address token) {
+        TOKEN = token;
+    }
 
     struct SwapParams {
         uint sideIn;
@@ -24,7 +29,6 @@ contract Helper is Constants, IHelper {
         uint amountIn;
         address payer;
         address recipient;
-        address TOKEN;
     }
 
     function _packID(address pool, uint side) internal pure returns (uint id) {
@@ -41,7 +45,7 @@ contract Helper is Constants, IHelper {
         return FullMath.mulDivRoundingUp(R, R, denominator);
     }
 
-    function _supply(address TOKEN, uint side) internal view returns (uint s) {
+    function _supply(uint side) internal view returns (uint s) {
         return IERC1155Supply(TOKEN).totalSupply(_packID(msg.sender, side));
     }
 
@@ -51,8 +55,7 @@ contract Helper is Constants, IHelper {
             uint(0),
             params.sideIn,
             SIDE_R,
-            params.amountIn,
-            params.TOKEN
+            params.amountIn
         );
 
         (, amountOut) = IPool(params.poolIn).swap(
@@ -73,8 +76,7 @@ contract Helper is Constants, IHelper {
             uint(0),
             SIDE_R,
             params.sideOut,
-            amountOut,
-            params.TOKEN
+            amountOut
         );
         (, amountOut) = IPool(params.poolOut).swap(
             SIDE_R,
@@ -109,9 +111,8 @@ contract Helper is Constants, IHelper {
         uint swapType,
         uint sideIn,
         uint sideOut,
-        uint amount,
-        address TOKEN
-        ) = abi.decode(payload, (uint, uint, uint, uint, address));
+        uint amount
+        ) = abi.decode(payload, (uint, uint, uint, uint));
         require(swapType == MAX_IN, 'Helper: UNSUPPORTED_SWAP_TYPE');
         state1 = State(state.R, state.a, state.b);
         if (sideIn == SIDE_R) {
@@ -122,7 +123,7 @@ contract Helper is Constants, IHelper {
                 state1.b = _v(market.xkB, rB + amount, state1.R);
             }
         } else {
-            uint s = _supply(TOKEN, sideIn);
+            uint s = _supply(sideIn);
 
             if (sideIn == SIDE_A) {
                 uint rOut = FullMath.mulDiv(rA, amount, s);

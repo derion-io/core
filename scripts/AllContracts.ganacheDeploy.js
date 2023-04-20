@@ -20,10 +20,10 @@ const CALL_VALUE    = 3
 
 const abiCoder = new ethers.utils.AbiCoder()
 
-function encodePayload(swapType, sideIn, sideOut, amount, token1155) {
+function encodePayload(swapType, sideIn, sideOut, amount) {
     return abiCoder.encode(
-        ["uint", "uint", "uint", "uint", "address"],
-        [swapType, sideIn, sideOut, amount, token1155]
+        ["uint", "uint", "uint", "uint"],
+        [swapType, sideIn, sideOut, amount]
     )
 }
 
@@ -293,7 +293,9 @@ async function main() {
 
     // deploy helper
     const StateCalHelper = await ethers.getContractFactory("contracts/Helper.sol:Helper")
-    const stateCalHelper = await StateCalHelper.deploy()
+    const stateCalHelper = await StateCalHelper.deploy(
+        derivable1155.address
+    )
     await stateCalHelper.deployed()
     console.log(`stateCalHelper: ${stateCalHelper.address}`)
     addressList["stateCalHelper"] = stateCalHelper.address

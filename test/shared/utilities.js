@@ -159,17 +159,17 @@ function encodePriceSqrt(reserve1, reserve0) {
     )
 }
 
-function encodePayload(swapType, sideIn, sideOut, amount, token1155) {
+function encodePayload(swapType, sideIn, sideOut, amount) {
     return abiCoder.encode(
-        ["uint", "uint", "uint", "uint", "address"],
-        [swapType, sideIn, sideOut, amount, token1155]
+        ["uint", "uint", "uint", "uint"],
+        [swapType, sideIn, sideOut, amount]
     )
 }
 
-async function attemptSwap(signer, swapType, sideIn, sideOut, amount, token1155, helper, payer, recipient) {
+async function attemptSwap(signer, swapType, sideIn, sideOut, amount, helper, payer, recipient) {
     const payload = abiCoder.encode(
-        ["uint", "uint", "uint", "uint", "address"],
-        [swapType, sideIn, sideOut, amount, token1155]
+        ["uint", "uint", "uint", "uint"],
+        [swapType, sideIn, sideOut, amount]
     )
     return await signer.swap(
         sideIn,
@@ -181,10 +181,10 @@ async function attemptSwap(signer, swapType, sideIn, sideOut, amount, token1155,
     )
 }
 
-async function attemptStaticSwap(signer, swapType, sideIn, sideOut, amount, token1155, helper, payer, recipient) {
+async function attemptStaticSwap(signer, swapType, sideIn, sideOut, amount, helper, payer, recipient) {
     const payload = abiCoder.encode(
-        ["uint", "uint", "uint", "uint", "address"],
-        [swapType, sideIn, sideOut, amount, token1155]
+        ["uint", "uint", "uint", "uint"],
+        [swapType, sideIn, sideOut, amount]
     )
     return (await signer.callStatic.swap(
         sideIn,
