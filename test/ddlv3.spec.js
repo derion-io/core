@@ -495,8 +495,8 @@ describe("DDL v3", function () {
         })
         describe("Price change drastically", function () {
             const ZERO = 0.000001;
-            const INFI1 = 10296999;
-            const INFI2 = 10297999;
+            const INFI1 = 29999999999;
+            const INFI2 = 39999999999;
     
             async function testSinglePositionPriceChangeDrastically(side, amountIn, priceChange, waitRecover) {
                 const { owner, weth, uniswapRouter, usdc, derivablePool, accountA, derivable1155, stateCalHelper } = await loadFixture(deployDDLv2)
@@ -546,7 +546,8 @@ describe("DDL v3", function () {
                     ((priceChange == INFI2) && (side == SIDE_B))
                 ) &&
                     !waitRecover
-                )
+                ) {
+                    console.log('reverttttt')
                     await expect(derivablePool.swap(
                         side,
                         SIDE_R,
@@ -556,8 +557,9 @@ describe("DDL v3", function () {
                         owner.address,
                         opts
                     ), `side(${side}) -> R`).to.be.reverted
+                }
                 else
-                    await derivablePool.swap(
+                    await expect(derivablePool.swap(
                         side,
                         SIDE_R,
                         stateCalHelper.address,
@@ -565,7 +567,7 @@ describe("DDL v3", function () {
                         AddressZero,
                         owner.address,
                         opts
-                    )
+                    ), `side(${side}) -> R`).not.to.be.reverted
             }
     
             async function testMultiPositonPriceChangeDrastically(longIn, shortIn, cIn, priceChange, waitRecover) {
@@ -655,7 +657,7 @@ describe("DDL v3", function () {
                         opts
                     )).to.be.reverted
                 } else {
-                    await txSignerA.swap(
+                    await expect(txSignerA.swap(
                         SIDE_A,
                         SIDE_R,
                         stateCalHelper.address,
@@ -663,7 +665,7 @@ describe("DDL v3", function () {
                         AddressZero,
                         accountA.address,
                         opts
-                    )
+                    ), `side(${SIDE_A}) -> R`).not.to.be.reverted
                 }
                 const aWethAfter = await weth.balanceOf(accountA.address)
                 // swap back short -> weth
@@ -679,7 +681,7 @@ describe("DDL v3", function () {
                     )).to.be.reverted
                 }
                 else {
-                    await txSignerB.swap(
+                    await expect(txSignerB.swap(
                         SIDE_B,
                         SIDE_R,
                         stateCalHelper.address,
@@ -687,11 +689,11 @@ describe("DDL v3", function () {
                         AddressZero,
                         accountB.address,
                         opts
-                    )
+                    ), `side(${SIDE_B}) -> R`).not.to.be.reverted
                 }
                 const bWethAfter = await weth.balanceOf(accountB.address)
                 // swap back c -> weth
-                await derivablePool.swap(
+                await expect(derivablePool.swap(
                     SIDE_C,
                     SIDE_R,
                     stateCalHelper.address,
@@ -699,7 +701,7 @@ describe("DDL v3", function () {
                     AddressZero,
                     owner.address,
                     opts
-                )
+                ), `side(${SIDE_C}) -> R`).not.to.be.reverted
                 const wethAfter = await weth.balanceOf(owner.address)
                 const actual = Number(fe(wethAfter.sub(wethBefore)))
                 // console.log(actual)
