@@ -494,10 +494,13 @@ describe("DDL v3", function () {
             await testPriceChange(false, 1, 1500 - (1500 * 99 / 100), 5168.547)
         })
         describe("Price change drastically", function () {
-            const ZERO1 = 0.0001;
-            const ZERO2 = 0.0000001;
-            const INFI1 = 20999999999;
-            const INFI2 = 30999999999999;
+            const MARK = 1500;
+            const SAFE_SCALE = 8000000000;  // for k = 5
+            const ZERO1 = MARK / SAFE_SCALE;
+            const INFI1 = MARK * SAFE_SCALE;
+            // TODO: can we support these?
+            const ZERO2 = ZERO1; // / 1.1
+            const INFI2 = INFI1; // * 1.1
     
             async function testSinglePositionPriceChangeDrastically(side, amountIn, priceChange, waitRecover) {
                 const { owner, weth, uniswapRouter, usdc, derivablePool, accountA, derivable1155, stateCalHelper } = await loadFixture(deployDDLv2)
