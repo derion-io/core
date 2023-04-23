@@ -14,7 +14,6 @@ import "./interfaces/IHelper.sol";
 import "./interfaces/IPool.sol";
 import "./interfaces/IPoolFactory.sol";
 import "./interfaces/IWeth.sol";
-import "hardhat/console.sol";
 
 contract Helper is Constants, IHelper {
     uint constant MAX_IN = 0;
@@ -58,13 +57,12 @@ contract Helper is Constants, IHelper {
         IWeth(WETH).deposit{value: msg.value}();
         uint amount = IWeth(WETH).balanceOf(address(this));
         address poolAddress = IPoolFactory(factory).computePoolAddress(params);
-        console.log(poolAddress);
         IWeth(WETH).transfer(poolAddress, amount);
 
         pool = IPoolFactory(factory).createPool(params);
     }
 
-    function swapMultiPool(SwapParams memory params) external returns (uint amountOut){
+    function _swapMultiPool(SwapParams memory params) internal returns (uint amountOut) {
         // swap poolIn/sideIn to poolIn/R
         bytes memory payload = abi.encode(
             uint(0),
@@ -107,6 +105,36 @@ contract Helper is Constants, IHelper {
         if (leftOver > 0) {
             TransferHelper.safeTransfer(TOKEN_R, params.payer, leftOver);
         }
+    }
+
+    function swap(SwapParams memory params) external payable returns (uint amountOut){
+        if(params.poolIn != params.poolOut) {
+            amountOut = _swapMultiPool(params);
+            return amountOut;
+        }
+
+        if(params.sideIn == SIDE_R && msg.value != 0) {
+            IWeth(WETH).deposit{value: msg.value}();
+            uint amount = IWeth(WETH).balanceOf(address(this));
+            IERC20(WETH).approve(params.poolIn, amount);
+            params.payer = address(0);
+        }
+
+        bytes memory payload = abi.encode(
+            uint(0),
+            params.sideIn,
+            params.sideOut,
+            params.amountIn
+        );
+
+        (, amountOut) = IPool(params.poolIn).swap(
+            params.sideIn,
+            params.sideOut,
+            address(this),
+            payload,
+            params.payer,
+            params.recipient
+        );
     }
 
     function unpackId(uint id) pure public returns (uint, address) {
