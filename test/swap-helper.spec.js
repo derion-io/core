@@ -11,11 +11,17 @@ const {
     bn,
     numberToWei,
     packId,
-    encodeSqrtX96,
+    encodeSqrtX96, weiToNumber,
 } = require("./shared/utilities")
+const compiledUniswapFactory = require("./compiled/UniswapV3Factory.json");
+const compiledUniswapRouter = require("./compiled/SwapRouter.json");
+const compiledUniswapv3PositionManager = require("./compiled/NonfungiblePositionManager.json");
+const compiledUniswapPool = require("./compiled/UniswapV3Pool.json");
 
 const fe = (x) => Number(ethers.utils.formatEther(x))
 const pe = (x) => ethers.utils.parseEther(String(x))
+
+const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
 
 const opts = {
     gasLimit: 30000000
@@ -30,7 +36,7 @@ const FROM_ROUTER = 10;
 const PAYMENT = 0;
 const TRANSFER = 1;
 const ALLOWANCE = 2;
-const CALL_VALUE = 3;
+const CALL_VALUE = 2;
 
 const EIP_ETH = 0
 const ERC_721_BALANCE = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("UniversalTokenRouter.ERC_721_BALANCE"))
@@ -90,6 +96,15 @@ describe("DDL v3", function () {
         const initPriceX96 = encodeSqrtX96(quoteTokenIndex ? 1500 : 1, quoteTokenIndex ? 1 : 1500)
         const a = await uniswapPair.initialize(initPriceX96)
         a.wait(1);
+
+        // deploy helper
+        const StateCalHelper = await ethers.getContractFactory("contracts/Helper.sol:Helper")
+        const stateCalHelper = await StateCalHelper.deploy(
+            derivable1155.address,
+            weth.address
+        )
+        await stateCalHelper.deployed()
+
         await time.increase(1000);
         // add liquidity
         await usdc.approve(uniswapPositionManager.address, MaxUint256);
@@ -135,12 +150,36 @@ describe("DDL v3", function () {
             halfLife: HALF_LIFE // ten years
         }
         const poolAddress = await poolFactory.computePoolAddress(params)
-        await weth.deposit({
-            value: pe("1000000")
-        })
-        await weth.transfer(poolAddress, pe("10000"));
-        await poolFactory.createPool(params);
-        const derivablePool = await ethers.getContractAt("Pool", await poolFactory.computePoolAddress(params))
+        await utr.exec(
+            [],
+            [
+                {
+                    inputs: [
+                        {
+                            mode: CALL_VALUE,
+                            eip: 0,
+                            token: ZERO_ADDRESS,
+                            id: 0,
+                            amountIn: pe("10"),
+                            recipient: ZERO_ADDRESS,
+                        },
+                    ],
+                    code: stateCalHelper.address,
+                    data: (
+                        await stateCalHelper.populateTransaction.createPool(
+                            params,
+                            poolFactory.address
+                        )
+                    ).data,
+                },
+            ],
+            {
+                value: pe("10"),
+                gasLimit: 30000000,
+            },
+        )
+
+        const derivablePool = await ethers.getContractAt("Pool", poolAddress)
 
         const params1 = {
             utr: utr.address,
@@ -157,19 +196,41 @@ describe("DDL v3", function () {
             halfLife: HALF_LIFE // ten years
         }
         const poolAddress1 = await poolFactory.computePoolAddress(params1)
-        await weth.deposit({
-            value: pe("1000000")
-        })
-        await weth.transfer(poolAddress1, pe("10000"));
-        await poolFactory.createPool(params1);
-        const derivablePool1 = await ethers.getContractAt("Pool", await poolFactory.computePoolAddress(params1))
-
-        // deploy helper
-        const StateCalHelper = await ethers.getContractFactory("contracts/Helper.sol:Helper")
-        const stateCalHelper = await StateCalHelper.deploy(
-            derivable1155.address
+        // await weth.deposit({
+        //     value: pe("1000000")
+        // })
+        // await weth.transfer(poolAddress1, pe("10000"));
+        // await poolFactory.createPool(params1);
+        await utr.exec(
+            [],
+            [
+                {
+                    inputs: [
+                        {
+                            mode: CALL_VALUE,
+                            eip: 0,
+                            token: ZERO_ADDRESS,
+                            id: 0,
+                            amountIn: pe("10000"),
+                            recipient: ZERO_ADDRESS,
+                        },
+                    ],
+                    code: stateCalHelper.address,
+                    data: (
+                        await stateCalHelper.populateTransaction.createPool(
+                            params1,
+                            poolFactory.address
+                        )
+                    ).data,
+                },
+            ],
+            {
+                value: pe("10000"),
+                gasLimit: 30000000,
+            },
         )
-        await stateCalHelper.deployed()
+
+        const derivablePool1 = await ethers.getContractAt("Pool", poolAddress1)
 
         const DerivableHelper = await ethers.getContractFactory("contracts/test/Helper.sol:Helper")
         const derivableHelper = await DerivableHelper.deploy(
@@ -224,7 +285,7 @@ describe("DDL v3", function () {
                     amountIn: pe(amountIn),
                     recipient: derivablePool.address,
                 }],
-                flags: 0,
+                // flags: 0,
                 code: stateCalHelper.address,
                 data: (await stateCalHelper.populateTransaction.swap({
                     sideIn: sideIn,
@@ -270,6 +331,112 @@ describe("DDL v3", function () {
         })
         it("Pool0/C -> pool1/C", async function () {
             await testSwapMultiPool(SIDE_C, "0.0001", SIDE_C)
+        })
+    })
+
+    describe("Swap in 1 pool", function () {
+        async function testSwap(sideIn, amountIn, sideOut) {
+            const {
+                owner,
+                weth,
+                derivablePool,
+                derivablePool1,
+                utr,
+                derivable1155,
+                stateCalHelper
+            } = await loadFixture(deployDDLv2)
+            await weth.deposit({value: numberToWei(amountIn)})
+            await weth.approve(utr.address, MaxUint256)
+
+            const balanceInBefore = await weth.balanceOf(owner.address)
+            const balanceOutBefore = await derivable1155.balanceOf(owner.address, packId(sideOut, derivablePool.address))
+            await utr.exec([], [{
+                inputs: [{
+                    mode: PAYMENT,
+                    token: sideIn === SIDE_R ? weth.address : derivable1155.address,
+                    eip: sideIn === SIDE_R ? 20 : 1155,
+                    id: sideIn === SIDE_R ? 0 : packId(sideIn, derivablePool.address),
+                    amountIn: pe(amountIn),
+                    recipient: derivablePool.address,
+                }],
+                // flags: 0,
+                code: stateCalHelper.address,
+                data: (await stateCalHelper.populateTransaction.swap({
+                    sideIn: sideIn,
+                    poolIn: derivablePool.address,
+                    sideOut: sideOut,
+                    poolOut: derivablePool.address,
+                    amountIn: pe(amountIn),
+                    payer: owner.address,
+                    recipient: owner.address
+                })).data,
+            }], opts)
+
+            const balanceInAfter =  await weth.balanceOf(owner.address)
+            const balanceOutAfter = await derivable1155.balanceOf(owner.address, packId(sideOut, derivablePool.address))
+
+            expect(numberToWei(amountIn).sub((balanceInBefore).sub(balanceInAfter))).lte(1)
+            expect(balanceOutBefore.lt(balanceOutAfter)).equal(true)
+        }
+
+        it("swap R in", async function () {
+            await testSwap(SIDE_R, 1, SIDE_B)
+        })
+    })
+
+    describe("Swap by native", function () {
+        async function testSwap(amountIn, sideOut) {
+            const {
+                owner,
+                weth,
+                derivablePool,
+                derivablePool1,
+                utr,
+                derivable1155,
+                stateCalHelper
+            } = await loadFixture(deployDDLv2)
+            await weth.deposit({value: numberToWei(amountIn)})
+            await weth.approve(utr.address, MaxUint256)
+
+            const balanceOutBefore = await derivable1155.balanceOf(owner.address, packId(sideOut, derivablePool.address))
+            await utr.exec([], [{
+                inputs: [{
+                    mode: CALL_VALUE,
+                    token: ZERO_ADDRESS,
+                    eip: 0,
+                    id: 0,
+                    amountIn: pe(amountIn),
+                    recipient: ZERO_ADDRESS,
+                }],
+                // flags: 0,
+                code: stateCalHelper.address,
+                data: (await stateCalHelper.populateTransaction.swap({
+                    sideIn: SIDE_R,
+                    poolIn: derivablePool.address,
+                    sideOut: sideOut,
+                    poolOut: derivablePool.address,
+                    amountIn: pe(amountIn),
+                    payer: owner.address,
+                    recipient: owner.address
+                })).data,
+            }], {
+                ...opts,
+                value: pe(amountIn),
+            })
+
+            const balanceOutAfter = await derivable1155.balanceOf(owner.address, packId(sideOut, derivablePool.address))
+
+            expect(balanceOutBefore.lt(balanceOutAfter)).equal(true)
+        }
+
+        it("swap R in by native", async function () {
+            await testSwap(1, SIDE_B)
+        })
+        it("swap R in by native", async function () {
+            await testSwap(1, SIDE_A)
+        })
+        it("swap R in by native", async function () {
+            await testSwap(1, SIDE_C)
         })
     })
 })
