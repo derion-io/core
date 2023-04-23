@@ -12,13 +12,18 @@ import "./interfaces/IAsymptoticPerpetual.sol";
 import "./interfaces/IERC1155Supply.sol";
 import "./interfaces/IHelper.sol";
 import "./interfaces/IPool.sol";
+import "./interfaces/IPoolFactory.sol";
+import "./interfaces/IWeth.sol";
+import "hardhat/console.sol";
 
 contract Helper is Constants, IHelper {
     uint constant MAX_IN = 0;
     address internal immutable TOKEN;
+    address internal immutable WETH;
 
-    constructor(address token) {
+    constructor(address token, address weth) {
         TOKEN = token;
+        WETH = weth;
     }
 
     struct SwapParams {
@@ -49,7 +54,17 @@ contract Helper is Constants, IHelper {
         return IERC1155Supply(TOKEN).totalSupply(_packID(msg.sender, side));
     }
 
-    function swap(SwapParams memory params) external returns (uint amountOut){
+    function createPool(Params memory params, address factory) external payable returns (address pool) {
+        IWeth(WETH).deposit{value: msg.value}();
+        uint amount = IWeth(WETH).balanceOf(address(this));
+        address poolAddress = IPoolFactory(factory).computePoolAddress(params);
+        console.log(poolAddress);
+        IWeth(WETH).transfer(poolAddress, amount);
+
+        pool = IPoolFactory(factory).createPool(params);
+    }
+
+    function swapMultiPool(SwapParams memory params) external returns (uint amountOut){
         // swap poolIn/sideIn to poolIn/R
         bytes memory payload = abi.encode(
             uint(0),
