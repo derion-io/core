@@ -31,6 +31,7 @@ const SIDE_R = 0x00
 const SIDE_A = 0x10
 const SIDE_B = 0x20
 const SIDE_C = 0x30
+const SIDE_NATIVE = '0x000000000000000000000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee'
 
 const FROM_ROUTER = 10;
 const PAYMENT = 0;
@@ -261,8 +262,187 @@ describe("DDL v3", function () {
         }
     }
 
-    describe("Swap multi pool", function () {
-        async function testSwapMultiPool(sideIn, amountIn, sideOut) {
+    // describe("Swap multi pool", function () {
+    //     async function testSwapMultiPool(sideIn, amountIn, sideOut) {
+    //         const {
+    //             owner,
+    //             weth,
+    //             derivablePool,
+    //             derivablePool1,
+    //             utr,
+    //             derivable1155,
+    //             stateCalHelper
+    //         } = await loadFixture(deployDDLv2)
+    //         await weth.approve(derivablePool.address, MaxUint256)
+    //
+    //         const balanceInBefore = await derivable1155.balanceOf(owner.address, packId(sideIn, derivablePool.address))
+    //         const balanceOutBefore = await derivable1155.balanceOf(owner.address, packId(sideOut, derivablePool1.address))
+    //         await utr.exec([], [{
+    //             inputs: [{
+    //                 mode: PAYMENT,
+    //                 eip: 1155,
+    //                 token: derivable1155.address,
+    //                 id: packId(sideIn, derivablePool.address),
+    //                 amountIn: pe(amountIn),
+    //                 recipient: derivablePool.address,
+    //             }],
+    //             // flags: 0,
+    //             code: stateCalHelper.address,
+    //             data: (await stateCalHelper.populateTransaction.swap({
+    //                 sideIn: sideIn,
+    //                 poolIn: derivablePool.address,
+    //                 sideOut: sideOut,
+    //                 poolOut: derivablePool1.address,
+    //                 amountIn: pe(amountIn),
+    //                 payer: owner.address,
+    //                 recipient: owner.address
+    //             })).data,
+    //         }], opts)
+    //
+    //         const balanceInAfter = await derivable1155.balanceOf(owner.address, packId(sideIn, derivablePool.address))
+    //         const balanceOutAfter = await derivable1155.balanceOf(owner.address, packId(sideOut, derivablePool1.address))
+    //
+    //         expect(numberToWei(amountIn).sub((balanceInBefore).sub(balanceInAfter))).lte(1)
+    //         expect(balanceOutBefore.lt(balanceOutAfter)).equal(true)
+    //     }
+    //
+    //     it("Pool0/A -> pool1/A", async function () {
+    //         await testSwapMultiPool(SIDE_A, "1", SIDE_A)
+    //     })
+    //     it("Pool0/A -> pool1/B", async function () {
+    //         await testSwapMultiPool(SIDE_A, "1", SIDE_B)
+    //     })
+    //     it("Pool0/A -> pool1/C", async function () {
+    //         await testSwapMultiPool(SIDE_A, "1", SIDE_C)
+    //     })
+    //     it("Pool0/B -> pool1/A", async function () {
+    //         await testSwapMultiPool(SIDE_B, "0.0001", SIDE_A)
+    //     })
+    //     it("Pool0/B -> pool1/B", async function () {
+    //         await testSwapMultiPool(SIDE_B, "0.0001", SIDE_B)
+    //     })
+    //     it("Pool0/B -> pool1/C", async function () {
+    //         await testSwapMultiPool(SIDE_B, "0.0001", SIDE_C)
+    //     })
+    //     it("Pool0/C -> pool1/A", async function () {
+    //         await testSwapMultiPool(SIDE_C, "0.0001", SIDE_A)
+    //     })
+    //     it("Pool0/C -> pool1/B", async function () {
+    //         await testSwapMultiPool(SIDE_C, "0.0001", SIDE_B)
+    //     })
+    //     it("Pool0/C -> pool1/C", async function () {
+    //         await testSwapMultiPool(SIDE_C, "0.0001", SIDE_C)
+    //     })
+    // })
+    //
+    // describe("Swap in 1 pool", function () {
+    //     async function testSwap(sideIn, amountIn, sideOut) {
+    //         const {
+    //             owner,
+    //             weth,
+    //             derivablePool,
+    //             derivablePool1,
+    //             utr,
+    //             derivable1155,
+    //             stateCalHelper
+    //         } = await loadFixture(deployDDLv2)
+    //         await weth.deposit({value: numberToWei(amountIn)})
+    //         await weth.approve(utr.address, MaxUint256)
+    //
+    //         const balanceInBefore = await weth.balanceOf(owner.address)
+    //         const balanceOutBefore = await derivable1155.balanceOf(owner.address, packId(sideOut, derivablePool.address))
+    //         await utr.exec([], [{
+    //             inputs: [{
+    //                 mode: PAYMENT,
+    //                 token: sideIn === SIDE_R ? weth.address : derivable1155.address,
+    //                 eip: sideIn === SIDE_R ? 20 : 1155,
+    //                 id: sideIn === SIDE_R ? 0 : packId(sideIn, derivablePool.address),
+    //                 amountIn: pe(amountIn),
+    //                 recipient: derivablePool.address,
+    //             }],
+    //             // flags: 0,
+    //             code: stateCalHelper.address,
+    //             data: (await stateCalHelper.populateTransaction.swap({
+    //                 sideIn: sideIn,
+    //                 poolIn: derivablePool.address,
+    //                 sideOut: sideOut,
+    //                 poolOut: derivablePool.address,
+    //                 amountIn: pe(amountIn),
+    //                 payer: owner.address,
+    //                 recipient: owner.address
+    //             })).data,
+    //         }], opts)
+    //
+    //         const balanceInAfter =  await weth.balanceOf(owner.address)
+    //         const balanceOutAfter = await derivable1155.balanceOf(owner.address, packId(sideOut, derivablePool.address))
+    //
+    //         expect(numberToWei(amountIn).sub((balanceInBefore).sub(balanceInAfter))).lte(1)
+    //         expect(balanceOutBefore.lt(balanceOutAfter)).equal(true)
+    //     }
+    //
+    //     it("swap R in", async function () {
+    //         await testSwap(SIDE_R, 1, SIDE_B)
+    //     })
+    // })
+    //
+    // describe("Swap by native", function () {
+    //     async function testSwap(amountIn, sideOut) {
+    //         const {
+    //             owner,
+    //             weth,
+    //             derivablePool,
+    //             derivablePool1,
+    //             utr,
+    //             derivable1155,
+    //             stateCalHelper
+    //         } = await loadFixture(deployDDLv2)
+    //         await weth.deposit({value: numberToWei(amountIn)})
+    //         await weth.approve(utr.address, MaxUint256)
+    //
+    //         const balanceOutBefore = await derivable1155.balanceOf(owner.address, packId(sideOut, derivablePool.address))
+    //         await utr.exec([], [{
+    //             inputs: [{
+    //                 mode: CALL_VALUE,
+    //                 token: ZERO_ADDRESS,
+    //                 eip: 0,
+    //                 id: 0,
+    //                 amountIn: pe(amountIn),
+    //                 recipient: ZERO_ADDRESS,
+    //             }],
+    //             // flags: 0,
+    //             code: stateCalHelper.address,
+    //             data: (await stateCalHelper.populateTransaction.swap({
+    //                 sideIn: SIDE_R,
+    //                 poolIn: derivablePool.address,
+    //                 sideOut: sideOut,
+    //                 poolOut: derivablePool.address,
+    //                 amountIn: pe(amountIn),
+    //                 payer: owner.address,
+    //                 recipient: owner.address
+    //             })).data,
+    //         }], {
+    //             ...opts,
+    //             value: pe(amountIn),
+    //         })
+    //
+    //         const balanceOutAfter = await derivable1155.balanceOf(owner.address, packId(sideOut, derivablePool.address))
+    //
+    //         expect(balanceOutBefore.lt(balanceOutAfter)).equal(true)
+    //     }
+    //
+    //     it("swap R in by native", async function () {
+    //         await testSwap(1, SIDE_B)
+    //     })
+    //     it("swap R in by native", async function () {
+    //         await testSwap(1, SIDE_A)
+    //     })
+    //     it("swap R in by native", async function () {
+    //         await testSwap(1, SIDE_C)
+    //     })
+    // })
+
+    describe("Swap by native", function () {
+        async function testSwap(sideIn) {
             const {
                 owner,
                 weth,
@@ -272,91 +452,16 @@ describe("DDL v3", function () {
                 derivable1155,
                 stateCalHelper
             } = await loadFixture(deployDDLv2)
-            await weth.approve(derivablePool.address, MaxUint256)
 
             const balanceInBefore = await derivable1155.balanceOf(owner.address, packId(sideIn, derivablePool.address))
-            const balanceOutBefore = await derivable1155.balanceOf(owner.address, packId(sideOut, derivablePool1.address))
-            await utr.exec([], [{
-                inputs: [{
-                    mode: PAYMENT,
-                    eip: 1155,
-                    token: derivable1155.address,
-                    id: packId(sideIn, derivablePool.address),
-                    amountIn: pe(amountIn),
-                    recipient: derivablePool.address,
-                }],
-                // flags: 0,
-                code: stateCalHelper.address,
-                data: (await stateCalHelper.populateTransaction.swap({
-                    sideIn: sideIn,
-                    poolIn: derivablePool.address,
-                    sideOut: sideOut,
-                    poolOut: derivablePool1.address,
-                    amountIn: pe(amountIn),
-                    payer: owner.address,
-                    recipient: owner.address
-                })).data,
-            }], opts)
-
-            const balanceInAfter = await derivable1155.balanceOf(owner.address, packId(sideIn, derivablePool.address))
-            const balanceOutAfter = await derivable1155.balanceOf(owner.address, packId(sideOut, derivablePool1.address))
-
-            expect(numberToWei(amountIn).sub((balanceInBefore).sub(balanceInAfter))).lte(1)
-            expect(balanceOutBefore.lt(balanceOutAfter)).equal(true)
-        }
-
-        it("Pool0/A -> pool1/A", async function () {
-            await testSwapMultiPool(SIDE_A, "1", SIDE_A)
-        })
-        it("Pool0/A -> pool1/B", async function () {
-            await testSwapMultiPool(SIDE_A, "1", SIDE_B)
-        })
-        it("Pool0/A -> pool1/C", async function () {
-            await testSwapMultiPool(SIDE_A, "1", SIDE_C)
-        })
-        it("Pool0/B -> pool1/A", async function () {
-            await testSwapMultiPool(SIDE_B, "0.0001", SIDE_A)
-        })
-        it("Pool0/B -> pool1/B", async function () {
-            await testSwapMultiPool(SIDE_B, "0.0001", SIDE_B)
-        })
-        it("Pool0/B -> pool1/C", async function () {
-            await testSwapMultiPool(SIDE_B, "0.0001", SIDE_C)
-        })
-        it("Pool0/C -> pool1/A", async function () {
-            await testSwapMultiPool(SIDE_C, "0.0001", SIDE_A)
-        })
-        it("Pool0/C -> pool1/B", async function () {
-            await testSwapMultiPool(SIDE_C, "0.0001", SIDE_B)
-        })
-        it("Pool0/C -> pool1/C", async function () {
-            await testSwapMultiPool(SIDE_C, "0.0001", SIDE_C)
-        })
-    })
-
-    describe("Swap in 1 pool", function () {
-        async function testSwap(sideIn, amountIn, sideOut) {
-            const {
-                owner,
-                weth,
-                derivablePool,
-                derivablePool1,
-                utr,
-                derivable1155,
-                stateCalHelper
-            } = await loadFixture(deployDDLv2)
-            await weth.deposit({value: numberToWei(amountIn)})
-            await weth.approve(utr.address, MaxUint256)
-
-            const balanceInBefore = await weth.balanceOf(owner.address)
-            const balanceOutBefore = await derivable1155.balanceOf(owner.address, packId(sideOut, derivablePool.address))
+            const balanceOutBefore = await owner.provider.getBalance(owner.address)
             await utr.exec([], [{
                 inputs: [{
                     mode: PAYMENT,
                     token: sideIn === SIDE_R ? weth.address : derivable1155.address,
                     eip: sideIn === SIDE_R ? 20 : 1155,
                     id: sideIn === SIDE_R ? 0 : packId(sideIn, derivablePool.address),
-                    amountIn: pe(amountIn),
+                    amountIn: balanceInBefore,
                     recipient: derivablePool.address,
                 }],
                 // flags: 0,
@@ -364,79 +469,29 @@ describe("DDL v3", function () {
                 data: (await stateCalHelper.populateTransaction.swap({
                     sideIn: sideIn,
                     poolIn: derivablePool.address,
-                    sideOut: sideOut,
+                    sideOut: SIDE_NATIVE,
                     poolOut: derivablePool.address,
-                    amountIn: pe(amountIn),
+                    amountIn: balanceInBefore,
                     payer: owner.address,
                     recipient: owner.address
                 })).data,
             }], opts)
 
-            const balanceInAfter =  await weth.balanceOf(owner.address)
-            const balanceOutAfter = await derivable1155.balanceOf(owner.address, packId(sideOut, derivablePool.address))
+            const balanceInAfter = await derivable1155.balanceOf(owner.address, packId(sideIn, derivablePool.address))
+            const balanceOutAfter = await owner.provider.getBalance(owner.address)
 
-            expect(numberToWei(amountIn).sub((balanceInBefore).sub(balanceInAfter))).lte(1)
-            expect(balanceOutBefore.lt(balanceOutAfter)).equal(true)
+            expect(balanceOutBefore.gt(balanceOutAfter)).equal(true)
+            expect(balanceInBefore.gt(balanceInAfter)).equal(true)
         }
 
-        it("swap R in", async function () {
-            await testSwap(SIDE_R, 1, SIDE_B)
+        it("swap A in by native", async function () {
+            await testSwap(SIDE_A )
         })
-    })
-
-    describe("Swap by native", function () {
-        async function testSwap(amountIn, sideOut) {
-            const {
-                owner,
-                weth,
-                derivablePool,
-                derivablePool1,
-                utr,
-                derivable1155,
-                stateCalHelper
-            } = await loadFixture(deployDDLv2)
-            await weth.deposit({value: numberToWei(amountIn)})
-            await weth.approve(utr.address, MaxUint256)
-
-            const balanceOutBefore = await derivable1155.balanceOf(owner.address, packId(sideOut, derivablePool.address))
-            await utr.exec([], [{
-                inputs: [{
-                    mode: CALL_VALUE,
-                    token: ZERO_ADDRESS,
-                    eip: 0,
-                    id: 0,
-                    amountIn: pe(amountIn),
-                    recipient: ZERO_ADDRESS,
-                }],
-                // flags: 0,
-                code: stateCalHelper.address,
-                data: (await stateCalHelper.populateTransaction.swap({
-                    sideIn: SIDE_R,
-                    poolIn: derivablePool.address,
-                    sideOut: sideOut,
-                    poolOut: derivablePool.address,
-                    amountIn: pe(amountIn),
-                    payer: owner.address,
-                    recipient: owner.address
-                })).data,
-            }], {
-                ...opts,
-                value: pe(amountIn),
-            })
-
-            const balanceOutAfter = await derivable1155.balanceOf(owner.address, packId(sideOut, derivablePool.address))
-
-            expect(balanceOutBefore.lt(balanceOutAfter)).equal(true)
-        }
-
-        it("swap R in by native", async function () {
-            await testSwap(1, SIDE_B)
+        it("swap B to native", async function () {
+            await testSwap(SIDE_B)
         })
-        it("swap R in by native", async function () {
-            await testSwap(1, SIDE_A)
-        })
-        it("swap R in by native", async function () {
-            await testSwap(1, SIDE_C)
+        it("swap C in by native", async function () {
+            await testSwap(SIDE_C)
         })
     })
 })

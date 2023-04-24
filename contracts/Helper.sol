@@ -16,6 +16,7 @@ import "./interfaces/IPoolFactory.sol";
 import "./interfaces/IWeth.sol";
 
 contract Helper is Constants, IHelper {
+    uint internal constant SIDE_NATIVE = 0x000000000000000000000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee;
     uint constant MAX_IN = 0;
     address internal immutable TOKEN;
     address internal immutable WETH;
@@ -62,7 +63,7 @@ contract Helper is Constants, IHelper {
         pool = IPoolFactory(factory).createPool(params);
     }
 
-    function _swapMultiPool(SwapParams memory params) internal returns (uint amountOut) {
+    function _swapMultiPool(SwapParams memory params, address TOKEN_R) internal returns (uint amountOut) {
         // swap poolIn/sideIn to poolIn/R
         bytes memory payload = abi.encode(
             uint(0),
@@ -81,7 +82,6 @@ contract Helper is Constants, IHelper {
         );
 
         // TOKEN_R approve poolOut
-        address TOKEN_R = IPool(params.poolIn).TOKEN_R();
         IERC20(TOKEN_R).approve(params.poolOut, amountOut);
 
         // swap (poolIn|PoolOut)/R to poolOut/SideOut
@@ -105,19 +105,45 @@ contract Helper is Constants, IHelper {
         if (leftOver > 0) {
             TransferHelper.safeTransfer(TOKEN_R, params.payer, leftOver);
         }
+
+        emit Derivable(
+            'swap',
+            _packID(params.poolIn, params.sideIn),
+            _packID(params.poolOut, params.sideOut),
+            abi.encode(PoolCreated(
+                UTR,
+                TOKEN,
+                LOGIC,
+                ORACLE,
+                TOKEN_R,
+                MARK,
+                params.k
+            ))
+        );
     }
 
     function swap(SwapParams memory params) external payable returns (uint amountOut){
+        address TOKEN_R = IPool(params.poolIn).TOKEN_R();
         if(params.poolIn != params.poolOut) {
-            amountOut = _swapMultiPool(params);
+            amountOut = _swapMultiPool(params, TOKEN_R);
             return amountOut;
         }
 
-        if(params.sideIn == SIDE_R && msg.value != 0) {
+        if(params.sideIn == SIDE_NATIVE) {
+            require(TOKEN_R == WETH, 'Reserve token is not Wrapped');
+            require(msg.value != 0, 'Value need > 0');
             IWeth(WETH).deposit{value: msg.value}();
             uint amount = IWeth(WETH).balanceOf(address(this));
             IERC20(WETH).approve(params.poolIn, amount);
             params.payer = address(0);
+            params.sideIn = SIDE_R;
+        }
+
+        address recipient = params.recipient;
+        if(params.sideOut == SIDE_NATIVE) {
+            require(TOKEN_R == WETH, 'Reserve token is not Wrapped');
+            params.sideOut = SIDE_R;
+            params.recipient = address(this);
         }
 
         bytes memory payload = abi.encode(
@@ -135,6 +161,13 @@ contract Helper is Constants, IHelper {
             params.payer,
             params.recipient
         );
+
+        if(params.sideOut == SIDE_NATIVE) {
+            params.sideOut = SIDE_R;
+            uint leftOver = IERC20(TOKEN_R).balanceOf(address(this));
+            IWeth(WETH).withdraw(leftOver);
+            payable(recipient).transfer(leftOver);
+        }
     }
 
     function unpackId(uint id) pure public returns (uint, address) {
