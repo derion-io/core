@@ -151,32 +151,10 @@ describe("DDL v3", function () {
             halfLife: HALF_LIFE // ten years
         }
         const poolAddress = await poolFactory.computePoolAddress(params)
-        await utr.exec(
-            [],
-            [
-                {
-                    inputs: [
-                        {
-                            mode: CALL_VALUE,
-                            eip: 0,
-                            token: ZERO_ADDRESS,
-                            id: 0,
-                            amountIn: pe("10"),
-                            recipient: ZERO_ADDRESS,
-                        },
-                    ],
-                    code: stateCalHelper.address,
-                    data: (
-                        await stateCalHelper.populateTransaction.createPool(
-                            params,
-                            poolFactory.address
-                        )
-                    ).data,
-                },
-            ],
-            {
+        await stateCalHelper.createPool(
+            params,
+            poolFactory.address, {
                 value: pe("10"),
-                gasLimit: 30000000,
             },
         )
 
@@ -202,33 +180,12 @@ describe("DDL v3", function () {
         // })
         // await weth.transfer(poolAddress1, pe("10000"));
         // await poolFactory.createPool(params1);
-        await utr.exec(
-            [],
-            [
-                {
-                    inputs: [
-                        {
-                            mode: CALL_VALUE,
-                            eip: 0,
-                            token: ZERO_ADDRESS,
-                            id: 0,
-                            amountIn: pe("10000"),
-                            recipient: ZERO_ADDRESS,
-                        },
-                    ],
-                    code: stateCalHelper.address,
-                    data: (
-                        await stateCalHelper.populateTransaction.createPool(
-                            params1,
-                            poolFactory.address
-                        )
-                    ).data,
-                },
-            ],
+        await stateCalHelper.createPool(
+            params1,
+            poolFactory.address,
             {
                 value: pe("10000"),
-                gasLimit: 30000000,
-            },
+            }
         )
 
         const derivablePool1 = await ethers.getContractAt("Pool", poolAddress1)
