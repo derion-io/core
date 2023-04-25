@@ -18,4 +18,6 @@ struct Params {
 
 interface IPoolFactory {
     function getParams() external view returns (Params memory);
+    function createPool(Params memory params) external returns (address pool);
+    function computePoolAddress(Params memory params) external view returns (address pool);
 }

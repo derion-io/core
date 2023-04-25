@@ -8,17 +8,23 @@ import "@uniswap/lib/contracts/libraries/TransferHelper.sol";
 import "./libraries/Math.sol";
 import "./libraries/FullMath.sol";
 import "./logics/Constants.sol";
+import "./logics/Events.sol";
 import "./interfaces/IAsymptoticPerpetual.sol";
 import "./interfaces/IERC1155Supply.sol";
 import "./interfaces/IHelper.sol";
 import "./interfaces/IPool.sol";
+import "./interfaces/IPoolFactory.sol";
+import "./interfaces/IWeth.sol";
 
-contract Helper is Constants, IHelper {
+contract Helper is Constants, IHelper, Events {
+    uint internal constant SIDE_NATIVE = 0x000000000000000000000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee;
     uint constant MAX_IN = 0;
     address internal immutable TOKEN;
+    address internal immutable WETH;
 
-    constructor(address token) {
+    constructor(address token, address weth) {
         TOKEN = token;
+        WETH = weth;
     }
 
     struct SwapParams {
@@ -49,7 +55,16 @@ contract Helper is Constants, IHelper {
         return IERC1155Supply(TOKEN).totalSupply(_packID(msg.sender, side));
     }
 
-    function swap(SwapParams memory params) external returns (uint amountOut){
+    function createPool(Params memory params, address factory) external payable returns (address pool) {
+        IWeth(WETH).deposit{value : msg.value}();
+        uint amount = IWeth(WETH).balanceOf(address(this));
+        address poolAddress = IPoolFactory(factory).computePoolAddress(params);
+        IWeth(WETH).transfer(poolAddress, amount);
+
+        pool = IPoolFactory(factory).createPool(params);
+    }
+
+    function _swapMultiPool(SwapParams memory params, address TOKEN_R) internal returns (uint amountOut) {
         // swap poolIn/sideIn to poolIn/R
         bytes memory payload = abi.encode(
             uint(0),
@@ -68,7 +83,6 @@ contract Helper is Constants, IHelper {
         );
 
         // TOKEN_R approve poolOut
-        address TOKEN_R = IPool(params.poolIn).TOKEN_R();
         IERC20(TOKEN_R).approve(params.poolOut, amountOut);
 
         // swap (poolIn|PoolOut)/R to poolOut/SideOut
@@ -92,6 +106,81 @@ contract Helper is Constants, IHelper {
         if (leftOver > 0) {
             TransferHelper.safeTransfer(TOKEN_R, params.payer, leftOver);
         }
+
+        emit Derivable(
+            'Swap', // topic1: eventName
+            bytes32(_addressToBytes32(params.poolIn)), // topic2: poolIn
+            bytes32(_addressToBytes32(params.poolOut)), // topic3: poolOut
+            abi.encode(SwapEvent(
+                params.sideIn,
+                params.sideOut,
+                params.amountIn,
+                amountOut,
+                params.payer,
+                params.recipient
+            ))
+        );
+    }
+
+    function swap(SwapParams memory params) external payable returns (uint amountOut){
+        SwapParams memory _params = params;
+        address TOKEN_R = IPool(params.poolIn).TOKEN_R();
+        if (params.poolIn != params.poolOut) {
+            amountOut = _swapMultiPool(params, TOKEN_R);
+            return amountOut;
+        }
+
+        if (params.sideIn == SIDE_NATIVE) {
+            require(TOKEN_R == WETH, 'Reserve token is not Wrapped');
+            require(msg.value != 0, 'Value need > 0');
+            IWeth(WETH).deposit{value : msg.value}();
+            uint amount = IWeth(WETH).balanceOf(address(this));
+            IERC20(WETH).approve(params.poolIn, amount);
+            params.payer = address(0);
+            params.sideIn = SIDE_R;
+        }
+
+        if (params.sideOut == SIDE_NATIVE) {
+            require(TOKEN_R == WETH, 'Reserve token is not Wrapped');
+            params.sideOut = SIDE_R;
+            params.recipient = address(this);
+        }
+
+        bytes memory payload = abi.encode(
+            uint(0),
+            params.sideIn,
+            params.sideOut,
+            params.amountIn
+        );
+
+        (, amountOut) = IPool(params.poolIn).swap(
+            params.sideIn,
+            params.sideOut,
+            address(this),
+            payload,
+            params.payer,
+            params.recipient
+        );
+
+        if (_params.sideOut == SIDE_NATIVE) {
+            amountOut = IERC20(TOKEN_R).balanceOf(address(this));
+            IWeth(WETH).withdraw(amountOut);
+            payable(_params.recipient).transfer(amountOut);
+        }
+
+        emit Derivable(
+            'Swap', // topic1: eventName
+            bytes32(_addressToBytes32(_params.poolIn)), // topic2: poolIn
+            bytes32(_addressToBytes32(_params.poolOut)), // topic3: poolOut
+            abi.encode(SwapEvent(
+                _params.sideIn,
+                _params.sideOut,
+                _params.amountIn,
+                amountOut,
+                _params.payer,
+                _params.recipient
+            ))
+        );
     }
 
     function unpackId(uint id) pure public returns (uint, address) {

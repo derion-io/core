@@ -9,14 +9,14 @@ abstract contract Events {
         bytes data
     );
 
-//    struct Deleverage {
-//        uint224 twapBase;
-//        uint224 twapLP;
-//        uint scaleLongBefore;
-//        uint scaleLongAfter;
-//        uint priceScaleLong;
-//        uint priceScaleShort;
-//    }
+    struct SwapEvent {
+        uint sideIn;
+        uint sideOut;
+        uint amountIn;
+        uint amountOut;
+        address payer;
+        address recipient;
+    }
 
     struct PoolCreated {
         address UTR;
