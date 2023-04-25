@@ -5,7 +5,7 @@ import "@openzeppelin/contracts/token/ERC1155/extensions/ERC1155Supply.sol";
 import "./logics/Constants.sol";
 import "./logics/Storage.sol";
 import "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
-import "./libraries/OracleLibrary.sol";
+import "./libs/OracleLibrary.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 interface IERC1155Supply {

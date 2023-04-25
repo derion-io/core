@@ -5,8 +5,8 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 import "@uniswap/lib/contracts/libraries/TransferHelper.sol";
 
-import "./libraries/Math.sol";
-import "./libraries/FullMath.sol";
+import "./libs/Math.sol";
+import "./libs/FullMath.sol";
 import "./logics/Constants.sol";
 import "./logics/Events.sol";
 import "./interfaces/IAsymptoticPerpetual.sol";

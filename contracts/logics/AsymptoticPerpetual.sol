@@ -4,14 +4,14 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 
-import "../libraries/OracleLibrary.sol";
-import "../libraries/Math.sol";
+import "../libs/OracleLibrary.sol";
+import "../libs/Math.sol";
 import "./Constants.sol";
 import "./Storage.sol";
 import "../interfaces/IHelper.sol";
 import "../interfaces/IERC1155Supply.sol";
 import "../interfaces/IAsymptoticPerpetual.sol";
-import "../libraries/ABDKMath64x64.sol";
+import "../libs/abdk-consulting/abdk-libraries-solidity/ABDKMath64x64.sol";
 
 
 contract AsymptoticPerpetual is Storage, Constants, IAsymptoticPerpetual {
