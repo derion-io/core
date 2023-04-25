@@ -4,19 +4,10 @@ const path = require('path')
 const { bn } = require("../test/shared/utilities")
 const { numberToWei, encodeSqrtX96, packId, delay} = require("./shared/utilities")
 const { MaxUint256, AddressZero } = ethers.constants
-const opts = {
-    gasLimit: 30000000
-}
+
 const fe = (x) => Number(ethers.utils.formatEther(x))
 const pe = (x) => ethers.utils.parseEther(String(x))
 const HALF_LIFE = 10 * 365 * 24 * 60 * 60
-
-// utr
-const FROM_ROUTER   = 10
-const PAYMENT       = 0
-const TRANSFER      = 1
-const ALLOWANCE     = 2
-const CALL_VALUE    = 3
 
 const abiCoder = new ethers.utils.AbiCoder()
 
@@ -128,6 +119,16 @@ async function main() {
     addressList["token"] = derivable1155.address
     await derivable1155.deployed()
 
+    // deploy helper
+    const StateCalHelper = await ethers.getContractFactory("contracts/Helper.sol:Helper")
+    const stateCalHelper = await StateCalHelper.deploy(
+        derivable1155.address,
+        weth.address
+    )
+    await stateCalHelper.deployed()
+    console.log(`stateCalHelper: ${stateCalHelper.address}`)
+    addressList["stateCalHelper"] = stateCalHelper.address
+
     // deploy ddl pool
     const oracle = ethers.utils.hexZeroPad(
         bn(quoteTokenIndex).shl(255).add(bn(300).shl(256 - 64)).add(uniswapPair.address).toHexString(),
@@ -148,55 +149,7 @@ async function main() {
         halfLife: HALF_LIFE
     }
     const poolAddress = await poolFactory.computePoolAddress(params)
-    await delay(1000)
-    // await weth.deposit({
-    //     value: pe("100")
-    // })
-    // await weth.transfer(poolAddress, pe("10"))
-
-    await utr.exec(
-        [],
-        [
-            {
-                inputs: [
-                    {
-                        mode: CALL_VALUE,
-                        eip: 0,
-                        token: AddressZero,
-                        id: 0,
-                        amountIn: pe("10"),
-                        recipient: AddressZero,
-                    },
-                ],
-                flags: 0,
-                code: weth.address,
-                data: (await weth.populateTransaction.deposit()).data,
-            },
-            {
-                inputs: [
-                    {
-                        mode: TRANSFER + FROM_ROUTER,
-                        eip: 20,
-                        token: weth.address,
-                        id: 0,
-                        amountIn: 0,
-                        recipient: poolAddress,
-                    },
-                ],
-                flags: 0,
-                code: poolFactory.address,
-                data: (
-                    await poolFactory.populateTransaction.createPool(
-                        params
-                    )
-                ).data,
-            },
-        ],
-        {
-            value: pe("10"),
-            gasLimit: 30000000,
-        },
-    )
+    await stateCalHelper.createPool(params, poolFactory.address, {value: pe(10)})
     const derivablePool = await ethers.getContractAt("Pool", poolAddress)
     console.log(`pool: ${derivablePool.address}`)
     addressList["pool"] = derivablePool.address
@@ -217,54 +170,7 @@ async function main() {
         halfLife: HALF_LIFE
     }
     const poolAddress1 = await poolFactory.computePoolAddress(params1)
-    // await weth.deposit({
-    //     value: pe("100")
-    // })
-    // await weth.transfer(poolAddress, pe("10"))
-    await delay(1000)
-    await utr.exec(
-        [],
-        [
-            {
-                inputs: [
-                    {
-                        mode: CALL_VALUE,
-                        eip: 0,
-                        token: AddressZero,
-                        id: 0,
-                        amountIn: pe("10"),
-                        recipient: AddressZero,
-                    },
-                ],
-                flags: 0,
-                code: weth.address,
-                data: (await weth.populateTransaction.deposit()).data,
-            },
-            {
-                inputs: [
-                    {
-                        mode: TRANSFER + FROM_ROUTER,
-                        eip: 20,
-                        token: weth.address,
-                        id: 0,
-                        amountIn: 0,
-                        recipient: poolAddress1,
-                    },
-                ],
-                flags: 0,
-                code: poolFactory.address,
-                data: (
-                    await poolFactory.populateTransaction.createPool(
-                        params1
-                    )
-                ).data,
-            },
-        ],
-        {
-            value: pe("10"),
-            gasLimit: 30000000,
-        },
-    )
+    await stateCalHelper.createPool(params1, poolFactory.address, {value: pe(10)})
     const derivablePool1 = await ethers.getContractAt("Pool", poolAddress1)
     console.log(`pool1: ${derivablePool1.address}`)
     addressList["pool1"] = derivablePool1.address
@@ -290,15 +196,6 @@ async function main() {
     await multicall3.deployed()
     console.log(`multicall3: ${multicall3.address}`)
     addressList["multicall3"] = multicall3.address
-
-    // deploy helper
-    const StateCalHelper = await ethers.getContractFactory("contracts/Helper.sol:Helper")
-    const stateCalHelper = await StateCalHelper.deploy(
-        derivable1155.address
-    )
-    await stateCalHelper.deployed()
-    console.log(`stateCalHelper: ${stateCalHelper.address}`)
-    addressList["stateCalHelper"] = stateCalHelper.address
 
     const PairDetailsV3 = await ethers.getContractFactory("PairDetailsV3")
     const pairDetailsV3 = await PairDetailsV3.deploy()
