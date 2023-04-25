@@ -106,6 +106,20 @@ contract Helper is Constants, IHelper, Events {
         if (leftOver > 0) {
             TransferHelper.safeTransfer(TOKEN_R, params.payer, leftOver);
         }
+
+        emit Derivable(
+            'Swap', // topic1: eventName
+            bytes32(_addressToBytes32(params.poolIn)), // topic2: poolIn
+            bytes32(_addressToBytes32(params.poolOut)), // topic3: poolOut
+            abi.encode(SwapEvent(
+                params.sideIn,
+                params.sideOut,
+                params.amountIn,
+                amountOut,
+                params.payer,
+                params.recipient
+            ))
+        );
     }
 
     function swap(SwapParams memory params) external payable returns (uint amountOut){
