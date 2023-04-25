@@ -139,7 +139,8 @@ describe("DDL v3", function () {
         // deploy helper
         const StateCalHelper = await ethers.getContractFactory("contracts/Helper.sol:Helper")
         const stateCalHelper = await StateCalHelper.deploy(
-            derivable1155.address
+            derivable1155.address,
+            weth.address
         )
         await stateCalHelper.deployed()
 
