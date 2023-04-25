@@ -162,11 +162,10 @@ contract Helper is Constants, IHelper, Events {
             params.recipient
         );
 
-        if (params.sideOut == SIDE_NATIVE) {
-            params.sideOut = SIDE_R;
-            uint leftOver = IERC20(TOKEN_R).balanceOf(address(this));
-            IWeth(WETH).withdraw(leftOver);
-            payable(_params.recipient).transfer(leftOver);
+        if (_params.sideOut == SIDE_NATIVE) {
+            amountOut = IERC20(TOKEN_R).balanceOf(address(this));
+            IWeth(WETH).withdraw(amountOut);
+            payable(_params.recipient).transfer(amountOut);
         }
 
         emit Derivable(
