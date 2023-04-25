@@ -88,6 +88,8 @@ contract Pool is IPool, Storage, Events, Constants {
                 ORACLE,
                 TOKEN_R,
                 MARK,
+                INIT_TIME,
+                HALF_LIFE,
                 params.k
             ))
         );

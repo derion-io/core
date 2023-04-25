@@ -25,6 +25,8 @@ abstract contract Events {
         bytes32 ORACLE;
         address TOKEN_R;
         uint256 MARK;
+        uint256 INIT_TIME;
+        uint256 HALF_LIFE;
         uint256 k;
     }
 
