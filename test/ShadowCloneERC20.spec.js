@@ -85,7 +85,7 @@ describe("ShadowCloneERC20", function () {
     await asymptoticPerpetual.deployed()
     // deploy ddl pool
     const oracle = ethers.utils.hexZeroPad(
-      bn(1).shl(255).add(bn(300).shl(256 - 64)).add(uniswapPair.address).toHexString(),
+      bn(quoteTokenIndex).shl(255).add(bn(300).shl(256 - 64)).add(uniswapPair.address).toHexString(),
       32,
     )
     const params = {
@@ -95,7 +95,7 @@ describe("ShadowCloneERC20", function () {
       oracle,
       reserveToken: weth.address,
       recipient: owner.address,
-      mark: bn(38).shl(112),
+      mark: bn(38).shl(128),
       k: 5,
       a: pe(10),
       b: pe(10),
