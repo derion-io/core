@@ -18,10 +18,8 @@
     "bignumber.js": "^9.1.1",
     "bn.js": "^5.2.1",
     "canonical-weth": "^1.4.0",
-    "config-js": "^1.1.15",
     "csv-parser": "^3.0.0",
-    "dotenv": "^16.0.1",
-    "merkletreejs": "^0.2.32"
+    "dotenv": "^16.0.1"
   },
   "devDependencies": {
     "@nomicfoundation/hardhat-chai-matchers": "^1.0.0",
@@ -42,6 +40,7 @@
     "hardhat-contract-sizer": "^2.6.1",
     "hardhat-deploy": "^0.11.12",
     "hardhat-gas-reporter": "^1.0.9",
+    "hardhat-tracer": "^2.2.2",
     "mocha": "^10.0.0",
     "prettier": "^2.7.1",
     "prettier-plugin-solidity": "^1.0.0-dev.23",
