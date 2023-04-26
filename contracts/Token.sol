@@ -12,7 +12,7 @@ contract Token is ERC1155SupplyVirtual {
     constructor(
         string memory metadataURI,
         address utr
-    ) ERC1155Cliff(metadataURI) {
+    ) TimelockERC1155(metadataURI) {
         METADATA_URI = metadataURI;
         UTR = utr;
     }
@@ -43,7 +43,27 @@ contract Token is ERC1155SupplyVirtual {
         return operator == UTR || super.isApprovedForAll(account, operator);
     }
 
-    function mint(
+    function onERC1155Received(
+        address,
+        address,
+        uint256,
+        uint256,
+        bytes memory
+    ) public virtual returns (bytes4) {
+        return this.onERC1155Received.selector;
+    }
+
+    function onERC1155BatchReceived(
+        address,
+        address,
+        uint256[] memory,
+        uint256[] memory,
+        bytes memory
+    ) public virtual returns (bytes4) {
+        return this.onERC1155BatchReceived.selector;
+    }
+
+    function mintLock(
         address to,
         uint256 id,
         uint256 amount,

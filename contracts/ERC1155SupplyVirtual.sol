@@ -3,7 +3,7 @@
 
 pragma solidity ^0.8.0;
 
-import "./ERC1155Cliff.sol";
+import "./TimelockERC1155.sol";
 
 /**
  * @dev Extension of ERC1155 that adds tracking of total supply per id.
@@ -13,7 +13,7 @@ import "./ERC1155Cliff.sol";
  * corresponding is an NFT, there is no guarantees that no other token with the
  * same id are not going to be minted.
  */
-abstract contract ERC1155SupplyVirtual is ERC1155Cliff {
+abstract contract ERC1155SupplyVirtual is TimelockERC1155 {
     mapping(uint256 => uint256) private _totalSupply;
 
     /**

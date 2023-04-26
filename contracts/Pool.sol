@@ -76,10 +76,9 @@ contract Pool is IPool, Storage, Events, Constants {
         IERC1155Supply(TOKEN).mintVirtualSupply(idC, MINIMUM_LIQUIDITY);
 
         // mint tokens to recipient
-        IERC1155Supply(TOKEN).mint(params.recipient, idA, rA - MINIMUM_LIQUIDITY, MIN_EXPIRATION, "");
-        IERC1155Supply(TOKEN).mint(params.recipient, idB, rB - MINIMUM_LIQUIDITY, MIN_EXPIRATION, "");
-        IERC1155Supply(TOKEN).mint(params.recipient, idC, rC - MINIMUM_LIQUIDITY, C_MIN_EXPIRATION, "");
-
+        IERC1155Supply(TOKEN).mintLock(params.recipient, idA, rA - MINIMUM_LIQUIDITY, MIN_EXPIRATION, "");
+        IERC1155Supply(TOKEN).mintLock(params.recipient, idB, rB - MINIMUM_LIQUIDITY, MIN_EXPIRATION, "");
+        IERC1155Supply(TOKEN).mintLock(params.recipient, idC, rC - MINIMUM_LIQUIDITY, C_MIN_EXPIRATION, "");
 
         emit Derivable(
             'PoolCreated',                 // topic1: eventName
@@ -138,7 +137,19 @@ contract Pool is IPool, Storage, Events, Constants {
         if (sideOut == SIDE_R) {
             TransferHelper.safeTransfer(TOKEN_R, recipient, amountOut);
         } else {
-            IERC1155Supply(TOKEN).mint(recipient, _packID(address(this), sideOut), amountOut, expiration, "");
+            if (sideOut == SIDE_C) {
+                if (expiration == 0) {
+                    expiration = C_MIN_EXPIRATION;
+                }
+                require(expiration >= C_MIN_EXPIRATION, "Pool: expiration too small");
+            }
+            if (sideOut == SIDE_A || sideOut == SIDE_B) {
+                if (expiration == 0) {
+                    expiration = MIN_EXPIRATION;
+                }
+                require(expiration >= MIN_EXPIRATION, "Pool: expiration too small");
+            }
+            IERC1155Supply(TOKEN).mintLock(recipient, _packID(address(this), sideOut), amountOut, expiration, "");
         }
         // TODO: flash callback here
         if (sideIn == SIDE_R) {
