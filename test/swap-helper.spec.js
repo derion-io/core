@@ -190,7 +190,7 @@ describe("DDL v3", function () {
 
         const derivablePool1 = await ethers.getContractAt("Pool", poolAddress1)
 
-        const DerivableHelper = await ethers.getContractFactory("contracts/test/Helper.sol:Helper")
+        const DerivableHelper = await ethers.getContractFactory("contracts/test/TestHelper.sol:TestHelper")
         const derivableHelper = await DerivableHelper.deploy(
             derivablePool.address,
             derivable1155.address,
