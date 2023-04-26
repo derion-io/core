@@ -111,13 +111,13 @@ describe("DDL v3", function () {
         await usdc.approve(uniswapPositionManager.address, MaxUint256);
         await weth.approve(uniswapPositionManager.address, MaxUint256);
         await uniswapPositionManager.mint({
-            token0: usdc.address,
-            token1: weth.address,
+            token0: quoteTokenIndex ? weth.address : usdc.address,
+            token1: quoteTokenIndex ? usdc.address : weth.address,
             fee: 500,
             tickLower: Math.ceil(-887272 / 10) * 10,
             tickUpper: Math.floor(887272 / 10) * 10,
-            amount0Desired: pe('150000'),
-            amount1Desired: pe('100'),
+            amount0Desired: quoteTokenIndex ? pe('100') : pe('150000'),
+            amount1Desired: quoteTokenIndex ? pe('150000') : pe('100'),
             amount0Min: 0,
             amount1Min: 0,
             recipient: owner.address,
