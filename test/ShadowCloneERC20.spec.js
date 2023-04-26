@@ -99,9 +99,10 @@ describe("ShadowCloneERC20", function () {
       k: 5,
       a: pe(10),
       b: pe(10),
+      initTime: 0,
       halfLife: HALF_LIFE, // ten years
       minExpiration: 0,
-      cMinExpiration: 0
+      cMinExpiration: 0,
     }
     const poolAddress = await poolFactory.computePoolAddress(params)
     await weth.deposit({

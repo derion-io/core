@@ -59,11 +59,15 @@ describe("DDL v3", function () {
         const UniversalRouter = new ethers.ContractFactory(UTR.abi, UTR.bytecode, owner)
         const utr = await UniversalRouter.deploy()
         await utr.deployed()
+        // deploy pool factory
+        const TokenFactory = await ethers.getContractFactory("TokenFactory")
+        const tokenFactory = await TokenFactory.deploy()
         // deploy token1155
         const Token = await ethers.getContractFactory("Token")
         const derivable1155 = await Token.deploy(
             "Test/",
-            utr.address
+            utr.address,
+            tokenFactory.address,
         )
         await derivable1155.deployed()
         // erc20 factory
@@ -148,7 +152,9 @@ describe("DDL v3", function () {
             a: pe(1),
             b: pe(1),
             initTime: 0,
-            halfLife: HALF_LIFE // ten years
+            halfLife: HALF_LIFE,
+            minExpiration: 0,
+            cMinExpiration: 0,
         }
         const poolAddress = await poolFactory.computePoolAddress(params)
         await stateCalHelper.createPool(
@@ -172,8 +178,10 @@ describe("DDL v3", function () {
             a: pe(1),
             b: pe(1),
             initTime: 0,
-            halfLife: HALF_LIFE // ten years
-        }
+            halfLife: HALF_LIFE,
+            minExpiration: 0,
+            cMinExpiration: 0,
+            }
         const poolAddress1 = await poolFactory.computePoolAddress(params1)
         // await weth.deposit({
         //     value: pe("1000000")
@@ -250,6 +258,7 @@ describe("DDL v3", function () {
                     poolIn: derivablePool.address,
                     sideOut: sideOut,
                     poolOut: derivablePool1.address,
+                    expiration: 0,
                     amountIn: pe(amountIn),
                     payer: owner.address,
                     recipient: owner.address

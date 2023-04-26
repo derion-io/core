@@ -92,11 +92,16 @@ async function scenerio01() {
   const asymptoticPerpetual = await AsymptoticPerpetual.deploy();
   await asymptoticPerpetual.deployed();
 
+  // deploy pool factory
+  const TokenFactory = await ethers.getContractFactory("TokenFactory")
+  const tokenFactory = await TokenFactory.deploy()
+
   // deploy token1155
   const Token = await ethers.getContractFactory("Token")
   const derivable1155 = await Token.deploy(
     "Test/",
-    utr.address
+    utr.address,
+    tokenFactory.address,
   )
   await derivable1155.deployed()
 
@@ -117,8 +122,10 @@ async function scenerio01() {
     a: '30000000000',
     b: '30000000000',
     initTime: await time.latest(),
-    halfLife: HALF_LIFE // ten years
-  }
+    halfLife: HALF_LIFE,
+    minExpiration: 0,
+    cMinExpiration: 0,
+}
   const poolAddress = await poolFactory.computePoolAddress(params);
   let txSignerA = weth.connect(accountA);
   let txSignerB = weth.connect(accountB);
@@ -174,6 +181,7 @@ async function scenerio01() {
     0x30,
     stateCalHelper.address,
     encodePayload(0, 0x00, 0x30, numberToWei(0.5)),
+    0,
     '0x0000000000000000000000000000000000000000',
     accountA.address
   );
@@ -258,11 +266,16 @@ async function scenerio02() {
   const asymptoticPerpetual = await AsymptoticPerpetual.deploy();
   await asymptoticPerpetual.deployed();
 
+  // deploy pool factory
+  const TokenFactory = await ethers.getContractFactory("TokenFactory")
+  const tokenFactory = await TokenFactory.deploy()
+  
   // deploy token1155
   const Token = await ethers.getContractFactory("Token")
   const derivable1155 = await Token.deploy(
     "Test/",
-    utr.address
+    utr.address,
+    tokenFactory.address,
   )
   await derivable1155.deployed()
 
@@ -283,8 +296,10 @@ async function scenerio02() {
     a: '30000000000',
     b: '30000000000',
     initTime: await time.latest(),
-    halfLife: HALF_LIFE // ten years
-  }
+    halfLife: HALF_LIFE,
+    minExpiration: 0,
+    cMinExpiration: 0,
+}
   const poolAddress = await poolFactory.computePoolAddress(params);
   let txSignerA = weth.connect(accountA);
   let txSignerB = weth.connect(accountB);
@@ -340,6 +355,7 @@ async function scenerio02() {
     0x30,
     stateCalHelper.address,
     encodePayload(0, 0x00, 0x30, numberToWei(0.5)),
+    0,
     '0x0000000000000000000000000000000000000000',
     accountA.address
   );

@@ -93,11 +93,16 @@ HLs.forEach(HALF_LIFE => {
       const asymptoticPerpetual = await AsymptoticPerpetual.deploy();
       await asymptoticPerpetual.deployed();
 
+      // deploy pool factory
+      const TokenFactory = await ethers.getContractFactory("TokenFactory")
+      const tokenFactory = await TokenFactory.deploy()
+
       // deploy token1155
       const Token = await ethers.getContractFactory("Token")
       const derivable1155 = await Token.deploy(
         "Test/",
-        utr.address
+        utr.address,
+        tokenFactory.address,
       )
       await derivable1155.deployed()
 
@@ -118,7 +123,9 @@ HLs.forEach(HALF_LIFE => {
         a: '30000000000',
         b: '30000000000',
         initTime: await time.latest(),
-        halfLife: HALF_LIFE // ten years
+        halfLife: HALF_LIFE, // ten years
+        minExpiration: 0,
+        cMinExpiration: 0,
       }
       const poolAddress = await poolFactory.computePoolAddress(params);
       let txSignerA = weth.connect(accountA);
@@ -337,6 +344,7 @@ HLs.forEach(HALF_LIFE => {
                 0x10,
                 stateCalHelper.address,
                 encodePayload(0, 0x00, 0x10, amountA),
+                0,
                 accountA.address,
                 derivableHelper.address
               )).data,
@@ -378,6 +386,7 @@ HLs.forEach(HALF_LIFE => {
                 0x20,
                 stateCalHelper.address,
                 encodePayload(0, 0x00, 0x20, amountB),
+                0,
                 accountB.address,
                 derivableHelper.address
               )).data,
@@ -422,6 +431,7 @@ HLs.forEach(HALF_LIFE => {
                 0x20,
                 stateCalHelper.address,
                 encodePayload(0, 0x00, 0x20, amountB),
+                0,
                 accountA.address,
                 derivableHelper.address
               )).data,
@@ -442,6 +452,7 @@ HLs.forEach(HALF_LIFE => {
                 0x10,
                 stateCalHelper.address,
                 encodePayload(0, 0x00, 0x10, amountA),
+                0,
                 accountA.address,
                 derivableHelper.address
               )).data,
