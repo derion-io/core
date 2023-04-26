@@ -233,7 +233,6 @@ describe("DDL v3", function () {
                         amountIn: pe(amountIn),
                         recipient: derivablePool.address,
                     }],
-                    flags: 0,
                     code: derivablePool.address,
                     data: (await derivablePool.populateTransaction.swap(
                         sideIn,
@@ -300,7 +299,6 @@ describe("DDL v3", function () {
                         amountIn: pe(amountIn),
                         recipient: derivablePool.address,
                     }],
-                    flags: 0,
                     code: derivablePool.address,
                     data: (await derivablePool.populateTransaction.swap(
                         sideIn,
@@ -363,7 +361,6 @@ describe("DDL v3", function () {
                             amountIn: pe(amount),
                             recipient: derivablePool.address,
                         }],
-                        flags: 0,
                         code: derivablePool.address,
                         data: (await derivablePool.populateTransaction.swap(
                             SIDE_R,
@@ -377,7 +374,6 @@ describe("DDL v3", function () {
                     },
                     {
                         inputs: [],
-                        flags: 0,
                         code: derivableHelper.address,
                         data: (await derivableHelper.populateTransaction.swapInAll(
                             side,
@@ -528,6 +524,7 @@ describe("DDL v3", function () {
                     side,
                     stateCalHelper.address,
                     encodePayload(0, SIDE_R, side, pe(amountIn), derivable1155.address),
+                    0,
                     AddressZero,
                     owner.address,
                     opts
@@ -571,6 +568,7 @@ describe("DDL v3", function () {
                         SIDE_R,
                         stateCalHelper.address,
                         encodePayload(0, side, SIDE_R, tokenAfter.sub(tokenBefore), derivable1155.address),
+                        0,
                         AddressZero,
                         owner.address,
                         opts
@@ -582,6 +580,7 @@ describe("DDL v3", function () {
                         SIDE_R,
                         stateCalHelper.address,
                         encodePayload(0, side, SIDE_R, tokenAfter.sub(tokenBefore), derivable1155.address),
+                        0,
                         AddressZero,
                         owner.address,
                         opts
@@ -608,6 +607,7 @@ describe("DDL v3", function () {
                     SIDE_A,
                     stateCalHelper.address,
                     encodePayload(0, SIDE_R, SIDE_A, pe(longIn), derivable1155.address),
+                    0,
                     AddressZero,
                     accountA.address,
                     opts
@@ -621,6 +621,7 @@ describe("DDL v3", function () {
                     SIDE_B,
                     stateCalHelper.address,
                     encodePayload(0, SIDE_R, SIDE_B, pe(shortIn), derivable1155.address),
+                    0,
                     AddressZero,
                     accountB.address,
                     opts
@@ -634,6 +635,7 @@ describe("DDL v3", function () {
                     SIDE_C,
                     stateCalHelper.address,
                     encodePayload(0, SIDE_R, SIDE_C, pe(cIn), derivable1155.address),
+                    0,
                     AddressZero,
                     owner.address,
                     opts
@@ -670,6 +672,7 @@ describe("DDL v3", function () {
                         SIDE_R,
                         stateCalHelper.address,
                         encodePayload(0, SIDE_A, SIDE_R, longTokenAfter.sub(longTokenBefore), derivable1155.address),
+                        0,
                         AddressZero,
                         accountA.address,
                         opts
@@ -680,6 +683,7 @@ describe("DDL v3", function () {
                         SIDE_R,
                         stateCalHelper.address,
                         encodePayload(0, SIDE_A, SIDE_R, longTokenAfter.sub(longTokenBefore), derivable1155.address),
+                        0,
                         AddressZero,
                         accountA.address,
                         opts
@@ -693,6 +697,7 @@ describe("DDL v3", function () {
                         SIDE_R,
                         stateCalHelper.address,
                         encodePayload(0, SIDE_B, SIDE_R, shortTokenAfter.sub(shortTokenBefore), derivable1155.address),
+                        0,
                         AddressZero,
                         accountB.address,
                         opts
@@ -704,6 +709,7 @@ describe("DDL v3", function () {
                         SIDE_R,
                         stateCalHelper.address,
                         encodePayload(0, SIDE_B, SIDE_R, shortTokenAfter.sub(shortTokenBefore), derivable1155.address),
+                        0,
                         AddressZero,
                         accountB.address,
                         opts
@@ -716,6 +722,7 @@ describe("DDL v3", function () {
                     SIDE_R,
                     stateCalHelper.address,
                     encodePayload(0, SIDE_C, SIDE_R, tokenAfter.sub(tokenBefore), derivable1155.address),
+                    0,
                     AddressZero,
                     owner.address,
                     opts

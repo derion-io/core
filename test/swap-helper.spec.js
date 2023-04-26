@@ -251,7 +251,6 @@ describe("DDL v3", function () {
                     amountIn: pe(amountIn),
                     recipient: derivablePool.address,
                 }],
-                // flags: 0,
                 code: stateCalHelper.address,
                 data: (await stateCalHelper.populateTransaction.swap({
                     sideIn: sideIn,

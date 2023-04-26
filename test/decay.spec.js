@@ -337,7 +337,6 @@ HLs.forEach(HALF_LIFE => {
                 amountIn: amountA,
                 recipient: derivablePool.address,
               }],
-              flags: 0,
               code: derivablePool.address,
               data: (await derivablePool.populateTransaction.swap(
                 0x00,
@@ -351,7 +350,6 @@ HLs.forEach(HALF_LIFE => {
             },
             {
               inputs: [],
-              flags: 0,
               code: derivableHelper.address,
               data: (await derivableHelper.populateTransaction.swapInAll(
                 0x10,
@@ -380,7 +378,6 @@ HLs.forEach(HALF_LIFE => {
                 amountIn: amountB,
                 recipient: derivablePool.address,
               }],
-              flags: 0,
               code: derivablePool.address,
               data: (await derivablePool.populateTransaction.swap(
                 0x00,
@@ -394,7 +391,6 @@ HLs.forEach(HALF_LIFE => {
             },
             {
               inputs: [],
-              flags: 0,
               code: derivableHelper.address,
               data: (await derivableHelper.populateTransaction.swapInAll(
                 0x20,
@@ -426,7 +422,6 @@ HLs.forEach(HALF_LIFE => {
                 amountIn: amountB,
                 recipient: derivablePool.address,
               }],
-              flags: 0,
               code: derivablePool.address,
               data: (await derivablePool.populateTransaction.swap(
                 0x00,
@@ -447,7 +442,6 @@ HLs.forEach(HALF_LIFE => {
                 amountIn: amountA,
                 recipient: derivablePool.address,
               }],
-              flags: 0,
               code: derivablePool.address,
               data: (await derivablePool.populateTransaction.swap(
                 0x00,
@@ -461,7 +455,6 @@ HLs.forEach(HALF_LIFE => {
             },
             {
               inputs: [],
-              flags: 0,
               code: derivableHelper.address,
               data: (await derivableHelper.populateTransaction.swapInAll(
                 0x10,
@@ -473,7 +466,6 @@ HLs.forEach(HALF_LIFE => {
             },
             {
               inputs: [],
-              flags: 0,
               code: derivableHelper.address,
               data: (await derivableHelper.populateTransaction.swapInAll(
                 0x20,
