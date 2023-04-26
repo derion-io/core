@@ -2,19 +2,24 @@
 pragma solidity ^0.8.0;
 import "@openzeppelin/contracts/utils/Strings.sol";
 import "./ERC1155SupplyVirtual.sol";
+import "./interfaces/ITokenFactory.sol";
+import "./interfaces/IShadowCloneERC20.sol";
 
 contract Token is ERC1155SupplyVirtual {
     // Base Metadata URI
     string public METADATA_URI;
     // Immutables
     address internal immutable UTR;
+    address internal immutable FACTORY;
 
     constructor(
         string memory metadataURI,
-        address utr
+        address utr,
+        address factory
     ) TimelockERC1155(metadataURI) {
         METADATA_URI = metadataURI;
         UTR = utr;
+        FACTORY = factory;
     }
 
     modifier onlyItsPool(uint id) {
@@ -86,5 +91,32 @@ contract Token is ERC1155SupplyVirtual {
         uint256 amount
     ) external virtual onlyItsPool(id) {
         super._burn(from, id, amount);
+    }
+    
+    function proxySetApprovalForAll(
+        address owner,
+        address operator,
+        bool approved
+    ) public virtual {
+        address expected = ITokenFactory(FACTORY).computePoolAddress(Params(
+            address(this), 
+            IShadowCloneERC20(msg.sender).ID()
+        ));
+        require(msg.sender == expected, "Invalid");
+        _setApprovalForAll(owner, operator, approved);
+    }
+
+    function proxySafeTransferFrom(
+        address from,
+        address to,
+        uint256 id,
+        uint256 amount
+    ) public virtual {
+        address expected = ITokenFactory(FACTORY).computePoolAddress(Params(
+            address(this), 
+            id
+        ));
+        require(msg.sender == expected, "Invalid");
+        _safeTransferFrom(from, to, id, amount, '');
     }
 }
