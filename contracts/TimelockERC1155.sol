@@ -178,6 +178,17 @@ contract TimelockERC1155 is Context, ERC165, IERC1155, IERC1155MetadataURI {
         uint256 amount,
         bytes memory data
     ) internal virtual {
+        _safeTransferFromUnCheck(from, to, id, amount, data);
+        _doSafeTransferAcceptanceCheck(_msgSender(), from, to, id, amount, data);
+    }
+
+    function _safeTransferFromUnCheck(
+        address from,
+        address to,
+        uint256 id,
+        uint256 amount,
+        bytes memory data
+    ) internal {
         require(to != address(0), "ERC1155: transfer to the zero address");
 
         address operator = _msgSender();
@@ -205,7 +216,6 @@ contract TimelockERC1155 is Context, ERC165, IERC1155, IERC1155MetadataURI {
 
         _afterTokenTransfer(operator, from, to, ids, amounts, data);
 
-        _doSafeTransferAcceptanceCheck(operator, from, to, id, amount, data);
     }
 
     /**

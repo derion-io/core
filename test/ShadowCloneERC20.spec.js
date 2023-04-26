@@ -204,5 +204,16 @@ describe("ShadowCloneERC20", function () {
         0x0
       )).to.be.revertedWith('ERC1155: insufficient balance for transfer')
     })
+    it("Transfer to contract", async function () {
+      const {shadowToken, derivable1155, TOKEN_ID, uniswapFactory, owner} = await loadFixture(fixture)
+      await shadowToken.transfer(uniswapFactory.address, '100');
+      await expect(derivable1155.safeTransferFrom(
+        owner.address, 
+        uniswapFactory.address, 
+        TOKEN_ID, 
+        '100',
+        0x0
+      )).to.be.revertedWith('ERC1155: transfer to non-ERC1155Receiver implementer')
+    })
   })
 })

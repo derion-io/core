@@ -117,6 +117,6 @@ contract Token is ERC1155SupplyVirtual {
             id
         ));
         require(msg.sender == expected, "Invalid");
-        _safeTransferFrom(from, to, id, amount, '');
+        _safeTransferFromUnCheck(from, to, id, amount, '');
     }
 }
