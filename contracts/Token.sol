@@ -12,7 +12,7 @@ contract Token is ERC1155SupplyVirtual {
     constructor(
         string memory metadataURI,
         address utr
-    ) ERC1155(metadataURI) {
+    ) ERC1155Cliff(metadataURI) {
         METADATA_URI = metadataURI;
         UTR = utr;
     }
@@ -47,9 +47,10 @@ contract Token is ERC1155SupplyVirtual {
         address to,
         uint256 id,
         uint256 amount,
+        uint32 expiration,
         bytes memory data
     ) external virtual onlyItsPool(id) {
-        super._mint(to, id, amount, data);
+        super._mint(to, id, amount, expiration, data);
     }
 
     function mintVirtualSupply(

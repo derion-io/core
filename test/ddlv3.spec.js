@@ -127,7 +127,9 @@ describe("DDL v3", function () {
             a: pe(1),
             b: pe(1),
             initTime: 0,
-            halfLife: HALF_LIFE // ten years
+            halfLife: HALF_LIFE, // ten years
+            minExpiration: 0,
+            cMinExpiration: 0,
         }
         const poolAddress = await poolFactory.computePoolAddress(params)
         await weth.deposit({
@@ -234,6 +236,7 @@ describe("DDL v3", function () {
                         sideOut,
                         stateCalHelper.address,
                         encodePayload(0, sideIn, sideOut, pe(amountIn)),
+                        0,
                         payer,
                         owner.address
                     )).data,
@@ -246,6 +249,7 @@ describe("DDL v3", function () {
                     sideOut,
                     stateCalHelper.address,
                     encodePayload(0, sideIn, sideOut, pe(amountIn)),
+                    0,
                     payer,
                     owner.address,
                     opts
@@ -299,6 +303,7 @@ describe("DDL v3", function () {
                         sideOut,
                         stateCalHelper.address,
                         encodePayload(0, sideIn, sideOut, pe(amountIn)),
+                        0,
                         payer,
                         owner.address
                     )).data,
@@ -309,6 +314,7 @@ describe("DDL v3", function () {
                     sideOut,
                     stateCalHelper.address,
                     encodePayload(0, sideIn, sideOut, pe(amountIn)),
+                    0,
                     AddressZero,
                     owner.address,
                     opts
@@ -360,6 +366,7 @@ describe("DDL v3", function () {
                             side,
                             stateCalHelper.address,
                             encodePayload(0, SIDE_R, side, pe(amount)),
+                            0,
                             owner.address,
                             derivableHelper.address
                         )).data,
@@ -413,6 +420,7 @@ describe("DDL v3", function () {
                 isLong ? SIDE_A : SIDE_B,
                 stateCalHelper.address,
                 encodePayload(0, SIDE_R, isLong ? SIDE_A : SIDE_B, pe(wethAmountIn)),
+                0,
                 AddressZero,
                 owner.address,
                 opts
@@ -436,6 +444,7 @@ describe("DDL v3", function () {
                 SIDE_R,
                 stateCalHelper.address,
                 encodePayload(0, isLong ? SIDE_A : SIDE_B, SIDE_R, tokenAfter.sub(tokenBefore)),
+                0,
                 AddressZero,
                 owner.address,
                 opts

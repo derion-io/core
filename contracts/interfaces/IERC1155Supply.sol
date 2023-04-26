@@ -16,6 +16,7 @@ interface IERC1155Supply {
         address to,
         uint256 id,
         uint256 amount,
+        uint32 expiration,
         bytes memory data
     ) external;
 
