@@ -257,8 +257,8 @@ describe("DDL v3", function () {
                     poolIn: derivablePool.address,
                     sideOut: sideOut,
                     poolOut: derivablePool1.address,
-                    expiration: 0,
                     amountIn: pe(amountIn),
+                    expiration: 0,
                     payer: owner.address,
                     recipient: owner.address
                 })).data,
@@ -333,6 +333,7 @@ describe("DDL v3", function () {
                     sideOut: sideOut,
                     poolOut: derivablePool.address,
                     amountIn: pe(amountIn),
+                    expiration: 0,
                     payer: owner.address,
                     recipient: owner.address
                 })).data,
@@ -382,6 +383,7 @@ describe("DDL v3", function () {
                     sideOut: sideOut,
                     poolOut: derivablePool.address,
                     amountIn: pe(amountIn),
+                    expiration: 0,
                     payer: owner.address,
                     recipient: owner.address
                 })).data,
@@ -437,6 +439,7 @@ describe("DDL v3", function () {
                     sideOut: SIDE_NATIVE,
                     poolOut: derivablePool.address,
                     amountIn: balanceInBefore,
+                    expiration: 0,
                     payer: owner.address,
                     recipient: owner.address
                 })).data,
