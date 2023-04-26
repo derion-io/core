@@ -140,14 +140,16 @@ contract Pool is IPool, Storage, Events, Constants {
             if (sideOut == SIDE_C) {
                 if (expiration == 0) {
                     expiration = C_MIN_EXPIRATION;
+                } else {
+                    require(expiration >= C_MIN_EXPIRATION, "Pool: expiration too small");
                 }
-                require(expiration >= C_MIN_EXPIRATION, "Pool: expiration too small");
             }
             if (sideOut == SIDE_A || sideOut == SIDE_B) {
                 if (expiration == 0) {
                     expiration = MIN_EXPIRATION;
+                } else {
+                    require(expiration >= MIN_EXPIRATION, "Pool: expiration too small");
                 }
-                require(expiration >= MIN_EXPIRATION, "Pool: expiration too small");
             }
             IERC1155Supply(TOKEN).mintLock(recipient, _packID(address(this), sideOut), amountOut, expiration, "");
         }
