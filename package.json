@@ -8,6 +8,7 @@
     "compile": "hardhat compile",
     "test": "hardhat test --parallel",
     "test-gas": "hardhat test",
+    "coverage": "hardhat coverage",
     "testnet": "hardhat run --network testnet",
     "mainnet": "hardhat run --network mainnet",
     "deploy:ganache": "npx hardhat run scripts/AllContracts.ganacheDeploy.js --network ganache"
@@ -44,6 +45,7 @@
     "mocha": "^10.0.0",
     "prettier": "^2.7.1",
     "prettier-plugin-solidity": "^1.0.0-dev.23",
-    "solhint": "^3.3.7"
+    "solhint": "^3.3.7",
+    "solidity-coverage": "^0.8.2"
   }
 }

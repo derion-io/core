@@ -8,6 +8,7 @@ require("hardhat-contract-sizer");
 require("@openzeppelin/hardhat-upgrades");
 require("hardhat-gas-reporter");
 require("hardhat-tracer");
+require("solidity-coverage");
 
 module.exports = {
     defaultNetwork: 'hardhat',
