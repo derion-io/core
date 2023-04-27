@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BSL-1.1
 pragma solidity ^0.8.0;
 import "@openzeppelin/contracts/utils/Strings.sol";
-import "./ERC1155SupplyVirtual.sol";
+import "./tokens/ERC1155SupplyVirtual.sol";
 
 contract Token is ERC1155SupplyVirtual {
     // Base Metadata URI
