@@ -47,6 +47,12 @@ contract Helper is Constants, IHelper {
         uint amountOut
     );
 
+    event Received(address, uint);
+
+    receive() external payable {
+        emit Received(msg.sender, msg.value);
+    }
+
     function _packID(address pool, uint side) internal pure returns (uint id) {
         id = (side << 160) + uint160(pool);
     }
@@ -179,16 +185,18 @@ contract Helper is Constants, IHelper {
         );
 
         if (_params.sideOut == SIDE_NATIVE) {
-            amountOut = IERC20(TOKEN_R).balanceOf(address(this));
+            require(TOKEN_R == WETH, 'Reserve token is not Wrapped');
+            amountOut = IERC20(WETH).balanceOf(address(this));
+            require(amountOut > 0, 'Do not have ETH to transfer');
             IWeth(WETH).withdraw(amountOut);
             payable(_params.recipient).transfer(amountOut);
         }
 
         emit Swap(
-            _params.payer, // topic2: poolIn
+            _params.payer,
             _params.poolIn,
             _params.poolOut,
-            _params.recipient, // topic3: poolOut
+            _params.recipient,
             _params.sideIn,
             _params.sideOut,
             _params.amountIn,
