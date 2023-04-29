@@ -387,18 +387,18 @@ describe("DDL v3", function () {
             expect(balanceOutBefore.lt(balanceOutAfter)).equal(true)
         }
 
-        it("swap R in by native", async function () {
+        it("swap to SIDE_B by native", async function () {
             await testSwap(1, SIDE_B)
         })
-        it("swap R in by native", async function () {
+        it("swap to SIDE_A by native", async function () {
             await testSwap(1, SIDE_A)
         })
-        it("swap R in by native", async function () {
+        it("swap to SIDE_C by native", async function () {
             await testSwap(1, SIDE_C)
         })
     })
 
-    describe("Swap by native", function () {
+    describe("Swap to native", function () {
         async function testSwap(sideIn) {
             const {
                 owner,
@@ -409,7 +409,9 @@ describe("DDL v3", function () {
                 derivable1155,
                 stateCalHelper
             } = await loadFixture(deployDDLv2)
-
+            await weth.deposit({
+                value: numberToWei(1000)
+            })
             const balanceInBefore = await derivable1155.balanceOf(owner.address, packId(sideIn, derivablePool.address))
             const balanceOutBefore = await owner.provider.getBalance(owner.address)
             await utr.exec([], [{
@@ -437,17 +439,17 @@ describe("DDL v3", function () {
             const balanceInAfter = await derivable1155.balanceOf(owner.address, packId(sideIn, derivablePool.address))
             const balanceOutAfter = await owner.provider.getBalance(owner.address)
 
-            expect(balanceOutBefore.gt(balanceOutAfter)).equal(true)
+            expect(balanceOutAfter.gt(balanceOutBefore)).equal(true)
             expect(balanceInBefore.gt(balanceInAfter)).equal(true)
         }
 
-        it("swap A in by native", async function () {
-            await testSwap(SIDE_A )
+        it("swap A to native", async function () {
+            await testSwap(SIDE_A)
         })
         it("swap B to native", async function () {
             await testSwap(SIDE_B)
         })
-        it("swap C in by native", async function () {
+        it("swap C to native", async function () {
             await testSwap(SIDE_C)
         })
     })
