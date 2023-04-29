@@ -9,15 +9,6 @@ abstract contract Events {
         bytes data
     );
 
-    struct SwapEvent {
-        uint sideIn;
-        uint sideOut;
-        uint amountIn;
-        uint amountOut;
-        address payer;
-        address recipient;
-    }
-
     struct PoolCreated {
         address UTR;
         address TOKEN;
