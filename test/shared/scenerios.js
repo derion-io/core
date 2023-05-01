@@ -118,8 +118,8 @@ async function scenerio01() {
     b: '30000000000',
     initTime: await time.latest(),
     halfLife: HALF_LIFE,
-    minExpiration: 0,
-    cMinExpiration: 0,
+    minExpirationD: 0,
+    minExpirationC: 0,
   }
   const poolAddress = await poolFactory.computePoolAddress(params);
   let txSignerA = weth.connect(accountA);
@@ -287,8 +287,8 @@ async function scenerio02() {
     b: '30000000000',
     initTime: await time.latest(),
     halfLife: HALF_LIFE,
-    minExpiration: 0,
-    cMinExpiration: 0,
+    minExpirationD: 0,
+    minExpirationC: 0,
   }
   const poolAddress = await poolFactory.computePoolAddress(params);
   let txSignerA = weth.connect(accountA);

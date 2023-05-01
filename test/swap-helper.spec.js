@@ -149,8 +149,8 @@ describe("DDL v3", function () {
             b: pe(1),
             initTime: 0,
             halfLife: HALF_LIFE,
-            minExpiration: 0,
-            cMinExpiration: 0,
+            minExpirationD: 0,
+            minExpirationC: 0,
         }
         const poolAddress = await poolFactory.computePoolAddress(params)
         await stateCalHelper.createPool(
@@ -175,8 +175,8 @@ describe("DDL v3", function () {
             b: pe(1),
             initTime: 0,
             halfLife: HALF_LIFE,
-            minExpiration: 0,
-            cMinExpiration: 0,
+            minExpirationD: 0,
+            minExpirationC: 0,
         }
         const poolAddress1 = await poolFactory.computePoolAddress(params1)
         // await weth.deposit({

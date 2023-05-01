@@ -145,6 +145,7 @@ contract Helper is Constants, IHelper {
             params.sideOut,
             params.poolOut,
             params.amountIn,
+            params.expiration,
             params.payer,
             params.recipient
         );

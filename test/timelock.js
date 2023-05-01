@@ -128,8 +128,8 @@ describe("Timelock", function () {
       b: pe(1),
       initTime: 0,
       halfLife: HALF_LIFE, // ten years
-      minExpiration: 60,
-      cMinExpiration: 30,
+      minExpirationD: 60,
+      minExpirationC: 30,
     }
     const poolAddress = await poolFactory.computePoolAddress(params)
     await weth.deposit({

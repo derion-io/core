@@ -11,8 +11,8 @@ struct Params {
     uint mark;
     uint    halfLife;
     uint32  initTime;
-    uint32  minExpiration;
-    uint32  cMinExpiration;
+    uint32  minExpirationD;
+    uint32  minExpirationC;
     uint k;
     uint a;
     uint b;

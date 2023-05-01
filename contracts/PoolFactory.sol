@@ -25,8 +25,8 @@ contract PoolFactory is IPoolFactory {
                 params.mark,
                 params.k,
                 params.halfLife,
-                params.minExpiration,
-                params.cMinExpiration
+                params.minExpirationD,
+                params.minExpirationC
             )
         );
     }

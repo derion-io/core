@@ -25,8 +25,8 @@ contract Pool is IPool, Storage, Events, Constants {
     uint internal immutable MARK;
     uint internal immutable INIT_TIME;
     uint internal immutable HALF_LIFE;
-    uint32 internal immutable MIN_EXPIRATION;
-    uint32 internal immutable C_MIN_EXPIRATION;
+    uint32 internal immutable MIN_EXPIRATION_D;
+    uint32 internal immutable MIN_EXPIRATION_C;
 
     constructor() {
         Params memory params = IPoolFactory(msg.sender).getParams();
@@ -39,8 +39,8 @@ contract Pool is IPool, Storage, Events, Constants {
         K = params.k;
         MARK = params.mark;
         HALF_LIFE = params.halfLife;
-        MIN_EXPIRATION = params.minExpiration;
-        C_MIN_EXPIRATION = params.cMinExpiration;
+        MIN_EXPIRATION_D = params.minExpirationD;
+        MIN_EXPIRATION_C = params.minExpirationC;
         INIT_TIME = params.initTime > 0 ? params.initTime : block.timestamp;
         require(block.timestamp >= INIT_TIME, "PAST_INIT_TIME");
 
@@ -76,9 +76,9 @@ contract Pool is IPool, Storage, Events, Constants {
         IERC1155Supply(TOKEN).mintVirtualSupply(idC, MINIMUM_LIQUIDITY);
 
         // mint tokens to recipient
-        IERC1155Supply(TOKEN).mintLock(params.recipient, idA, rA - MINIMUM_LIQUIDITY, MIN_EXPIRATION, "");
-        IERC1155Supply(TOKEN).mintLock(params.recipient, idB, rB - MINIMUM_LIQUIDITY, MIN_EXPIRATION, "");
-        IERC1155Supply(TOKEN).mintLock(params.recipient, idC, rC - MINIMUM_LIQUIDITY, C_MIN_EXPIRATION, "");
+        IERC1155Supply(TOKEN).mintLock(params.recipient, idA, rA - MINIMUM_LIQUIDITY, MIN_EXPIRATION_D, "");
+        IERC1155Supply(TOKEN).mintLock(params.recipient, idB, rB - MINIMUM_LIQUIDITY, MIN_EXPIRATION_D, "");
+        IERC1155Supply(TOKEN).mintLock(params.recipient, idC, rC - MINIMUM_LIQUIDITY, MIN_EXPIRATION_C, "");
 
         emit Derivable(
             'PoolCreated',                 // topic1: eventName
@@ -112,10 +112,10 @@ contract Pool is IPool, Storage, Events, Constants {
         address recipient
     ) external override returns(uint amountIn, uint amountOut) {
         if (sideOut == SIDE_C) {
-            require(expiration >= C_MIN_EXPIRATION, "Pool: expiration too small");
+            require(expiration >= MIN_EXPIRATION_C, "INSUFFICIENT_EXPIRATION_C");
         }
         if (sideOut == SIDE_A || sideOut == SIDE_B) {
-            require(expiration >= MIN_EXPIRATION, "Pool: expiration too small");
+            require(expiration >= MIN_EXPIRATION_D, "INSUFFICIENT_EXPIRATION_D");
         }
         (bool success, bytes memory result) = LOGIC.delegatecall(
             abi.encodeWithSelector(
@@ -139,16 +139,16 @@ contract Pool is IPool, Storage, Events, Constants {
         } else {
             if (sideOut == SIDE_C) {
                 if (expiration == 0) {
-                    expiration = C_MIN_EXPIRATION;
+                    expiration = MIN_EXPIRATION_C;
                 } else {
-                    require(expiration >= C_MIN_EXPIRATION, "Pool: expiration too small");
+                    require(expiration >= MIN_EXPIRATION_C, "INSUFFICIENT_EXPIRATION_C");
                 }
             }
             if (sideOut == SIDE_A || sideOut == SIDE_B) {
                 if (expiration == 0) {
-                    expiration = MIN_EXPIRATION;
+                    expiration = MIN_EXPIRATION_D;
                 } else {
-                    require(expiration >= MIN_EXPIRATION, "Pool: expiration too small");
+                    require(expiration >= MIN_EXPIRATION_D, "INSUFFICIENT_EXPIRATION_D");
                 }
             }
             IERC1155Supply(TOKEN).mintLock(recipient, _packID(address(this), sideOut), amountOut, expiration, "");

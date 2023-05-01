@@ -119,8 +119,8 @@ HLs.forEach(HALF_LIFE => {
         b: '30000000000',
         initTime: await time.latest(),
         halfLife: HALF_LIFE, // ten years
-        minExpiration: 0,
-        cMinExpiration: 0,
+        minExpirationD: 0,
+        minExpirationC: 0,
       }
       const poolAddress = await poolFactory.computePoolAddress(params);
       let txSignerA = weth.connect(accountA);
