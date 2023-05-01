@@ -48,11 +48,8 @@ contract Helper is Constants, IHelper {
         uint amountOut
     );
 
-    event Received(address, uint);
-
-    receive() external payable {
-        emit Received(msg.sender, msg.value);
-    }
+    // accepting ETH for WETH.withdraw
+    receive() external payable {}
 
     function _packID(address pool, uint side) internal pure returns (uint id) {
         id = (side << 160) + uint160(pool);
