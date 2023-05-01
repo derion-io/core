@@ -8,7 +8,6 @@ import "@uniswap/lib/contracts/libraries/TransferHelper.sol";
 import "./libs/Math.sol";
 import "./libs/FullMath.sol";
 import "./logics/Constants.sol";
-import "./logics/Events.sol";
 import "./interfaces/IAsymptoticPerpetual.sol";
 import "./interfaces/IERC1155Supply.sol";
 import "./interfaces/IHelper.sol";
@@ -16,7 +15,7 @@ import "./interfaces/IPool.sol";
 import "./interfaces/IPoolFactory.sol";
 import "./interfaces/IWeth.sol";
 
-contract Helper is Constants, IHelper, Events {
+contract Helper is Constants, IHelper {
     uint internal constant SIDE_NATIVE = 0x000000000000000000000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee;
     uint constant MAX_IN = 0;
     address internal immutable TOKEN;
@@ -35,6 +34,23 @@ contract Helper is Constants, IHelper, Events {
         uint amountIn;
         address payer;
         address recipient;
+    }
+
+    event Swap(
+        address indexed payer,
+        address indexed poolIn,
+        address indexed poolOut,
+        address recipient,
+        uint sideIn,
+        uint sideOut,
+        uint amountIn,
+        uint amountOut
+    );
+
+    event Received(address, uint);
+
+    receive() external payable {
+        emit Received(msg.sender, msg.value);
     }
 
     function _packID(address pool, uint side) internal pure returns (uint id) {
@@ -107,23 +123,29 @@ contract Helper is Constants, IHelper, Events {
             TransferHelper.safeTransfer(TOKEN_R, params.payer, leftOver);
         }
 
-        emit Derivable(
-            'Swap', // topic1: eventName
-            bytes32(_addressToBytes32(params.poolIn)), // topic2: poolIn
-            bytes32(_addressToBytes32(params.poolOut)), // topic3: poolOut
-            abi.encode(SwapEvent(
-                params.sideIn,
-                params.sideOut,
-                params.amountIn,
-                amountOut,
-                params.payer,
-                params.recipient
-            ))
+        emit Swap(
+            params.payer, // topic2: poolIn
+            params.poolIn,
+            params.poolOut,
+            params.recipient, // topic3: poolOut
+            params.sideIn,
+            params.sideOut,
+            params.amountIn,
+            amountOut
         );
     }
 
     function swap(SwapParams memory params) external payable returns (uint amountOut){
-        SwapParams memory _params = params;
+        SwapParams memory _params = SwapParams(
+            params.sideIn,
+            params.poolIn,
+            params.sideOut,
+            params.poolOut,
+            params.amountIn,
+            params.payer,
+            params.recipient
+        );
+
         address TOKEN_R = IPool(params.poolIn).TOKEN_R();
         if (params.poolIn != params.poolOut) {
             amountOut = _swapMultiPool(params, TOKEN_R);
@@ -163,23 +185,22 @@ contract Helper is Constants, IHelper, Events {
         );
 
         if (_params.sideOut == SIDE_NATIVE) {
-            amountOut = IERC20(TOKEN_R).balanceOf(address(this));
+            require(TOKEN_R == WETH, 'Reserve token is not Wrapped');
+            amountOut = IERC20(WETH).balanceOf(address(this));
+            require(amountOut > 0, 'Do not have ETH to transfer');
             IWeth(WETH).withdraw(amountOut);
             payable(_params.recipient).transfer(amountOut);
         }
 
-        emit Derivable(
-            'Swap', // topic1: eventName
-            bytes32(_addressToBytes32(_params.poolIn)), // topic2: poolIn
-            bytes32(_addressToBytes32(_params.poolOut)), // topic3: poolOut
-            abi.encode(SwapEvent(
-                _params.sideIn,
-                _params.sideOut,
-                _params.amountIn,
-                amountOut,
-                _params.payer,
-                _params.recipient
-            ))
+        emit Swap(
+            _params.payer,
+            _params.poolIn,
+            _params.poolOut,
+            _params.recipient,
+            _params.sideIn,
+            _params.sideOut,
+            _params.amountIn,
+            amountOut
         );
     }
 
