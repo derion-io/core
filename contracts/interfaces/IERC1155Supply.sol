@@ -12,6 +12,14 @@ interface IERC1155Supply {
      */
     function exists(uint256 id) external view returns (bool);
 
+    function mintLock(
+        address to,
+        uint256 id,
+        uint256 amount,
+        uint32 expiration,
+        bytes memory data
+    ) external;
+
     function mint(
         address to,
         uint256 id,

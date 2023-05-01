@@ -117,7 +117,9 @@ async function scenerio01() {
     a: '30000000000',
     b: '30000000000',
     initTime: await time.latest(),
-    halfLife: HALF_LIFE // ten years
+    halfLife: HALF_LIFE,
+    minExpiration: 0,
+    cMinExpiration: 0,
   }
   const poolAddress = await poolFactory.computePoolAddress(params);
   let txSignerA = weth.connect(accountA);
@@ -174,6 +176,7 @@ async function scenerio01() {
     0x30,
     stateCalHelper.address,
     encodePayload(0, 0x00, 0x30, numberToWei(0.5)),
+    0,
     '0x0000000000000000000000000000000000000000',
     accountA.address
   );
@@ -283,7 +286,9 @@ async function scenerio02() {
     a: '30000000000',
     b: '30000000000',
     initTime: await time.latest(),
-    halfLife: HALF_LIFE // ten years
+    halfLife: HALF_LIFE,
+    minExpiration: 0,
+    cMinExpiration: 0,
   }
   const poolAddress = await poolFactory.computePoolAddress(params);
   let txSignerA = weth.connect(accountA);
@@ -340,6 +345,7 @@ async function scenerio02() {
     0x30,
     stateCalHelper.address,
     encodePayload(0, 0x00, 0x30, numberToWei(0.5)),
+    0,
     '0x0000000000000000000000000000000000000000',
     accountA.address
   );

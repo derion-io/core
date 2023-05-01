@@ -148,7 +148,9 @@ describe("DDL v3", function () {
             a: pe(1),
             b: pe(1),
             initTime: 0,
-            halfLife: HALF_LIFE // ten years
+            halfLife: HALF_LIFE,
+            minExpiration: 0,
+            cMinExpiration: 0,
         }
         const poolAddress = await poolFactory.computePoolAddress(params)
         await stateCalHelper.createPool(
@@ -172,7 +174,9 @@ describe("DDL v3", function () {
             a: pe(1),
             b: pe(1),
             initTime: 0,
-            halfLife: HALF_LIFE // ten years
+            halfLife: HALF_LIFE,
+            minExpiration: 0,
+            cMinExpiration: 0,
         }
         const poolAddress1 = await poolFactory.computePoolAddress(params1)
         // await weth.deposit({
@@ -243,7 +247,6 @@ describe("DDL v3", function () {
                     amountIn: pe(amountIn),
                     recipient: derivablePool.address,
                 }],
-                // flags: 0,
                 code: stateCalHelper.address,
                 data: (await stateCalHelper.populateTransaction.swap({
                     sideIn: sideIn,
@@ -251,6 +254,7 @@ describe("DDL v3", function () {
                     sideOut: sideOut,
                     poolOut: derivablePool1.address,
                     amountIn: pe(amountIn),
+                    expiration: 0,
                     payer: owner.address,
                     recipient: owner.address
                 })).data,
@@ -325,6 +329,7 @@ describe("DDL v3", function () {
                     sideOut: sideOut,
                     poolOut: derivablePool.address,
                     amountIn: pe(amountIn),
+                    expiration: 0,
                     payer: owner.address,
                     recipient: owner.address
                 })).data,
@@ -374,6 +379,7 @@ describe("DDL v3", function () {
                     sideOut: sideOut,
                     poolOut: derivablePool.address,
                     amountIn: pe(amountIn),
+                    expiration: 0,
                     payer: owner.address,
                     recipient: owner.address
                 })).data,
@@ -431,6 +437,7 @@ describe("DDL v3", function () {
                     sideOut: SIDE_NATIVE,
                     poolOut: derivablePool.address,
                     amountIn: balanceInBefore,
+                    expiration: 0,
                     payer: owner.address,
                     recipient: owner.address
                 })).data,

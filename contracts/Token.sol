@@ -43,13 +43,14 @@ contract Token is ERC1155SupplyVirtual {
         return operator == UTR || super.isApprovedForAll(account, operator);
     }
 
-    function mint(
+    function mintLock(
         address to,
         uint256 id,
         uint256 amount,
+        uint32 expiration,
         bytes memory data
     ) external virtual onlyItsPool(id) {
-        super._mint(to, id, amount, data);
+        super._mint(to, id, amount, block.timestamp + expiration, data);
     }
 
     function mintVirtualSupply(

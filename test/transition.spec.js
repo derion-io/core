@@ -39,6 +39,7 @@ describe("Decay funding rate", function () {
           0x30,
           stateCalHelper.address,
           encodePayload(0, 0x00, 0x30, numberToWei(1)),
+          0,
           '0x0000000000000000000000000000000000000000',
           accountA.address
         );
@@ -49,6 +50,7 @@ describe("Decay funding rate", function () {
           0x10,
           stateCalHelper.address,
           encodePayload(0, 0x00, 0x10, longAmount),
+          0,
           '0x0000000000000000000000000000000000000000',
           accountA.address
         );
@@ -57,6 +59,7 @@ describe("Decay funding rate", function () {
           0x20,
           stateCalHelper.address,
           encodePayload(0, 0x00, 0x20, shortAmount),
+          0,
           '0x0000000000000000000000000000000000000000',
           accountB.address
         );
@@ -78,6 +81,7 @@ describe("Decay funding rate", function () {
           0x00,
           stateCalHelper.address,
           encodePayload(0, 0x10, 0x00, amountAIn),
+          0,
           '0x0000000000000000000000000000000000000000',
           accountA.address
         );
@@ -86,6 +90,7 @@ describe("Decay funding rate", function () {
           0x00,
           stateCalHelper.address,
           encodePayload(0, 0x20, 0x00, amountBIn),
+          0,
           '0x0000000000000000000000000000000000000000',
           accountB.address
         );
