@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: MIT
 // OpenZeppelin Contracts (last updated v4.6.0) (token/ERC1155/extensions/ERC1155Supply.sol)
+// Derivable Contracts (tokens/ERC1155SupplyVirtual.sol)
 
 pragma solidity ^0.8.0;
 
-import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
+import "./ERC1155.sol";
 
 /**
  * @dev Extension of ERC1155 that adds tracking of total supply per id.

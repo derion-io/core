@@ -176,6 +176,7 @@ async function attemptSwap(signer, swapType, sideIn, sideOut, amount, helper, pa
         sideOut,
         helper,
         payload,
+        0,
         payer,
         recipient
     )
@@ -191,6 +192,7 @@ async function attemptStaticSwap(signer, swapType, sideIn, sideOut, amount, help
         sideOut,
         helper,
         payload,
+        0,
         payer,
         recipient
     )).amountOut

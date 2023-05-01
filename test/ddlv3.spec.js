@@ -127,7 +127,9 @@ describe("DDL v3", function () {
             a: pe(1),
             b: pe(1),
             initTime: 0,
-            halfLife: HALF_LIFE // ten years
+            halfLife: HALF_LIFE, // ten years
+            minExpirationD: 0,
+            minExpirationC: 0,
         }
         const poolAddress = await poolFactory.computePoolAddress(params)
         await weth.deposit({
@@ -227,13 +229,13 @@ describe("DDL v3", function () {
                         amountIn: pe(amountIn),
                         recipient: derivablePool.address,
                     }],
-                    flags: 0,
                     code: derivablePool.address,
                     data: (await derivablePool.populateTransaction.swap(
                         sideIn,
                         sideOut,
                         stateCalHelper.address,
                         encodePayload(0, sideIn, sideOut, pe(amountIn)),
+                        0,
                         payer,
                         owner.address
                     )).data,
@@ -246,6 +248,7 @@ describe("DDL v3", function () {
                     sideOut,
                     stateCalHelper.address,
                     encodePayload(0, sideIn, sideOut, pe(amountIn)),
+                    0,
                     payer,
                     owner.address,
                     opts
@@ -292,13 +295,13 @@ describe("DDL v3", function () {
                         amountIn: pe(amountIn),
                         recipient: derivablePool.address,
                     }],
-                    flags: 0,
                     code: derivablePool.address,
                     data: (await derivablePool.populateTransaction.swap(
                         sideIn,
                         sideOut,
                         stateCalHelper.address,
                         encodePayload(0, sideIn, sideOut, pe(amountIn)),
+                        0,
                         payer,
                         owner.address
                     )).data,
@@ -309,6 +312,7 @@ describe("DDL v3", function () {
                     sideOut,
                     stateCalHelper.address,
                     encodePayload(0, sideIn, sideOut, pe(amountIn)),
+                    0,
                     AddressZero,
                     owner.address,
                     opts
@@ -353,26 +357,26 @@ describe("DDL v3", function () {
                             amountIn: pe(amount),
                             recipient: derivablePool.address,
                         }],
-                        flags: 0,
                         code: derivablePool.address,
                         data: (await derivablePool.populateTransaction.swap(
                             SIDE_R,
                             side,
                             stateCalHelper.address,
                             encodePayload(0, SIDE_R, side, pe(amount)),
+                            0,
                             owner.address,
                             derivableHelper.address
                         )).data,
                     },
                     {
                         inputs: [],
-                        flags: 0,
                         code: derivableHelper.address,
                         data: (await derivableHelper.populateTransaction.swapInAll(
                             side,
                             SIDE_R,
+                            0,
                             AddressZero,
-                            owner.address
+                            owner.address,
                         )).data,
                     }
                 ], opts)
@@ -413,6 +417,7 @@ describe("DDL v3", function () {
                 isLong ? SIDE_A : SIDE_B,
                 stateCalHelper.address,
                 encodePayload(0, SIDE_R, isLong ? SIDE_A : SIDE_B, pe(wethAmountIn)),
+                0,
                 AddressZero,
                 owner.address,
                 opts
@@ -436,6 +441,7 @@ describe("DDL v3", function () {
                 SIDE_R,
                 stateCalHelper.address,
                 encodePayload(0, isLong ? SIDE_A : SIDE_B, SIDE_R, tokenAfter.sub(tokenBefore)),
+                0,
                 AddressZero,
                 owner.address,
                 opts
@@ -514,6 +520,7 @@ describe("DDL v3", function () {
                     side,
                     stateCalHelper.address,
                     encodePayload(0, SIDE_R, side, pe(amountIn), derivable1155.address),
+                    0,
                     AddressZero,
                     owner.address,
                     opts
@@ -557,6 +564,7 @@ describe("DDL v3", function () {
                         SIDE_R,
                         stateCalHelper.address,
                         encodePayload(0, side, SIDE_R, tokenAfter.sub(tokenBefore), derivable1155.address),
+                        0,
                         AddressZero,
                         owner.address,
                         opts
@@ -568,6 +576,7 @@ describe("DDL v3", function () {
                         SIDE_R,
                         stateCalHelper.address,
                         encodePayload(0, side, SIDE_R, tokenAfter.sub(tokenBefore), derivable1155.address),
+                        0,
                         AddressZero,
                         owner.address,
                         opts
@@ -594,6 +603,7 @@ describe("DDL v3", function () {
                     SIDE_A,
                     stateCalHelper.address,
                     encodePayload(0, SIDE_R, SIDE_A, pe(longIn), derivable1155.address),
+                    0,
                     AddressZero,
                     accountA.address,
                     opts
@@ -607,6 +617,7 @@ describe("DDL v3", function () {
                     SIDE_B,
                     stateCalHelper.address,
                     encodePayload(0, SIDE_R, SIDE_B, pe(shortIn), derivable1155.address),
+                    0,
                     AddressZero,
                     accountB.address,
                     opts
@@ -620,6 +631,7 @@ describe("DDL v3", function () {
                     SIDE_C,
                     stateCalHelper.address,
                     encodePayload(0, SIDE_R, SIDE_C, pe(cIn), derivable1155.address),
+                    0,
                     AddressZero,
                     owner.address,
                     opts
@@ -656,6 +668,7 @@ describe("DDL v3", function () {
                         SIDE_R,
                         stateCalHelper.address,
                         encodePayload(0, SIDE_A, SIDE_R, longTokenAfter.sub(longTokenBefore), derivable1155.address),
+                        0,
                         AddressZero,
                         accountA.address,
                         opts
@@ -666,6 +679,7 @@ describe("DDL v3", function () {
                         SIDE_R,
                         stateCalHelper.address,
                         encodePayload(0, SIDE_A, SIDE_R, longTokenAfter.sub(longTokenBefore), derivable1155.address),
+                        0,
                         AddressZero,
                         accountA.address,
                         opts
@@ -679,6 +693,7 @@ describe("DDL v3", function () {
                         SIDE_R,
                         stateCalHelper.address,
                         encodePayload(0, SIDE_B, SIDE_R, shortTokenAfter.sub(shortTokenBefore), derivable1155.address),
+                        0,
                         AddressZero,
                         accountB.address,
                         opts
@@ -690,6 +705,7 @@ describe("DDL v3", function () {
                         SIDE_R,
                         stateCalHelper.address,
                         encodePayload(0, SIDE_B, SIDE_R, shortTokenAfter.sub(shortTokenBefore), derivable1155.address),
+                        0,
                         AddressZero,
                         accountB.address,
                         opts
@@ -702,6 +718,7 @@ describe("DDL v3", function () {
                     SIDE_R,
                     stateCalHelper.address,
                     encodePayload(0, SIDE_C, SIDE_R, tokenAfter.sub(tokenBefore), derivable1155.address),
+                    0,
                     AddressZero,
                     owner.address,
                     opts

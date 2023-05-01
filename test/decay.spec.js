@@ -118,7 +118,9 @@ HLs.forEach(HALF_LIFE => {
         a: '30000000000',
         b: '30000000000',
         initTime: await time.latest(),
-        halfLife: HALF_LIFE // ten years
+        halfLife: HALF_LIFE, // ten years
+        minExpirationD: 0,
+        minExpirationC: 0,
       }
       const poolAddress = await poolFactory.computePoolAddress(params);
       let txSignerA = weth.connect(accountA);
@@ -330,24 +332,24 @@ HLs.forEach(HALF_LIFE => {
                 amountIn: amountA,
                 recipient: derivablePool.address,
               }],
-              flags: 0,
               code: derivablePool.address,
               data: (await derivablePool.populateTransaction.swap(
                 0x00,
                 0x10,
                 stateCalHelper.address,
                 encodePayload(0, 0x00, 0x10, amountA),
+                0,
                 accountA.address,
                 derivableHelper.address
               )).data,
             },
             {
               inputs: [],
-              flags: 0,
               code: derivableHelper.address,
               data: (await derivableHelper.populateTransaction.swapInAll(
                 0x10,
                 0x00,
+                0,
                 ethers.constants.AddressZero,
                 accountA.address
               )).data,
@@ -371,24 +373,24 @@ HLs.forEach(HALF_LIFE => {
                 amountIn: amountB,
                 recipient: derivablePool.address,
               }],
-              flags: 0,
               code: derivablePool.address,
               data: (await derivablePool.populateTransaction.swap(
                 0x00,
                 0x20,
                 stateCalHelper.address,
                 encodePayload(0, 0x00, 0x20, amountB),
+                0,
                 accountB.address,
                 derivableHelper.address
               )).data,
             },
             {
               inputs: [],
-              flags: 0,
               code: derivableHelper.address,
               data: (await derivableHelper.populateTransaction.swapInAll(
                 0x20,
                 0x00,
+                0,
                 ethers.constants.AddressZero,
                 accountB.address
               )).data,
@@ -415,13 +417,13 @@ HLs.forEach(HALF_LIFE => {
                 amountIn: amountB,
                 recipient: derivablePool.address,
               }],
-              flags: 0,
               code: derivablePool.address,
               data: (await derivablePool.populateTransaction.swap(
                 0x00,
                 0x20,
                 stateCalHelper.address,
                 encodePayload(0, 0x00, 0x20, amountB),
+                0,
                 accountA.address,
                 derivableHelper.address
               )).data,
@@ -435,35 +437,35 @@ HLs.forEach(HALF_LIFE => {
                 amountIn: amountA,
                 recipient: derivablePool.address,
               }],
-              flags: 0,
               code: derivablePool.address,
               data: (await derivablePool.populateTransaction.swap(
                 0x00,
                 0x10,
                 stateCalHelper.address,
                 encodePayload(0, 0x00, 0x10, amountA),
+                0,
                 accountA.address,
                 derivableHelper.address
               )).data,
             },
             {
               inputs: [],
-              flags: 0,
               code: derivableHelper.address,
               data: (await derivableHelper.populateTransaction.swapInAll(
                 0x10,
                 0x00,
+                0,
                 ethers.constants.AddressZero,
                 accountA.address
               )).data,
             },
             {
               inputs: [],
-              flags: 0,
               code: derivableHelper.address,
               data: (await derivableHelper.populateTransaction.swapInAll(
                 0x20,
                 0x00,
+                0,
                 ethers.constants.AddressZero,
                 accountB.address
               )).data,

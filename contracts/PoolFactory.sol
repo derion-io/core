@@ -24,7 +24,9 @@ contract PoolFactory is IPoolFactory {
                 params.reserveToken,
                 params.mark,
                 params.k,
-                params.halfLife
+                params.halfLife,
+                params.minExpirationD,
+                params.minExpirationC
             )
         );
     }

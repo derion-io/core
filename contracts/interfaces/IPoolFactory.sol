@@ -9,8 +9,10 @@ struct Params {
     address reserveToken;
     address recipient;
     uint mark;
-    uint32  initTime;
     uint    halfLife;
+    uint32  initTime;
+    uint32  minExpirationD;
+    uint32  minExpirationC;
     uint k;
     uint a;
     uint b;

@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
 // OpenZeppelin Contracts (last updated v4.8.0) (token/ERC1155/ERC1155.sol)
+// Derivable Contracts (tokens/ERC1155.sol)
 
 pragma solidity ^0.8.0;
 
@@ -10,6 +11,8 @@ import "@openzeppelin/contracts/utils/Address.sol";
 import "@openzeppelin/contracts/utils/Context.sol";
 import "@openzeppelin/contracts/utils/introspection/ERC165.sol";
 
+import "../libs/TimelockBalance.sol";
+
 /**
  * @dev Implementation of the basic standard multi-token.
  * See https://eips.ethereum.org/EIPS/eip-1155
@@ -19,6 +22,7 @@ import "@openzeppelin/contracts/utils/introspection/ERC165.sol";
  */
 contract ERC1155 is Context, ERC165, IERC1155, IERC1155MetadataURI {
     using Address for address;
+    using TimelockBalance for uint;
 
     // Mapping from token ID to account balances
     mapping(uint256 => mapping(address => uint256)) private _balances;
@@ -69,7 +73,7 @@ contract ERC1155 is Context, ERC165, IERC1155, IERC1155MetadataURI {
      */
     function balanceOf(address account, uint256 id) public view virtual override returns (uint256) {
         require(account != address(0), "ERC1155: address zero is not a valid owner");
-        return _balances[id][account];
+        return _balances[id][account].amount();
     }
 
     /**
@@ -173,11 +177,8 @@ contract ERC1155 is Context, ERC165, IERC1155, IERC1155MetadataURI {
         _beforeTokenTransfer(operator, from, to, ids, amounts, data);
 
         uint256 fromBalance = _balances[id][from];
-        require(fromBalance >= amount, "ERC1155: insufficient balance for transfer");
-        unchecked {
-            _balances[id][from] = fromBalance - amount;
-        }
-        _balances[id][to] += amount;
+        _balances[id][from] = fromBalance.sub(amount);
+        _balances[id][to] = _balances[id][to].add(amount);
 
         emit TransferSingle(operator, from, to, id, amount);
 
@@ -214,12 +215,8 @@ contract ERC1155 is Context, ERC165, IERC1155, IERC1155MetadataURI {
             uint256 id = ids[i];
             uint256 amount = amounts[i];
 
-            uint256 fromBalance = _balances[id][from];
-            require(fromBalance >= amount, "ERC1155: insufficient balance for transfer");
-            unchecked {
-                _balances[id][from] = fromBalance - amount;
-            }
-            _balances[id][to] += amount;
+            _balances[id][from] = _balances[id][from].sub(amount);
+            _balances[id][to] = _balances[id][to].add(amount);
         }
 
         emit TransferBatch(operator, from, to, ids, amounts);
@@ -267,6 +264,7 @@ contract ERC1155 is Context, ERC165, IERC1155, IERC1155MetadataURI {
         address to,
         uint256 id,
         uint256 amount,
+        uint256 locktime,
         bytes memory data
     ) internal virtual {
         require(to != address(0), "ERC1155: mint to the zero address");
@@ -277,7 +275,9 @@ contract ERC1155 is Context, ERC165, IERC1155, IERC1155MetadataURI {
 
         _beforeTokenTransfer(operator, address(0), to, ids, amounts, data);
 
-        _balances[id][to] += amount;
+        uint timelockAmount = TimelockBalance.pack(amount, locktime);
+        _balances[id][to] = _balances[id][to].add(timelockAmount);
+
         emit TransferSingle(operator, address(0), to, id, amount);
 
         _afterTokenTransfer(operator, address(0), to, ids, amounts, data);
@@ -300,6 +300,7 @@ contract ERC1155 is Context, ERC165, IERC1155, IERC1155MetadataURI {
         address to,
         uint256[] memory ids,
         uint256[] memory amounts,
+        uint256 locktime,
         bytes memory data
     ) internal virtual {
         require(to != address(0), "ERC1155: mint to the zero address");
@@ -310,7 +311,8 @@ contract ERC1155 is Context, ERC165, IERC1155, IERC1155MetadataURI {
         _beforeTokenTransfer(operator, address(0), to, ids, amounts, data);
 
         for (uint256 i = 0; i < ids.length; i++) {
-            _balances[ids[i]][to] += amounts[i];
+            uint timelockAmount = TimelockBalance.pack(amounts[i], locktime);
+            _balances[ids[i]][to] = _balances[ids[i]][to].add(timelockAmount);
         }
 
         emit TransferBatch(operator, address(0), to, ids, amounts);
@@ -343,11 +345,7 @@ contract ERC1155 is Context, ERC165, IERC1155, IERC1155MetadataURI {
 
         _beforeTokenTransfer(operator, from, address(0), ids, amounts, "");
 
-        uint256 fromBalance = _balances[id][from];
-        require(fromBalance >= amount, "ERC1155: burn amount exceeds balance");
-        unchecked {
-            _balances[id][from] = fromBalance - amount;
-        }
+        _balances[id][from] = _balances[id][from].sub(amount);
 
         emit TransferSingle(operator, from, address(0), id, amount);
 
@@ -377,13 +375,7 @@ contract ERC1155 is Context, ERC165, IERC1155, IERC1155MetadataURI {
 
         for (uint256 i = 0; i < ids.length; i++) {
             uint256 id = ids[i];
-            uint256 amount = amounts[i];
-
-            uint256 fromBalance = _balances[id][from];
-            require(fromBalance >= amount, "ERC1155: burn amount exceeds balance");
-            unchecked {
-                _balances[id][from] = fromBalance - amount;
-            }
+            _balances[id][from] = _balances[id][from].sub(amounts[i]);
         }
 
         emit TransferBatch(operator, from, address(0), ids, amounts);
