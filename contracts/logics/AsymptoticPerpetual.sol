@@ -15,6 +15,8 @@ import "../libs/abdk-consulting/abdk-libraries-solidity/ABDKMath64x64.sol";
 
 
 contract AsymptoticPerpetual is Storage, Constants, IAsymptoticPerpetual {
+    uint internal constant FEE_SHIFT = 3;    // takes 1/8 cut of LP interest rate
+
     function init(
         Config memory config,
         uint a,
@@ -22,13 +24,16 @@ contract AsymptoticPerpetual is Storage, Constants, IAsymptoticPerpetual {
     ) external override returns (uint rA, uint rB, uint rC) {
         require(s_a == 0 && s_b == 0, "ALREADY_INITIALIZED");
         (uint twap, ) = _fetch(config.ORACLE);
-        uint decayRateX64 = _decayRate(block.timestamp - config.INIT_TIME, config.HALF_LIFE);
+        uint t = block.timestamp - config.INIT_TIME;
+        uint decayRateX64 = _decayRate(t, config.HALF_LIFE);
         State memory state = State(_reserve(config.TOKEN_R), a, b);
         Market memory market = _market(config.K, config.MARK, decayRateX64, twap);
         (rA, rB) = _evaluate(market, state);
         rC = state.R - rA - rB;
         // uint R = IERC20(TOKEN_R).balanceOf(address(this));
         // require(4 * a * b <= R, "INVALID_PARAM");
+        uint feeDecayRateX64 = _decayRate(t, config.HALF_LIFE << FEE_SHIFT);
+        s_R = FullMath.mulDivRoundingUp(state.R, feeDecayRateX64, Q64);
         s_a = a;
         s_b = b;
     }
@@ -152,10 +157,21 @@ contract AsymptoticPerpetual is Storage, Constants, IAsymptoticPerpetual {
     ) external override returns(uint amountIn, uint amountOut) {
         require(sideIn != sideOut, 'SAME_SIDE');
         // [PRICE SELECTION]
-        State memory state = State(_reserve(config.TOKEN_R), s_a, s_b);
+        amountIn = _decayRate(block.timestamp - config.INIT_TIME, config.HALF_LIFE << FEE_SHIFT);
+        State memory state = State(
+            FullMath.mulDiv(s_R, Q64, amountIn),
+            s_a,
+            s_b
+        );
         (Market memory market, uint rA, uint rB) = _selectPrice(config, state, sideIn, sideOut);
         // [CALCULATION]
         State memory state1 = IHelper(helper).swapToState(market, state, rA, rB, payload);
+        if (state.R != state1.R) {
+            uint R = FullMath.mulDivRoundingUp(state1.R, amountIn, Q64);
+            s_R = R;
+            // TODO: do we need this?
+            state1.R = FullMath.mulDiv(R, Q64, amountIn);
+        }
         // [TRANSITION]
         (uint rA1, uint rB1) = _evaluate(market, state1);
         if (sideIn == SIDE_R) {
