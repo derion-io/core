@@ -30,7 +30,7 @@ async function main() {
 
     // deploy pool factory
     const PoolFactory = await ethers.getContractFactory("PoolFactory")
-    const poolFactory = await PoolFactory.deploy()
+    const poolFactory = await PoolFactory.deploy(owner.address)
     await poolFactory.deployed()
     console.log(`poolFactory: ${poolFactory.address}`)
     addressList["poolFactory"] = poolFactory.address

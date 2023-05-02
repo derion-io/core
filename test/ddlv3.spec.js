@@ -41,7 +41,7 @@ describe("DDL v3", function () {
         const signer = owner;
         // deploy pool factory
         const PoolFactory = await ethers.getContractFactory("PoolFactory")
-        const poolFactory = await PoolFactory.deploy()
+        const poolFactory = await PoolFactory.deploy(owner.address)
         // deploy UTR
         const UTR = require("@derivable/utr/build/UniversalTokenRouter.json")
         const UniversalRouter = new ethers.ContractFactory(UTR.abi, UTR.bytecode, owner)

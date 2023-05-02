@@ -16,6 +16,7 @@ contract Pool is IPool, Storage, Events, Constants {
     uint public constant MINIMUM_LIQUIDITY = 10 ** 3;
 
     /// Immutables
+    IPoolFactory internal immutable FACTORY;
     address internal immutable UTR;
     address internal immutable LOGIC;
     bytes32 internal immutable ORACLE;
@@ -29,6 +30,8 @@ contract Pool is IPool, Storage, Events, Constants {
     uint32 internal immutable MIN_EXPIRATION_C;
 
     constructor() {
+        FACTORY = IPoolFactory(msg.sender);
+
         Params memory params = IPoolFactory(msg.sender).getParams();
         // TODO: require(4*params.a*params.b <= params.R, "invalid (R,a,b)");
         UTR = params.utr;
@@ -100,6 +103,13 @@ contract Pool is IPool, Storage, Events, Constants {
 
     function _packID(address pool, uint side) internal pure returns (uint id) {
         id = (side << 160) + uint160(pool);
+    }
+
+    function collect() external returns (uint amount) {
+        amount = IERC20(TOKEN_R).balanceOf(address(this)) - s_R;
+        address feeTo = FACTORY.getFeeTo();
+        require(feeTo != address(0), "FEE_TO_NOT_SET");
+        TransferHelper.safeTransfer(TOKEN_R, feeTo, amount);
     }
 
     function swap(

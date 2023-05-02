@@ -43,6 +43,7 @@ async function scenerio01() {
   // deploy pool factory
   const PoolFactory = await ethers.getContractFactory("PoolFactory");
   const poolFactory = await PoolFactory.deploy(
+    owner.address,
     // derivable1155.address
   );
   // weth test
@@ -212,6 +213,7 @@ async function scenerio02() {
   // deploy pool factory
   const PoolFactory = await ethers.getContractFactory("PoolFactory");
   const poolFactory = await PoolFactory.deploy(
+    owner.address,
     // derivable1155.address
   );
   // weth test
