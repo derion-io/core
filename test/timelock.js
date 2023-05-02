@@ -21,18 +21,6 @@ const SIDE_A = 0x10
 const SIDE_B = 0x20
 const SIDE_C = 0x30
 
-const FROM_ROUTER = 10;
-const PAYMENT = 0;
-const TRANSFER = 1;
-const ALLOWANCE = 2;
-const CALL_VALUE = 3;
-
-const EIP_ETH = 0
-const ERC_721_BALANCE = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("UniversalTokenRouter.ERC_721_BALANCE"))
-const ACTION_IGNORE_ERROR = 1
-const ACTION_RECORD_CALL_RESULT = 2
-const ACTION_INJECT_CALL_RESULT = 4
-
 const HALF_LIFE = 10 * 365 * 24 * 60 * 60
 
 describe("Timelock", function () {
@@ -41,7 +29,7 @@ describe("Timelock", function () {
     const signer = owner;
     // deploy pool factory
     const PoolFactory = await ethers.getContractFactory("PoolFactory")
-    const poolFactory = await PoolFactory.deploy()
+    const poolFactory = await PoolFactory.deploy(owner.address)
     // deploy UTR
     const UTR = require("@derivable/utr/build/UniversalTokenRouter.json")
     const UniversalRouter = new ethers.ContractFactory(UTR.abi, UTR.bytecode, owner)

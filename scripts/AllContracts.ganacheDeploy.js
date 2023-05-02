@@ -71,7 +71,7 @@ async function main() {
     addressList["uniswapFactory"] = uniswapFactory.address
     // deploy pool factory
     const PoolFactory = await ethers.getContractFactory("PoolFactory")
-    const poolFactory = await PoolFactory.deploy()
+    const poolFactory = await PoolFactory.deploy(owner.address)
     console.log('poolFactory: ', poolFactory.address)
     addressList["poolFactory"] = poolFactory.address
 

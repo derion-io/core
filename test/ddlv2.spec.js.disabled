@@ -20,7 +20,7 @@ describe("DDL v2", function () {
         );
         // deploy pool factory
         const PoolFactory = await ethers.getContractFactory("PoolFactory");
-        const poolFactory = await PoolFactory.deploy();
+        const poolFactory = await PoolFactory.deploy(owner.address);
         // weth test
         const compiledWETH = require("canonical-weth/build/contracts/WETH9.json")
         const WETH = await new ethers.ContractFactory(compiledWETH.abi, compiledWETH.bytecode, signer);
