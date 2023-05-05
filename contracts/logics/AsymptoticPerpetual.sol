@@ -15,7 +15,7 @@ import "../libs/abdk-consulting/abdk-libraries-solidity/ABDKMath64x64.sol";
 
 
 contract AsymptoticPerpetual is Storage, Constants, IAsymptoticPerpetual {
-    uint internal constant FEE_SHIFT = 3;    // takes 1/8 cut of LP interest rate
+    uint internal constant FEE_RATE = 12;    // takes 1/12 cut of LP interest rate
 
     function init(
         Config memory config,
@@ -32,7 +32,7 @@ contract AsymptoticPerpetual is Storage, Constants, IAsymptoticPerpetual {
         rC = state.R - rA - rB;
         // uint R = IERC20(TOKEN_R).balanceOf(address(this));
         // require(4 * a * b <= R, "INVALID_PARAM");
-        uint feeDecayRateX64 = _decayRate(t, config.HALF_LIFE << FEE_SHIFT);
+        uint feeDecayRateX64 = _decayRate(t, config.HALF_LIFE * FEE_RATE);
         s_R = FullMath.mulDivRoundingUp(state.R, feeDecayRateX64, Q64);
         s_a = a;
         s_b = b;
@@ -157,7 +157,7 @@ contract AsymptoticPerpetual is Storage, Constants, IAsymptoticPerpetual {
     ) external override returns(uint amountIn, uint amountOut) {
         require(sideIn != sideOut, 'SAME_SIDE');
         // [PRICE SELECTION]
-        amountIn = _decayRate(block.timestamp - config.INIT_TIME, config.HALF_LIFE << FEE_SHIFT);
+        amountIn = _decayRate(block.timestamp - config.INIT_TIME, config.HALF_LIFE * FEE_RATE);
         State memory state = State(
             FullMath.mulDiv(s_R, Q64, amountIn),
             s_a,
