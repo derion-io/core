@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: BSL-1.1
 pragma solidity ^0.8.0;
 
+import "./SimpleMath.sol";
+
 library TimelockBalance {
     function pack(uint a, uint t) internal pure returns (uint) {
         require(t <= type(uint32).max, "Timelock: uint32 overflow");
@@ -32,20 +34,16 @@ library TimelockBalance {
             uint xt = x >> 224;
             uint yt = y >> 224;
             if (xt != yt) {
-                xt = xt > block.timestamp ? (xt - block.timestamp) : 0;
-                yt = yt > block.timestamp ? (yt - block.timestamp) : 0;
-                uint num = xt * xb + yt * yb;   // TODO: overflow?
-                z = num / zb;
-                if (z * zb < num) {
-                    ++z; // rounding up
-                }
+                x = xt > block.timestamp ? xb * (xt - block.timestamp) : 0;
+                y = yt > block.timestamp ? yb * (yt - block.timestamp) : 0;
+                z = SimpleMath.avgRoundingUp(x, y, zb);
                 if (z > 0) {
                     z += block.timestamp;
                     require(z <= type(uint32).max, "Timelock: uint32 overflow");
                 }
                 z <<= 224;
             } else {
-                z = xt <= block.timestamp ? 0 : (xt << 224);
+                z = xt > block.timestamp ? (xt << 224) : 0;
             }
             z |= zb;
         }
