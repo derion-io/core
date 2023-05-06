@@ -52,12 +52,12 @@ library TimelockBalance {
     function sub(uint x, uint y) internal view returns (uint) {
         unchecked {
             require(x >> 224 <= block.timestamp, "Timelock: unexpired");
-            uint xb = x & type(uint224).max;
-            if (xb == y) {
+            x &= type(uint224).max;
+            if (x == y) {
                 return 0;
             }
-            require(xb > y, "Timelock: insufficient balance for transfer");
-            return xb - y;
+            require(x > y, "Timelock: insufficient balance for transfer");
+            return x - y;
         }
     }
 }
