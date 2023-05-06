@@ -21,11 +21,16 @@ const SIDE_A = 0x10
 const SIDE_B = 0x20
 const SIDE_C = 0x30
 
+const PAYMENT = 0;
+
 const HALF_LIFE = 10 * 365 * 24 * 60 * 60
+
+const EXPIR_MIN = 1
+const C_EXPIR_MIN = 1
 
 describe("Timelock", function () {
   async function deployDDLv2() {
-    const [owner, accountA] = await ethers.getSigners();
+    const [owner, accountA, accountB] = await ethers.getSigners();
     const signer = owner;
     // deploy pool factory
     const PoolFactory = await ethers.getContractFactory("PoolFactory")
@@ -116,8 +121,8 @@ describe("Timelock", function () {
       b: pe(1),
       initTime: 0,
       halfLife: HALF_LIFE, // ten years
-      minExpirationD: 60,
-      minExpirationC: 30,
+      minExpirationD: EXPIR_MIN,
+      minExpirationC: C_EXPIR_MIN,
     }
     const poolAddress = await poolFactory.computePoolAddress(params)
     await weth.deposit({
@@ -149,6 +154,7 @@ describe("Timelock", function () {
     return {
       owner,
       accountA,
+      accountB,
       weth,
       usdc,
       utr,
@@ -179,9 +185,16 @@ describe("Timelock", function () {
 
   describe("Transfer", function () {
     async function mintWaitAndTransfer(sideOut, duration) {
-      const { owner, weth, derivablePool, stateCalHelper, derivable1155, accountA } = await loadFixture(deployDDLv2)
+      const { owner, weth, derivablePool, stateCalHelper, derivable1155, accountA, accountB } = await loadFixture(deployDDLv2)
       await weth.approve(derivablePool.address, MaxUint256)
       const minDuration = (sideOut == SIDE_C) ? 30 : 60
+      await derivable1155.safeTransferFrom(
+        owner.address,
+        accountB.address,
+        convertId(SIDE_C, derivablePool.address),
+        await derivable1155.balanceOf(owner.address, convertId(SIDE_C, derivablePool.address)),
+        0x0
+      )
       await derivablePool.swap(
         SIDE_R,
         sideOut,
@@ -212,15 +225,15 @@ describe("Timelock", function () {
       }
     }
     it("A-Token transfer before expiration should revert", async function () {
-      await mintWaitAndTransfer(SIDE_A, 50)
+      await mintWaitAndTransfer(SIDE_A, 1)
     })
 
     it("B-Token transfer before expiration should revert", async function () {
-      await mintWaitAndTransfer(SIDE_B, 50)
+      await mintWaitAndTransfer(SIDE_B, 1)
     })
 
     it("C-Token transfer before expiration should revert", async function () {
-      await mintWaitAndTransfer(SIDE_C, 20)
+      await mintWaitAndTransfer(SIDE_C, 1)
     })
 
     it("A-Token transer after expiration should success", async function () {
@@ -252,7 +265,7 @@ describe("Timelock", function () {
 
       await time.increase(20)
       const balanceAfter1 = await derivable1155.balanceOf(accountA.address, convertId(SIDE_C, derivablePool.address))
-      
+
       await derivablePool.swap(
         SIDE_R,
         SIDE_C,
@@ -266,12 +279,13 @@ describe("Timelock", function () {
 
       const txSignerA = await derivable1155.connect(accountA)
       const balanceAfter2 = await derivable1155.balanceOf(accountA.address, convertId(SIDE_C, derivablePool.address))
+
       const mintOutput1 = balanceAfter1.sub(balanceBefore)
       const mintOutput2 = balanceAfter2.sub(balanceAfter1)
       const lockDuration = Number(mintOutput1.mul(10).add(mintOutput2.mul(30)).div(mintOutput1.add(mintOutput2)).toString())
 
-      await time.increase(lockDuration - 1)
-      
+      await time.increase(lockDuration - 2)
+
       await expect(txSignerA.safeTransferFrom(
         accountA.address,
         owner.address,
@@ -279,8 +293,6 @@ describe("Timelock", function () {
         '1',
         0x0
       ), 'locked transfer').to.be.revertedWith('unexpired')
-
-      await time.increase(1)
 
       await txSignerA.safeTransferFrom(
         accountA.address,
@@ -290,6 +302,158 @@ describe("Timelock", function () {
         0x0
       )
     })
+
+    it("Transfer correct balance", async function () {
+      const { owner, weth, derivablePool, stateCalHelper, derivable1155, accountA, accountB } = await loadFixture(deployDDLv2)
+      await weth.approve(derivablePool.address, MaxUint256)
+
+      await derivablePool.swap(
+        SIDE_R,
+        SIDE_C,
+        stateCalHelper.address,
+        encodePayload(0, SIDE_R, SIDE_C, pe(1)),
+        30,
+        AddressZero,
+        accountA.address,
+        opts
+      )
+
+      await time.increase(30)
+      const balanceBefore = await derivable1155.balanceOf(accountA.address, convertId(SIDE_C, derivablePool.address))
+
+      const txSignerA = await derivable1155.connect(accountA)
+
+      await txSignerA.safeTransferFrom(
+        accountA.address,
+        accountB.address,
+        convertId(SIDE_C, derivablePool.address),
+        '200000',
+        0x0
+      )
+      const balanceAfter = await derivable1155.balanceOf(accountA.address, convertId(SIDE_C, derivablePool.address))
+      const balanceB = await derivable1155.balanceOf(accountB.address, convertId(SIDE_C, derivablePool.address))
+      expect(balanceBefore.sub(balanceAfter)).to.be.eq(bn('200000'))
+      expect(balanceB).to.be.eq(bn('200000'))
+    })
+
+    it("Transfer exceed balance must be revert", async function () {
+      const { owner, weth, derivablePool, stateCalHelper, derivable1155, accountA } = await loadFixture(deployDDLv2)
+      await weth.approve(derivablePool.address, MaxUint256)
+
+      await derivablePool.swap(
+        SIDE_R,
+        SIDE_C,
+        stateCalHelper.address,
+        encodePayload(0, SIDE_R, SIDE_C, pe(1)),
+        30,
+        AddressZero,
+        accountA.address,
+        opts
+      )
+
+      await time.increase(30)
+      const balanceBefore = await derivable1155.balanceOf(accountA.address, convertId(SIDE_C, derivablePool.address))
+
+      const txSignerA = await derivable1155.connect(accountA)
+
+      await expect(txSignerA.safeTransferFrom(
+        accountA.address,
+        owner.address,
+        convertId(SIDE_C, derivablePool.address),
+        balanceBefore.add(1).toString(),
+        0x0
+      )).to.be.revertedWith('Timelock: insufficient balance for transfer')
+    })
+  })
+
+  it("Timelock overflow must be revert", async function () {
+    const { owner, weth, derivablePool, stateCalHelper, derivable1155, accountA } = await loadFixture(deployDDLv2)
+    const MAXUINT32 = 4294967296
+    await weth.approve(derivablePool.address, MaxUint256)
+    await expect(derivablePool.swap(
+      SIDE_R,
+      SIDE_C,
+      stateCalHelper.address,
+      encodePayload(0, SIDE_R, SIDE_C, pe(1)),
+      MAXUINT32 - (await time.latest()),
+      AddressZero,
+      accountA.address,
+      opts
+    )).to.be.revertedWith('Timelock: uint32 overflow')
+
+  })
+
+  it("Dilution exploit", async function () {
+    const { owner, weth, derivablePool, stateCalHelper, derivableHelper, derivable1155, accountA, utr } = await loadFixture(deployDDLv2)
+    const MAXUINT32 = 4294967296
+    await weth.approve(derivablePool.address, MaxUint256)
+    await weth.approve(utr.address, MaxUint256)
+    await derivablePool.swap(
+      SIDE_R,
+      SIDE_C,
+      stateCalHelper.address,
+      encodePayload(0, SIDE_R, SIDE_C, pe(1)),
+      60,
+      AddressZero,
+      accountA.address,
+      opts
+    )
+    
+    await expect(utr.exec([],
+      [
+        {
+          inputs: [{
+            mode: PAYMENT,
+            eip: 20,
+            token: weth.address,
+            id: 0,
+            amountIn: '1',
+            recipient: derivablePool.address,
+          }],
+          code: derivablePool.address,
+          data: (await derivablePool.populateTransaction.swap(
+            SIDE_R,
+            SIDE_C,
+            stateCalHelper.address,
+            encodePayload(0, SIDE_R, SIDE_C, '1'),
+            60,
+            owner.address,
+            derivableHelper.address
+          )).data,
+        },
+        {
+          inputs: [{
+            mode: PAYMENT,
+            eip: 20,
+            token: weth.address,
+            id: 0,
+            amountIn: pe(100000),
+            recipient: derivablePool.address,
+          }],
+          code: derivablePool.address,
+          data: (await derivablePool.populateTransaction.swap(
+            SIDE_R,
+            SIDE_C,
+            stateCalHelper.address,
+            encodePayload(0, SIDE_R, SIDE_C, pe(100000)),
+            1,
+            owner.address,
+            derivableHelper.address
+          )).data,
+        },
+        {
+          inputs: [],
+          code: derivableHelper.address,
+          data: (await derivableHelper.populateTransaction.swapInAll(
+            SIDE_C,
+            SIDE_R,
+            1,
+            AddressZero,
+            owner.address,
+          )).data,
+        }
+      ], opts)).to.be.revertedWith('Timelock: unexpired')
+
   })
 })
 
