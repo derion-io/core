@@ -4,7 +4,7 @@ pragma solidity ^0.8.9;
 // a library for performing various math operations
 // Copy from "@uniswap/v2-core/contracts/libraries/Math.sol" and change solidity version
 
-library Math {
+library SimpleMath {
     function sub(uint x, uint y) internal pure returns (int z) {
         z = x > y ? int(x-y) : -int(y-x);
     }
