@@ -25,8 +25,8 @@ const PAYMENT = 0;
 
 const HALF_LIFE = 10 * 365 * 24 * 60 * 60
 
-const EXPIR_MIN = 1
-const C_EXPIR_MIN = 1
+const EXPIR_MIN = 0
+const C_EXPIR_MIN = 0
 
 describe("Timelock", function () {
   async function deployDDLv2() {
@@ -384,20 +384,17 @@ describe("Timelock", function () {
   })
 
   it("Dilution exploit", async function () {
-    const { owner, weth, derivablePool, stateCalHelper, derivableHelper, derivable1155, accountA, utr } = await loadFixture(deployDDLv2)
-    const MAXUINT32 = 4294967296
+    const { owner, weth, derivablePool, stateCalHelper, derivableHelper, derivable1155, accountA, accountB, utr } = await loadFixture(deployDDLv2)
+    await derivable1155.safeTransferFrom(
+      owner.address,
+      accountB.address,
+      convertId(SIDE_C, derivablePool.address),
+      await derivable1155.balanceOf(owner.address, convertId(SIDE_C, derivablePool.address)),
+      0x0
+    )
+
     await weth.approve(derivablePool.address, MaxUint256)
     await weth.approve(utr.address, MaxUint256)
-    await derivablePool.swap(
-      SIDE_R,
-      SIDE_C,
-      stateCalHelper.address,
-      encodePayload(0, SIDE_R, SIDE_C, pe(1)),
-      60,
-      AddressZero,
-      accountA.address,
-      opts
-    )
     
     await expect(utr.exec([],
       [
@@ -436,7 +433,7 @@ describe("Timelock", function () {
             SIDE_C,
             stateCalHelper.address,
             encodePayload(0, SIDE_R, SIDE_C, pe(100000)),
-            1,
+            0,
             owner.address,
             derivableHelper.address
           )).data,
