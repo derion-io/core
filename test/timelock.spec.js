@@ -25,8 +25,6 @@ const PAYMENT = 0;
 
 const HALF_LIFE = 10 * 365 * 24 * 60 * 60
 
-const EXPIR_MIN = 0
-const C_EXPIR_MIN = 0
 
 describe("Timelock", function () {
   async function deployDDLv2() {
@@ -121,8 +119,8 @@ describe("Timelock", function () {
       b: pe(1),
       initTime: 0,
       halfLife: HALF_LIFE, // ten years
-      minExpirationD: EXPIR_MIN,
-      minExpirationC: C_EXPIR_MIN,
+      minExpirationD: 0,
+      minExpirationC: 0,
     }
     const poolAddress = await poolFactory.computePoolAddress(params)
     await weth.deposit({
