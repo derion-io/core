@@ -29,6 +29,8 @@ const ACTION_INJECT_CALL_RESULT = 4
 
 const HLs = [10 * 365 * 24 * 60 * 60]
 
+const FEE_RATE = 12
+
 HLs.forEach(HALF_LIFE => {
   describe(`Funding rate fee`, function () {
     async function deployDDLv2() {
@@ -208,7 +210,7 @@ HLs.forEach(HALF_LIFE => {
 
         const protocolFee = await derivablePool.callStatic.collect()
         const message = `${side == 0x10 ? 'LONG' : 'SHORT'} - ${weiToNumber(amount)}eth - ${period / HALF_LIFE}HL`
-        expect(Number(weiToNumber(totalFee)) / Number(weiToNumber((protocolFee)))).to.be.closeTo(13, 0.00001, message)
+        expect(Number(weiToNumber(totalFee)) / Number(weiToNumber((protocolFee)))).to.be.closeTo(FEE_RATE + 1, 0.00001, message)
       }
 
       await poolFactory.setFeeTo(owner.address)
