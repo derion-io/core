@@ -39,4 +39,6 @@ interface IAsymptoticPerpetual {
         address helper,
         bytes calldata payload
     ) external returns(uint amountIn, uint amountOut);
+
+    function getR(uint INIT_TIME, uint HALF_LIFE) external view returns (uint);
 }
