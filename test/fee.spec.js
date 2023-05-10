@@ -241,10 +241,10 @@ HLs.forEach(HALF_LIFE => {
         await swapAndWait(7 * 24 * 3600, numberToWei(0.1), 0x10)
       })
 
-      // it("Wait 2 HL", async function () {
-      //   const { swapAndWait } = await loadFixture(deployDDLv2);
-      //   await swapAndWait(2 * HALF_LIFE, numberToWei(0.1), 0x10)
-      // })
+      it("Wait 6 months", async function () {
+        const { swapAndWait } = await loadFixture(deployDDLv2);
+        await swapAndWait(6 * 30 * 24 * 3600, numberToWei(2), 0x10)
+      })
 
     })
 
@@ -264,10 +264,10 @@ HLs.forEach(HALF_LIFE => {
         await swapAndWait(7 * 24 * 3600, numberToWei(0.1), 0x10)
       })
 
-      // it("Wait 2 HL", async function () {
-      //   const { swapAndWait } = await loadFixture(deployDDLv2);
-      //   await swapAndWait(2 * HALF_LIFE, numberToWei(0.1), 0x20)
-      // })
+      it("Wait 6 months", async function () {
+        const { swapAndWait } = await loadFixture(deployDDLv2);
+        await swapAndWait(6 * 30 * 24 * 3600, numberToWei(2), 0x20)
+      })
 
     })
   })
