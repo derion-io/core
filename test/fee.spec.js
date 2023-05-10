@@ -27,13 +27,22 @@ const ACTION_IGNORE_ERROR = 1
 const ACTION_RECORD_CALL_RESULT = 2
 const ACTION_INJECT_CALL_RESULT = 4
 
+const SECONDS_PER_DAY = 86400
 
 const HLs = [19932680, 1966168] // 0.3%, 3%
 
 const FEE_RATE = 12
 
+function toDailyRate(HALF_LIFE) {
+  return HALF_LIFE == 0 ? 0 : 1-2**(-SECONDS_PER_DAY/HALF_LIFE)
+}
+
+function toHalfLife(dailyRate) {
+  return dailyRate == 0 ? 0 : SECONDS_PER_DAY/Math.log2(1/(1-dailyRate))
+}
+
 HLs.forEach(HALF_LIFE => {
-  const dailyFundingRate = HALF_LIFE == 0 ? 0 : 1-2**(-60*60*24/HALF_LIFE)
+  const dailyFundingRate = toDailyRate(HALF_LIFE)
   describe(`Funding rate fee: Funding rate ${dailyFundingRate}`, function () {
     async function deployDDLv2() {
       const [owner, accountA, accountB] = await ethers.getSigners();
@@ -193,6 +202,7 @@ HLs.forEach(HALF_LIFE => {
         )
         // const aTokenAmount = await derivable1155.balanceOf(accountA.address, packId(side, derivablePool.address))
         const sR = (await derivablePool.getStates(FEE_RATE))[0]
+        const protocolFeeBefore = await derivablePool.callStatic.collect()
         await time.increase(period)
         // await attemptSwap(
         //   txSignerA,
@@ -204,11 +214,13 @@ HLs.forEach(HALF_LIFE => {
         //   '0x0000000000000000000000000000000000000000',
         //   accountA.address
         // )
-        const protocolFee = await derivablePool.callStatic.collect()
+        const protocolFeeAfter = await derivablePool.callStatic.collect()
+        const protocolFee = protocolFeeAfter.sub(protocolFeeBefore)
         const message = `${side == 0x10 ? 'LONG' : 'SHORT'} - ${weiToNumber(amount)}eth - sR ${weiToNumber(sR)} - ${period / HALF_LIFE}HL`
-        const dailyFeeRate = dailyFundingRate / FEE_RATE
+        const dailyFeeRate = toDailyRate(HALF_LIFE * FEE_RATE)
+        expect(dailyFundingRate/dailyFeeRate).closeTo(FEE_RATE, FEE_RATE/10, 'effective fee rate')
         expect(Number(weiToNumber(protocolFee)) / Number(weiToNumber((sR))))
-          .to.be.closeTo((1 - (1 - dailyFeeRate) ** (period / 86400)), 0.00001, message)
+          .to.be.closeTo((1 - (1 - dailyFeeRate) ** (period / SECONDS_PER_DAY)), 0.000000000001, message)
       }
 
       await poolFactory.setFeeTo(owner.address)
@@ -257,7 +269,7 @@ HLs.forEach(HALF_LIFE => {
     describe("Short", function () {
       it("Wait 1 day", async function () {
         const { swapAndWait } = await loadFixture(deployDDLv2);
-        await swapAndWait(86400, numberToWei(1), 0x20)
+        await swapAndWait(SECONDS_PER_DAY, numberToWei(1), 0x20)
       })
 
       it("Wait 2 days", async function () {
