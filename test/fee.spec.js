@@ -24,8 +24,8 @@ function toHalfLife(dailyRate) {
 }
 
 HLs.forEach(HALF_LIFE => {
-  const dailyFundingRate = toDailyRate(HALF_LIFE)
-  describe(`Funding rate fee: Funding rate ${dailyFundingRate}`, function () {
+  const dailyInterestRate = toDailyRate(HALF_LIFE)
+  describe(`Interest rate fee: Interest rate ${dailyInterestRate}`, function () {
     async function deployDDLv2() {
       const [owner, accountA, accountB] = await ethers.getSigners();
       const signer = owner;
@@ -200,7 +200,7 @@ HLs.forEach(HALF_LIFE => {
         const protocolFee = protocolFeeAfter.sub(protocolFeeBefore)
         const message = `${side == 0x10 ? 'LONG' : 'SHORT'} - ${weiToNumber(amount)}eth - sR ${weiToNumber(sR)} - ${period / HALF_LIFE}HL`
         const dailyFeeRate = toDailyRate(HALF_LIFE * FEE_RATE)
-        expect(dailyFundingRate/dailyFeeRate).closeTo(FEE_RATE, FEE_RATE/10, 'effective fee rate')
+        expect(dailyInterestRate/dailyFeeRate).closeTo(FEE_RATE, FEE_RATE/10, 'effective fee rate')
         expect(Number(weiToNumber(protocolFee)) / Number(weiToNumber((sR))))
           .to.be.closeTo((1 - (1 - dailyFeeRate) ** (period / SECONDS_PER_DAY)), 0.000000000001, message)
       }
