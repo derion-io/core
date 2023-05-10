@@ -39,7 +39,7 @@ HLs.forEach(HALF_LIFE => {
       // deploy pool factory
       const PoolFactory = await ethers.getContractFactory("PoolFactory");
       const poolFactory = await PoolFactory.deploy(
-        owner.address
+        owner.address,
       );
 
       // weth test

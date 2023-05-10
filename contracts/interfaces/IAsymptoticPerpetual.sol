@@ -23,6 +23,8 @@ struct State {
 }
 
 interface IAsymptoticPerpetual {
+    function getR(uint r, uint INIT_TIME, uint HALF_LIFE) external view returns (uint);
+
     function init(
         Config memory config,
         uint a,
@@ -39,6 +41,4 @@ interface IAsymptoticPerpetual {
         address helper,
         bytes calldata payload
     ) external returns(uint amountIn, uint amountOut);
-
-    function getR(uint r, uint INIT_TIME, uint HALF_LIFE) external view returns (uint);
 }

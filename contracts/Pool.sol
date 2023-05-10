@@ -4,7 +4,6 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@derivable/utr/contracts/interfaces/IUniversalTokenRouter.sol";
 import "@uniswap/lib/contracts/libraries/TransferHelper.sol";
-
 import "./interfaces/IPoolFactory.sol";
 import "./logics/Constants.sol";
 import "./interfaces/IERC1155Supply.sol";
@@ -106,6 +105,12 @@ contract Pool is IPool, Storage, Events, Constants {
         id = (side << 160) + uint160(pool);
     }
 
+    function getStates() external view returns (uint R, uint a, uint b) {
+        R = IAsymptoticPerpetual(LOGIC).getR(s_R, INIT_TIME, HALF_LIFE);
+        a = s_a;
+        b = s_b;
+    }
+
     function collect() external returns (uint amount) {
         uint R = IAsymptoticPerpetual(LOGIC).getR(s_R, INIT_TIME, HALF_LIFE);
         amount = IERC20(TOKEN_R).balanceOf(address(this)) - R;
@@ -181,11 +186,5 @@ contract Pool is IPool, Storage, Events, Constants {
                 IERC1155Supply(TOKEN).burn(msg.sender, idIn, amountIn);
             }
         }
-    }
-
-    function getStates() external view returns (uint R, uint a, uint b) {
-        R = IAsymptoticPerpetual(LOGIC).getR(s_R, INIT_TIME, HALF_LIFE);
-        a = s_a;
-        b = s_b;
     }
 }
