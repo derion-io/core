@@ -5,27 +5,9 @@ const {
 const { expect, use } = require("chai");
 const { solidity } = require("ethereum-waffle");
 const { ethers } = require("hardhat");
-const { weiToNumber, bn, getDeltaSupply, numberToWei, packId, unpackId, encodeSqrtX96, encodePayload, attemptSwap, attemptStaticSwap } = require("./shared/utilities");
+const { weiToNumber, bn, numberToWei, packId, encodeSqrtX96, attemptSwap } = require("./shared/utilities");
 
 use(solidity)
-
-const opts = {
-  gasLimit: 30000000
-}
-
-const FROM_ROUTER = 10;
-const PAYMENT = 0;
-const TRANSFER = 1;
-const ALLOWANCE = 2;
-const CALL_VALUE = 3;
-
-const AMOUNT_EXACT = 0
-const AMOUNT_ALL = 1
-const EIP_ETH = 0
-const ERC_721_BALANCE = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("UniversalTokenRouter.ERC_721_BALANCE"))
-const ACTION_IGNORE_ERROR = 1
-const ACTION_RECORD_CALL_RESULT = 2
-const ACTION_INJECT_CALL_RESULT = 4
 
 const SECONDS_PER_DAY = 86400
 
@@ -132,7 +114,7 @@ HLs.forEach(HALF_LIFE => {
         a: '30000000000',
         b: '30000000000',
         initTime: await time.latest(),
-        halfLife: HALF_LIFE, // ten years
+        halfLife: HALF_LIFE,
         minExpirationD: 0,
         minExpirationC: 0,
       }
