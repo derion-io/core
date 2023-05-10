@@ -44,7 +44,7 @@ HLs.forEach(HALF_LIFE => {
       // deploy pool factory
       const PoolFactory = await ethers.getContractFactory("PoolFactory");
       const poolFactory = await PoolFactory.deploy(
-        // derivable1155.address
+        owner.address,
       );
       // weth test
       const compiledWETH = require("canonical-weth/build/contracts/WETH9.json")

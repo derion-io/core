@@ -38,6 +38,11 @@ contract AsymptoticPerpetual is Storage, Constants, IAsymptoticPerpetual {
         s_b = b;
     }
 
+    function getR(uint R, uint INIT_TIME, uint HALF_LIFE) external view override returns (uint) {
+        uint feeRateX64 = _decayRate(block.timestamp - INIT_TIME, HALF_LIFE * FEE_RATE);
+        return FullMath.mulDiv(R, Q64, feeRateX64);
+    }
+
     function _powu(uint x, uint y) internal pure returns (uint z) {
         // Calculate the first iteration of the loop in advance.
         z = y & 1 > 0 ? x : Q128;

@@ -105,8 +105,15 @@ contract Pool is IPool, Storage, Events, Constants {
         id = (side << 160) + uint160(pool);
     }
 
+    function getStates() external view returns (uint R, uint a, uint b) {
+        R = IAsymptoticPerpetual(LOGIC).getR(s_R, INIT_TIME, HALF_LIFE);
+        a = s_a;
+        b = s_b;
+    }
+
     function collect() external returns (uint amount) {
-        amount = IERC20(TOKEN_R).balanceOf(address(this)) - s_R;
+        uint R = IAsymptoticPerpetual(LOGIC).getR(s_R, INIT_TIME, HALF_LIFE);
+        amount = IERC20(TOKEN_R).balanceOf(address(this)) - R;
         address feeTo = FACTORY.getFeeTo();
         require(feeTo != address(0), "FEE_TO_NOT_SET");
         TransferHelper.safeTransfer(TOKEN_R, feeTo, amount);
