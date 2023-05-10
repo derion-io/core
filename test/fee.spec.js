@@ -183,7 +183,7 @@ HLs.forEach(HALF_LIFE => {
           accountA.address
         )
         // const aTokenAmount = await derivable1155.balanceOf(accountA.address, packId(side, derivablePool.address))
-        const sR = (await derivablePool.getStates(FEE_RATE))[0]
+        const sR = (await derivablePool.getStates())[0]
         const protocolFeeBefore = await derivablePool.callStatic.collect()
         await time.increase(period)
         // await attemptSwap(

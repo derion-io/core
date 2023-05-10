@@ -5,8 +5,6 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@derivable/utr/contracts/interfaces/IUniversalTokenRouter.sol";
 import "@uniswap/lib/contracts/libraries/TransferHelper.sol";
 
-import "./libs/abdk-consulting/abdk-libraries-solidity/ABDKMath64x64.sol";
-import "./libs/FullMath.sol";
 import "./interfaces/IPoolFactory.sol";
 import "./logics/Constants.sol";
 import "./interfaces/IERC1155Supply.sol";
@@ -109,20 +107,8 @@ contract Pool is IPool, Storage, Events, Constants {
     }
 
     function collect() external returns (uint amount) {
-        (bool success, bytes memory result) = LOGIC.delegatecall(
-            abi.encodeWithSelector(
-                IAsymptoticPerpetual.getR.selector,
-                INIT_TIME,
-                HALF_LIFE
-            )
-        );
-        if (!success) {
-            assembly {
-                revert(add(result, 32), mload(result))
-            }
-        }
-        (uint s_R) = abi.decode(result, (uint));
-        amount = IERC20(TOKEN_R).balanceOf(address(this)) - s_R;
+        uint r = IAsymptoticPerpetual(LOGIC).getR(s_R, INIT_TIME, HALF_LIFE);
+        amount = IERC20(TOKEN_R).balanceOf(address(this)) - r;
         address feeTo = FACTORY.getFeeTo();
         require(feeTo != address(0), "FEE_TO_NOT_SET");
         TransferHelper.safeTransfer(TOKEN_R, feeTo, amount);
@@ -197,19 +183,8 @@ contract Pool is IPool, Storage, Events, Constants {
         }
     }
 
-    function _decayRate (
-        uint elapsed,
-        uint hl
-    ) internal pure returns (uint rateX64) {
-        if (hl == 0) {
-            return Q64;
-        }
-        int128 rate = ABDKMath64x64.exp_2(int128(int((elapsed << 64) / hl)));
-        return uint(int(rate));
-    }
-
-    function getStates(uint feeRate) external view returns (uint, uint, uint) {
-        uint amountIn = _decayRate(block.timestamp - INIT_TIME, HALF_LIFE * feeRate);
-        return (FullMath.mulDiv(s_R, Q64, amountIn), s_a, s_b);
+    function getStates() external view returns (uint, uint, uint) {
+        uint r = IAsymptoticPerpetual(LOGIC).getR(s_R, INIT_TIME, HALF_LIFE);
+        return (r, s_a, s_b);
     }
 }

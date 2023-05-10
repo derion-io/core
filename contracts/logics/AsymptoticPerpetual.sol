@@ -148,9 +148,9 @@ contract AsymptoticPerpetual is Storage, Constants, IAsymptoticPerpetual {
         }
     }
 
-    function getR(uint INIT_TIME, uint HALF_LIFE) external view override returns (uint) {
+    function getR(uint r, uint INIT_TIME, uint HALF_LIFE) external view override returns (uint) {
         uint amountIn = _decayRate(block.timestamp - INIT_TIME, HALF_LIFE * FEE_RATE);
-        return FullMath.mulDiv(s_R, Q64, amountIn);
+        return FullMath.mulDiv(r, Q64, amountIn);
     }
 
     function swap(
