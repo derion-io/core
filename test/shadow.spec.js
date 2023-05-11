@@ -33,9 +33,6 @@ describe("Shadow", function () {
     // deploy pool factory
     const PoolFactory = await ethers.getContractFactory("PoolFactory")
     const poolFactory = await PoolFactory.deploy(owner.address)
-    // deploy shadow factory
-    const ShadowFactory = await ethers.getContractFactory("ShadowFactory")
-    const tokenFactory = await ShadowFactory.deploy()
     // deploy UTR
     const UTR = require("@derivable/utr/build/UniversalTokenRouter.json")
     const UniversalRouter = new ethers.ContractFactory(UTR.abi, UTR.bytecode, owner)
@@ -46,7 +43,6 @@ describe("Shadow", function () {
     const derivable1155 = await Token.deploy(
       "Test/",
       utr.address,
-      tokenFactory.address
     )
 
     await derivable1155.deployed()
@@ -111,12 +107,8 @@ describe("Shadow", function () {
     await weth.transfer(poolAddress, pe("10000"));
     await poolFactory.createPool(params);
     const TOKEN_ID = packId(SIDE_C, poolAddress)
-    const tokenParams = {
-      token: derivable1155.address,
-      id: TOKEN_ID
-    }
-    await tokenFactory.createPool(tokenParams);
-    const shadowToken = await ethers.getContractAt("Shadow", await tokenFactory.computePoolAddress(tokenParams))
+    await derivable1155.deployShadow(TOKEN_ID);
+    const shadowToken = await ethers.getContractAt("Shadow", await derivable1155.computeShadowAddress(TOKEN_ID))
     const derivablePool = await ethers.getContractAt("Pool", poolAddress)
 
     await weth.connect(accountA).deposit({
@@ -142,14 +134,14 @@ describe("Shadow", function () {
     const {shadowToken, derivable1155, derivablePool} = await loadFixture(fixture)
     expect(await shadowToken.name()).equal("Shadow Clone")
     expect(await shadowToken.symbol()).equal("SCL")
-    expect(await shadowToken.TOKEN1155()).equal(derivable1155.address)
+    expect(await shadowToken.ORIGIN()).equal(derivable1155.address)
     expect(await shadowToken.ID()).equal(packId(SIDE_C, derivablePool.address))
   })
 
   describe("Authorization", function () {
-    it("Shouldn't allow arbitrary address to call proxySetApprovalForAll", async function () {
+    it("Shouldn't allow arbitrary address to call setApprovalForAllByShadow", async function () {
       const {derivable1155, accountA, owner} = await loadFixture(fixture)
-      await expect(derivable1155.proxySetApprovalForAll(owner.address, accountA.address, true)).to.be.reverted
+      await expect(derivable1155.setApprovalForAllByShadow(owner.address, accountA.address, true)).to.be.reverted
     })
   })
 
@@ -186,7 +178,7 @@ describe("Shadow", function () {
       const erc20BalanceBefore = await shadowToken.balanceOf(owner.address)
       await expect(
         shadowToken.transfer(accountA.address, erc20BalanceBefore.add(1).toString())
-      ).to.be.revertedWith('ERC20: transfer amount exceeds balance')
+      ).to.be.revertedWith('balance')
       await expect(derivable1155.safeTransferFrom(
         owner.address, 
         accountA.address, 

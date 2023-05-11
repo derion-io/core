@@ -43,7 +43,6 @@ describe("Timelock", function () {
     const derivable1155 = await Token.deploy(
       "Test/",
       utr.address,
-      AddressZero,
     )
     await derivable1155.deployed()
     // erc20 factory

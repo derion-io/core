@@ -6,7 +6,7 @@ const chai = require("chai")
 const {solidity} = require("ethereum-waffle")
 chai.use(solidity)
 const expect = chai.expect
-const { AddressZero, MaxUint256 } = ethers.constants
+const {MaxUint256} = ethers.constants
 const {
     bn,
     numberToWei,
@@ -63,8 +63,7 @@ describe("DDL v3", function () {
         const Token = await ethers.getContractFactory("Token")
         const derivable1155 = await Token.deploy(
             "Test/",
-            utr.address,
-            AddressZero,
+            utr.address
         )
         await derivable1155.deployed()
         // erc20 factory

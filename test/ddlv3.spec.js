@@ -51,8 +51,7 @@ describe("DDL v3", function () {
         const Token = await ethers.getContractFactory("Token")
         const derivable1155 = await Token.deploy(
             "Test/",
-            utr.address,
-            AddressZero,
+            utr.address
         )
         await derivable1155.deployed()
         // erc20 factory

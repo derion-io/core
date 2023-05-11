@@ -3,37 +3,71 @@ pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/utils/Create2.sol";
 
-import "../interfaces/ITokenFactory.sol";
+import "../interfaces/IShadowFactory.sol";
 import "./Shadow.sol";
+import "./ERC1155.sol";
 
-contract ShadowFactory is ITokenFactory {
-    bytes32 immutable BYTECODE_HASH = keccak256(type(Shadow).creationCode);
+abstract contract ShadowFactory is IShadowFactory, ERC1155 {
+    bytes32 immutable public BYTECODE_HASH = keccak256(type(Shadow).creationCode);
 
     // transient storage
-    Params t_params;
+    uint public deployingID;
 
-    function getParams() external view override returns (Params memory) {
-        return t_params;
+    function deployShadow(uint id) external returns (address pool) {
+        deployingID = id;
+        pool = Create2.deploy(0, bytes32(id), type(Shadow).creationCode);
+        delete deployingID;
     }
 
-    function _salt(Params memory params) internal pure returns (bytes32) {
-        return keccak256(
-            abi.encodePacked(
-                params.token,
-                params.id
-            )
+    function computeShadowAddress(uint id) public view override returns (address pool) {
+        return Create2.computeAddress(bytes32(id), BYTECODE_HASH, address(this));
+    }
+
+    function getShadowMetadata(uint, bytes32) public pure override returns (bytes32 value) {
+        return 0;
+    } 
+
+    modifier onlyShadow(uint id) {
+        address shadowToken = computeShadowAddress(id);
+        require(msg.sender == shadowToken, "Shadow: UNAUTHORIZED");
+        _;
+    }
+
+    function setApprovalForAllByShadow(
+        uint id,
+        address owner,
+        address operator,
+        bool approved
+    ) public virtual override onlyShadow(id) {
+        _setApprovalForAll(owner, operator, approved);
+    }
+
+    function safeTransferFromByShadow(
+        address operator,
+        address from,
+        address to,
+        uint256 id,
+        uint256 amount
+    ) public virtual override onlyShadow(id) {
+        require(
+            from == operator || isApprovedForAll(from, operator),
+            "ERC1155: caller is not token owner or approved"
         );
+        return _safeTransferFrom(from, to, id, amount, "");
     }
 
-    function createPool(Params memory params) external returns (address pool) {
-        t_params = params;
-        pool = Create2.deploy(0, _salt(params), type(Shadow).creationCode);
-        delete t_params;
-    }
-
-    function computePoolAddress(
-        Params memory params
-    ) external view override returns (address pool) {
-        return Create2.computeAddress(_salt(params), BYTECODE_HASH, address(this));
+    function _doSafeTransferAcceptanceCheck(
+        address operator,
+        address from,
+        address to,
+        uint256 id,
+        uint256 amount,
+        bytes memory data
+    ) internal override virtual {
+        address shadowToken = computeShadowAddress(id);
+        if (msg.sender == shadowToken) {
+            return; // skip the acceptance check
+        }
+        super._doSafeTransferAcceptanceCheck(operator, from, to, id, amount, data);
     }
 }

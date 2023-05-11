@@ -37,13 +37,4 @@ interface IERC1155Supply {
         uint256 id,
         uint256 amount
     ) external;
-
-    function proxySetApprovalForAll(address owner, address operator, bool approved) external;
-    
-    function proxySafeTransferFrom(
-        address from,
-        address to,
-        uint256 id,
-        uint256 amount
-    ) external;
 }
