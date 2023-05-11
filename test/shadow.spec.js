@@ -101,6 +101,8 @@ describe("Shadow", function () {
       b: pe(10),
       initTime: 0,
       halfLife: HALF_LIFE, // ten years
+      minExpirationD: 0,
+      minExpirationC: 0
     }
     const poolAddress = await poolFactory.computePoolAddress(params)
     await weth.deposit({
@@ -108,7 +110,6 @@ describe("Shadow", function () {
     })
     await weth.transfer(poolAddress, pe("10000"));
     await poolFactory.createPool(params);
-
     const TOKEN_ID = packId(SIDE_C, poolAddress)
     const tokenParams = {
       token: derivable1155.address,
@@ -150,21 +151,12 @@ describe("Shadow", function () {
       const {derivable1155, accountA, owner} = await loadFixture(fixture)
       await expect(derivable1155.proxySetApprovalForAll(owner.address, accountA.address, true)).to.be.reverted
     })
-    it("Shouldn't allow arbitrary address to call proxySafeTransferFrom", async function () {
-      const {derivable1155, accountA, owner, TOKEN_ID} = await loadFixture(fixture)
-      await expect(derivable1155.proxySafeTransferFrom(
-        owner.address, 
-        accountA.address, 
-        TOKEN_ID, 
-        '100'
-      )).to.be.reverted
-    })
   })
 
   describe("Approve", function () {
     it("Should approved for all ERC1155, when approve from ERC20", async function () {
       const {shadowToken, derivable1155, TOKEN_ID, accountA, owner} = await loadFixture(fixture)
-      await shadowToken.approve(accountA.address, "20")
+      await shadowToken.approve(accountA.address, MAX_INT)
       expect(await derivable1155.isApprovedForAll(owner.address, accountA.address)).to.be.true
     })
     it("Should approve with max allowance ERC20, when approval for all ERC1155 ", async function () {
@@ -201,7 +193,7 @@ describe("Shadow", function () {
         TOKEN_ID, 
         erc20BalanceBefore.add(1).toString(),
         0x0
-      )).to.be.revertedWith('ERC1155: insufficient balance for transfer')
+      )).to.be.revertedWith('Timelock: insufficient balance for transfer')
     })
     it("Transfer to contract", async function () {
       const {shadowToken, derivable1155, TOKEN_ID, uniswapFactory, owner} = await loadFixture(fixture)

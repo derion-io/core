@@ -35,7 +35,12 @@ contract Shadow is ERC20 {
     }
 
     function approve(address spender, uint amount) public virtual override returns (bool) {
-        IERC1155Supply(TOKEN1155).proxySetApprovalForAll(msg.sender, spender, true);
+        require(amount == type(uint).max || amount == 0, 'Shadow: full allowance only');
+        if (amount == type(uint).max) {
+            IERC1155Supply(TOKEN1155).proxySetApprovalForAll(msg.sender, spender, true);
+        } else {
+            IERC1155Supply(TOKEN1155).proxySetApprovalForAll(msg.sender, spender, false);
+        }
         return true;
     }
 
@@ -55,7 +60,7 @@ contract Shadow is ERC20 {
         _beforeTokenTransfer(from, to, amount);
         uint256 fromBalance = balanceOf(from);
         require(fromBalance >= amount, "ERC20: transfer amount exceeds balance");
-        IERC1155Supply(TOKEN1155).proxySafeTransferFrom(from, to, ID, amount);
+        IERC1155(TOKEN1155).safeTransferFrom(from, to, ID, amount, '');
 
         emit Transfer(from, to, amount);
         _afterTokenTransfer(from, to, amount);
