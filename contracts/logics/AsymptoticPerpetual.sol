@@ -5,7 +5,6 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 
 import "../libs/OracleLibrary.sol";
-import "../libs/SimpleMath.sol";
 import "./Constants.sol";
 import "./Storage.sol";
 import "../interfaces/IHelper.sol";

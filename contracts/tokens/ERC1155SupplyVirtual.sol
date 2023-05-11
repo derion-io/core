@@ -4,7 +4,7 @@
 
 pragma solidity ^0.8.0;
 
-import "./ERC1155.sol";
+import "@derivable/erc1155-timelock/contracts/token/ERC1155/ERC1155.sol";
 
 /**
  * @dev Extension of ERC1155 that adds tracking of total supply per id.
