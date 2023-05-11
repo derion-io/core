@@ -48,26 +48,6 @@ contract Token is ERC1155SupplyVirtual {
         return operator == UTR || super.isApprovedForAll(account, operator);
     }
 
-    function onERC1155Received(
-        address,
-        address,
-        uint256,
-        uint256,
-        bytes memory
-    ) public virtual returns (bytes4) {
-        return this.onERC1155Received.selector;
-    }
-
-    function onERC1155BatchReceived(
-        address,
-        address,
-        uint256[] memory,
-        uint256[] memory,
-        bytes memory
-    ) public virtual returns (bytes4) {
-        return this.onERC1155BatchReceived.selector;
-    }
-
     function mintLock(
         address to,
         uint256 id,
@@ -91,5 +71,38 @@ contract Token is ERC1155SupplyVirtual {
         uint256 amount
     ) external virtual onlyItsPool(id) {
         super._burn(from, id, amount);
+    }
+    
+    function proxySetApprovalForAll(
+        address owner,
+        address operator,
+        bool approved
+    ) public virtual {
+        // TODO: this can be calculated internally
+        address tetheredContract = ITokenFactory(FACTORY).computePoolAddress(Params(
+            address(this), 
+            IShadowCloneERC20(msg.sender).ID()
+        ));
+        require(msg.sender == tetheredContract, "Invalid");
+        _setApprovalForAll(owner, operator, approved);
+    }
+
+    function _doSafeTransferAcceptanceCheck(
+        address operator,
+        address from,
+        address to,
+        uint256 id,
+        uint256 amount,
+        bytes memory data
+    ) internal override virtual {
+        // TODO: this can be calculated internally
+        address tetheredContract = ITokenFactory(FACTORY).computePoolAddress(Params(
+            address(this), 
+            id
+        ));
+        if (msg.sender == tetheredContract) {
+            return; // skip the acceptance check
+        }
+        super._doSafeTransferAcceptanceCheck(operator, from, to, id, amount, data);
     }
 }
