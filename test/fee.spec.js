@@ -171,6 +171,31 @@ HLs.forEach(HALF_LIFE => {
       txSignerA = derivablePool.connect(accountA);
       txSignerB = derivablePool.connect(accountB);
 
+      async function swapAndWaitStatic(period, amount, side) {
+        await attemptSwap(
+          txSignerA,
+          0,
+          0x00,
+          side,
+          amount,
+          stateCalHelper.address,
+          '0x0000000000000000000000000000000000000000',
+          accountA.address
+        )
+
+        const sR = (await derivablePool.getStates())[0]
+        const protocolFeeBefore = await derivablePool.callStatic.collect()
+        await time.increase(period)
+
+        const protocolFeeAfter = await derivablePool.callStatic.collect()
+        const protocolFee = protocolFeeAfter.sub(protocolFeeBefore)
+        const message = `${side == 0x10 ? 'LONG' : 'SHORT'} - ${weiToNumber(amount)}eth - sR ${weiToNumber(sR)} - ${period / HALF_LIFE}HL`
+        const dailyFeeRate = toDailyRate(HALF_LIFE * FEE_RATE)
+        expect(dailyInterestRate/dailyFeeRate).closeTo(FEE_RATE, FEE_RATE/10, 'effective fee rate')
+        expect(Number(weiToNumber(protocolFee)) / Number(weiToNumber((sR))))
+          .to.be.closeTo((1 - (1 - dailyFeeRate) ** (period / SECONDS_PER_DAY)), 0.000000000001, message)
+      }
+
       async function swapAndWait(period, amount, side) {
         await attemptSwap(
           txSignerA,
@@ -182,27 +207,21 @@ HLs.forEach(HALF_LIFE => {
           '0x0000000000000000000000000000000000000000',
           accountA.address
         )
-        // const aTokenAmount = await derivable1155.balanceOf(accountA.address, packId(side, derivablePool.address))
+
         const sR = (await derivablePool.getStates())[0]
-        const protocolFeeBefore = await derivablePool.callStatic.collect()
+        await derivablePool.collect()
+
+        const balanceBeforeCollect = await weth.balanceOf(owner.address)
         await time.increase(period)
-        // await attemptSwap(
-        //   txSignerA,
-        //   0,
-        //   side,
-        //   0x00,
-        //   aTokenAmount,
-        //   stateCalHelper.address,
-        //   '0x0000000000000000000000000000000000000000',
-        //   accountA.address
-        // )
-        const protocolFeeAfter = await derivablePool.callStatic.collect()
-        const protocolFee = protocolFeeAfter.sub(protocolFeeBefore)
+
+        await derivablePool.collect()
+        const balanceAfterCollect = await weth.balanceOf(owner.address)
+        const protocolFee = balanceAfterCollect.sub(balanceBeforeCollect)
         const message = `${side == 0x10 ? 'LONG' : 'SHORT'} - ${weiToNumber(amount)}eth - sR ${weiToNumber(sR)} - ${period / HALF_LIFE}HL`
         const dailyFeeRate = toDailyRate(HALF_LIFE * FEE_RATE)
         expect(dailyInterestRate/dailyFeeRate).closeTo(FEE_RATE, FEE_RATE/10, 'effective fee rate')
         expect(Number(weiToNumber(protocolFee)) / Number(weiToNumber((sR))))
-          .to.be.closeTo((1 - (1 - dailyFeeRate) ** (period / SECONDS_PER_DAY)), 0.000000000001, message)
+          .to.be.closeTo((1 - (1 - dailyFeeRate) ** (period / SECONDS_PER_DAY)), 0.0000001, message)
       }
 
       await poolFactory.setFeeTo(owner.address)
@@ -219,6 +238,7 @@ HLs.forEach(HALF_LIFE => {
         accountB,
         txSignerA,
         txSignerB,
+        swapAndWaitStatic,
         swapAndWait,
         stateCalHelper,
         view
@@ -226,6 +246,26 @@ HLs.forEach(HALF_LIFE => {
     }
 
     describe("Long", function () {
+      it("Wait 1 day - static", async function () {
+        const { swapAndWaitStatic } = await loadFixture(deployDDLv2);
+        await swapAndWaitStatic(24 * 3600, numberToWei(2), 0x10)
+      })
+
+      it("Wait 2 days - static", async function () {
+        const { swapAndWaitStatic } = await loadFixture(deployDDLv2);
+        await swapAndWaitStatic(3 * 24 * 3600, numberToWei(0.1), 0x10)
+      })
+
+      it("Wait 7 days - static", async function () {
+        const { swapAndWaitStatic } = await loadFixture(deployDDLv2);
+        await swapAndWaitStatic(7 * 24 * 3600, numberToWei(0.1), 0x10)
+      })
+
+      it("Wait 6 months - static", async function () {
+        const { swapAndWaitStatic } = await loadFixture(deployDDLv2);
+        await swapAndWaitStatic(6 * 30 * 24 * 3600, numberToWei(2), 0x10)
+      })
+
       it("Wait 1 day", async function () {
         const { swapAndWait } = await loadFixture(deployDDLv2);
         await swapAndWait(24 * 3600, numberToWei(2), 0x10)
@@ -245,10 +285,29 @@ HLs.forEach(HALF_LIFE => {
         const { swapAndWait } = await loadFixture(deployDDLv2);
         await swapAndWait(6 * 30 * 24 * 3600, numberToWei(2), 0x10)
       })
-
     })
 
     describe("Short", function () {
+      it("Wait 1 day - static", async function () {
+        const { swapAndWaitStatic } = await loadFixture(deployDDLv2);
+        await swapAndWaitStatic(SECONDS_PER_DAY, numberToWei(1), 0x20)
+      })
+
+      it("Wait 2 days - static", async function () {
+        const { swapAndWaitStatic } = await loadFixture(deployDDLv2);
+        await swapAndWaitStatic(2 * 24 * 3600, numberToWei(0.1), 0x20)
+      })
+
+      it("Wait 7 days - static", async function () {
+        const { swapAndWaitStatic } = await loadFixture(deployDDLv2);
+        await swapAndWaitStatic(7 * 24 * 3600, numberToWei(0.1), 0x10)
+      })
+
+      it("Wait 6 months - static", async function () {
+        const { swapAndWaitStatic } = await loadFixture(deployDDLv2);
+        await swapAndWaitStatic(6 * 30 * 24 * 3600, numberToWei(2), 0x20)
+      })
+
       it("Wait 1 day", async function () {
         const { swapAndWait } = await loadFixture(deployDDLv2);
         await swapAndWait(SECONDS_PER_DAY, numberToWei(1), 0x20)
@@ -268,7 +327,6 @@ HLs.forEach(HALF_LIFE => {
         const { swapAndWait } = await loadFixture(deployDDLv2);
         await swapAndWait(6 * 30 * 24 * 3600, numberToWei(2), 0x20)
       })
-
     })
   })
 })
