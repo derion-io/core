@@ -2,19 +2,24 @@
 pragma solidity ^0.8.0;
 import "@openzeppelin/contracts/utils/Strings.sol";
 import "./tokens/ERC1155SupplyVirtual.sol";
+import "./interfaces/ITokenFactory.sol";
+import "./interfaces/IShadowCloneERC20.sol";
 
 contract Token is ERC1155SupplyVirtual {
     // Base Metadata URI
     string public METADATA_URI;
     // Immutables
     address internal immutable UTR;
+    address internal immutable FACTORY;
 
     constructor(
         string memory metadataURI,
-        address utr
+        address utr,
+        address factory
     ) ERC1155(metadataURI) {
         METADATA_URI = metadataURI;
         UTR = utr;
+        FACTORY = factory;
     }
 
     modifier onlyItsPool(uint id) {
@@ -41,6 +46,26 @@ contract Token is ERC1155SupplyVirtual {
      */
      function isApprovedForAll(address account, address operator) public view virtual override returns (bool) {
         return operator == UTR || super.isApprovedForAll(account, operator);
+    }
+
+    function onERC1155Received(
+        address,
+        address,
+        uint256,
+        uint256,
+        bytes memory
+    ) public virtual returns (bytes4) {
+        return this.onERC1155Received.selector;
+    }
+
+    function onERC1155BatchReceived(
+        address,
+        address,
+        uint256[] memory,
+        uint256[] memory,
+        bytes memory
+    ) public virtual returns (bytes4) {
+        return this.onERC1155BatchReceived.selector;
     }
 
     function mintLock(

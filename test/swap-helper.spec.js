@@ -59,11 +59,15 @@ describe("DDL v3", function () {
         const UniversalRouter = new ethers.ContractFactory(UTR.abi, UTR.bytecode, owner)
         const utr = await UniversalRouter.deploy()
         await utr.deployed()
+        // deploy pool factory
+        const TokenFactory = await ethers.getContractFactory("TokenFactory")
+        const tokenFactory = await TokenFactory.deploy()
         // deploy token1155
         const Token = await ethers.getContractFactory("Token")
         const derivable1155 = await Token.deploy(
             "Test/",
-            utr.address
+            utr.address,
+            tokenFactory.address,
         )
         await derivable1155.deployed()
         // erc20 factory

@@ -109,11 +109,16 @@ async function main() {
     console.log('logic: ', asymptoticPerpetual.address)
     addressList["logic"] = asymptoticPerpetual.address
 
+    // deploy pool factory
+    const TokenFactory = await ethers.getContractFactory("TokenFactory")
+    const tokenFactory = await TokenFactory.deploy()
+
     // deploy token1155
     const Token = await ethers.getContractFactory("Token")
     const derivable1155 = await Token.deploy(
         "Test/",
-        utr.address
+        utr.address,
+        tokenFactory.address,
     )
     console.log('token: ', derivable1155.address)
     addressList["token"] = derivable1155.address

@@ -42,6 +42,9 @@ describe("DDL v3", function () {
         // deploy pool factory
         const PoolFactory = await ethers.getContractFactory("PoolFactory")
         const poolFactory = await PoolFactory.deploy(owner.address)
+        // deploy pool factory
+        const TokenFactory = await ethers.getContractFactory("TokenFactory")
+        const tokenFactory = await TokenFactory.deploy()
         // deploy UTR
         const UTR = require("@derivable/utr/build/UniversalTokenRouter.json")
         const UniversalRouter = new ethers.ContractFactory(UTR.abi, UTR.bytecode, owner)
@@ -51,7 +54,8 @@ describe("DDL v3", function () {
         const Token = await ethers.getContractFactory("Token")
         const derivable1155 = await Token.deploy(
             "Test/",
-            utr.address
+            utr.address,
+            tokenFactory.address,
         )
         await derivable1155.deployed()
         // erc20 factory
