@@ -5,6 +5,7 @@ const {
 const { expect, use } = require("chai");
 const { solidity } = require("ethereum-waffle");
 const { weiToNumber, bn, getDeltaSupply, numberToWei, packId, unpackId, encodeSqrtX96, encodePayload, attemptSwap, attemptStaticSwap } = require("./shared/utilities");
+const { AddressZero } = ethers.constants
 
 use(solidity)
 
@@ -45,6 +46,7 @@ HLs.forEach(HALF_LIFE => {
       const PoolFactory = await ethers.getContractFactory("PoolFactory");
       const poolFactory = await PoolFactory.deploy(
         owner.address,
+        // derivable1155.address,
       );
       // weth test
       const compiledWETH = require("canonical-weth/build/contracts/WETH9.json")
@@ -93,16 +95,12 @@ HLs.forEach(HALF_LIFE => {
       const asymptoticPerpetual = await AsymptoticPerpetual.deploy();
       await asymptoticPerpetual.deployed();
 
-      // deploy pool factory
-      const TokenFactory = await ethers.getContractFactory("TokenFactory")
-      const tokenFactory = await TokenFactory.deploy()
-
       // deploy token1155
       const Token = await ethers.getContractFactory("Token")
       const derivable1155 = await Token.deploy(
         "Test/",
         utr.address,
-        tokenFactory.address,
+        AddressZero,
       )
       await derivable1155.deployed()
 

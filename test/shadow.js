@@ -7,7 +7,7 @@ const { solidity } = require("ethereum-waffle")
 const { ethers } = require("hardhat")
 chai.use(solidity)
 const expect = chai.expect
-const { AddressZero, MaxUint256 } = ethers.constants
+const { MaxUint256 } = ethers.constants
 const { bn, numberToWei, packId, encodeSqrtX96, encodePriceSqrt } = require("./shared/utilities")
 
 const fe = (x) => Number(ethers.utils.formatEther(x))
@@ -26,16 +26,16 @@ const HALF_LIFE = 10 * 365 * 24 * 60 * 60
 
 const MAX_INT = bn('0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff')
 
-describe("ShadowCloneERC20", function () {
+describe("Shadow", function () {
   async function fixture() {
     const [owner, accountA] = await ethers.getSigners();
     const signer = owner;
     // deploy pool factory
     const PoolFactory = await ethers.getContractFactory("PoolFactory")
-    const poolFactory = await PoolFactory.deploy()
-    // deploy pool factory
-    const TokenFactory = await ethers.getContractFactory("TokenFactory")
-    const tokenFactory = await TokenFactory.deploy()
+    const poolFactory = await PoolFactory.deploy(owner.address)
+    // deploy shadow factory
+    const ShadowFactory = await ethers.getContractFactory("ShadowFactory")
+    const tokenFactory = await ShadowFactory.deploy()
     // deploy UTR
     const UTR = require("@derivable/utr/build/UniversalTokenRouter.json")
     const UniversalRouter = new ethers.ContractFactory(UTR.abi, UTR.bytecode, owner)
@@ -115,7 +115,7 @@ describe("ShadowCloneERC20", function () {
       id: TOKEN_ID
     }
     await tokenFactory.createPool(tokenParams);
-    const shadowToken = await ethers.getContractAt("ShadowCloneERC20", await tokenFactory.computePoolAddress(tokenParams))
+    const shadowToken = await ethers.getContractAt("Shadow", await tokenFactory.computePoolAddress(tokenParams))
     const derivablePool = await ethers.getContractAt("Pool", poolAddress)
 
     await weth.connect(accountA).deposit({

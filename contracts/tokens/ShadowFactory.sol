@@ -3,11 +3,11 @@ pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/utils/Create2.sol";
 
-import "./interfaces/ITokenFactory.sol";
-import "./ShadowCloneERC20.sol";
+import "../interfaces/ITokenFactory.sol";
+import "./Shadow.sol";
 
-contract TokenFactory is ITokenFactory {
-    bytes32 immutable BYTECODE_HASH = keccak256(type(ShadowCloneERC20).creationCode);
+contract ShadowFactory is ITokenFactory {
+    bytes32 immutable BYTECODE_HASH = keccak256(type(Shadow).creationCode);
 
     // transient storage
     Params t_params;
@@ -27,7 +27,7 @@ contract TokenFactory is ITokenFactory {
 
     function createPool(Params memory params) external returns (address pool) {
         t_params = params;
-        pool = Create2.deploy(0, _salt(params), type(ShadowCloneERC20).creationCode);
+        pool = Create2.deploy(0, _salt(params), type(Shadow).creationCode);
         delete t_params;
     }
 

@@ -10,16 +10,16 @@ contract Token is ERC1155SupplyVirtual {
     string public METADATA_URI;
     // Immutables
     address internal immutable UTR;
-    address internal immutable FACTORY;
+    address internal immutable SHADOW_FACTORY;
 
     constructor(
         string memory metadataURI,
         address utr,
-        address factory
+        address shadowFactory
     ) ERC1155(metadataURI) {
         METADATA_URI = metadataURI;
         UTR = utr;
-        FACTORY = factory;
+        SHADOW_FACTORY = shadowFactory;
     }
 
     modifier onlyItsPool(uint id) {
@@ -79,11 +79,12 @@ contract Token is ERC1155SupplyVirtual {
         bool approved
     ) public virtual {
         // TODO: this can be calculated internally
-        address tetheredContract = ITokenFactory(FACTORY).computePoolAddress(Params(
+        require(SHADOW_FACTORY != address(0), "Shadow: untethered");
+        address shadowToken = ITokenFactory(SHADOW_FACTORY).computePoolAddress(Params(
             address(this), 
             IShadowCloneERC20(msg.sender).ID()
         ));
-        require(msg.sender == tetheredContract, "Invalid");
+        require(msg.sender == shadowToken, "Shadow: tethered contract only");
         _setApprovalForAll(owner, operator, approved);
     }
 
@@ -96,12 +97,14 @@ contract Token is ERC1155SupplyVirtual {
         bytes memory data
     ) internal override virtual {
         // TODO: this can be calculated internally
-        address tetheredContract = ITokenFactory(FACTORY).computePoolAddress(Params(
-            address(this), 
-            id
-        ));
-        if (msg.sender == tetheredContract) {
-            return; // skip the acceptance check
+        if (SHADOW_FACTORY != address(0)) {
+            address shadowToken = ITokenFactory(SHADOW_FACTORY).computePoolAddress(Params(
+                address(this), 
+                id
+            ));
+            if (msg.sender == shadowToken) {
+                return; // skip the acceptance check
+            }
         }
         super._doSafeTransferAcceptanceCheck(operator, from, to, id, amount, data);
     }

@@ -4,10 +4,10 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
-import "./interfaces/IERC1155Supply.sol";
-import "./interfaces/ITokenFactory.sol";
+import "../interfaces/IERC1155Supply.sol";
+import "../interfaces/ITokenFactory.sol";
 
-contract ShadowCloneERC20 is ERC20 {
+contract Shadow is ERC20 {
     address public immutable TOKEN1155;
     uint public immutable ID;
 
