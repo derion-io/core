@@ -12,7 +12,7 @@ contract Token is ERC1155SupplyVirtual {
     constructor(
         string memory metadataURI,
         address utr
-    ) ERC1155(metadataURI) {
+    ) ERC1155Timelock(metadataURI) {
         METADATA_URI = metadataURI;
         UTR = utr;
     }

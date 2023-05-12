@@ -36,13 +36,13 @@
   resolved "https://registry.yarnpkg.com/@colors/colors/-/colors-1.5.0.tgz#bb504579c1cae923e6576a4f5da43d25f97bdbd9"
   integrity sha512-ooWCrlZP11i8GImSjTHYHLkvFDP48nS4+204nGb1RiX/WXYHmJA2III9/e2DWVabCESdW7hBAEzHRqUn9OUVvQ==
 
-"@derivable/erc1155-timelock@git+ssh://git@github.com:derivable-labs/erc1155-timelock.git#ae917a2b05849028502d93bfd65e213fd0ae1eb5":
+"@derivable/erc1155-timelock@git+ssh://git@github.com:derivable-labs/erc1155-timelock.git#3457762c1f512cbce6026d1fd424f940ca91730f":
   version "4.8.2"
-  resolved "git+ssh://git@github.com:derivable-labs/erc1155-timelock.git#ae917a2b05849028502d93bfd65e213fd0ae1eb5"
+  resolved "git+ssh://git@github.com:derivable-labs/erc1155-timelock.git#3457762c1f512cbce6026d1fd424f940ca91730f"
 
-"@derivable/utr@git+ssh://git@github.com:derivable-labs/utr.git#f38beb53de9b6f4773b7d59d387501885879de23":
+"@derivable/utr@git+ssh://git@github.com:derivable-labs/utr.git":
   version "1.0.0"
-  resolved "git+ssh://git@github.com:derivable-labs/utr.git#f38beb53de9b6f4773b7d59d387501885879de23"
+  resolved "git+ssh://git@github.com:derivable-labs/utr.git#6a57c45d524ffcb54ba12706c811a1c1d672df5a"
   dependencies:
     "@atixlabs/hardhat-time-n-mine" "^0.0.5"
     "@uniswap/lib" "^4.0.1-alpha"
