@@ -62,7 +62,7 @@ contract TokenDescriptor is ITokenDescriptor {
     }
 
     function _getName(address base, address quote, address pool, uint side) internal view returns (string memory) {
-        string memory sideStr = "CP";
+        string memory sideStr = "LP";
         if (side == SIDE_A) {
             sideStr = "Long";
         } else if (side == SIDE_B) {
@@ -80,7 +80,7 @@ contract TokenDescriptor is ITokenDescriptor {
     }
 
     function _getSymbol(address base, address quote, address pool, uint side) internal view returns (string memory) {
-        string memory sideStr = "CP";
+        string memory sideStr = "(LP)";
         if (side == SIDE_A) {
             sideStr = "+";
         } else if (side == SIDE_B) {

@@ -215,7 +215,7 @@ describe("DDL v3", function () {
 
           expect(longName).to.be.equals('Long 5x WETH/USDC (WETH)')
           expect(shortName).to.be.equals('Short 5x WETH/USDC (WETH)')
-          expect(cpName).to.be.equals('CP 5x WETH/USDC (WETH)')
+          expect(cpName).to.be.equals('LP 5x WETH/USDC (WETH)')
       })
       
       it("Shadow Symbol", async function() {
@@ -226,11 +226,11 @@ describe("DDL v3", function () {
 
           const longSymbol = await derivable1155.getShadowSymbol(convertId(SIDE_A, derivablePool.address))
           const shortSymbol = await derivable1155.getShadowSymbol(convertId(SIDE_B, derivablePool.address))
-          const cpSymbol = await derivable1155.getShadowSymbol(convertId(SIDE_C, derivablePool.address))
+          const lpSymbol = await derivable1155.getShadowSymbol(convertId(SIDE_C, derivablePool.address))
 
           expect(longSymbol).to.be.equals('WETH+5xWETH/USDC')
           expect(shortSymbol).to.be.equals('WETH-5xWETH/USDC')
-          expect(cpSymbol).to.be.equals('WETHCP5xWETH/USDC')
+          expect(lpSymbol).to.be.equals('WETH(LP)5xWETH/USDC')
       })
 
       it("Shadow Decimals", async function() {
@@ -241,11 +241,11 @@ describe("DDL v3", function () {
 
           const longDecimals = await derivable1155.getShadowDecimals(convertId(SIDE_A, derivablePool.address))
           const shortDecimals = await derivable1155.getShadowDecimals(convertId(SIDE_B, derivablePool.address))
-          const cpDecimals = await derivable1155.getShadowDecimals(convertId(SIDE_C, derivablePool.address))
+          const lpDecimals = await derivable1155.getShadowDecimals(convertId(SIDE_C, derivablePool.address))
 
           expect(longDecimals).to.be.equals(6)
           expect(shortDecimals).to.be.equals(6)
-          expect(cpDecimals).to.be.equals(12)
+          expect(lpDecimals).to.be.equals(12)
       })
 
       it("Token metadata", async function() {
@@ -256,11 +256,11 @@ describe("DDL v3", function () {
 
         const longMetadata = await derivable1155.uri(convertId(SIDE_A, derivablePool.address))
         const shortMetadata = await derivable1155.uri(convertId(SIDE_B, derivablePool.address))
-        const cpMetadata = await derivable1155.uri(convertId(SIDE_C, derivablePool.address))
+        const lpMetadata = await derivable1155.uri(convertId(SIDE_C, derivablePool.address))
 
         expect(longMetadata).to.be.equals('{"name":"Long 5x WETH/USDC (WETH)", "decimals":6, "symbol":"WETH+5xWETH/USDC"}')
         expect(shortMetadata).to.be.equals('{"name":"Short 5x WETH/USDC (WETH)", "decimals":6, "symbol":"WETH-5xWETH/USDC"}')
-        expect(cpMetadata).to.be.equals('{"name":"CP 5x WETH/USDC (WETH)", "decimals":12, "symbol":"WETHCP5xWETH/USDC"}')
+        expect(lpMetadata).to.be.equals('{"name":"LP 5x WETH/USDC (WETH)", "decimals":12, "symbol":"WETH(LP)5xWETH/USDC"}')
     })
   })
 })
