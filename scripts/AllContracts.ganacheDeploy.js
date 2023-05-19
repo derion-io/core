@@ -130,7 +130,6 @@ async function main() {
     // deploy token1155
     const Token = await ethers.getContractFactory("Token")
     const derivable1155 = await Token.deploy(
-        "Test/",
         utr.address
     )
     console.log('token: ', derivable1155.address)
