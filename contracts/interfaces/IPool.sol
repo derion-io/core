@@ -2,7 +2,9 @@
 pragma solidity ^0.8.0;
 
 interface IPool {
-    function TOKEN_R() external returns (address);
+    function ORACLE() external view returns (bytes32);
+    function TOKEN_R() external view returns (address);
+    function K() external view returns (uint);
     function swap(
         uint sideIn,
         uint sideOut,

@@ -17,6 +17,7 @@
     "@atixlabs/hardhat-time-n-mine": "^0.0.5",
     "@derivable/utr": "git+ssh://git@github.com:derivable-labs/utr.git",
     "@derivable/erc1155-timelock": "git+ssh://git@github.com:derivable-labs/erc1155-timelock.git#3457762c1f512cbce6026d1fd424f940ca91730f",
+    "@derivable/shadow-token": "git+ssh://git@github.com:derivable-labs/shadow-token.git#dev",
     "bignumber.js": "^9.1.1",
     "bn.js": "^5.2.1",
     "canonical-weth": "^1.4.0",

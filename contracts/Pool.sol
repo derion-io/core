@@ -19,8 +19,8 @@ contract Pool is IPool, Storage, Events, Constants {
     IPoolFactory internal immutable FACTORY;
     address internal immutable UTR;
     address internal immutable LOGIC;
-    bytes32 internal immutable ORACLE;
-    uint internal immutable K;
+    bytes32 public immutable ORACLE;
+    uint public immutable K;
     address internal immutable TOKEN;
     address public immutable TOKEN_R;
     uint internal immutable MARK;
