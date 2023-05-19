@@ -10,8 +10,9 @@ contract Token is ERC1155SupplyVirtual {
     string public METADATA_URI;
     // Immutables
     address internal immutable UTR;
-    address internal DESCRIPTOR;
-    address internal DESCRIPTOR_SETTER;
+    // Storages
+    address internal s_descriptor;
+    address internal s_descriptorSetter;
 
     constructor(
         string memory metadataURI,
@@ -21,8 +22,8 @@ contract Token is ERC1155SupplyVirtual {
     ) ERC1155Timelock(metadataURI) {
         METADATA_URI = metadataURI;
         UTR = utr;
-        DESCRIPTOR = descriptor;
-        DESCRIPTOR_SETTER = descriptorSetter;
+        s_descriptor = descriptor;
+        s_descriptorSetter = descriptorSetter;
     }
 
     modifier onlyItsPool(uint id) {
@@ -30,21 +31,11 @@ contract Token is ERC1155SupplyVirtual {
         _;
     }
 
-    function setDescriptor(address newDescriptor) public {
-        require(msg.sender == DESCRIPTOR_SETTER, "UNAUTHORIZED");
-        DESCRIPTOR = newDescriptor;
-    }
-
-    function setDescriptorSetter(address newSetter) public {
-        require(msg.sender == DESCRIPTOR_SETTER, "UNAUTHORIZED");
-        DESCRIPTOR_SETTER = newSetter;
-    }
-
     /**
      * Generate URI by id.
      */
     function uri(uint256 tokenId) public view override returns (string memory) {
-        return ITokenDescriptor(DESCRIPTOR).constructMetadata(tokenId);
+        return ITokenDescriptor(s_descriptor).constructMetadata(tokenId);
     }
 
     /**
@@ -79,15 +70,28 @@ contract Token is ERC1155SupplyVirtual {
         super._burn(from, id, amount);
     }
 
+    modifier onlyDescriptorSetter() {
+        require(msg.sender == s_descriptorSetter, "UNAUTHORIZED");
+        _;
+    }
+
+    function setDescriptor(address descriptor) public onlyDescriptorSetter {
+        s_descriptor = descriptor;
+    }
+
+    function setDescriptorSetter(address setter) public onlyDescriptorSetter {
+        s_descriptorSetter = setter;
+    }
+
     function getShadowName(uint id) public view override virtual returns (string memory) {
-        return ITokenDescriptor(DESCRIPTOR).getName(id);
+        return ITokenDescriptor(s_descriptor).getName(id);
     }
 
     function getShadowSymbol(uint id) public view override virtual returns (string memory) {
-        return ITokenDescriptor(DESCRIPTOR).getSymbol(id);
+        return ITokenDescriptor(s_descriptor).getSymbol(id);
     }
 
     function getShadowDecimals(uint id) public view override virtual returns (uint8) {
-        return ITokenDescriptor(DESCRIPTOR).getDecimals(id);
+        return ITokenDescriptor(s_descriptor).getDecimals(id);
     }
 }
