@@ -24,8 +24,7 @@ async function main() {
         "poolFactory": "",
         "logic": "",
         "token": "",
-        "stateCalHelper": "",
-        "fetchPrice": ""
+        "stateCalHelper": ""
     }
 
     // deploy pool factory
@@ -62,14 +61,7 @@ async function main() {
     console.log(`stateCalHelper: ${stateCalHelper.address}`)
     addressList["stateCalHelper"] = stateCalHelper.address
 
-    // deploy FetchPrice
-    const FetchPriceUniV3 = await ethers.getContractFactory("FetchPriceUniV3")
-    const fetchPrice = await FetchPriceUniV3.deploy()
-    await fetchPrice.deployed()
-    console.log(`fetchPrice: ${fetchPrice.address}`)
-    addressList["fetchPrice"] = fetchPrice.address
-
-    // exportData(addressList)
+    exportData(addressList)
 }
 
 function exportData(dictOutput) {
