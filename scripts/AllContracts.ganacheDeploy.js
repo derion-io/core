@@ -3,6 +3,7 @@ const fs = require('fs')
 const path = require('path')
 const { bn } = require("../test/shared/utilities")
 const { numberToWei, encodeSqrtX96, packId, delay} = require("./shared/utilities")
+const compiledUniswapPool = require("./compiled/UniswapV3Pool.json");
 const { MaxUint256, AddressZero } = ethers.constants
 
 const fe = (x) => Number(ethers.utils.formatEther(x))
@@ -59,9 +60,13 @@ async function main() {
     const UniswapPositionManager = new ethers.ContractFactory(compiledUniswapv3PositionManager.abi, compiledUniswapv3PositionManager.bytecode, signer)
     // erc20 factory
     const USDC = await ethers.getContractFactory("USDC")
+    const BTC = await ethers.getContractFactory("BTC")
     // setup uniswap
     const usdc = await USDC.deploy(numberToWei(100000000000))
+    const btc = await BTC.deploy(numberToWei(100000000000))
     const weth = await WETH.deploy()
+    console.log('btc: ', btc.address)
+    addressList["btc"] = usdc.address
     console.log('usdc: ', usdc.address)
     addressList["usdc"] = usdc.address
     console.log('weth: ', weth.address)
@@ -83,6 +88,7 @@ async function main() {
     addressList["uniswapPositionManager"] = uniswapPositionManager.address
 
     await uniswapFactory.createPool(usdc.address, weth.address, 500)
+    await uniswapFactory.createPool(usdc.address, btc.address, 500)
 
     const compiledUniswapPool = require("./compiled/UniswapV3Pool.json")
     const pairAddress = await uniswapFactory.getPool(usdc.address, weth.address, 500)
@@ -90,6 +96,13 @@ async function main() {
     console.log(`uniswapPool: ${uniswapPair.address}`)
     addressList["uniswapPool"] = uniswapPair.address
 
+
+    const pairBtcAddress = await uniswapFactory.getPool(usdc.address, btc.address, 500)
+    const btcPair = new ethers.Contract(pairBtcAddress, compiledUniswapPool.abi, signer)
+    console.log(`btcUniswapPair: ${btcPair.address}`)
+    addressList["btcUniswapPair"] = btcPair.address
+
+    await btc.approve(uniswapRouter.address, MaxUint256)
     await usdc.approve(uniswapRouter.address, MaxUint256)
     await weth.approve(uniswapRouter.address, MaxUint256)
 
@@ -97,6 +110,11 @@ async function main() {
     const initPriceX96 = encodeSqrtX96(quoteTokenIndex ? 1500 : 1, quoteTokenIndex ? 1 : 1500)
     const a = await uniswapPair.initialize(initPriceX96)
     a.wait(1)
+
+    const quoteTokenIndex1 = btc.address.toLowerCase() < usdc.address.toLowerCase() ? 1 : 0
+    const initPriceX96Btc = encodeSqrtX96(quoteTokenIndex1 ? 26000 : 1, quoteTokenIndex1 ? 1 : 26000)
+    const tx = await btcPair.initialize(initPriceX96Btc)
+    tx.wait(1)
 
     // await time.increase(1000)
     await delay(1000)
@@ -178,6 +196,53 @@ async function main() {
     const derivablePool1 = await ethers.getContractAt("Pool", poolAddress1)
     console.log(`pool1: ${derivablePool1.address}`)
     addressList["pool1"] = derivablePool1.address
+
+    // deploy ddl pool
+    const oracleBtc = ethers.utils.hexZeroPad(
+        bn(quoteTokenIndex1).shl(255).add(bn(300).shl(256 - 64)).add(btcPair.address).toHexString(),
+        32,
+    )
+    const params2 = {
+        utr: utr.address,
+        token: derivable1155.address,
+        logic: asymptoticPerpetual.address,
+        oracle: oracleBtc,
+        reserveToken: weth.address,
+        recipient: owner.address,
+        mark: bn(38).shl(128),
+        k: 16,
+        a: numberToWei(1),
+        b: numberToWei(1),
+        initTime: 0,
+        halfLife: HALF_LIFE
+    }
+    const poolAddress2 = await poolFactory.computePoolAddress(params2)
+    await stateCalHelper.createPool(params2, poolFactory.address, {value: pe(10), gasLimit: 30000000})
+    const derivablePool2 = await ethers.getContractAt("Pool", poolAddress2)
+    console.log(`pool2: ${derivablePool2.address}`)
+    addressList["pool2"] = derivablePool2.address
+
+
+    const params3 = {
+        utr: utr.address,
+        token: derivable1155.address,
+        logic: asymptoticPerpetual.address,
+        oracle,
+        reserveToken: usdc.address,
+        recipient: owner.address,
+        mark: bn(38).shl(128),
+        k: 16,
+        a: numberToWei(1),
+        b: numberToWei(1),
+        initTime: 0,
+        halfLife: HALF_LIFE
+    }
+    const poolAddress3 = await poolFactory.computePoolAddress(params3)
+    await usdc.transfer(poolAddress3, pe("10000"));
+    await poolFactory.createPool(params3, {gasLimit: 30000000})
+    const derivablePool3 = await ethers.getContractAt("Pool", poolAddress3)
+    console.log(`pool3: ${derivablePool3.address}`)
+    addressList["pool3"] = derivablePool3.address
 
     // deploy utility contracts
     const TokenInfo = await hre.ethers.getContractFactory("TokenInfo")
