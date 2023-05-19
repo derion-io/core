@@ -6,8 +6,6 @@ import "./interfaces/IPool.sol";
 import "./interfaces/ITokenDescriptor.sol";
 
 contract Token is ERC1155SupplyVirtual {
-    // Base Metadata URI
-    string public METADATA_URI;
     // Immutables
     address internal immutable UTR;
     // Storages
@@ -15,12 +13,10 @@ contract Token is ERC1155SupplyVirtual {
     address internal s_descriptorSetter;
 
     constructor(
-        string memory metadataURI,
         address utr,
         address descriptorSetter,
         address descriptor
-    ) ERC1155Timelock(metadataURI) {
-        METADATA_URI = metadataURI;
+    ) ERC1155Timelock("") {
         UTR = utr;
         s_descriptor = descriptor;
         s_descriptorSetter = descriptorSetter;

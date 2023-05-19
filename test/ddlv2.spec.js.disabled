@@ -16,7 +16,6 @@ describe("DDL v2", function () {
         // deploy token1155
         const Token = await ethers.getContractFactory("Token");
         const derivable1155 = await Token.deploy(
-            "Test/"
         );
         // deploy pool factory
         const PoolFactory = await ethers.getContractFactory("PoolFactory");

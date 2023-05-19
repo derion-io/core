@@ -101,7 +101,6 @@ async function scenerio01() {
   // deploy token1155
   const Token = await ethers.getContractFactory("Token")
   const derivable1155 = await Token.deploy(
-    "Test/",
     utr.address,
     owner.address,
     tokenDescriptor.address
@@ -278,7 +277,6 @@ async function scenerio02() {
   // deploy token1155
   const Token = await ethers.getContractFactory("Token")
   const derivable1155 = await Token.deploy(
-    "Test/",
     utr.address,
     owner.address,
     tokenDescriptor.address

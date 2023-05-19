@@ -97,7 +97,6 @@ HLs.forEach(HALF_LIFE => {
       // deploy token1155
       const Token = await ethers.getContractFactory("Token")
       const derivable1155 = await Token.deploy(
-        "Test/",
         utr.address,
         owner.address,
         tokenDescriptor.address
