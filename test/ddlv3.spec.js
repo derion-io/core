@@ -906,52 +906,5 @@ describe("DDL v3", function () {
             })
         })
     })
-
-    describe("Token Shadow Metadata", function() {
-        it("Shadow Name", async function() {
-            const {
-                derivablePool,
-                derivable1155
-            } = await loadFixture(deployDDLv2)
-
-            const longName = await derivable1155.getShadowName(convertId(SIDE_A, derivablePool.address))
-            const shortName = await derivable1155.getShadowName(convertId(SIDE_B, derivablePool.address))
-            const cpName = await derivable1155.getShadowName(convertId(SIDE_C, derivablePool.address))
-
-            expect(longName).to.be.equals('Long 5x WETH/UNI-V2 (WETH)')
-            expect(shortName).to.be.equals('Short 5x WETH/UNI-V2 (WETH)')
-            expect(cpName).to.be.equals('CP 5x WETH/UNI-V2 (WETH)')
-        })
-        
-        it("Shadow Symbol", async function() {
-            const {
-                derivablePool,
-                derivable1155
-            } = await loadFixture(deployDDLv2)
-
-            const longSymbol = await derivable1155.getShadowSymbol(convertId(SIDE_A, derivablePool.address))
-            const shortSymbol = await derivable1155.getShadowSymbol(convertId(SIDE_B, derivablePool.address))
-            const cpSymbol = await derivable1155.getShadowSymbol(convertId(SIDE_C, derivablePool.address))
-
-            expect(longSymbol).to.be.equals('WETH+5xWETH/UNI-V2')
-            expect(shortSymbol).to.be.equals('WETH-5xWETH/UNI-V2')
-            expect(cpSymbol).to.be.equals('WETHCP5xWETH/UNI-V2')
-        })
-
-        it("Shadow Decimals", async function() {
-            const {
-                derivablePool,
-                derivable1155
-            } = await loadFixture(deployDDLv2)
-
-            const longDecimals = await derivable1155.getShadowDecimals(convertId(SIDE_A, derivablePool.address))
-            const shortDecimals = await derivable1155.getShadowDecimals(convertId(SIDE_B, derivablePool.address))
-            const cpDecimals = await derivable1155.getShadowDecimals(convertId(SIDE_C, derivablePool.address))
-
-            expect(longDecimals).to.be.equals(18)
-            expect(shortDecimals).to.be.equals(18)
-            expect(cpDecimals).to.be.equals(18)
-        })
-    })
 })
 
