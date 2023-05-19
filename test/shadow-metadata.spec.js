@@ -47,11 +47,19 @@ describe("DDL v3", function () {
       const UniversalRouter = new ethers.ContractFactory(UTR.abi, UTR.bytecode, owner)
       const utr = await UniversalRouter.deploy()
       await utr.deployed()
+
+      // deploy descriptor
+      const TokenDescriptor = await ethers.getContractFactory("TokenDescriptor")
+      const tokenDescriptor = await TokenDescriptor.deploy()
+      await tokenDescriptor.deployed()
+
       // deploy token1155
       const Token = await ethers.getContractFactory("Token")
       const derivable1155 = await Token.deploy(
-          "Test/",
-          utr.address
+        "Test/",
+        utr.address,
+        owner.address,
+        tokenDescriptor.address
       )
       await derivable1155.deployed()
       // erc20 factory
@@ -240,6 +248,21 @@ describe("DDL v3", function () {
           expect(shortDecimals).to.be.equals(6)
           expect(cpDecimals).to.be.equals(12)
       })
+
+      it("Token metadata", async function() {
+        const {
+            derivablePool,
+            derivable1155
+        } = await loadFixture(deployDDLv2)
+
+        const longMetadata = await derivable1155.uri(convertId(SIDE_A, derivablePool.address))
+        const shortMetadata = await derivable1155.uri(convertId(SIDE_B, derivablePool.address))
+        const cpMetadata = await derivable1155.uri(convertId(SIDE_C, derivablePool.address))
+
+        expect(longMetadata).to.be.equals('{"name":"Long 5x WETH/USDC (WETH)", "decimals":6, "symbol":"WETH+5xWETH/USDC"}')
+        expect(shortMetadata).to.be.equals('{"name":"Short 5x WETH/USDC (WETH)", "decimals":6, "symbol":"WETH-5xWETH/USDC"}')
+        expect(cpMetadata).to.be.equals('{"name":"CP 5x WETH/USDC (WETH)", "decimals":12, "symbol":"WETHCP5xWETH/USDC"}')
+    })
   })
 })
 

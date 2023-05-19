@@ -93,11 +93,18 @@ async function scenerio01() {
   const asymptoticPerpetual = await AsymptoticPerpetual.deploy();
   await asymptoticPerpetual.deployed();
 
+  // deploy descriptor
+  const TokenDescriptor = await ethers.getContractFactory("TokenDescriptor")
+  const tokenDescriptor = await TokenDescriptor.deploy()
+  await tokenDescriptor.deployed()
+
   // deploy token1155
   const Token = await ethers.getContractFactory("Token")
   const derivable1155 = await Token.deploy(
     "Test/",
-    utr.address
+    utr.address,
+    owner.address,
+    tokenDescriptor.address
   )
   await derivable1155.deployed()
 
@@ -263,11 +270,18 @@ async function scenerio02() {
   const asymptoticPerpetual = await AsymptoticPerpetual.deploy();
   await asymptoticPerpetual.deployed();
 
+  // deploy descriptor
+  const TokenDescriptor = await ethers.getContractFactory("TokenDescriptor")
+  const tokenDescriptor = await TokenDescriptor.deploy()
+  await tokenDescriptor.deployed()
+
   // deploy token1155
   const Token = await ethers.getContractFactory("Token")
   const derivable1155 = await Token.deploy(
     "Test/",
-    utr.address
+    utr.address,
+    owner.address,
+    tokenDescriptor.address
   )
   await derivable1155.deployed()
 
