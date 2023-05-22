@@ -159,8 +159,7 @@ contract AsymptoticPerpetual is Storage, Constants, IAsymptoticPerpetual {
         Config memory config,
         uint sideIn,
         uint sideOut,
-        address helper,
-        bytes memory payload
+        SwapParam memory param
     ) external override returns(uint amountIn, uint amountOut) {
         require(sideIn != sideOut, 'SAME_SIDE');
         // [PRICE SELECTION]
@@ -172,7 +171,7 @@ contract AsymptoticPerpetual is Storage, Constants, IAsymptoticPerpetual {
         );
         (Market memory market, uint rA, uint rB) = _selectPrice(config, state, sideIn, sideOut);
         // [CALCULATION]
-        State memory state1 = IHelper(helper).swapToState(market, state, rA, rB, payload);
+        State memory state1 = IHelper(param.helper).swapToState(market, state, rA, rB, param.payload);
         if (state.R != state1.R) {
             uint R = FullMath.mulDivRoundingUp(state1.R, amountIn, Q64);
             s_R = R;
@@ -228,6 +227,10 @@ contract AsymptoticPerpetual is Storage, Constants, IAsymptoticPerpetual {
                     }
                     amountOut = FullMath.mulDiv(rB1 - rB, s, rB);
                     s_b = state1.b;
+                }
+                if (param.discountTime > 0) {
+                    s = _decayRate(param.discountTime, config.HALF_LIFE);
+                    amountOut = FullMath.mulDiv(amountOut, s, Q64);
                 }
             }
         }
