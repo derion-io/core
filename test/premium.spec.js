@@ -324,6 +324,11 @@ describe("Premium", function () {
         accountA.address
       )
 
+      expect(longWithPremium, "premium taken").lt(longWithoutPremium)
+      expect(longWithPremium, "premium taken").gte(
+        longWithoutPremium.mul(config.PREMIUM_RATE).div(imbalanceRate).sub(20)
+      )
+
       expect(Number(weiToNumber(longWithPremium.mul(imbalanceRate).div(config.PREMIUM_RATE))))
         .to.be.closeTo(
           Number(weiToNumber(longWithoutPremium)), 0.00001
