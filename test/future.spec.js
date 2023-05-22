@@ -121,7 +121,7 @@ describe("Future", function () {
       halfLife: toHalfLife(0.006),
       minExpirationD: 24 * 60 * 60, // 1 day
       minExpirationC: 12 * 60 * 60, // 0.5 day
-      discountRate: bn(50).div(100).shl(128)
+      discountRate: bn(50).shl(128).div(100)
     }
     const poolAddress = await poolFactory.computePoolAddress(params)
     await weth.deposit({
