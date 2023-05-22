@@ -11,6 +11,12 @@ struct Config {
     uint HALF_LIFE; // TODO: change to uint32
 }
 
+struct SwapParam {
+    uint zeroInterestTime;
+    address helper;
+    bytes payload;
+}
+
 struct Market {
     uint xkA;
     uint xkB;
@@ -32,13 +38,12 @@ interface IAsymptoticPerpetual {
     ) external returns (uint rA, uint rB, uint rC);
 
     /**
-     * @param payload passed to Helper.swapToState callback, should not used by this function
+     * @param param: payload passed to Helper.swapToState callback, should not used by this function
      */
     function swap(
         Config calldata config,
         uint sideIn,
         uint sideOut,
-        address helper,
-        bytes calldata payload
+        SwapParam calldata param
     ) external returns(uint amountIn, uint amountOut);
 }

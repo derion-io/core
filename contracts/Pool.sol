@@ -28,6 +28,7 @@ contract Pool is IPool, Storage, Events, Constants {
     uint internal immutable HALF_LIFE;
     uint32 internal immutable MIN_EXPIRATION_D;
     uint32 internal immutable MIN_EXPIRATION_C;
+    uint internal immutable DISCOUNT_RATE;
 
     constructor() {
         FACTORY = IPoolFactory(msg.sender);
@@ -44,6 +45,7 @@ contract Pool is IPool, Storage, Events, Constants {
         HALF_LIFE = params.halfLife;
         MIN_EXPIRATION_D = params.minExpirationD;
         MIN_EXPIRATION_C = params.minExpirationC;
+        DISCOUNT_RATE = params.discountRate;
         INIT_TIME = params.initTime > 0 ? params.initTime : block.timestamp;
         require(block.timestamp >= INIT_TIME, "PAST_INIT_TIME");
 
@@ -131,25 +133,30 @@ contract Pool is IPool, Storage, Events, Constants {
         if (sideOut == SIDE_C) {
             require(expiration >= MIN_EXPIRATION_C, "INSUFFICIENT_EXPIRATION_C");
         }
-        if (sideOut == SIDE_A || sideOut == SIDE_B) {
-            require(expiration >= MIN_EXPIRATION_D, "INSUFFICIENT_EXPIRATION_D");
-        }
-        (bool success, bytes memory result) = LOGIC.delegatecall(
-            abi.encodeWithSelector(
-                IAsymptoticPerpetual.swap.selector,
-                Config(TOKEN, TOKEN_R, ORACLE, K, MARK, INIT_TIME, HALF_LIFE),
-                sideIn,
-                sideOut,
-                helper,
-                payload
-            )
-        );
-        if (!success) {
-            assembly {
-                revert(add(result, 32), mload(result))
+        {
+            SwapParam memory param = SwapParam(0, helper, payload);
+            if (sideOut == SIDE_A || sideOut == SIDE_B) {
+                require(expiration >= MIN_EXPIRATION_D, "INSUFFICIENT_EXPIRATION_D");
+                if (DISCOUNT_RATE > 0) {
+                    param.zeroInterestTime = (expiration - MIN_EXPIRATION_D) * DISCOUNT_RATE / Q128;
+                }
             }
+            (bool success, bytes memory result) = LOGIC.delegatecall(
+                abi.encodeWithSelector(
+                    IAsymptoticPerpetual.swap.selector,
+                    Config(TOKEN, TOKEN_R, ORACLE, K, MARK, INIT_TIME, HALF_LIFE),
+                    sideIn,
+                    sideOut,
+                    param
+                )
+            );
+            if (!success) {
+                assembly {
+                    revert(add(result, 32), mload(result))
+                }
+            }
+            (amountIn, amountOut) = abi.decode(result, (uint, uint));
         }
-        (amountIn, amountOut) = abi.decode(result, (uint, uint));
         // TODO: reentrancy guard
         if (sideOut == SIDE_R) {
             TransferHelper.safeTransfer(TOKEN_R, recipient, amountOut);
