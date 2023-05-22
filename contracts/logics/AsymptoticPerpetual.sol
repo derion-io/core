@@ -153,27 +153,6 @@ contract AsymptoticPerpetual is Storage, Constants, IAsymptoticPerpetual {
                 (rA, rB) = _evaluate(market, state);
             }
         }
-        if (PREMIUM_RATE > 0) {
-            if (sideOut == SIDE_A) {
-                if (rA > rB) {
-                    uint rC = state.R - rA - rB;
-                    uint imbaRate = FullMath.mulDiv(rA - rB, Q128, rC);
-                    if (imbaRate > PREMIUM_RATE) {
-                        market.xkA = FullMath.mulDiv(market.xkA, imbaRate, PREMIUM_RATE);
-                        (rA, rB) = _evaluate(market, state);
-                    }
-                }
-            } else if (sideOut == SIDE_B) {
-                if (rB > rA) {
-                    uint rC = state.R - rA - rB;
-                    uint imbaRate = FullMath.mulDiv(rB - rA, Q128, rC);
-                    if (imbaRate > PREMIUM_RATE) {
-                        market.xkB = FullMath.mulDiv(market.xkB, imbaRate, PREMIUM_RATE);
-                        (rA, rB) = _evaluate(market, state);
-                    }
-                }
-            }
-        }
     }
 
     function swap(
@@ -223,9 +202,25 @@ contract AsymptoticPerpetual is Storage, Constants, IAsymptoticPerpetual {
         } else {
             uint s = _supply(config.TOKEN, sideOut);
             if (sideOut == SIDE_A) {
+                if (PREMIUM_RATE > 0 && rA1 > rB1 && state1.a > state.a) {
+                    uint rC1 = state1.R - rA1 - rB1;
+                    uint imbaRate = FullMath.mulDiv(rA1 - rB1, Q128, rC1);
+                    if (imbaRate > PREMIUM_RATE) {
+                        state1.a = state.a + FullMath.mulDiv(state1.a - state.a, PREMIUM_RATE, imbaRate);
+                        rA1 = _r(market.xkA, state1.a, state1.R);
+                    }
+                }
                 amountOut = FullMath.mulDiv(rA1 - rA, s, rA);
                 s_a = state1.a;
             } else if (sideOut == SIDE_B) {
+                if (PREMIUM_RATE > 0 && rB1 > rA1 && state1.b > state.b) {
+                    uint rC1 = state1.R - rA1 - rB1;
+                    uint imbaRate = FullMath.mulDiv(rB1 - rA1, Q128, rC1);
+                    if (imbaRate > PREMIUM_RATE) {
+                        state1.b = state.b + FullMath.mulDiv(state1.b - state.b, PREMIUM_RATE, imbaRate);
+                        rB1 = _r(market.xkB, state1.b, state1.R);
+                    }
+                }
                 amountOut = FullMath.mulDiv(rB1 - rB, s, rB);
                 s_b = state1.b;
             } else if (sideOut == SIDE_C) {
