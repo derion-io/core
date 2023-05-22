@@ -16,6 +16,9 @@ import "../libs/abdk-consulting/abdk-libraries-solidity/ABDKMath64x64.sol";
 contract AsymptoticPerpetual is Storage, Constants, IAsymptoticPerpetual {
     uint internal constant FEE_RATE = 12;    // takes 1/12 cut of LP interest rate
 
+    // TODO: make this immutable in Pool and pass it in Configs
+    uint internal constant PREMIUM_RATE = Q128 / 2;
+
     function init(
         Config memory config,
         uint a,
@@ -148,6 +151,27 @@ contract AsymptoticPerpetual is Storage, Constants, IAsymptoticPerpetual {
                 // TODO: unit test for this case
                 market = _market(config.K, config.MARK, decayRateX64, max);
                 (rA, rB) = _evaluate(market, state);
+            }
+        }
+        if (PREMIUM_RATE > 0) {
+            if (sideOut == SIDE_A) {
+                if (rA > rB) {
+                    uint rC = state.R - rA - rB;
+                    uint imbaRate = FullMath.mulDiv(rA - rB, Q128, rC);
+                    if (imbaRate > PREMIUM_RATE) {
+                        market.xkA = FullMath.mulDiv(market.xkA, imbaRate, PREMIUM_RATE);
+                        (rA, rB) = _evaluate(market, state);
+                    }
+                }
+            } else if (sideOut == SIDE_B) {
+                if (rB > rA) {
+                    uint rC = state.R - rA - rB;
+                    uint imbaRate = FullMath.mulDiv(rB - rA, Q128, rC);
+                    if (imbaRate > PREMIUM_RATE) {
+                        market.xkB = FullMath.mulDiv(market.xkB, imbaRate, PREMIUM_RATE);
+                        (rA, rB) = _evaluate(market, state);
+                    }
+                }
             }
         }
     }
