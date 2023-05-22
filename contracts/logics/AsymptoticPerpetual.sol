@@ -214,6 +214,11 @@ contract AsymptoticPerpetual is Storage, Constants, IAsymptoticPerpetual {
                             rA1 = _r(market.xkA, state1.a, state1.R);
                         }
                     }
+                    if (param.zeroInterestTime > 0) {
+                        amountOut = _decayRate(param.zeroInterestTime, config.HALF_LIFE);
+                        state1.a = state.a + FullMath.mulDiv(state1.a - state.a, amountOut, Q64);
+                        rA1 = _r(market.xkA, state1.a, state1.R);
+                    }
                     amountOut = FullMath.mulDiv(rA1 - rA, s, rA);
                     s_a = state1.a;
                 } else if (sideOut == SIDE_B) {
@@ -225,12 +230,13 @@ contract AsymptoticPerpetual is Storage, Constants, IAsymptoticPerpetual {
                             rB1 = _r(market.xkB, state1.b, state1.R);
                         }
                     }
+                    if (param.zeroInterestTime > 0) {
+                        amountOut = _decayRate(param.zeroInterestTime, config.HALF_LIFE);
+                        state1.b = state.b + FullMath.mulDiv(state1.b - state.b, amountOut, Q64);
+                        rB1 = _r(market.xkB, state1.b, state1.R);
+                    }
                     amountOut = FullMath.mulDiv(rB1 - rB, s, rB);
                     s_b = state1.b;
-                }
-                if (param.zeroInterestTime > 0) {
-                    s = _decayRate(param.zeroInterestTime, config.HALF_LIFE);
-                    amountOut = FullMath.mulDiv(amountOut, s, Q64);
                 }
             }
         }
