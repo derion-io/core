@@ -16,9 +16,6 @@ import "../libs/abdk-consulting/abdk-libraries-solidity/ABDKMath64x64.sol";
 contract AsymptoticPerpetual is Storage, Constants, IAsymptoticPerpetual {
     uint internal constant FEE_RATE = 12;    // takes 1/12 cut of LP interest rate
 
-    // TODO: make this immutable in Pool and pass it in Configs
-    uint internal constant PREMIUM_RATE = Q128 / 2;
-
     function init(
         Config memory config,
         uint a,
@@ -206,11 +203,11 @@ contract AsymptoticPerpetual is Storage, Constants, IAsymptoticPerpetual {
                 amountOut = FullMath.mulDiv(rC1 - rC, s, rC);
             } else {
                 if (sideOut == SIDE_A) {
-                    if (PREMIUM_RATE > 0 && rA1 > rB1 && state1.a > state.a) {
+                    if (config.PREMIUM_RATE > 0 && rA1 > rB1 && state1.a > state.a) {
                         uint rC1 = state1.R - rA1 - rB1;
                         uint imbaRate = FullMath.mulDiv(rA1 - rB1, Q128, rC1);
-                        if (imbaRate > PREMIUM_RATE) {
-                            state1.a = state.a + FullMath.mulDiv(state1.a - state.a, PREMIUM_RATE, imbaRate);
+                        if (imbaRate > config.PREMIUM_RATE) {
+                            state1.a = state.a + FullMath.mulDiv(state1.a - state.a, config.PREMIUM_RATE, imbaRate);
                             rA1 = _r(market.xkA, state1.a, state1.R);
                         }
                     }
@@ -222,11 +219,11 @@ contract AsymptoticPerpetual is Storage, Constants, IAsymptoticPerpetual {
                     amountOut = FullMath.mulDiv(rA1 - rA, s, rA);
                     s_a = state1.a;
                 } else if (sideOut == SIDE_B) {
-                    if (PREMIUM_RATE > 0 && rB1 > rA1 && state1.b > state.b) {
+                    if (config.PREMIUM_RATE > 0 && rB1 > rA1 && state1.b > state.b) {
                         uint rC1 = state1.R - rA1 - rB1;
                         uint imbaRate = FullMath.mulDiv(rB1 - rA1, Q128, rC1);
-                        if (imbaRate > PREMIUM_RATE) {
-                            state1.b = state.b + FullMath.mulDiv(state1.b - state.b, PREMIUM_RATE, imbaRate);
+                        if (imbaRate > config.PREMIUM_RATE) {
+                            state1.b = state.b + FullMath.mulDiv(state1.b - state.b, config.PREMIUM_RATE, imbaRate);
                             rB1 = _r(market.xkB, state1.b, state1.R);
                         }
                     }

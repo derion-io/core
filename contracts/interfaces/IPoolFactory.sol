@@ -8,8 +8,9 @@ struct Params {
     bytes32 oracle; // 1bit QTI, 31bit reserve, 32bit WINDOW, ... PAIR ADDRESS
     address reserveToken;
     address recipient;
-    uint mark;
+    uint    mark;
     uint    halfLife;
+    uint    premiumRate;
     uint32  initTime;
     uint32  minExpirationD;
     uint32  minExpirationC;

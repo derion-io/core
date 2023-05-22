@@ -18,6 +18,7 @@ abstract contract Events {
         uint256 MARK;
         uint256 INIT_TIME;
         uint256 HALF_LIFE;
+        uint256 PREMIUM_RATE;
         uint256 k;
     }
 

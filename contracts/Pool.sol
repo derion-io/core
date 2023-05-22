@@ -26,6 +26,7 @@ contract Pool is IPool, Storage, Events, Constants {
     uint internal immutable MARK;
     uint internal immutable INIT_TIME;
     uint internal immutable HALF_LIFE;
+    uint internal immutable PREMIUM_RATE;
     uint32 internal immutable MIN_EXPIRATION_D;
     uint32 internal immutable MIN_EXPIRATION_C;
     uint internal immutable DISCOUNT_RATE;
@@ -46,6 +47,7 @@ contract Pool is IPool, Storage, Events, Constants {
         MIN_EXPIRATION_D = params.minExpirationD;
         MIN_EXPIRATION_C = params.minExpirationC;
         DISCOUNT_RATE = params.discountRate;
+        PREMIUM_RATE = params.premiumRate;
         INIT_TIME = params.initTime > 0 ? params.initTime : block.timestamp;
         require(block.timestamp >= INIT_TIME, "PAST_INIT_TIME");
 
@@ -59,7 +61,8 @@ contract Pool is IPool, Storage, Events, Constants {
                     K,
                     MARK,
                     INIT_TIME,
-                    HALF_LIFE
+                    HALF_LIFE,
+                    PREMIUM_RATE
                 ),
                 params.a,
                 params.b
@@ -98,6 +101,7 @@ contract Pool is IPool, Storage, Events, Constants {
                 MARK,
                 INIT_TIME,
                 HALF_LIFE,
+                PREMIUM_RATE,
                 params.k
             ))
         );
@@ -144,7 +148,7 @@ contract Pool is IPool, Storage, Events, Constants {
             (bool success, bytes memory result) = LOGIC.delegatecall(
                 abi.encodeWithSelector(
                     IAsymptoticPerpetual.swap.selector,
-                    Config(TOKEN, TOKEN_R, ORACLE, K, MARK, INIT_TIME, HALF_LIFE),
+                    Config(TOKEN, TOKEN_R, ORACLE, K, MARK, INIT_TIME, HALF_LIFE, PREMIUM_RATE),
                     sideIn,
                     sideOut,
                     param
