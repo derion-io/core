@@ -6,7 +6,7 @@ import "./interfaces/IPoolFactory.sol";
 import "./Pool.sol";
 
 contract PoolFactory is IPoolFactory {
-    bytes32 immutable BYTECODE_HASH = keccak256(type(Pool).creationCode);
+    bytes32 immutable public BYTECODE_HASH = keccak256(type(Pool).creationCode);
 
     // storage
     address internal s_feeTo;
@@ -36,6 +36,7 @@ contract PoolFactory is IPoolFactory {
                 params.mark,
                 params.k,
                 params.halfLife,
+                params.premiumRate,
                 params.minExpirationD,
                 params.minExpirationC,
                 params.discountRate

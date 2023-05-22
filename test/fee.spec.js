@@ -143,8 +143,6 @@ HLs.forEach(HALF_LIFE => {
       await poolFactory.createPool(params);
       const derivablePool = await ethers.getContractAt("Pool", await poolFactory.computePoolAddress(params));
 
-      const view = await ethers.getContractAt("View", poolAddress)
-
       await time.increase(100);
       // deploy helper
       const StateCalHelper = await ethers.getContractFactory("contracts/Helper.sol:Helper")
@@ -248,8 +246,7 @@ HLs.forEach(HALF_LIFE => {
         txSignerB,
         swapAndWaitStatic,
         swapAndWait,
-        stateCalHelper,
-        view
+        stateCalHelper
       }
     }
 
