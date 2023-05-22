@@ -134,7 +134,7 @@ describe("DDL v3", function () {
             a: pe(1),
             b: pe(1),
             initTime: 0,
-            halfLife: HALF_LIFE, // ten years
+            halfLife: HALF_LIFE,
             minExpirationD: 0,
             minExpirationC: 0,
         }

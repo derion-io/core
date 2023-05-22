@@ -166,6 +166,7 @@ async function main() {
         halfLife: HALF_LIFE,
         minExpirationD: 0,
         minExpirationC: 0,
+        discountRate: 0,,
     }
     const poolAddress = await poolFactory.computePoolAddress(params)
     await stateCalHelper.createPool(params, poolFactory.address, {value: pe(10)})
@@ -189,6 +190,7 @@ async function main() {
         halfLife: HALF_LIFE,
         minExpirationD: 0,
         minExpirationC: 0,
+        discountRate: 0,,
     }
     const poolAddress1 = await poolFactory.computePoolAddress(params1)
     await stateCalHelper.createPool(params1, poolFactory.address, {value: pe(10)})
