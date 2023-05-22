@@ -123,6 +123,7 @@ HLs.forEach(HALF_LIFE => {
         halfLife: HALF_LIFE,
         minExpirationD: 0,
         minExpirationC: 0,
+        discountRate: 0
       }
       const poolAddress = await poolFactory.computePoolAddress(params);
       let txSignerA = weth.connect(accountA);

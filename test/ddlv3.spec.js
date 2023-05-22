@@ -137,6 +137,7 @@ describe("DDL v3", function () {
             halfLife: HALF_LIFE, // ten years
             minExpirationD: 0,
             minExpirationC: 0,
+            discountRate: 0
         }
         const poolAddress = await poolFactory.computePoolAddress(params)
         await weth.deposit({
