@@ -206,7 +206,7 @@ contract AsymptoticPerpetual is Storage, Constants, IAsymptoticPerpetual {
                 // TODO: don't share variable if possible
                 amountOut = config.PREMIUM_RATE;
                 if (sideOut == SIDE_A) {
-                    if (amountOut > 0 && rA1 > rB1 && state1.a > state.a) {
+                    if (amountOut > 0 && rA1 > rB1) {
                         uint rC1 = state1.R - rA1 - rB1;
                         uint imbaRate = FullMath.mulDiv(rA1 - rB1, Q128, rC1);
                         if (imbaRate > amountOut) {
@@ -222,7 +222,7 @@ contract AsymptoticPerpetual is Storage, Constants, IAsymptoticPerpetual {
                     amountOut = FullMath.mulDiv(rA1 - rA, s, rA);
                     s_a = state1.a;
                 } else if (sideOut == SIDE_B) {
-                    if (amountOut > 0 && rB1 > rA1 && state1.b > state.b) {
+                    if (amountOut > 0 && rB1 > rA1) {
                         uint rC1 = state1.R - rA1 - rB1;
                         uint imbaRate = FullMath.mulDiv(rB1 - rA1, Q128, rC1);
                         if (imbaRate > amountOut) {
