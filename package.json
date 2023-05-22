@@ -41,6 +41,7 @@
     "hardhat-deploy": "^0.11.12",
     "hardhat-gas-reporter": "^1.0.9",
     "hardhat-tracer": "^2.2.2",
+    "hardhat-exposed": "^0.3.4",
     "mocha": "^10.0.0",
     "prettier": "^2.7.1",
     "prettier-plugin-solidity": "^1.0.0-dev.23",

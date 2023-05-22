@@ -125,6 +125,7 @@ HLs.forEach(HALF_LIFE => {
         b: '30000000000',
         initTime: await time.latest(),
         halfLife: HALF_LIFE,
+        premiumRate: '0',
         minExpirationD: 0,
         minExpirationC: 0,
         discountRate: 0,

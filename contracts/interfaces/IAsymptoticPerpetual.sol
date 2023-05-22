@@ -9,6 +9,7 @@ struct Config {
     uint MARK;
     uint INIT_TIME; // TODO: change to uint32
     uint HALF_LIFE; // TODO: change to uint32
+    uint PREMIUM_RATE;
 }
 
 struct SwapParam {

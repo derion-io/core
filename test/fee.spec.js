@@ -121,6 +121,7 @@ HLs.forEach(HALF_LIFE => {
         b: '30000000000',
         initTime: await time.latest(),
         halfLife: HALF_LIFE,
+        premiumRate: bn(1).shl(128).div(2),
         minExpirationD: 0,
         minExpirationC: 0,
         discountRate: 0,
@@ -141,8 +142,6 @@ HLs.forEach(HALF_LIFE => {
       await weth.transfer(poolAddress, numberToWei(1));
       await poolFactory.createPool(params);
       const derivablePool = await ethers.getContractAt("Pool", await poolFactory.computePoolAddress(params));
-
-      const view = await ethers.getContractAt("View", poolAddress)
 
       await time.increase(100);
       // deploy helper
@@ -247,8 +246,7 @@ HLs.forEach(HALF_LIFE => {
         txSignerB,
         swapAndWaitStatic,
         swapAndWait,
-        stateCalHelper,
-        view
+        stateCalHelper
       }
     }
 
