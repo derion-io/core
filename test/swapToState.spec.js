@@ -50,8 +50,9 @@ describe("DDL v3", function () {
         // deploy token1155
         const Token = await ethers.getContractFactory("Token")
         const derivable1155 = await Token.deploy(
-            "Test/",
-            utr.address
+            utr.address,
+            owner.address,
+            owner.address
         )
         await derivable1155.deployed()
         // erc20 factory
@@ -127,7 +128,11 @@ describe("DDL v3", function () {
             a: pe(1),
             b: pe(1),
             initTime: 0,
-            halfLife: HALF_LIFE // ten years
+            halfLife: HALF_LIFE,
+            premiumRate: 0,
+            minExpirationD: 0,
+            minExpirationC: 0,
+            discountRate: 0
         }
         const poolAddress = await poolFactory.computePoolAddress(params)
         await weth.deposit({
@@ -139,11 +144,12 @@ describe("DDL v3", function () {
         // deploy helper
         const StateCalHelper = await ethers.getContractFactory("contracts/Helper.sol:Helper")
         const stateCalHelper = await StateCalHelper.deploy(
-            derivable1155.address
+            derivable1155.address,
+            weth.address
         )
         await stateCalHelper.deployed()
 
-        const DerivableHelper = await ethers.getContractFactory("contracts/test/Helper.sol:Helper")
+        const DerivableHelper = await ethers.getContractFactory("contracts/test/TestHelper.sol:TestHelper")
         const derivableHelper = await DerivableHelper.deploy(
             derivablePool.address,
             derivable1155.address,
@@ -213,6 +219,7 @@ describe("DDL v3", function () {
                 SIDE_A,
                 stateCalHelper.address,
                 encodePayload(0, SIDE_R, SIDE_A, pe(20)),
+                0,
                 AddressZero,
                 owner.address,
                 opts
@@ -223,6 +230,7 @@ describe("DDL v3", function () {
                 SIDE_B,
                 stateCalHelper.address,
                 encodePayload(0, SIDE_R, SIDE_B, pe(1)),
+                0,
                 AddressZero,
                 owner.address,
                 opts
@@ -233,6 +241,7 @@ describe("DDL v3", function () {
                 SIDE_C,
                 stateCalHelper.address,
                 encodePayload(0, SIDE_R, SIDE_C, pe(1)),
+                0,
                 AddressZero,
                 owner.address,
                 opts
@@ -255,6 +264,7 @@ describe("DDL v3", function () {
                 SIDE_A,
                 stateCalHelper.address,
                 encodePayload(0, SIDE_R, SIDE_A, '999999999999999999999999'),
+                0,
                 AddressZero,
                 accountA.address,
                 opts
@@ -265,6 +275,7 @@ describe("DDL v3", function () {
                 SIDE_A,
                 stateCalHelper.address,
                 encodePayload(0, SIDE_R, SIDE_A, '1000000000000000000000000'),
+                0,
                 AddressZero,
                 accountA.address,
                 opts
@@ -282,6 +293,7 @@ describe("DDL v3", function () {
                 SIDE_A,
                 stateCalHelper.address,
                 encodePayload(0, SIDE_R, SIDE_A, pe(1)),
+                0,
                 AddressZero,
                 owner.address,
                 opts
@@ -292,6 +304,7 @@ describe("DDL v3", function () {
                 SIDE_B,
                 stateCalHelper.address,
                 encodePayload(0, SIDE_R, SIDE_B, pe(20)),
+                0,
                 AddressZero,
                 owner.address,
                 opts
@@ -302,6 +315,7 @@ describe("DDL v3", function () {
                 SIDE_C,
                 stateCalHelper.address,
                 encodePayload(0, SIDE_R, SIDE_C, pe(1)),
+                0,
                 AddressZero,
                 owner.address,
                 opts
@@ -324,6 +338,7 @@ describe("DDL v3", function () {
                 SIDE_B,
                 stateCalHelper.address,
                 encodePayload(0, SIDE_R, SIDE_B, '999999999999999999999999'),
+                0,
                 AddressZero,
                 accountA.address,
                 opts
@@ -334,6 +349,7 @@ describe("DDL v3", function () {
                 SIDE_B,
                 stateCalHelper.address,
                 encodePayload(0, SIDE_R, SIDE_B, '1000000000000000000000000'),
+                0,
                 AddressZero,
                 accountA.address,
                 opts

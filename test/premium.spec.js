@@ -79,8 +79,9 @@ describe("Premium", function () {
     // deploy token1155
     const Token = await ethers.getContractFactory("Token")
     const derivable1155 = await Token.deploy(
-      "Test/",
-      utr.address
+      utr.address,
+      owner.address,
+      owner.address
     )
     await derivable1155.deployed()
 
@@ -119,6 +120,7 @@ describe("Premium", function () {
       premiumRate: '0',
       minExpirationD: 0,
       minExpirationC: 0,
+      discountRate: 0
     }
     const poolNoPremiumAddress = await poolFactory.computePoolAddress(params);
     await weth.transfer(poolNoPremiumAddress, numberToWei(1));

@@ -142,6 +142,7 @@ DCs.forEach(DISCOUNT_RATE => {
         b: pe(1),
         initTime: 0,
         halfLife: toHalfLife(0.006),
+        premiumRate: 0,
         minExpirationD: 24 * 60 * 60, // 1 day
         minExpirationC: 12 * 60 * 60, // 0.5 day
         discountRate: bn(DISCOUNT_RATE).shl(128).div(100)
