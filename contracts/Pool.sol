@@ -138,7 +138,7 @@ contract Pool is IPool, Storage, Events, Constants {
             if (sideOut == SIDE_A || sideOut == SIDE_B) {
                 require(expiration >= MIN_EXPIRATION_D, "INSUFFICIENT_EXPIRATION_D");
                 if (DISCOUNT_RATE > 0) {
-                    param.discountTime = (expiration - MIN_EXPIRATION_D) * DISCOUNT_RATE / Q128;
+                    param.zeroInterestTime = (expiration - MIN_EXPIRATION_D) * DISCOUNT_RATE / Q128;
                 }
             }
             (bool success, bytes memory result) = LOGIC.delegatecall(

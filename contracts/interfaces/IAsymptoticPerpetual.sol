@@ -12,7 +12,7 @@ struct Config {
 }
 
 struct SwapParam {
-    uint discountTime;
+    uint zeroInterestTime;
     address helper;
     bytes payload;
 }

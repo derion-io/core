@@ -228,8 +228,8 @@ contract AsymptoticPerpetual is Storage, Constants, IAsymptoticPerpetual {
                     amountOut = FullMath.mulDiv(rB1 - rB, s, rB);
                     s_b = state1.b;
                 }
-                if (param.discountTime > 0) {
-                    s = _decayRate(param.discountTime, config.HALF_LIFE);
+                if (param.zeroInterestTime > 0) {
+                    s = _decayRate(param.zeroInterestTime, config.HALF_LIFE);
                     amountOut = FullMath.mulDiv(amountOut, s, Q64);
                 }
             }
