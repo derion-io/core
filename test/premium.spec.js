@@ -306,22 +306,22 @@ describe("Premium", function () {
     }
   }
 
-  it("RiskFactory > PremiumRate: 1e", async function () {
+  it("RiskFactory > PremiumRate: Buy long 1e", async function () {
     const { premiumBuyingLong } = await loadFixture(fixture)
     await premiumBuyingLong(1)
   })
 
-  it("RiskFactory > PremiumRate: 0.5e", async function () {
+  it("RiskFactory > PremiumRate: Buy long 0.5e", async function () {
     const { premiumBuyingLong } = await loadFixture(fixture)
     await premiumBuyingLong(0.5)
   })
 
-  it("RiskFactory > PremiumRate: 2e", async function () {
+  it("RiskFactory > PremiumRate: Buy long 2e", async function () {
     const { premiumBuyingLong } = await loadFixture(fixture)
     await premiumBuyingLong(2)
   })
 
-  it("RiskFactory ≤ PremiumRate: 0.1e", async function () {
+  it("RiskFactory ≤ PremiumRate: Buy long 0.1e", async function () {
     const {txSignerA, txSignerANoPremium, stateCalHelper, accountA} = await loadFixture(fixture)
 
     const withPremium = await attemptStaticSwap(
@@ -350,7 +350,7 @@ describe("Premium", function () {
       .to.be.equal(withoutPremium)
   })
 
-  it("RiskFactory ≥ -PremiumRate: 0.1e", async function () {
+  it("RiskFactory ≥ -PremiumRate:  Buy short 0.1e", async function () {
     const {txSignerA, txSignerANoPremium, stateCalHelper, accountA} = await loadFixture(fixture)
 
     const withPremium = await attemptStaticSwap(
@@ -379,17 +379,17 @@ describe("Premium", function () {
       .to.be.equal(withoutPremium)
   })
 
-  it("RiskFactory < -PremiumRate: 1e", async function () {
+  it("RiskFactory < -PremiumRate: Buy short 1e", async function () {
     const { premiumBuyingShort } = await loadFixture(fixture)
     await premiumBuyingShort(1)
   })
 
-  it("RiskFactory < -PremiumRate: 0.5e", async function () {
+  it("RiskFactory < -PremiumRate: Buy short 0.5e", async function () {
     const { premiumBuyingShort } = await loadFixture(fixture)
     await premiumBuyingShort(0.5)
   })
 
-  it("RiskFactory < -PremiumRate: 2e", async function () {
+  it("RiskFactory < -PremiumRate: Buy short 2e", async function () {
     const { premiumBuyingShort } = await loadFixture(fixture)
     await premiumBuyingShort(2)
   })
