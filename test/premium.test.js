@@ -418,27 +418,27 @@ describe("Premium", function () {
     }
   }
 
-  it("RiskFactory > PremiumRate: Buy long 1e", async function () {
+  it("RiskFactor > PremiumRate: Buy long 1e", async function () {
     const { premiumBuyingLong } = await loadFixture(fixture)
     await premiumBuyingLong(1)
   })
 
-  it("RiskFactory > PremiumRate: Buy long 0.5e", async function () {
+  it("RiskFactor > PremiumRate: Buy long 0.5e", async function () {
     const { premiumBuyingLong } = await loadFixture(fixture)
     await premiumBuyingLong(0.5)
   })
 
-  it("RiskFactory > PremiumRate: Buy long 2e", async function () {
+  it("RiskFactor > PremiumRate: Buy long 2e", async function () {
     const { premiumBuyingLong } = await loadFixture(fixture)
     await premiumBuyingLong(2)
   })
 
-  it("RiskFactory > PremiumRate: Buy short 0.1e", async function () {
+  it("RiskFactor > PremiumRate: Buy short 0.1e", async function () {
     const { premiumAppliedLongBuyShort } = await loadFixture(fixture)
     await premiumAppliedLongBuyShort(0.1)
   })
 
-  it("RiskFactory ≤ PremiumRate: Buy long 0.1e", async function () {
+  it("RiskFactor ≤ PremiumRate: Buy long 0.1e", async function () {
     const { txSignerA, txSignerANoPremium, stateCalHelper, accountA } = await loadFixture(fixture)
 
     const withPremium = await attemptStaticSwap(
@@ -467,7 +467,7 @@ describe("Premium", function () {
       .to.be.equal(withoutPremium)
   })
 
-  it("RiskFactory ≥ -PremiumRate:  Buy short 0.1e", async function () {
+  it("RiskFactor ≥ -PremiumRate: Buy short 0.1e", async function () {
     const { txSignerA, txSignerANoPremium, stateCalHelper, accountA } = await loadFixture(fixture)
 
     const withPremium = await attemptStaticSwap(
@@ -496,22 +496,22 @@ describe("Premium", function () {
       .to.be.equal(withoutPremium)
   })
 
-  it("RiskFactory < -PremiumRate: Buy short 1e", async function () {
+  it("RiskFactor < -PremiumRate: Buy short 1e", async function () {
     const { premiumBuyingShort } = await loadFixture(fixture)
     await premiumBuyingShort(1)
   })
 
-  it("RiskFactory < -PremiumRate: Buy short 0.7e", async function () {
+  it("RiskFactor < -PremiumRate: Buy short 0.7e", async function () {
     const { premiumBuyingShort } = await loadFixture(fixture)
     await premiumBuyingShort(0.7)
   })
 
-  it("RiskFactory < -PremiumRate: Buy short 2e", async function () {
+  it("RiskFactor < -PremiumRate: Buy short 2e", async function () {
     const { premiumBuyingShort } = await loadFixture(fixture)
     await premiumBuyingShort(2)
   })
 
-  it("RiskFactory < -PremiumRate: Buy long 0.1e", async function () {
+  it("RiskFactor < -PremiumRate: Buy long 0.1e", async function () {
     const { premiumAppliedShortBuyLong } = await loadFixture(fixture)
     await premiumAppliedShortBuyLong(0.1)
   })
