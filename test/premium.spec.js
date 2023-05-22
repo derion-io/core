@@ -181,6 +181,104 @@ describe("Premium", function () {
     const txSignerANoPremium = derivablePoolNoPremium.connect(accountA);
     const txSignerBNoPremium = derivablePoolNoPremium.connect(accountB);
 
+    async function premiumAppliedLongBuyShort(amount) {
+      await attemptSwap(
+        txSignerA,
+        0,
+        0x00,
+        0x10,
+        numberToWei(1),
+        stateCalHelper.address,
+        '0x0000000000000000000000000000000000000000',
+        accountA.address
+      )
+
+      await attemptSwap(
+        txSignerANoPremium,
+        0,
+        0x00,
+        0x10,
+        numberToWei(1),
+        stateCalHelper.address,
+        '0x0000000000000000000000000000000000000000',
+        accountA.address
+      )
+
+      const shortWithPremium = await attemptStaticSwap(
+        txSignerA,
+        0,
+        0x00,
+        0x20,
+        numberToWei(amount),
+        stateCalHelper.address,
+        '0x0000000000000000000000000000000000000000',
+        accountA.address
+      )
+
+      const shortWithoutPremium = await attemptStaticSwap(
+        txSignerANoPremium,
+        0,
+        0x00,
+        0x20,
+        numberToWei(amount),
+        stateCalHelper.address,
+        '0x0000000000000000000000000000000000000000',
+        accountA.address
+      )
+
+      expect(shortWithPremium)
+        .to.be.equal(shortWithoutPremium)
+    }
+
+    async function premiumAppliedShortBuyLong(amount) {
+      await attemptSwap(
+        txSignerA,
+        0,
+        0x00,
+        0x20,
+        numberToWei(1),
+        stateCalHelper.address,
+        '0x0000000000000000000000000000000000000000',
+        accountA.address
+      )
+
+      await attemptSwap(
+        txSignerANoPremium,
+        0,
+        0x00,
+        0x20,
+        numberToWei(1),
+        stateCalHelper.address,
+        '0x0000000000000000000000000000000000000000',
+        accountA.address
+      )
+
+      const longWithPremium = await attemptStaticSwap(
+        txSignerA,
+        0,
+        0x00,
+        0x10,
+        numberToWei(amount),
+        stateCalHelper.address,
+        '0x0000000000000000000000000000000000000000',
+        accountA.address
+      )
+
+      const longWithoutPremium = await attemptStaticSwap(
+        txSignerANoPremium,
+        0,
+        0x00,
+        0x10,
+        numberToWei(amount),
+        stateCalHelper.address,
+        '0x0000000000000000000000000000000000000000',
+        accountA.address
+      )
+
+
+      expect(longWithPremium).to.be.equal(longWithoutPremium)
+    }
+
     async function premiumBuyingLong(amount) {
       const state = await txSignerA.getStates()
       const price = await asymptoticPerpetual.$_selectPrice(
@@ -302,7 +400,9 @@ describe("Premium", function () {
       config,
       params,
       premiumBuyingLong,
-      premiumBuyingShort
+      premiumBuyingShort,
+      premiumAppliedLongBuyShort,
+      premiumAppliedShortBuyLong
     }
   }
 
@@ -319,6 +419,11 @@ describe("Premium", function () {
   it("RiskFactory > PremiumRate: Buy long 2e", async function () {
     const { premiumBuyingLong } = await loadFixture(fixture)
     await premiumBuyingLong(2)
+  })
+
+  it("RiskFactory > PremiumRate: Buy short 0.1e", async function () {
+    const { premiumAppliedLongBuyShort } = await loadFixture(fixture)
+    await premiumAppliedLongBuyShort(0.1)
   })
 
   it("RiskFactory ≤ PremiumRate: Buy long 0.1e", async function () {
@@ -392,5 +497,10 @@ describe("Premium", function () {
   it("RiskFactory < -PremiumRate: Buy short 2e", async function () {
     const { premiumBuyingShort } = await loadFixture(fixture)
     await premiumBuyingShort(2)
+  })
+
+  it("RiskFactory < -PremiumRate: Buy long 0.1e", async function () {
+    const { premiumAppliedShortBuyLong } = await loadFixture(fixture)
+    await premiumAppliedShortBuyLong(0.1)
   })
 })
