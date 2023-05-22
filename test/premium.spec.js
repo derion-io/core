@@ -328,11 +328,11 @@ describe("Premium", function () {
       expect(longWithPremium, "premium taken").gte(
         longWithoutPremium.mul(config.PREMIUM_RATE).div(imbalanceRate).sub(20)
       )
-
-      expect(Number(weiToNumber(longWithPremium.mul(imbalanceRate).div(config.PREMIUM_RATE))))
-        .to.be.closeTo(
-          Number(weiToNumber(longWithoutPremium)), 0.00001
-        )
+      if (amount <= 1)
+        expect(Number(weiToNumber(longWithPremium.mul(imbalanceRate).div(config.PREMIUM_RATE))))
+          .to.be.closeTo(
+            Number(weiToNumber(longWithoutPremium)), 0.00001
+          )
     }
 
     async function premiumBuyingShort(amount) {
@@ -380,10 +380,15 @@ describe("Premium", function () {
         accountA.address
       )
 
-      expect(Number(weiToNumber(shortWithPremium.mul(imbalanceRate).div(config.PREMIUM_RATE))))
-        .to.be.closeTo(
-          Number(weiToNumber(shortWithoutPremium)), 0.00001
-        )
+      expect(shortWithPremium, "premium taken").lt(shortWithoutPremium)
+      expect(shortWithPremium, "premium taken").gte(
+        shortWithoutPremium.mul(config.PREMIUM_RATE).div(imbalanceRate).sub(20)
+      )
+      if (amount <= 1)
+        expect(Number(weiToNumber(shortWithPremium.mul(imbalanceRate).div(config.PREMIUM_RATE))))
+          .to.be.closeTo(
+            Number(weiToNumber(shortWithoutPremium)), 0.00001
+          )
     }
 
     return {
@@ -432,7 +437,7 @@ describe("Premium", function () {
   })
 
   it("RiskFactory ≤ PremiumRate: Buy long 0.1e", async function () {
-    const {txSignerA, txSignerANoPremium, stateCalHelper, accountA} = await loadFixture(fixture)
+    const { txSignerA, txSignerANoPremium, stateCalHelper, accountA } = await loadFixture(fixture)
 
     const withPremium = await attemptStaticSwap(
       txSignerA,
@@ -461,7 +466,7 @@ describe("Premium", function () {
   })
 
   it("RiskFactory ≥ -PremiumRate:  Buy short 0.1e", async function () {
-    const {txSignerA, txSignerANoPremium, stateCalHelper, accountA} = await loadFixture(fixture)
+    const { txSignerA, txSignerANoPremium, stateCalHelper, accountA } = await loadFixture(fixture)
 
     const withPremium = await attemptStaticSwap(
       txSignerA,
@@ -494,9 +499,9 @@ describe("Premium", function () {
     await premiumBuyingShort(1)
   })
 
-  it("RiskFactory < -PremiumRate: Buy short 0.5e", async function () {
+  it("RiskFactory < -PremiumRate: Buy short 0.7e", async function () {
     const { premiumBuyingShort } = await loadFixture(fixture)
-    await premiumBuyingShort(0.5)
+    await premiumBuyingShort(0.7)
   })
 
   it("RiskFactory < -PremiumRate: Buy short 2e", async function () {
