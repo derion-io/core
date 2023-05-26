@@ -5,14 +5,12 @@ abstract contract Events {
     event Derivable(
         bytes32 indexed topic1,
         bytes32 indexed topic2,
-        bytes32 indexed topic3,
         bytes data
     );
 
     struct PoolCreated {
         address UTR;
         address TOKEN;
-        address LOGIC;
         bytes32 ORACLE;
         address TOKEN_R;
         uint256 MARK;

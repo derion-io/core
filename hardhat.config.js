@@ -8,7 +8,7 @@ require("hardhat-contract-sizer");
 require("@openzeppelin/hardhat-upgrades");
 require("hardhat-gas-reporter");
 require("hardhat-tracer");
-require("hardhat-exposed");
+// require("hardhat-exposed");
 require("solidity-coverage");
 
 require("./scripts/DeployDDLCore.sf");
@@ -22,7 +22,7 @@ module.exports = {
                 settings: {
                     optimizer: {
                         enabled: true,
-                        runs: 1000000,
+                        runs: 5,
                     },
                 },
             },
@@ -31,7 +31,7 @@ module.exports = {
                 settings: {
                     optimizer: {
                         enabled: true,
-                        runs: 1000000,
+                        runs: 5,
                     },
                 },
             }

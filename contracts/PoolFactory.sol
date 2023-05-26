@@ -30,7 +30,6 @@ contract PoolFactory is IPoolFactory {
         return keccak256(
             abi.encodePacked(
                 params.token,
-                params.logic,
                 params.oracle,
                 params.reserveToken,
                 params.mark,
