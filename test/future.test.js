@@ -22,7 +22,7 @@ const SIDE_B = 0x20
 const SIDE_C = 0x30
 
 const SECONDS_PER_DAY = 86400
-const DCs = [25, 50, 75] // 25%, 50%, 75%
+const DCs = [1, 25, 50, 75, 100]
 
 function toHalfLife(dailyRate) {
   return dailyRate == 0 ? 0 : Math.round(SECONDS_PER_DAY/Math.log2(1/(1-dailyRate)))
@@ -143,8 +143,8 @@ DCs.forEach(DISCOUNT_RATE => {
         initTime: 0,
         halfLife: toHalfLife(0.006),
         premiumRate: 0,
-        minExpirationD: 24 * 60 * 60, // 1 day
-        minExpirationC: 12 * 60 * 60, // 0.5 day
+        minExpirationD: 0,
+        minExpirationC: 0,
         discountRate: bn(DISCOUNT_RATE).shl(128).div(100)
       }
       const poolAddress = await poolFactory.computePoolAddress(params)
@@ -153,8 +153,34 @@ DCs.forEach(DISCOUNT_RATE => {
       })
       await weth.transfer(poolAddress, pe("100"))
       await poolFactory.createPool(params)
-      const createPoolTimestamp = await time.latest()
       const derivablePool = await ethers.getContractAt("Pool", await poolFactory.computePoolAddress(params))
+
+      const params1 = {
+        utr: utr.address,
+        token: derivable1155.address,
+        logic: asymptoticPerpetual.address,
+        oracle,
+        reserveToken: weth.address,
+        recipient: owner.address,
+        mark: bn(38).shl(128),
+        k: 6,
+        a: pe(1),
+        b: pe(1),
+        initTime: 0,
+        halfLife: toHalfLife(0.006),
+        premiumRate: '0',
+        minExpirationD: 24 * 60 * 60,
+        minExpirationC: 12 * 60 * 60,
+        discountRate: bn(DISCOUNT_RATE).shl(128).div(100)
+      }
+      const poolAddress1 = await poolFactory.computePoolAddress(params1)
+      await weth.deposit({
+        value: pe("1000000")
+      })
+      await weth.transfer(poolAddress1, pe("100"))
+      await poolFactory.createPool(params1)
+      const createPoolTimestamp = await time.latest()
+      const derivablePool1 = await ethers.getContractAt("Pool", await poolFactory.computePoolAddress(params1))
 
       // deploy helper
       const StateCalHelper = await ethers.getContractFactory("contracts/Helper.sol:Helper")
@@ -179,7 +205,7 @@ DCs.forEach(DISCOUNT_RATE => {
       await weth.connect(accountB).deposit({
         value: pe("1000000")
       })
-      await usdc.transfer(accountA.address, pe("100000000"))
+      await usdc.transfer(accountB.address, pe("100000000"))
       return {
         owner,
         accountA,
@@ -189,6 +215,7 @@ DCs.forEach(DISCOUNT_RATE => {
         utr,
         uniswapFactory,
         derivablePool,
+        derivablePool1,
         createPoolTimestamp,
         derivable1155,
         uniswapRouter,
@@ -200,9 +227,9 @@ DCs.forEach(DISCOUNT_RATE => {
 
     describe("Future Expiration", function () {
       it("Check time lock of the tokens of pool owner", async function () {
-        const { owner, weth, derivablePool, derivable1155, stateCalHelper, accountB, createPoolTimestamp } = await loadFixture(deployDDLv2)
-        await weth.approve(derivablePool.address, MaxUint256)
-        await expect(derivablePool.swap(
+        const { owner, weth, derivablePool1, derivable1155, stateCalHelper, accountB, createPoolTimestamp } = await loadFixture(deployDDLv2)
+        await weth.approve(derivablePool1.address, MaxUint256)
+        await expect(derivablePool1.swap(
           SIDE_R,
           SIDE_A,
           stateCalHelper.address,
@@ -212,7 +239,7 @@ DCs.forEach(DISCOUNT_RATE => {
           accountB.address,
           opts
         )).to.be.revertedWith('INSUFFICIENT_EXPIRATION_D')
-        await expect(derivablePool.swap(
+        await expect(derivablePool1.swap(
           SIDE_A,
           SIDE_C,
           stateCalHelper.address,
@@ -226,92 +253,212 @@ DCs.forEach(DISCOUNT_RATE => {
         await expect(derivable1155.safeTransferFrom(
           owner.address,
           accountB.address,
-          convertId(SIDE_C, derivablePool.address),
-          await derivable1155.balanceOf(owner.address, convertId(SIDE_C, derivablePool.address)),
+          convertId(SIDE_C, derivablePool1.address),
+          await derivable1155.balanceOf(owner.address, convertId(SIDE_C, derivablePool1.address)),
           0x0
         )).to.be.revertedWith('unexpired')
         await time.increase(1)
         await derivable1155.safeTransferFrom(
           owner.address,
           accountB.address,
-          convertId(SIDE_C, derivablePool.address),
-          await derivable1155.balanceOf(owner.address, convertId(SIDE_C, derivablePool.address)),
+          convertId(SIDE_C, derivablePool1.address),
+          await derivable1155.balanceOf(owner.address, convertId(SIDE_C, derivablePool1.address)),
           0x0
         )
         await time.setNextBlockTimestamp(createPoolTimestamp + 24 * 60 * 60 - 1)
         await expect(derivable1155.safeTransferFrom(
           owner.address,
           accountB.address,
-          convertId(SIDE_A, derivablePool.address),
-          await derivable1155.balanceOf(owner.address, convertId(SIDE_A, derivablePool.address)),
+          convertId(SIDE_A, derivablePool1.address),
+          await derivable1155.balanceOf(owner.address, convertId(SIDE_A, derivablePool1.address)),
           0x0
         )).to.be.revertedWith('unexpired')
         await time.increase(1)
         await derivable1155.safeTransferFrom(
           owner.address,
           accountB.address,
-          convertId(SIDE_A, derivablePool.address),
-          await derivable1155.balanceOf(owner.address, convertId(SIDE_A, derivablePool.address)),
+          convertId(SIDE_A, derivablePool1.address),
+          await derivable1155.balanceOf(owner.address, convertId(SIDE_A, derivablePool1.address)),
           0x0
         )
       })
 
-      it("ZeroInterestTime", async function () {
-        const { owner, weth, derivablePool, stateCalHelper, derivable1155, accountA, accountB } = await loadFixture(deployDDLv2)
-        const expiration = 365 * 24 * 60 * 60 // 5 days
+      if (DISCOUNT_RATE === 100) {
+        it("R->A->R and R->A lock 1 year A->R", async function () {
+          const { weth, derivablePool, stateCalHelper, derivable1155, accountA, accountB } = await loadFixture(deployDDLv2)
+          const expiration = 365 * 24 * 60 * 60 // 5 days
+          await weth.connect(accountA).approve(derivablePool.address, MaxUint256)
+          await weth.connect(accountB).approve(derivablePool.address, MaxUint256)
+          const wethAfterAccB = await weth.balanceOf(accountB.address)
+          await derivablePool.connect(accountB).swap(
+            SIDE_R,
+            SIDE_A,
+            stateCalHelper.address,
+            encodePayload(0, SIDE_R, SIDE_A, pe(1)),
+            0,
+            AddressZero,
+            accountB.address,
+            opts
+          )
+          await derivablePool.connect(accountB).swap(
+            SIDE_A,
+            SIDE_R,
+            stateCalHelper.address,
+            encodePayload(0, SIDE_A, SIDE_R, await derivable1155.balanceOf(accountB.address, convertId(SIDE_A, derivablePool.address))),
+            0,
+            AddressZero,
+            accountB.address,
+            opts
+          )
+          const wethBeforeAccB = await weth.balanceOf(accountB.address)
+          const wethChangedAccB = wethAfterAccB.sub(wethBeforeAccB)
 
-        await weth.connect(accountA).approve(derivablePool.address, MaxUint256)
-        await weth.connect(accountB).approve(derivablePool.address, MaxUint256)
-        const wethAfterAccA = await weth.balanceOf(accountA.address)
-        await derivablePool.connect(accountA).swap(
-          SIDE_R,
-          SIDE_A,
-          stateCalHelper.address,
-          encodePayload(0, SIDE_R, SIDE_A, pe(1)),
-          expiration,
-          AddressZero,
-          accountA.address,
-          opts
-        )
-        await time.increase(expiration * DISCOUNT_RATE / 100)
-        const wethAfterAccB = await weth.balanceOf(accountB.address)
-        await derivablePool.connect(accountB).swap(
-          SIDE_R,
-          SIDE_A,
-          stateCalHelper.address,
-          encodePayload(0, SIDE_R, SIDE_A, pe(1)),
-          24 * 60 * 60,
-          AddressZero,
-          accountB.address,
-          opts
-        )
-        await time.increase(expiration - expiration * DISCOUNT_RATE / 100)
-        await derivablePool.connect(accountB).swap(
-          SIDE_A,
-          SIDE_R,
-          stateCalHelper.address,
-          encodePayload(0, SIDE_A, SIDE_R, await derivable1155.balanceOf(accountB.address, convertId(SIDE_A, derivablePool.address))),
-          0,
-          AddressZero,
-          accountB.address,
-          opts
-        )
-        await derivablePool.connect(accountA).swap(
-          SIDE_A,
-          SIDE_R,
-          stateCalHelper.address,
-          encodePayload(0, SIDE_A, SIDE_R, await derivable1155.balanceOf(accountA.address, convertId(SIDE_A, derivablePool.address))),
-          0,
-          AddressZero,
-          accountA.address,
-          opts
-        )
-        const wethBeforeAccA = await weth.balanceOf(accountA.address)
-        const wethBeforeAccB = await weth.balanceOf(accountB.address)
-        const wethChangedAccA = wethAfterAccA.sub(wethBeforeAccA)
-        const wethChangedAccB = wethAfterAccB.sub(wethBeforeAccB)
-        expect(Number(weiToNumber(wethChangedAccA)) / Number(weiToNumber(wethChangedAccB))).closeTo(1, 0.007)
+          const wethAfterAccA = await weth.balanceOf(accountA.address)
+          await derivablePool.connect(accountA).swap(
+            SIDE_R,
+            SIDE_A,
+            stateCalHelper.address,
+            encodePayload(0, SIDE_R, SIDE_A, pe(1)),
+            expiration,
+            AddressZero,
+            accountA.address,
+            opts
+          )
+          await time.increase(expiration * DISCOUNT_RATE / 100)
+          await derivablePool.connect(accountA).swap(
+            SIDE_A,
+            SIDE_R,
+            stateCalHelper.address,
+            encodePayload(0, SIDE_A, SIDE_R, await derivable1155.balanceOf(accountA.address, convertId(SIDE_A, derivablePool.address))),
+            0,
+            AddressZero,
+            accountA.address,
+            opts
+          )
+          const wethBeforeAccA = await weth.balanceOf(accountA.address)
+          const wethChangedAccA = wethAfterAccA.sub(wethBeforeAccA)
+          expect(Number(weiToNumber(wethChangedAccA)) / Number(weiToNumber(wethChangedAccB))).to.be.closeTo(1, 0.0000000001)
+        })
+
+        it("R->A lock 1 year A->R and R->A-R", async function () {
+          const { weth, derivablePool, stateCalHelper, derivable1155, accountA, accountB } = await loadFixture(deployDDLv2)
+          const expiration = 365 * 24 * 60 * 60 // 5 days
+          await weth.connect(accountA).approve(derivablePool.address, MaxUint256)
+          await weth.connect(accountB).approve(derivablePool.address, MaxUint256)
+
+          const wethAfterAccA = await weth.balanceOf(accountA.address)
+          await derivablePool.connect(accountA).swap(
+            SIDE_R,
+            SIDE_A,
+            stateCalHelper.address,
+            encodePayload(0, SIDE_R, SIDE_A, pe(1)),
+            expiration,
+            AddressZero,
+            accountA.address,
+            opts
+          )
+          await time.increase(expiration * DISCOUNT_RATE / 100)
+          await derivablePool.connect(accountA).swap(
+            SIDE_A,
+            SIDE_R,
+            stateCalHelper.address,
+            encodePayload(0, SIDE_A, SIDE_R, await derivable1155.balanceOf(accountA.address, convertId(SIDE_A, derivablePool.address))),
+            0,
+            AddressZero,
+            accountA.address,
+            opts
+          )
+          const wethBeforeAccA = await weth.balanceOf(accountA.address)
+          const wethChangedAccA = wethAfterAccA.sub(wethBeforeAccA)
+          const wethAfterAccB = await weth.balanceOf(accountB.address)
+          await derivablePool.connect(accountB).swap(
+            SIDE_R,
+            SIDE_A,
+            stateCalHelper.address,
+            encodePayload(0, SIDE_R, SIDE_A, pe(1)),
+            0,
+            AddressZero,
+            accountB.address,
+            opts
+          )
+          await derivablePool.connect(accountB).swap(
+            SIDE_A,
+            SIDE_R,
+            stateCalHelper.address,
+            encodePayload(0, SIDE_A, SIDE_R, await derivable1155.balanceOf(accountB.address, convertId(SIDE_A, derivablePool.address))),
+            0,
+            AddressZero,
+            accountB.address,
+            opts
+          )
+          const wethBeforeAccB = await weth.balanceOf(accountB.address)
+          const wethChangedAccB = wethAfterAccB.sub(wethBeforeAccB)
+          expect(Number(weiToNumber(wethChangedAccA)) / Number(weiToNumber(wethChangedAccB))).to.be.closeTo(1, 0.0000000001)
+        })
+      } else {
+        it("R->A lock 1 year\n" +
+        "\tWait until ZeroInterestTime is up\n" +
+        "\tR->A nolock\n" +
+        "\tWait until the remaining time to reach 1 year\n" +
+        "\tCompare", async function () {
+          const { weth, derivablePool, stateCalHelper, derivable1155, accountA, accountB } = await loadFixture(deployDDLv2)
+          const expiration = 365 * 24 * 60 * 60 // 5 days
+          await weth.connect(accountA).approve(derivablePool.address, MaxUint256)
+          await weth.connect(accountB).approve(derivablePool.address, MaxUint256)
+          const wethAfterAccA = await weth.balanceOf(accountA.address)
+          await derivablePool.connect(accountA).swap(
+            SIDE_R,
+            SIDE_A,
+            stateCalHelper.address,
+            encodePayload(0, SIDE_R, SIDE_A, pe(1)),
+            expiration,
+            AddressZero,
+            accountA.address,
+            opts
+          )
+
+          await time.increase(expiration * DISCOUNT_RATE / 100)
+          const wethAfterAccB = await weth.balanceOf(accountB.address)
+          await derivablePool.connect(accountB).swap(
+            SIDE_R,
+            SIDE_A,
+            stateCalHelper.address,
+            encodePayload(0, SIDE_R, SIDE_A, pe(1)),
+            0,
+            AddressZero,
+            accountB.address,
+            opts
+          )
+
+          await time.increase(expiration - expiration * DISCOUNT_RATE / 100)
+          await derivablePool.connect(accountA).swap(
+            SIDE_A,
+            SIDE_R,
+            stateCalHelper.address,
+            encodePayload(0, SIDE_A, SIDE_R, await derivable1155.balanceOf(accountA.address, convertId(SIDE_A, derivablePool.address))),
+            0,
+            AddressZero,
+            accountA.address,
+            opts
+          )
+          await derivablePool.connect(accountB).swap(
+            SIDE_A,
+            SIDE_R,
+            stateCalHelper.address,
+            encodePayload(0, SIDE_A, SIDE_R, await derivable1155.balanceOf(accountB.address, convertId(SIDE_A, derivablePool.address))),
+            0,
+            AddressZero,
+            accountB.address,
+            opts
+          )
+          const wethBeforeAccA = await weth.balanceOf(accountA.address)
+          const wethBeforeAccB = await weth.balanceOf(accountB.address)
+          const wethChangedAccA = wethAfterAccA.sub(wethBeforeAccA)
+          const wethChangedAccB = wethAfterAccB.sub(wethBeforeAccB)
+          const tolerance = DISCOUNT_RATE < 10 ? 0.00001 : 0.0000000001
+          expect(Number(weiToNumber(wethChangedAccA)) / Number(weiToNumber(wethChangedAccB))).to.be.closeTo(1, tolerance)
       })
+      }
     })
   })
 })
