@@ -108,9 +108,9 @@
   version "4.8.2"
   resolved "git+ssh://git@github.com:derivable-labs/erc1155-timelock.git#b302210c38ec7341f6eb2b9ffbf99400296190e2"
 
-"@derivable/shadow-token@git+ssh://git@github.com:derivable-labs/shadow-token.git#dev":
+"@derivable/shadow-token@git+ssh://git@github.com:derivable-labs/shadow-token.git":
   version "1.0.0"
-  resolved "git+ssh://git@github.com:derivable-labs/shadow-token.git#8fb8c8d9e7d6d743f513ba57b1c76d5e88eab3c9"
+  resolved "git+ssh://git@github.com:derivable-labs/shadow-token.git#c1a64b3ca399d1fbf6ae64a78dbf65dcc8beb1fe"
   dependencies:
     "@atixlabs/hardhat-time-n-mine" "^0.0.5"
     "@derivable/erc1155-timelock" "git+ssh://git@github.com:derivable-labs/erc1155-timelock.git"
@@ -8481,12 +8481,7 @@ solhint@^3.3.7:
   optionalDependencies:
     prettier "^2.8.3"
 
-solidity-ast@^0.4.15:
-  version "0.4.49"
-  resolved "https://registry.yarnpkg.com/solidity-ast/-/solidity-ast-0.4.49.tgz#ecba89d10c0067845b7848c3a3e8cc61a4fc5b82"
-  integrity sha512-Pr5sCAj1SFqzwFZw1HPKSq0PehlQNdM8GwKyAVYh2DOn7/cCK8LUKD1HeHnKtTgBW7hi9h4nnnan7hpAg5RhWQ==
-
-solidity-ast@^0.4.25:
+solidity-ast@^0.4.15, solidity-ast@^0.4.25:
   version "0.4.49"
   resolved "https://registry.yarnpkg.com/solidity-ast/-/solidity-ast-0.4.49.tgz#ecba89d10c0067845b7848c3a3e8cc61a4fc5b82"
   integrity sha512-Pr5sCAj1SFqzwFZw1HPKSq0PehlQNdM8GwKyAVYh2DOn7/cCK8LUKD1HeHnKtTgBW7hi9h4nnnan7hpAg5RhWQ==
