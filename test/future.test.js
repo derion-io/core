@@ -22,7 +22,7 @@ const SIDE_B = 0x20
 const SIDE_C = 0x30
 
 const SECONDS_PER_DAY = 86400
-const DCs = [25, 50, 75, 100] // 25%, 50%, 75%
+const DCs = [1, 25, 50, 75, 100]
 
 function toHalfLife(dailyRate) {
   return dailyRate == 0 ? 0 : Math.round(SECONDS_PER_DAY/Math.log2(1/(1-dailyRate)))
@@ -455,7 +455,8 @@ DCs.forEach(DISCOUNT_RATE => {
           const wethBeforeAccB = await weth.balanceOf(accountB.address)
           const wethChangedAccA = wethAfterAccA.sub(wethBeforeAccA)
           const wethChangedAccB = wethAfterAccB.sub(wethBeforeAccB)
-          expect(Number(weiToNumber(wethChangedAccA)) / Number(weiToNumber(wethChangedAccB))).to.be.closeTo(1, 0.0000000001)
+          const tolerance = DISCOUNT_RATE < 10 ? 0.00001 : 0.0000000001
+          expect(Number(weiToNumber(wethChangedAccA)) / Number(weiToNumber(wethChangedAccB))).to.be.closeTo(1, tolerance)
       })
       }
     })
