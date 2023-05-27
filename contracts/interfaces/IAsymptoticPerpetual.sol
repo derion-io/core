@@ -1,17 +1,6 @@
 // SPDX-License-Identifier: BSL-1.1
 pragma solidity ^0.8.0;
 
-struct Config {
-    address TOKEN;
-    address TOKEN_R;
-    bytes32 ORACLE;
-    uint K;
-    uint MARK;
-    uint INIT_TIME; // TODO: change to uint32
-    uint HALF_LIFE; // TODO: change to uint32
-    uint PREMIUM_RATE;
-}
-
 struct SwapParam {
     uint zeroInterestTime;
     address helper;
@@ -30,21 +19,7 @@ struct State {
 }
 
 interface IAsymptoticPerpetual {
-    function getR(uint r, uint INIT_TIME, uint HALF_LIFE) external view returns (uint);
-
-    function init(
-        Config memory config,
-        uint a,
-        uint b
-    ) external returns (uint rA, uint rB, uint rC);
-
-    /**
-     * @param param: payload passed to Helper.swapToState callback, should not used by this function
-     */
-    function swap(
-        Config calldata config,
-        uint sideIn,
-        uint sideOut,
-        SwapParam calldata param
-    ) external returns(uint amountIn, uint amountOut);
+    function ORACLE() external view returns (bytes32);
+    function TOKEN_R() external view returns (address);
+    function K() external view returns (uint);
 }

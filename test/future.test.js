@@ -120,10 +120,7 @@ DCs.forEach(DISCOUNT_RATE => {
         gasLimit: 30000000
       })
       await time.increase(1000)
-      // deploy logic
-      const AsymptoticPerpetual = await ethers.getContractFactory("AsymptoticPerpetual")
-      const asymptoticPerpetual = await AsymptoticPerpetual.deploy()
-      await asymptoticPerpetual.deployed()
+
       // deploy ddl pool
       const oracle = ethers.utils.hexZeroPad(
         bn(quoteTokenIndex).shl(255).add(bn(300).shl(256 - 64)).add(uniswapPair.address).toHexString(),
@@ -132,7 +129,6 @@ DCs.forEach(DISCOUNT_RATE => {
       const params = {
         utr: utr.address,
         token: derivable1155.address,
-        logic: asymptoticPerpetual.address,
         oracle,
         reserveToken: weth.address,
         recipient: owner.address,
@@ -158,7 +154,6 @@ DCs.forEach(DISCOUNT_RATE => {
       const params1 = {
         utr: utr.address,
         token: derivable1155.address,
-        logic: asymptoticPerpetual.address,
         oracle,
         reserveToken: weth.address,
         recipient: owner.address,
@@ -238,7 +233,7 @@ DCs.forEach(DISCOUNT_RATE => {
           AddressZero,
           accountB.address,
           opts
-        )).to.be.revertedWith('INSUFFICIENT_EXPIRATION_D')
+        )).to.be.revertedWith('IED')
         await expect(derivablePool1.swap(
           SIDE_A,
           SIDE_C,
@@ -248,7 +243,7 @@ DCs.forEach(DISCOUNT_RATE => {
           AddressZero,
           accountB.address,
           opts
-        )).to.be.revertedWith('INSUFFICIENT_EXPIRATION_C')
+        )).to.be.revertedWith('IEC')
         await time.setNextBlockTimestamp(createPoolTimestamp + 12 * 60 * 60 - 1)
         await expect(derivable1155.safeTransferFrom(
           owner.address,

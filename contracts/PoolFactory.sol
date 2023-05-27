@@ -30,7 +30,6 @@ contract PoolFactory is IPoolFactory {
         return keccak256(
             abi.encodePacked(
                 params.token,
-                params.logic,
                 params.oracle,
                 params.reserveToken,
                 params.mark,
@@ -61,7 +60,7 @@ contract PoolFactory is IPoolFactory {
     }
 
     function setFeeTo(address feeTo) external {
-        require(msg.sender == s_feeToSetter, 'Derivable: FORBIDDEN');
+        require(msg.sender == s_feeToSetter, 'ERR');
         s_feeTo = feeTo;
     }
 
@@ -70,7 +69,7 @@ contract PoolFactory is IPoolFactory {
     }
 
     function setFeeToSetter(address feeToSetter) external {
-        require(msg.sender == s_feeToSetter, 'Derivable: FORBIDDEN');
+        require(msg.sender == s_feeToSetter, 'ERR');
         s_feeToSetter = feeToSetter;
     }
 }

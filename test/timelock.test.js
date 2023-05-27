@@ -104,10 +104,7 @@ describe("Timelock", function () {
       gasLimit: 30000000
     })
     await time.increase(1000);
-    // deploy logic
-    const AsymptoticPerpetual = await ethers.getContractFactory("AsymptoticPerpetual")
-    const asymptoticPerpetual = await AsymptoticPerpetual.deploy()
-    await asymptoticPerpetual.deployed()
+   
     // deploy ddl pool
     const oracle = ethers.utils.hexZeroPad(
       bn(quoteTokenIndex).shl(255).add(bn(300).shl(256 - 64)).add(uniswapPair.address).toHexString(),
@@ -116,7 +113,6 @@ describe("Timelock", function () {
     const params = {
       utr: utr.address,
       token: derivable1155.address,
-      logic: asymptoticPerpetual.address,
       oracle,
       reserveToken: weth.address,
       recipient: owner.address,

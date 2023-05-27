@@ -1,79 +1,24 @@
 // SPDX-License-Identifier: BSL-1.1
 pragma solidity ^0.8.0;
 
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@derivable/utr/contracts/interfaces/IUniversalTokenRouter.sol";
 import "@uniswap/lib/contracts/libraries/TransferHelper.sol";
-import "./interfaces/IPoolFactory.sol";
-import "./logics/Constants.sol";
+
+import "./logics/AsymptoticPerpetual.sol";
 import "./interfaces/IERC1155Supply.sol";
-import "./interfaces/IAsymptoticPerpetual.sol";
 import "./interfaces/IPool.sol";
-import "./logics/Storage.sol";
 import "./logics/Events.sol";
 
-contract Pool is IPool, Storage, Events, Constants {
+contract Pool is AsymptoticPerpetual, IPool, Events {
     uint public constant MINIMUM_LIQUIDITY = 10 ** 3;
 
-    /// Immutables
     IPoolFactory internal immutable FACTORY;
-    address internal immutable UTR;
-    address internal immutable LOGIC;
-    bytes32 public immutable ORACLE;
-    uint public immutable K;
-    address internal immutable TOKEN;
-    address public immutable TOKEN_R;
-    uint internal immutable MARK;
-    uint internal immutable INIT_TIME;
-    uint internal immutable HALF_LIFE;
-    uint internal immutable PREMIUM_RATE;
-    uint32 internal immutable MIN_EXPIRATION_D;
-    uint32 internal immutable MIN_EXPIRATION_C;
-    uint internal immutable DISCOUNT_RATE;
 
-    constructor() {
+    constructor() AsymptoticPerpetual() {
         FACTORY = IPoolFactory(msg.sender);
-
         Params memory params = IPoolFactory(msg.sender).getParams();
-        // TODO: require(4*params.a*params.b <= params.R, "invalid (R,a,b)");
-        UTR = params.utr;
-        TOKEN = params.token;
-        LOGIC = params.logic;
-        ORACLE = params.oracle;
-        TOKEN_R = params.reserveToken;
-        K = params.k;
-        MARK = params.mark;
-        HALF_LIFE = params.halfLife;
-        MIN_EXPIRATION_D = params.minExpirationD;
-        MIN_EXPIRATION_C = params.minExpirationC;
-        DISCOUNT_RATE = params.discountRate;
-        PREMIUM_RATE = params.premiumRate;
-        INIT_TIME = params.initTime > 0 ? params.initTime : block.timestamp;
-        require(block.timestamp >= INIT_TIME, "PAST_INIT_TIME");
 
-        (bool success, bytes memory result) = LOGIC.delegatecall(
-            abi.encodeWithSelector(
-                IAsymptoticPerpetual.init.selector,
-                Config(
-                    TOKEN,
-                    TOKEN_R,
-                    ORACLE,
-                    K,
-                    MARK,
-                    INIT_TIME,
-                    HALF_LIFE,
-                    PREMIUM_RATE
-                ),
-                params.a,
-                params.b
-            )
-        );
-        if (!success) {
-            assembly {
-                revert(add(result, 32), mload(result))
-            }
-        }
-        (uint rA, uint rB, uint rC) = abi.decode(result, (uint, uint, uint));
+        (uint rA, uint rB, uint rC) = _init(params.a, params.b);
         uint idA = _packID(address(this), SIDE_A);
         uint idB = _packID(address(this), SIDE_B);
         uint idC = _packID(address(this), SIDE_C);
@@ -91,11 +36,9 @@ contract Pool is IPool, Storage, Events, Constants {
         emit Derivable(
             'PoolCreated',                 // topic1: eventName
             _addressToBytes32(msg.sender), // topic2: factory
-            _addressToBytes32(LOGIC),      // topic3: logic
             abi.encode(PoolCreated(
                 UTR,
                 TOKEN,
-                LOGIC,
                 ORACLE,
                 TOKEN_R,
                 MARK,
@@ -107,21 +50,17 @@ contract Pool is IPool, Storage, Events, Constants {
         );
     }
 
-    function _packID(address pool, uint side) internal pure returns (uint id) {
-        id = (side << 160) + uint160(pool);
-    }
-
     function getStates() external view returns (uint R, uint a, uint b) {
-        R = IAsymptoticPerpetual(LOGIC).getR(s_R, INIT_TIME, HALF_LIFE);
+        R = _getR(s_R);
         a = s_a;
         b = s_b;
     }
 
     function collect() external returns (uint amount) {
-        uint R = IAsymptoticPerpetual(LOGIC).getR(s_R, INIT_TIME, HALF_LIFE);
+        uint R = _getR(s_R);
         amount = IERC20(TOKEN_R).balanceOf(address(this)) - R;
         address feeTo = FACTORY.getFeeTo();
-        require(feeTo != address(0), "FEE_TO_NOT_SET");
+        require(feeTo != address(0), "FTNS");
         TransferHelper.safeTransfer(TOKEN_R, feeTo, amount);
     }
 
@@ -135,31 +74,17 @@ contract Pool is IPool, Storage, Events, Constants {
         address recipient
     ) external override returns(uint amountIn, uint amountOut) {
         if (sideOut == SIDE_C) {
-            require(expiration >= MIN_EXPIRATION_C, "INSUFFICIENT_EXPIRATION_C");
+            require(expiration >= MIN_EXPIRATION_C, "IEC");
         }
         {
             SwapParam memory param = SwapParam(0, helper, payload);
             if (sideOut == SIDE_A || sideOut == SIDE_B) {
-                require(expiration >= MIN_EXPIRATION_D, "INSUFFICIENT_EXPIRATION_D");
+                require(expiration >= MIN_EXPIRATION_D, "IED");
                 if (DISCOUNT_RATE > 0) {
                     param.zeroInterestTime = (expiration - MIN_EXPIRATION_D) * DISCOUNT_RATE / Q128;
                 }
             }
-            (bool success, bytes memory result) = LOGIC.delegatecall(
-                abi.encodeWithSelector(
-                    IAsymptoticPerpetual.swap.selector,
-                    Config(TOKEN, TOKEN_R, ORACLE, K, MARK, INIT_TIME, HALF_LIFE, PREMIUM_RATE),
-                    sideIn,
-                    sideOut,
-                    param
-                )
-            );
-            if (!success) {
-                assembly {
-                    revert(add(result, 32), mload(result))
-                }
-            }
-            (amountIn, amountOut) = abi.decode(result, (uint, uint));
+            (amountIn, amountOut) = _swap(sideIn, sideOut, param);
         }
         // TODO: reentrancy guard
         if (sideOut == SIDE_R) {
@@ -169,14 +94,14 @@ contract Pool is IPool, Storage, Events, Constants {
                 if (expiration == 0) {
                     expiration = MIN_EXPIRATION_C;
                 } else {
-                    require(expiration >= MIN_EXPIRATION_C, "INSUFFICIENT_EXPIRATION_C");
+                    require(expiration >= MIN_EXPIRATION_C, "IEC");
                 }
             }
             if (sideOut == SIDE_A || sideOut == SIDE_B) {
                 if (expiration == 0) {
                     expiration = MIN_EXPIRATION_D;
                 } else {
-                    require(expiration >= MIN_EXPIRATION_D, "INSUFFICIENT_EXPIRATION_D");
+                    require(expiration >= MIN_EXPIRATION_D, "IED");
                 }
             }
             IERC1155Supply(TOKEN).mintLock(recipient, _packID(address(this), sideOut), amountOut, expiration, "");

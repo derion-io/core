@@ -11,33 +11,67 @@ import "../interfaces/IHelper.sol";
 import "../interfaces/IERC1155Supply.sol";
 import "../interfaces/IAsymptoticPerpetual.sol";
 import "../libs/abdk-consulting/abdk-libraries-solidity/ABDKMath64x64.sol";
+import "../interfaces/IPoolFactory.sol";
 
 
-contract AsymptoticPerpetual is Storage, Constants, IAsymptoticPerpetual {
+contract AsymptoticPerpetual is IAsymptoticPerpetual, Storage, Constants {
     uint internal constant FEE_RATE = 12;    // takes 1/12 cut of LP interest rate
 
-    function init(
-        Config memory config,
+    /// Immutables
+    
+    address internal immutable UTR;
+    bytes32 public immutable ORACLE;
+    uint public immutable K;
+    address internal immutable TOKEN;
+    address public immutable TOKEN_R;
+    uint internal immutable MARK;
+    uint internal immutable INIT_TIME;
+    uint internal immutable HALF_LIFE;
+    uint internal immutable PREMIUM_RATE;
+    uint32 internal immutable MIN_EXPIRATION_D;
+    uint32 internal immutable MIN_EXPIRATION_C;
+    uint internal immutable DISCOUNT_RATE;
+
+    constructor() {
+        Params memory params = IPoolFactory(msg.sender).getParams();
+        // TODO: require(4*params.a*params.b <= params.R, "invalid (R,a,b)");
+
+        UTR = params.utr;
+        TOKEN = params.token;
+        ORACLE = params.oracle;
+        TOKEN_R = params.reserveToken;
+        K = params.k;
+        MARK = params.mark;
+        HALF_LIFE = params.halfLife;
+        MIN_EXPIRATION_D = params.minExpirationD;
+        MIN_EXPIRATION_C = params.minExpirationC;
+        DISCOUNT_RATE = params.discountRate;
+        PREMIUM_RATE = params.premiumRate;
+        INIT_TIME = params.initTime > 0 ? params.initTime : block.timestamp;
+
+        require(block.timestamp >= INIT_TIME, "PIT");
+    }
+
+    function _init(
         uint a,
         uint b
-    ) external override returns (uint rA, uint rB, uint rC) {
-        require(s_a == 0 && s_b == 0, "ALREADY_INITIALIZED");
-        (uint twap, ) = _fetch(config.ORACLE);
-        uint t = block.timestamp - config.INIT_TIME;
-        uint decayRateX64 = _decayRate(t, config.HALF_LIFE);
-        State memory state = State(_reserve(config.TOKEN_R), a, b);
-        Market memory market = _market(config.K, config.MARK, decayRateX64, twap);
+    ) internal returns (uint rA, uint rB, uint rC) {
+        (uint twap, ) = _fetch();
+        uint t = block.timestamp - INIT_TIME;
+        uint decayRateX64 = _decayRate(t, HALF_LIFE * FEE_RATE);
+        State memory state = State(_reserve(), a, b);
+        Market memory market = _market(decayRateX64, twap);
         (rA, rB) = _evaluate(market, state);
         rC = state.R - rA - rB;
         // uint R = IERC20(TOKEN_R).balanceOf(address(this));
         // require(4 * a * b <= R, "INVALID_PARAM");
-        uint feeDecayRateX64 = _decayRate(t, config.HALF_LIFE * FEE_RATE);
+        uint feeDecayRateX64 = _decayRate(t, HALF_LIFE * FEE_RATE);
         s_R = FullMath.mulDivRoundingUp(state.R, feeDecayRateX64, Q64);
         s_a = a;
         s_b = b;
     }
 
-    function getR(uint R, uint INIT_TIME, uint HALF_LIFE) external view override returns (uint) {
+    function _getR(uint R) internal view returns (uint) {
         uint feeRateX64 = _decayRate(block.timestamp - INIT_TIME, HALF_LIFE * FEE_RATE);
         return FullMath.mulDiv(R, Q64, feeRateX64);
     }
@@ -60,9 +94,7 @@ contract AsymptoticPerpetual is Storage, Constants, IAsymptoticPerpetual {
         id = (side << 160) + uint160(pool);
     }
 
-    function _fetch(
-        bytes32 ORACLE // 1bit QTI, 31bit reserve, 32bit WINDOW, ... PAIR ADDRESS
-    ) internal view returns (uint twap, uint spot) {
+    function _fetch() internal view returns (uint twap, uint spot) {
         address pool = address(uint160(uint(ORACLE)));
         (uint160 sqrtSpotX96,,,,,,) = IUniswapV3Pool(pool).slot0();
 
@@ -88,11 +120,11 @@ contract AsymptoticPerpetual is Storage, Constants, IAsymptoticPerpetual {
         }
     }
 
-    function _supply(address TOKEN, uint side) internal view returns (uint s) {
+    function _supply(uint side) internal view returns (uint s) {
         return IERC1155Supply(TOKEN).totalSupply(_packID(address(this), side));
     }
 
-    function _reserve(address TOKEN_R) internal view returns (uint R) {
+    function _reserve() internal view returns (uint R) {
         return IERC20(TOKEN_R).balanceOf(address(this));
     }
 
@@ -102,11 +134,9 @@ contract AsymptoticPerpetual is Storage, Constants, IAsymptoticPerpetual {
     }
 
     function _market(
-        uint K,
-        uint MARK,
         uint decayRateX64,
         uint price
-    ) internal pure returns (Market memory market) {
+    ) internal view returns (Market memory market) {
         market.xkA = _powu(FullMath.mulDiv(price, Q128, MARK), K);
         market.xkB = uint(FullMath.mulDiv(Q256M/market.xkA, Q64, decayRateX64));
         market.xkA = uint(FullMath.mulDiv(market.xkA, Q64, decayRateX64));
@@ -114,60 +144,58 @@ contract AsymptoticPerpetual is Storage, Constants, IAsymptoticPerpetual {
 
     function _decayRate (
         uint elapsed,
-        uint HALF_LIFE
+        uint hl
     ) internal pure returns (uint rateX64) {
-        if (HALF_LIFE == 0) {
+        if (hl == 0) {
             return Q64;
         }
-        int128 rate = ABDKMath64x64.exp_2(int128(int((elapsed << 64) / HALF_LIFE)));
+        int128 rate = ABDKMath64x64.exp_2(int128(int((elapsed << 64) / hl)));
         return uint(int(rate));
     } 
 
     function _selectPrice(
-        Config memory config,
         State memory state,
         uint sideIn,
         uint sideOut
     ) internal view returns (Market memory market, uint rA, uint rB) {
-        uint decayRateX64 = _decayRate(block.timestamp - config.INIT_TIME, config.HALF_LIFE);
-        (uint min, uint max) = _fetch(config.ORACLE);
+        uint decayRateX64 = _decayRate(block.timestamp - INIT_TIME, HALF_LIFE);
+        (uint min, uint max) = _fetch();
         if (min > max) {
             (min, max) = (max, min);
         }
         if (sideOut == SIDE_A || sideIn == SIDE_B) {
-            market = _market(config.K, config.MARK, decayRateX64, max);
+            market = _market(decayRateX64, max);
             (rA, rB) = _evaluate(market, state);
         } else if (sideOut == SIDE_B || sideIn == SIDE_A) {
-            market = _market(config.K, config.MARK, decayRateX64, min);
+            market = _market(decayRateX64, min);
             (rA, rB) = _evaluate(market, state);
         } else {
             // TODO: assisting flag for min/max
-            market = _market(config.K, config.MARK, decayRateX64, min);
+            market = _market(decayRateX64, min);
             (rA, rB) = _evaluate(market, state);
             if ((sideIn == SIDE_R) == rB > rA) {
                 // TODO: unit test for this case
-                market = _market(config.K, config.MARK, decayRateX64, max);
+                market = _market(decayRateX64, max);
                 (rA, rB) = _evaluate(market, state);
             }
         }
     }
 
-    function swap(
-        Config memory config,
+    function _swap(
         uint sideIn,
         uint sideOut,
         SwapParam memory param
-    ) external override returns(uint amountIn, uint amountOut) {
-        require(sideIn != sideOut, 'SAME_SIDE');
+    ) internal returns(uint amountIn, uint amountOut) {
+        require(sideIn != sideOut, 'SS');
         // [PRICE SELECTION]
         // TODO: don't share variable if possible
-        amountIn = _decayRate(block.timestamp - config.INIT_TIME, config.HALF_LIFE * FEE_RATE);
+        amountIn = _decayRate(block.timestamp - INIT_TIME, HALF_LIFE * FEE_RATE);
         State memory state = State(
             FullMath.mulDiv(s_R, Q64, amountIn),
             s_a,
             s_b
         );
-        (Market memory market, uint rA, uint rB) = _selectPrice(config, state, sideIn, sideOut);
+        (Market memory market, uint rA, uint rB) = _selectPrice(state, sideIn, sideOut);
         // [CALCULATION]
         State memory state1 = IHelper(param.helper).swapToState(market, state, rA, rB, param.payload);
         if (state.R != state1.R) {
@@ -181,7 +209,7 @@ contract AsymptoticPerpetual is Storage, Constants, IAsymptoticPerpetual {
         if (sideIn == SIDE_R) {
             amountIn = state1.R - state.R;
         } else {
-            uint s = _supply(config.TOKEN, sideIn);
+            uint s = _supply(sideIn);
             if (sideIn == SIDE_A) {
                 amountIn = FullMath.mulDivRoundingUp(rA - rA1, s, rA);
                 s_a = state1.a;
@@ -197,13 +225,13 @@ contract AsymptoticPerpetual is Storage, Constants, IAsymptoticPerpetual {
         if (sideOut == SIDE_R) {
             amountOut = state.R - state1.R;
         } else {
-            uint s = _supply(config.TOKEN, sideOut);
+            uint s = _supply(sideOut);
             if (sideOut == SIDE_C) {
                 uint rC = state.R - rA - rB;
                 uint rC1 = state1.R - rA1 - rB1;
                 amountOut = FullMath.mulDiv(rC1 - rC, s, rC);
             } else {
-                amountOut = config.PREMIUM_RATE;
+                amountOut = PREMIUM_RATE;
                 if (sideOut == SIDE_A) {
                     sideOut = Q128;
                     if (amountOut > 0 && rA1 > rB1) {
@@ -214,7 +242,7 @@ contract AsymptoticPerpetual is Storage, Constants, IAsymptoticPerpetual {
                         }
                     }
                     if (param.zeroInterestTime > 0) {
-                        amountOut = _decayRate(param.zeroInterestTime, config.HALF_LIFE);
+                        amountOut = _decayRate(param.zeroInterestTime, HALF_LIFE);
                         sideOut = FullMath.mulDiv(sideOut, amountOut, Q64);
                     }
                     if (sideOut != Q128) {
@@ -233,7 +261,7 @@ contract AsymptoticPerpetual is Storage, Constants, IAsymptoticPerpetual {
                         }
                     }
                     if (param.zeroInterestTime > 0) {
-                        amountOut = _decayRate(param.zeroInterestTime, config.HALF_LIFE);
+                        amountOut = _decayRate(param.zeroInterestTime, HALF_LIFE);
                         sideOut = FullMath.mulDiv(sideOut, amountOut, Q64);
                     }
                     if (sideOut != Q128) {

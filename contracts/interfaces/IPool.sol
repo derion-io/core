@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: BSL-1.1
 pragma solidity ^0.8.0;
 
-interface IPool {
-    function ORACLE() external view returns (bytes32);
-    function TOKEN_R() external view returns (address);
-    function K() external view returns (uint);
+import "./IAsymptoticPerpetual.sol";
+
+interface IPool is IAsymptoticPerpetual{
+    
     function swap(
         uint sideIn,
         uint sideOut,

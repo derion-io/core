@@ -77,11 +77,6 @@ describe("Premium and Future", function () {
 
     await time.increase(1000);
 
-    const AsymptoticPerpetual = await ethers.getContractFactory("$AsymptoticPerpetual");
-
-    const asymptoticPerpetual = await AsymptoticPerpetual.deploy();
-    await asymptoticPerpetual.deployed();
-
     // deploy token1155
     const Token = await ethers.getContractFactory("Token")
     const derivable1155 = await Token.deploy(
@@ -113,7 +108,6 @@ describe("Premium and Future", function () {
     const params = {
       utr: utr.address,
       token: derivable1155.address,
-      logic: asymptoticPerpetual.address,
       oracle,
       reserveToken: weth.address,
       recipient: owner.address,
@@ -204,7 +198,6 @@ describe("Premium and Future", function () {
       txSignerANoPremium,
       txSignerBNoPremium,
       stateCalHelper,
-      asymptoticPerpetual,
       config,
       params
     }

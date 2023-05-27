@@ -84,11 +84,6 @@ HLs.forEach(HALF_LIFE => {
 
       await time.increase(1000);
 
-      const AsymptoticPerpetual = await ethers.getContractFactory("AsymptoticPerpetual");
-
-      const asymptoticPerpetual = await AsymptoticPerpetual.deploy();
-      await asymptoticPerpetual.deployed();
-
       // deploy descriptor
       const TokenDescriptor = await ethers.getContractFactory("TokenDescriptor")
       const tokenDescriptor = await TokenDescriptor.deploy()
@@ -111,7 +106,6 @@ HLs.forEach(HALF_LIFE => {
       const params = {
         utr: utr.address,
         token: derivable1155.address,
-        logic: asymptoticPerpetual.address,
         oracle,
         reserveToken: weth.address,
         recipient: owner.address,
@@ -121,7 +115,7 @@ HLs.forEach(HALF_LIFE => {
         b: '30000000000',
         initTime: await time.latest(),
         halfLife: HALF_LIFE,
-        premiumRate: bn(1).shl(128).div(2),
+        premiumRate: 0,
         minExpirationD: 0,
         minExpirationC: 0,
         discountRate: 0,

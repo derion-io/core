@@ -34,7 +34,18 @@ module.exports = {
                     },
                 },
             }
-        ]
+        ],
+        overrides: {
+            "contracts/PoolFactory.sol": {
+                version: "0.8.13",
+                settings: {
+                    optimizer: {
+                        enabled: true,
+                        runs: 20,
+                    },
+                }
+            }
+        }
     },
     networks: {
         hardhat: {
