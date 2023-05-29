@@ -4,6 +4,7 @@ const {
 } = require("@nomicfoundation/hardhat-network-helpers");
 const { expect, use } = require("chai");
 const { solidity } = require("ethereum-waffle");
+const { _evaluate, _selectPrice } = require("./shared/AsymptoticPerpetual");
 const { weiToNumber, bn, getDeltaSupply, numberToWei, packId, unpackId, encodeSqrtX96, encodePayload, attemptSwap, attemptStaticSwap } = require("./shared/utilities");
 const abiCoder = new ethers.utils.AbiCoder()
 use(solidity)
@@ -71,7 +72,7 @@ describe("Premium", function () {
 
     await time.increase(1000);
 
-    const AsymptoticPerpetual = await ethers.getContractFactory("$AsymptoticPerpetual");
+    const AsymptoticPerpetual = await ethers.getContractFactory("AsymptoticPerpetual");
 
     const asymptoticPerpetual = await AsymptoticPerpetual.deploy();
     await asymptoticPerpetual.deployed();
@@ -133,10 +134,10 @@ describe("Premium", function () {
       TOKEN: derivable1155.address,
       TOKEN_R: weth.address,
       ORACLE: oracle,
-      K: 5,
+      K: bn(5),
       MARK: bn(1000).shl(128).div(38),
-      INIT_TIME: params.initTime,
-      HALF_LIFE: params.halfLife,
+      INIT_TIME: bn(params.initTime),
+      HALF_LIFE: bn(params.halfLife),
       PREMIUM_RATE: params.premiumRate
     }
     const poolAddress = await poolFactory.computePoolAddress(params);
@@ -152,6 +153,11 @@ describe("Premium", function () {
       weth.address
     )
     await stateCalHelper.deployed()
+
+    // deploy oracle library
+    const OracleLibrary = await ethers.getContractFactory("TestOracleHelper")
+    const oracleLibrary = await OracleLibrary.deploy()
+    await oracleLibrary.deployed()
 
     const DerivableHelper = await ethers.getContractFactory("contracts/test/TestHelper.sol:TestHelper")
     const derivableHelper = await DerivableHelper.deploy(
@@ -283,11 +289,14 @@ describe("Premium", function () {
 
     async function premiumBuyingLong(amount) {
       const state = await txSignerA.getStates()
-      const price = await asymptoticPerpetual.$_selectPrice(
-        config,
-        state,
-        0x00,
-        0x10
+      const oraclePrice = await oracleLibrary.fetch(config.ORACLE)
+      const price = _selectPrice(
+        config, 
+        state, 
+        {min: oraclePrice.spot, max: oraclePrice.twap}, 
+        0x00, 
+        0x10, 
+        bn(await time.latest())
       )
 
       const payload = abiCoder.encode(
@@ -297,7 +306,7 @@ describe("Premium", function () {
 
       const state1 = await stateCalHelper.swapToState(price.market, state, price.rA, price.rB, payload)
 
-      const eval = await asymptoticPerpetual.$_evaluate(price.market, state1)
+      const eval = _evaluate(price.market, state1)
       const rA = eval.rA;
       const rB = eval.rB;
       const R = state1.R;
@@ -339,11 +348,14 @@ describe("Premium", function () {
 
     async function premiumBuyingShort(amount) {
       const state = await txSignerA.getStates()
-      const price = await asymptoticPerpetual.$_selectPrice(
+      const oraclePrice = await oracleLibrary.fetch(config.ORACLE)
+      const price = await _selectPrice(
         config,
         state,
+        {min: oraclePrice.spot, max: oraclePrice.twap},
         0x00,
-        0x20
+        0x20,
+        bn(await time.latest())
       )
 
       const payload = abiCoder.encode(
@@ -353,7 +365,7 @@ describe("Premium", function () {
 
       const state1 = await stateCalHelper.swapToState(price.market, state, price.rA, price.rB, payload)
 
-      const eval = await asymptoticPerpetual.$_evaluate(price.market, state1)
+      const eval = _evaluate(price.market, state1)
       const rA = eval.rA;
       const rB = eval.rB;
       const R = state1.R;
@@ -393,6 +405,13 @@ describe("Premium", function () {
           )
     }
 
+    async function fetchPrice() {
+      const {spot, twap} = await oracleLibrary.fetch(params.oracle)
+      if (spot.lt(twap)) 
+        return {min: spot, max: twap}
+      return {min: twap, max: spot}
+    }
+
     return {
       C_ID,
       utr,
@@ -414,7 +433,8 @@ describe("Premium", function () {
       premiumBuyingLong,
       premiumBuyingShort,
       premiumAppliedLongBuyShort,
-      premiumAppliedShortBuyLong
+      premiumAppliedShortBuyLong,
+      fetchPrice
     }
   }
 
@@ -424,8 +444,9 @@ describe("Premium", function () {
   })
 
   it("RiskFactor > PremiumRate: Buy long 0.5e", async function () {
-    const { premiumBuyingLong } = await loadFixture(fixture)
+    const { premiumBuyingLong, fetchPrice, params } = await loadFixture(fixture)
     await premiumBuyingLong(0.5)
+    await fetchPrice()
   })
 
   it("RiskFactor > PremiumRate: Buy long 2e", async function () {
