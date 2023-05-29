@@ -1,11 +1,10 @@
+// SPDX-License-Identifier: BSL-1.1
 pragma solidity 0.8.13;
 
 import "../interfaces/IPool.sol";
 import "@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
-
-import "hardhat/console.sol";
 
 
 contract FlashloanAttack {
