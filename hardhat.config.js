@@ -8,7 +8,6 @@ require("hardhat-contract-sizer");
 require("@openzeppelin/hardhat-upgrades");
 require("hardhat-gas-reporter");
 require("hardhat-tracer");
-require("hardhat-exposed");
 require("solidity-coverage");
 
 require("./scripts/DeployDDLCore.sf");

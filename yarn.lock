@@ -112,14 +112,7 @@
   version "1.0.0"
   resolved "git+ssh://git@github.com:derivable-labs/shadow-token.git#c1a64b3ca399d1fbf6ae64a78dbf65dcc8beb1fe"
   dependencies:
-    "@atixlabs/hardhat-time-n-mine" "^0.0.5"
     "@derivable/erc1155-timelock" "git+ssh://git@github.com:derivable-labs/erc1155-timelock.git"
-    "@derivable/utr" "git+ssh://git@github.com:derivable-labs/utr.git"
-    bignumber.js "^9.1.1"
-    bn.js "^5.2.1"
-    canonical-weth "^1.4.0"
-    csv-parser "^3.0.0"
-    dotenv "^16.0.1"
 
 "@derivable/utr@git+ssh://git@github.com:derivable-labs/utr.git":
   version "1.0.0"
@@ -5004,14 +4997,6 @@ hardhat-deploy@^0.11.12:
     qs "^6.9.4"
     zksync-web3 "^0.14.3"
 
-hardhat-exposed@^0.3.4:
-  version "0.3.4"
-  resolved "https://registry.yarnpkg.com/hardhat-exposed/-/hardhat-exposed-0.3.4.tgz#9c7d7b3d4a91cc11121965a7fa540bc128e45340"
-  integrity sha512-TGare3JJKg5KHiARGk65ugJSkPKmG0kWJKbZb6y0YX1jZpeX7XnQ5ntKhDQjg0yNj5nUqwRSsO/fEcyGjF6JIw==
-  dependencies:
-    micromatch "^4.0.4"
-    solidity-ast "^0.4.25"
-
 hardhat-gas-reporter@^1.0.9:
   version "1.0.9"
   resolved "https://registry.yarnpkg.com/hardhat-gas-reporter/-/hardhat-gas-reporter-1.0.9.tgz#9a2afb354bc3b6346aab55b1c02ca556d0e16450"
@@ -8481,7 +8466,7 @@ solhint@^3.3.7:
   optionalDependencies:
     prettier "^2.8.3"
 
-solidity-ast@^0.4.15, solidity-ast@^0.4.25:
+solidity-ast@^0.4.15:
   version "0.4.49"
   resolved "https://registry.yarnpkg.com/solidity-ast/-/solidity-ast-0.4.49.tgz#ecba89d10c0067845b7848c3a3e8cc61a4fc5b82"
   integrity sha512-Pr5sCAj1SFqzwFZw1HPKSq0PehlQNdM8GwKyAVYh2DOn7/cCK8LUKD1HeHnKtTgBW7hi9h4nnnan7hpAg5RhWQ==
