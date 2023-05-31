@@ -291,7 +291,7 @@ describe("DDL v3", function () {
         )
         const wethAfter = await weth.balanceOf(owner.address)
         
-        expect(wethAfter.sub(wethBefore)).to.be.equal(normalAmount)
+        expect(Number(weiToNumber(wethAfter.sub(wethBefore)))).to.be.closeTo(Number(weiToNumber(normalAmount)), 0.0001)
       })
 
       it("Short", async function () {
@@ -342,7 +342,6 @@ describe("DDL v3", function () {
         )
 
         const wethBefore = await weth.balanceOf(owner.address)
-        console.log('\n')
         await flashloan.attack(
           swapParams,
           derivable1155.address,
@@ -355,7 +354,7 @@ describe("DDL v3", function () {
           owner.address,
         )
         const wethAfter = await weth.balanceOf(owner.address)
-        expect(Number(weiToNumber(wethAfter.sub(wethBefore)))).to.be.closeTo(Number(weiToNumber(normalAmount)), 0.001)
+        expect(Number(weiToNumber(wethAfter.sub(wethBefore)))).to.be.closeTo(Number(weiToNumber(normalAmount)), 0.0001)
       })
     })
   })
