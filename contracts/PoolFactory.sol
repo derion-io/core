@@ -60,7 +60,7 @@ contract PoolFactory is IPoolFactory {
     }
 
     function setFeeTo(address feeTo) external {
-        require(msg.sender == s_feeToSetter, 'ERR');
+        require(msg.sender == s_feeToSetter, 'UNA');
         s_feeTo = feeTo;
     }
 
@@ -69,7 +69,7 @@ contract PoolFactory is IPoolFactory {
     }
 
     function setFeeToSetter(address feeToSetter) external {
-        require(msg.sender == s_feeToSetter, 'ERR');
+        require(msg.sender == s_feeToSetter, 'UNA');
         s_feeToSetter = feeToSetter;
     }
 }
