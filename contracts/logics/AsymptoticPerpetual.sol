@@ -16,11 +16,11 @@ contract AsymptoticPerpetual is Pool {
         uint a,
         uint b
     ) internal override returns (uint rA, uint rB, uint rC) {
-        (uint twap, ) = _fetch(ORACLE);
+        (uint twap, ) = _fetch();
         uint t = block.timestamp - INIT_TIME;
         uint decayRateX64 = _decayRate(t, HALF_LIFE);
         State memory state = State(_reserve(TOKEN_R), a, b);
-        Market memory market = _market(K, MARK, decayRateX64, twap);
+        Market memory market = _market(decayRateX64, twap);
         (rA, rB) = _evaluate(market, state);
         rC = state.R - rA - rB;
         // uint R = IERC20(TOKEN_R).balanceOf(address(this));
@@ -50,9 +50,7 @@ contract AsymptoticPerpetual is Pool {
         // require(z <= type(uint).max, "Pool: upper overflow");
     }
 
-    function _fetch(
-        bytes32 ORACLE // 1bit QTI, 31bit reserve, 32bit WINDOW, ... PAIR ADDRESS
-    ) internal view returns (uint twap, uint spot) {
+    function _fetch() internal view returns (uint twap, uint spot) {
         address pool = address(uint160(uint(ORACLE)));
         (uint160 sqrtSpotX96,,,,,,) = IUniswapV3Pool(pool).slot0();
 
@@ -92,11 +90,9 @@ contract AsymptoticPerpetual is Pool {
     }
 
     function _market(
-        uint K,
-        uint MARK,
         uint decayRateX64,
         uint price
-    ) internal pure returns (Market memory market) {
+    ) internal view returns (Market memory market) {
         market.xkA = _powu(FullMath.mulDiv(price, Q128, MARK), K);
         market.xkB = uint(FullMath.mulDiv(Q256M/market.xkA, Q64, decayRateX64));
         market.xkA = uint(FullMath.mulDiv(market.xkA, Q64, decayRateX64));
@@ -119,23 +115,23 @@ contract AsymptoticPerpetual is Pool {
         uint sideOut
     ) internal view returns (Market memory market, uint rA, uint rB) {
         uint decayRateX64 = _decayRate(block.timestamp - INIT_TIME, HALF_LIFE);
-        (uint min, uint max) = _fetch(ORACLE);
+        (uint min, uint max) = _fetch();
         if (min > max) {
             (min, max) = (max, min);
         }
         if (sideOut == SIDE_A || sideIn == SIDE_B) {
-            market = _market(K, MARK, decayRateX64, max);
+            market = _market(decayRateX64, max);
             (rA, rB) = _evaluate(market, state);
         } else if (sideOut == SIDE_B || sideIn == SIDE_A) {
-            market = _market(K, MARK, decayRateX64, min);
+            market = _market(decayRateX64, min);
             (rA, rB) = _evaluate(market, state);
         } else {
             // TODO: assisting flag for min/max
-            market = _market(K, MARK, decayRateX64, min);
+            market = _market(decayRateX64, min);
             (rA, rB) = _evaluate(market, state);
             if ((sideIn == SIDE_R) == rB > rA) {
                 // TODO: unit test for this case
-                market = _market(K, MARK, decayRateX64, max);
+                market = _market(decayRateX64, max);
                 (rA, rB) = _evaluate(market, state);
             }
         }

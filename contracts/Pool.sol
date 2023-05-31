@@ -18,7 +18,7 @@ abstract contract Pool is IPool, Storage, Events, Constants {
     /// Immutables
     IPoolFactory internal immutable FACTORY;
     address internal immutable UTR;
-    bytes32 public immutable ORACLE;
+    bytes32 public immutable ORACLE; // QTI(1) reserve(32) WINDOW(32) PAIR(160)
     uint public immutable K;
     address internal immutable TOKEN;
     address public immutable TOKEN_R;
