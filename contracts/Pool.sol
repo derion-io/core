@@ -67,6 +67,7 @@ abstract contract Pool is IPool, Storage, Events, Constants {
         emit Derivable(
             'PoolCreated',                 // topic1: eventName
             _addressToBytes32(msg.sender), // topic2: factory
+            bytes32(bytes20(TOKEN_R)),     // topic3: reserve token
             abi.encode(PoolCreated(
                 UTR,
                 TOKEN,

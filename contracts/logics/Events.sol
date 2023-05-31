@@ -5,6 +5,7 @@ abstract contract Events {
     event Derivable(
         bytes32 indexed topic1,
         bytes32 indexed topic2,
+        bytes32 indexed topic3,
         bytes data
     );
 
