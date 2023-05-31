@@ -12,7 +12,6 @@ abstract contract Events {
     struct PoolCreated {
         address UTR;
         address TOKEN;
-        address LOGIC;
         bytes32 ORACLE;
         address TOKEN_R;
         uint256 MARK;
