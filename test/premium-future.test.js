@@ -77,11 +77,6 @@ describe("Premium and Future", function () {
 
     await time.increase(1000);
 
-    const AsymptoticPerpetual = await ethers.getContractFactory("$AsymptoticPerpetual");
-
-    const asymptoticPerpetual = await AsymptoticPerpetual.deploy();
-    await asymptoticPerpetual.deployed();
-
     // deploy token1155
     const Token = await ethers.getContractFactory("Token")
     const derivable1155 = await Token.deploy(
@@ -113,7 +108,6 @@ describe("Premium and Future", function () {
     const params = {
       utr: utr.address,
       token: derivable1155.address,
-      logic: asymptoticPerpetual.address,
       oracle,
       reserveToken: weth.address,
       recipient: owner.address,
@@ -131,7 +125,7 @@ describe("Premium and Future", function () {
     const poolNoPremiumAddress = await poolFactory.computePoolAddress(params);
     await weth.transfer(poolNoPremiumAddress, numberToWei(1));
     await poolFactory.createPool(params);
-    const derivablePoolNoPremium = await ethers.getContractAt("Pool", poolNoPremiumAddress);
+    const derivablePoolNoPremium = await ethers.getContractAt("AsymptoticPerpetual", poolNoPremiumAddress);
 
     // deploy ddl pool premium
     params.premiumRate = bn(1).shl(128).div(2)
@@ -148,7 +142,7 @@ describe("Premium and Future", function () {
     const poolAddress = await poolFactory.computePoolAddress(params);
     await weth.transfer(poolAddress, numberToWei(1));
     await poolFactory.createPool(params);
-    const derivablePool = await ethers.getContractAt("Pool", poolAddress);
+    const derivablePool = await ethers.getContractAt("AsymptoticPerpetual", poolAddress);
     await time.increase(100);
 
     // deploy helper
@@ -204,7 +198,6 @@ describe("Premium and Future", function () {
       txSignerANoPremium,
       txSignerBNoPremium,
       stateCalHelper,
-      asymptoticPerpetual,
       config,
       params
     }

@@ -3,10 +3,10 @@ pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/utils/Create2.sol";
 import "./interfaces/IPoolFactory.sol";
-import "./Pool.sol";
+import "./logics/AsymptoticPerpetual.sol";
 
 contract PoolFactory is IPoolFactory {
-    bytes32 immutable public BYTECODE_HASH = keccak256(type(Pool).creationCode);
+    bytes32 immutable public BYTECODE_HASH = keccak256(type(AsymptoticPerpetual).creationCode);
 
     // storage
     address internal s_feeTo;
@@ -30,7 +30,6 @@ contract PoolFactory is IPoolFactory {
         return keccak256(
             abi.encodePacked(
                 params.token,
-                params.logic,
                 params.oracle,
                 params.reserveToken,
                 params.mark,
@@ -46,7 +45,7 @@ contract PoolFactory is IPoolFactory {
 
     function createPool(Params memory params) external returns (address pool) {
         t_params = params;
-        pool = Create2.deploy(0, _salt(params), type(Pool).creationCode);
+        pool = Create2.deploy(0, _salt(params), type(AsymptoticPerpetual).creationCode);
         delete t_params;
     }
 
@@ -61,7 +60,7 @@ contract PoolFactory is IPoolFactory {
     }
 
     function setFeeTo(address feeTo) external {
-        require(msg.sender == s_feeToSetter, 'Derivable: FORBIDDEN');
+        require(msg.sender == s_feeToSetter, 'ERR');
         s_feeTo = feeTo;
     }
 
@@ -70,7 +69,7 @@ contract PoolFactory is IPoolFactory {
     }
 
     function setFeeToSetter(address feeToSetter) external {
-        require(msg.sender == s_feeToSetter, 'Derivable: FORBIDDEN');
+        require(msg.sender == s_feeToSetter, 'ERR');
         s_feeToSetter = feeToSetter;
     }
 }

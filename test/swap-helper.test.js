@@ -134,10 +134,6 @@ describe("DDL v3", function () {
             gasLimit: 30000000
         })
         await time.increase(1000);
-        // deploy logic
-        const AsymptoticPerpetual = await ethers.getContractFactory("AsymptoticPerpetual")
-        const asymptoticPerpetual = await AsymptoticPerpetual.deploy()
-        await asymptoticPerpetual.deployed()
         // deploy ddl pool
         const oracle = ethers.utils.hexZeroPad(
             bn(quoteTokenIndex).shl(255).add(bn(300).shl(256 - 64)).add(uniswapPair.address).toHexString(),
@@ -146,7 +142,6 @@ describe("DDL v3", function () {
         const params = {
             utr: utr.address,
             token: derivable1155.address,
-            logic: asymptoticPerpetual.address,
             oracle,
             reserveToken: weth.address,
             recipient: owner.address,
@@ -169,12 +164,11 @@ describe("DDL v3", function () {
             },
         )
 
-        const derivablePool = await ethers.getContractAt("Pool", poolAddress)
+        const derivablePool = await ethers.getContractAt("AsymptoticPerpetual", poolAddress)
 
         const params1 = {
             utr: utr.address,
             token: derivable1155.address,
-            logic: asymptoticPerpetual.address,
             oracle,
             reserveToken: weth.address,
             recipient: owner.address,
@@ -203,7 +197,7 @@ describe("DDL v3", function () {
             }
         )
 
-        const derivablePool1 = await ethers.getContractAt("Pool", poolAddress1)
+        const derivablePool1 = await ethers.getContractAt("AsymptoticPerpetual", poolAddress1)
 
         const DerivableHelper = await ethers.getContractFactory("contracts/test/TestHelper.sol:TestHelper")
         const derivableHelper = await DerivableHelper.deploy(
