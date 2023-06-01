@@ -100,12 +100,12 @@ contract AsymptoticPerpetual is Pool {
 
     function _decayRate (
         uint elapsed,
-        uint HALF_LIFE
+        uint halfLife
     ) internal pure returns (uint rateX64) {
-        if (HALF_LIFE == 0) {
+        if (halfLife == 0) {
             return Q64;
         }
-        int128 rate = ABDKMath64x64.exp_2(int128(int((elapsed << 64) / HALF_LIFE)));
+        int128 rate = ABDKMath64x64.exp_2(int128(int((elapsed << 64) / halfLife)));
         return uint(int(rate));
     } 
 
