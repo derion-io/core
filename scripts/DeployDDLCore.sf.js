@@ -13,6 +13,7 @@ const opts = {
 // testnet arb
 const weth = '0xe39Ab88f8A4777030A534146A9Ca3B52bd5D43A3'
 const utr = '0xbc9a257e43f7b3b1a03aEBE909f15e95A4928834'
+const descriptorSetter = '0x0af7e6C3dCEd0f86d82229Bd316d403d78F54E07'
 
 const singletonFactoryAddress = '0xce0042B868300000d44A59004Da54A005ffdcf9f'
 
@@ -65,7 +66,7 @@ task('deployPoolFactory', 'Use SingletonFatory to deploy PoolFactory contract')
         }
     )
 
-task('deployToken', 'Use SingletonFatory to deploy Token contract')
+task('deployTokenDescriptor', 'Use SingletonFatory to deploy TokenDescriptor contract')
     .addParam('addr', 'The address list json file')
     .setAction(
         async (taskArgs, hre) => {
@@ -79,16 +80,7 @@ task('deployToken', 'Use SingletonFatory to deploy Token contract')
             const contract = new ethers.Contract(singletonFactoryAddress, SingletonFactoryABI, provider)
             const wallet = new ethers.Wallet(account, provider)
             const contractWithSigner = contract.connect(wallet)
-            const byteCode = require('../artifacts/contracts/Token.sol/Token.json').bytecode
-            const tokenURI = 'https://raw.githubusercontent.com/derivable-labs/metadata/dev/token/'
-            const params = ethers.utils.defaultAbiCoder.encode(
-                ['string', 'address'],
-                [tokenURI, utr]
-            )
-            const initBytecode = ethers.utils.solidityPack(
-                ['bytes', 'bytes'],
-                [byteCode, params]
-            )
+            const initBytecode = require('../artifacts/contracts/TokenDescriptor.sol/TokenDescriptor.json').bytecode
             try {
                 const deployTx = await contractWithSigner.deploy(initBytecode, saltHex, opts)
                 console.log('Tx: ', deployTx.hash)
@@ -106,14 +98,14 @@ task('deployToken', 'Use SingletonFatory to deploy Token contract')
                 ethers.utils.hexZeroPad(ethers.utils.hexlify(salt), 32),
                 initCodeHash,
             )
-            console.log(`token: ${address}`)
-            addressList['token'] = address
+            console.log(`tokenDescriptor: ${address}`)
+            addressList['tokenDescriptor'] = address
 
             exportData(addressList, taskArgs.addr)
         }
     )
 
-task('deployLogic', 'Use SingletonFatory to deploy Logic contract')
+task('deployToken', 'Use SingletonFatory to deploy Token contract')
     .addParam('addr', 'The address list json file')
     .setAction(
         async (taskArgs, hre) => {
@@ -127,10 +119,21 @@ task('deployLogic', 'Use SingletonFatory to deploy Logic contract')
             const contract = new ethers.Contract(singletonFactoryAddress, SingletonFactoryABI, provider)
             const wallet = new ethers.Wallet(account, provider)
             const contractWithSigner = contract.connect(wallet)
-            const byteCode = require('../artifacts/contracts/logics/AsymptoticPerpetual.sol/AsymptoticPerpetual.json').bytecode
+            const byteCode = require('../artifacts/contracts/Token.sol/Token.json').bytecode
 
+            const addressPath = path.join(__dirname, `./${taskArgs.addr}.json`)
+            const addressList = JSON.parse(fs.readFileSync(addressPath, 'utf8'))
+
+            const params = ethers.utils.defaultAbiCoder.encode(
+                ['address', 'address', 'address'],
+                [utr, descriptorSetter, addressList['tokenDescriptor']]
+            )
+            const initBytecode = ethers.utils.solidityPack(
+                ['bytes', 'bytes'],
+                [byteCode, params]
+            )
             try {
-                const deployTx = await contractWithSigner.deploy(byteCode, saltHex, opts)
+                const deployTx = await contractWithSigner.deploy(initBytecode, saltHex, opts)
                 console.log('Tx: ', deployTx.hash)
                 const res = await deployTx.wait(1)
                 console.log('Result: ', res)
@@ -138,16 +141,14 @@ task('deployLogic', 'Use SingletonFatory to deploy Logic contract')
                 console.log('Error: ', error)
             }
             // compute address
-            const addressPath = path.join(__dirname, `./${taskArgs.addr}.json`)
-            const addressList = JSON.parse(fs.readFileSync(addressPath, 'utf8'))
-            const initCodeHash = ethers.utils.keccak256(byteCode)
+            const initCodeHash = ethers.utils.keccak256(initBytecode)
             const address = ethers.utils.getCreate2Address(
                 singletonFactoryAddress,
                 ethers.utils.hexZeroPad(ethers.utils.hexlify(salt), 32),
                 initCodeHash,
             )
-            console.log(`logic: ${address}`)
-            addressList['logic'] = address
+            console.log(`token: ${address}`)
+            addressList['token'] = address
 
             exportData(addressList, taskArgs.addr)
         }
@@ -207,7 +208,7 @@ task('packID', 'Pack Id to mint token')
     .addParam('id', 'Token ID')
     .setAction(
         async (taskArgs, hre) => {
-            const id = packId(taskArgs.id, '0x0af7e6C3dCEd0f86d82229Bd316d403d78F54E07')
+            const id = packId(taskArgs.id, '0x74DF0C44Ad399Ba0301caC00EAf741C72EF90B73')
             console.log(id.toHexString())
         }
     )

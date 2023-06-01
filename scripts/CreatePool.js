@@ -31,13 +31,13 @@ async function main() {
     // const pairETHUSDC = "0xBf4CC059DfF52AeFe7f12516e4CA4Bc691D97474"
 
     const qti = 0
-    const initTime = 1682528400
+    const initTime = 0
     const windowTime = 60
     // mainnet
     // const mark = "0x2D9B0000000000000000000000000"
     // testnet
     const mark = bn("27293609183235302404845348176478882")
-    const k = 10
+    const k = 8
     const amountInit = pe("0.001")
     const a = pe("0.0004")
     const b = pe("0.0004")
@@ -53,19 +53,27 @@ async function main() {
     const addressPath = path.join(__dirname, `./ARBTestnet.json`)
     const addressList = JSON.parse(fs.readFileSync(addressPath, 'utf8'))
 
+    const premiumRate = 0;
+    const minExpirationD = 0;
+    const minExpirationC = 0;
+    const discountRate = 0;
+
     const params = {
         utr,
         token: addressList["token"],
-        logic: addressList["logic"],
         oracle,
         reserveToken: weth,
-        recipient: "0xFf6a4D6C03750c0d6449cCF3fF21e1E085c8f26b",
+        recipient: "0x0af7e6C3dCEd0f86d82229Bd316d403d78F54E07",
         mark,
         k,
         a,
         b,
         initTime,
-        halfLife
+        halfLife,
+        premiumRate,
+        minExpirationD,
+        minExpirationC,
+        discountRate
     }
 
     console.log(params)
@@ -79,7 +87,7 @@ async function main() {
     const poolFactory = await ethers.getContractAt("PoolFactory", addressList["poolFactory"])
     const poolAddress = await poolFactory.computePoolAddress(params)
     console.log(`pool: ${poolAddress}`)
-    addressList["pool^16"] = poolAddress
+    addressList["pool^4"] = poolAddress
     exportData(addressList)
 }
 
