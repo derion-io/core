@@ -157,8 +157,8 @@ contract AsymptoticPerpetual is Pool {
         if (state.R != state1.R) {
             uint R = FullMath.mulDivRoundingUp(state1.R, amountIn, Q64);
             s_R = R;
-            // TODO: do we need this?
-            state1.R = FullMath.mulDiv(R, Q64, amountIn);
+            // NOTE: amountIn >= Q64 always true, so the following re-calculation can be skipped
+            // state1.R = FullMath.mulDiv(R, Q64, amountIn);
         }
         // [TRANSITION]
         (uint rA1, uint rB1) = _evaluate(market, state1);
