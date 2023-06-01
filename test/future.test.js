@@ -48,9 +48,18 @@ DCs.forEach(DISCOUNT_RATE => {
     async function deployDDLv2() {
       const [owner, accountA, accountB] = await ethers.getSigners()
       const signer = owner
+      // deploy logic container
+      const LogicContainer = await ethers.getContractFactory("LogicContainer")
+      const logicContainer = await LogicContainer.deploy()
+      await logicContainer.deployed()
       // deploy pool factory
       const PoolFactory = await ethers.getContractFactory("PoolFactory")
-      const poolFactory = await PoolFactory.deploy(owner.address)
+      const poolFactory = await PoolFactory.deploy(
+        owner.address, 
+        logicContainer.address,
+        12, 
+        toHalfLife(0.006) * 12
+      )
       // deploy UTR
       const UTR = require("@derivable/utr/build/UniversalTokenRouter.json")
       const UniversalRouter = new ethers.ContractFactory(UTR.abi, UTR.bytecode, owner)
@@ -140,7 +149,8 @@ DCs.forEach(DISCOUNT_RATE => {
         premiumRate: 0,
         minExpirationD: 0,
         minExpirationC: 0,
-        discountRate: bn(DISCOUNT_RATE).shl(128).div(100)
+        discountRate: bn(DISCOUNT_RATE).shl(128).div(100),
+        feeHalfLife: 0
       }
       const poolAddress = await poolFactory.computePoolAddress(params)
       await weth.deposit({
@@ -165,7 +175,8 @@ DCs.forEach(DISCOUNT_RATE => {
         premiumRate: '0',
         minExpirationD: 24 * 60 * 60,
         minExpirationC: 12 * 60 * 60,
-        discountRate: bn(DISCOUNT_RATE).shl(128).div(100)
+        discountRate: bn(DISCOUNT_RATE).shl(128).div(100),
+        feeHalfLife: 0
       }
       const poolAddress1 = await poolFactory.computePoolAddress(params1)
       await weth.deposit({

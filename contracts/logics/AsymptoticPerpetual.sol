@@ -10,8 +10,6 @@ import "../libs/abdk-consulting/abdk-libraries-solidity/ABDKMath64x64.sol";
 
 
 contract AsymptoticPerpetual is Pool {
-    uint internal constant FEE_RATE = 12;    // takes 1/12 cut of LP interest rate
-
     function _init(
         uint a,
         uint b
@@ -25,14 +23,14 @@ contract AsymptoticPerpetual is Pool {
         rC = state.R - rA - rB;
         // uint R = IERC20(TOKEN_R).balanceOf(address(this));
         // require(4 * a * b <= R, "INVALID_PARAM");
-        uint feeDecayRateX64 = _decayRate(t, HALF_LIFE * FEE_RATE);
+        uint feeDecayRateX64 = _decayRate(t, FEE_HALF_LIFE);
         s_R = FullMath.mulDivRoundingUp(state.R, feeDecayRateX64, Q64);
         s_a = a;
         s_b = b;
     }
 
     function _getR(uint R) internal view override returns (uint) {
-        uint feeRateX64 = _decayRate(block.timestamp - INIT_TIME, HALF_LIFE * FEE_RATE);
+        uint feeRateX64 = _decayRate(block.timestamp - INIT_TIME, FEE_HALF_LIFE);
         return FullMath.mulDiv(R, Q64, feeRateX64);
     }
 
@@ -145,7 +143,7 @@ contract AsymptoticPerpetual is Pool {
         require(sideIn != sideOut, 'SS');
         // [PRICE SELECTION]
         // TODO: don't share variable if possible
-        amountIn = _decayRate(block.timestamp - INIT_TIME, HALF_LIFE * FEE_RATE);
+        amountIn = _decayRate(block.timestamp - INIT_TIME, FEE_HALF_LIFE);
         State memory state = State(
             FullMath.mulDiv(s_R, Q64, amountIn),
             s_a,

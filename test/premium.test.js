@@ -15,6 +15,10 @@ describe("Premium", function () {
   async function fixture() {
     const [owner, accountA, accountB] = await ethers.getSigners();
     const signer = owner;
+    // deploy logic container
+    const LogicContainer = await ethers.getContractFactory("LogicContainer")
+    const logicContainer = await LogicContainer.deploy()
+    await logicContainer.deployed()
 
     // deploy UTR
     const UTR = require("@derivable/utr/build/UniversalTokenRouter.json")
@@ -25,8 +29,9 @@ describe("Premium", function () {
     // deploy pool factory
     const PoolFactory = await ethers.getContractFactory("PoolFactory");
     const poolFactory = await PoolFactory.deploy(
-      owner.address,
-    );
+      owner.address, 
+      logicContainer.address,
+      12, 0);
     await poolFactory.setFeeTo(owner.address)
 
     // weth test
@@ -115,7 +120,8 @@ describe("Premium", function () {
       premiumRate: '0',
       minExpirationD: 0,
       minExpirationC: 0,
-      discountRate: 0
+      discountRate: 0,
+      feeHalfLife: 0
     }
     const poolNoPremiumAddress = await poolFactory.computePoolAddress(params);
     await weth.transfer(poolNoPremiumAddress, numberToWei(1));

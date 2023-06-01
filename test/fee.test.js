@@ -36,10 +36,18 @@ HLs.forEach(HALF_LIFE => {
       const utr = await UniversalRouter.deploy()
       await utr.deployed()
 
+      // deploy logic container
+      const LogicContainer = await ethers.getContractFactory("LogicContainer")
+      const logicContainer = await LogicContainer.deploy()
+      await logicContainer.deployed()
+
       // deploy pool factory
       const PoolFactory = await ethers.getContractFactory("PoolFactory");
       const poolFactory = await PoolFactory.deploy(
         owner.address,
+        logicContainer.address,
+        12,
+        HALF_LIFE * 12
       );
 
       // weth test
@@ -119,6 +127,7 @@ HLs.forEach(HALF_LIFE => {
         minExpirationD: 0,
         minExpirationC: 0,
         discountRate: 0,
+        feeHalfLife: 0
       }
       const poolAddress = await poolFactory.computePoolAddress(params);
       let txSignerA = weth.connect(accountA);

@@ -40,11 +40,18 @@ async function scenerio01() {
   const utr = await UniversalRouter.deploy()
   await utr.deployed()
 
+  // deploy logic container
+  const LogicContainer = await ethers.getContractFactory("LogicContainer")
+  const logicContainer = await LogicContainer.deploy()
+  await logicContainer.deployed()
+
   // deploy pool factory
   const PoolFactory = await ethers.getContractFactory("PoolFactory");
   const poolFactory = await PoolFactory.deploy(
     owner.address,
-    // derivable1155.address
+    logicContainer.address,
+    12,
+    HALF_LIFE*12
   );
   // weth test
   const compiledWETH = require("canonical-weth/build/contracts/WETH9.json")
@@ -123,6 +130,7 @@ async function scenerio01() {
     minExpirationD: 0,
     minExpirationC: 0,
     discountRate: 0,
+    feeHalfLife: 0
   }
   const poolAddress = await poolFactory.computePoolAddress(params);
   let txSignerA = weth.connect(accountA);
@@ -212,11 +220,18 @@ async function scenerio02() {
   const utr = await UniversalRouter.deploy()
   await utr.deployed()
 
+  // deploy logic container
+  const LogicContainer = await ethers.getContractFactory("LogicContainer")
+  const logicContainer = await LogicContainer.deploy()
+  await logicContainer.deployed()
+
   // deploy pool factory
   const PoolFactory = await ethers.getContractFactory("PoolFactory");
   const poolFactory = await PoolFactory.deploy(
     owner.address,
-    // derivable1155.address
+    logicContainer.address,
+    12,
+    HALF_LIFE * 12
   );
   // weth test
   const compiledWETH = require("canonical-weth/build/contracts/WETH9.json")
@@ -295,6 +310,7 @@ async function scenerio02() {
     minExpirationD: 0,
     minExpirationC: 0,
     discountRate: 0,
+    feeHalfLife: 0
   }
   const poolAddress = await poolFactory.computePoolAddress(params);
   let txSignerA = weth.connect(accountA);

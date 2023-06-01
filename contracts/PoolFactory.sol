@@ -3,10 +3,13 @@ pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/utils/Create2.sol";
 import "./interfaces/IPoolFactory.sol";
-import "./logics/AsymptoticPerpetual.sol";
+import "./interfaces/ILogicContainer.sol";
 
 contract PoolFactory is IPoolFactory {
-    bytes32 immutable public BYTECODE_HASH = keccak256(type(AsymptoticPerpetual).creationCode);
+    bytes32 immutable public BYTECODE_HASH;
+    uint internal immutable FEE_RATE;
+    uint internal immutable FEE_HL_LIMIT;
+    address internal immutable LOGIC_CONTAINER;
 
     // storage
     address internal s_feeTo;
@@ -15,11 +18,20 @@ contract PoolFactory is IPoolFactory {
     // transient storage
     Params t_params;
 
-    constructor(address feeToSetter) {
+    constructor(
+        address feeToSetter,
+        address logicContainer,
+        uint feeRate,
+        uint feeHLLimit
+    ) {
         if (feeToSetter == address(0)) {
             feeToSetter = msg.sender;
         }
         s_feeToSetter = feeToSetter;
+        FEE_RATE = feeRate;
+        FEE_HL_LIMIT = feeHLLimit;
+        LOGIC_CONTAINER = logicContainer;
+        BYTECODE_HASH = keccak256(ILogicContainer(logicContainer).getPoolBytecode());
     }
 
     function getParams() external view override returns (Params memory) {
@@ -45,7 +57,8 @@ contract PoolFactory is IPoolFactory {
 
     function createPool(Params memory params) external returns (address pool) {
         t_params = params;
-        pool = Create2.deploy(0, _salt(params), type(AsymptoticPerpetual).creationCode);
+        t_params.feeHalfLife = FEE_HL_LIMIT < params.halfLife * FEE_RATE ? FEE_HL_LIMIT : params.halfLife * FEE_RATE;
+        pool = Create2.deploy(0, _salt(params), ILogicContainer(LOGIC_CONTAINER).getPoolBytecode());
         delete t_params;
     }
 

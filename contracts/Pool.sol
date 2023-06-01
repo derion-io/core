@@ -29,6 +29,7 @@ abstract contract Pool is IPool, Storage, Events, Constants {
     uint32 internal immutable MIN_EXPIRATION_D;
     uint32 internal immutable MIN_EXPIRATION_C;
     uint internal immutable DISCOUNT_RATE;
+    uint internal immutable FEE_HALF_LIFE;
 
     constructor() {
         FACTORY = IPoolFactory(msg.sender);
@@ -47,6 +48,7 @@ abstract contract Pool is IPool, Storage, Events, Constants {
         DISCOUNT_RATE = params.discountRate;
         PREMIUM_RATE = params.premiumRate;
         INIT_TIME = params.initTime > 0 ? params.initTime : block.timestamp;
+        FEE_HALF_LIFE = params.feeHalfLife;
         require(block.timestamp >= INIT_TIME, "PIT");
 
         (uint rA, uint rB, uint rC) = _init(params.a, params.b);

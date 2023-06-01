@@ -14,6 +14,7 @@ struct Params {
     uint32  minExpirationD;
     uint32  minExpirationC;
     uint    discountRate;
+    uint    feeHalfLife;
     uint k;
     uint a;
     uint b;

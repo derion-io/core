@@ -51,9 +51,16 @@ describe("DDL v3", function () {
     async function deployDDLv2() {
         const [owner, accountA] = await ethers.getSigners();
         const signer = owner;
+        // deploy logic container
+        const LogicContainer = await ethers.getContractFactory("LogicContainer")
+        const logicContainer = await LogicContainer.deploy()
+        await logicContainer.deployed()
         // deploy pool factory
         const PoolFactory = await ethers.getContractFactory("PoolFactory")
-        const poolFactory = await PoolFactory.deploy(owner.address)
+        const poolFactory = await PoolFactory.deploy(
+            owner.address, 
+            logicContainer.address,
+            12, HALF_LIFE*12)
         // deploy UTR
         const UTR = require("@derivable/utr/build/UniversalTokenRouter.json")
         const UniversalRouter = new ethers.ContractFactory(UTR.abi, UTR.bytecode, owner)
@@ -155,6 +162,7 @@ describe("DDL v3", function () {
             minExpirationD: 0,
             minExpirationC: 0,
             discountRate: 0,
+            feeHalfLife: 0
         }
         const poolAddress = await poolFactory.computePoolAddress(params)
         await stateCalHelper.createPool(
@@ -182,6 +190,7 @@ describe("DDL v3", function () {
             minExpirationD: 0,
             minExpirationC: 0,
             discountRate: 0,
+            feeHalfLife: 0
         }
         const poolAddress1 = await poolFactory.computePoolAddress(params1)
         // await weth.deposit({
