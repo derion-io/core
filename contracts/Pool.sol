@@ -29,7 +29,6 @@ abstract contract Pool is IPool, Storage, Events, Constants {
     uint32 internal immutable MIN_EXPIRATION_D;
     uint32 internal immutable MIN_EXPIRATION_C;
     uint internal immutable DISCOUNT_RATE;
-    uint internal immutable FEE_HALF_LIFE;
 
     constructor() {
         FACTORY = IPoolFactory(msg.sender);
@@ -48,7 +47,6 @@ abstract contract Pool is IPool, Storage, Events, Constants {
         DISCOUNT_RATE = params.discountRate;
         PREMIUM_RATE = params.premiumRate;
         INIT_TIME = params.initTime > 0 ? params.initTime : block.timestamp;
-        FEE_HALF_LIFE = params.feeHalfLife;
         require(block.timestamp >= INIT_TIME, "PIT");
 
         (uint rA, uint rB, uint rC) = _init(params.a, params.b);
@@ -89,17 +87,9 @@ abstract contract Pool is IPool, Storage, Events, Constants {
     }
 
     function getStates() external view returns (uint R, uint a, uint b) {
-        R = _getR(s_R);
+        R = IERC20(TOKEN_R).balanceOf(address(this));
         a = s_a;
         b = s_b;
-    }
-
-    function collect() external returns (uint amount) {
-        uint R = _getR(s_R);
-        amount = IERC20(TOKEN_R).balanceOf(address(this)) - R;
-        address feeTo = FACTORY.getFeeTo();
-        require(feeTo != address(0), "FTNS");
-        TransferHelper.safeTransfer(TOKEN_R, feeTo, amount);
     }
 
     function swap(
@@ -172,6 +162,4 @@ abstract contract Pool is IPool, Storage, Events, Constants {
         uint sideOut,
         SwapParam memory param
     ) internal virtual returns(uint amountIn, uint amountOut);
-
-    function _getR(uint R) internal view virtual returns (uint);
 }

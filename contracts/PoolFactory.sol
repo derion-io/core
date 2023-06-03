@@ -57,7 +57,6 @@ contract PoolFactory is IPoolFactory {
 
     function createPool(Params memory params) external returns (address pool) {
         t_params = params;
-        t_params.feeHalfLife = FEE_HL_LIMIT < params.halfLife * FEE_RATE ? FEE_HL_LIMIT : params.halfLife * FEE_RATE;
         pool = Create2.deploy(0, _salt(params), ILogicContainer(LOGIC_CONTAINER).getPoolBytecode());
         delete t_params;
     }
