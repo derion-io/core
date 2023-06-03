@@ -34,7 +34,6 @@ abstract contract Pool is IPool, Storage, Events, Constants {
         FACTORY = IPoolFactory(msg.sender);
 
         Params memory params = IPoolFactory(msg.sender).getParams();
-        // TODO: require(4*params.a*params.b <= params.R, "invalid (R,a,b)");
         UTR = params.utr;
         TOKEN = params.token;
         ORACLE = params.oracle;
@@ -49,20 +48,25 @@ abstract contract Pool is IPool, Storage, Events, Constants {
         INIT_TIME = params.initTime > 0 ? params.initTime : block.timestamp;
         require(block.timestamp >= INIT_TIME, "PIT");
 
-        (uint rA, uint rB, uint rC) = _init(params.a, params.b);
+        // uint R = _reserve();
+        // require(4 * a * b <= R, "INVALID_PARAM");
+        s_a = params.a;
+        s_b = params.b;
+
         uint idA = _packID(address(this), SIDE_A);
         uint idB = _packID(address(this), SIDE_B);
         uint idC = _packID(address(this), SIDE_C);
 
+        // TODO: can this virtual supply be removed when we have new fee supply
         // permanently lock MINIMUM_LIQUIDITY for each side
         IERC1155Supply(TOKEN).mintVirtualSupply(idA, MINIMUM_LIQUIDITY);
         IERC1155Supply(TOKEN).mintVirtualSupply(idB, MINIMUM_LIQUIDITY);
         IERC1155Supply(TOKEN).mintVirtualSupply(idC, MINIMUM_LIQUIDITY);
 
         // mint tokens to recipient
-        IERC1155Supply(TOKEN).mintLock(params.recipient, idA, rA - MINIMUM_LIQUIDITY, MIN_EXPIRATION_D, "");
-        IERC1155Supply(TOKEN).mintLock(params.recipient, idB, rB - MINIMUM_LIQUIDITY, MIN_EXPIRATION_D, "");
-        IERC1155Supply(TOKEN).mintLock(params.recipient, idC, rC - MINIMUM_LIQUIDITY, MIN_EXPIRATION_C, "");
+        IERC1155Supply(TOKEN).mintLock(params.recipient, idA, params.sA - MINIMUM_LIQUIDITY, MIN_EXPIRATION_D, "");
+        IERC1155Supply(TOKEN).mintLock(params.recipient, idB, params.sB - MINIMUM_LIQUIDITY, MIN_EXPIRATION_D, "");
+        IERC1155Supply(TOKEN).mintLock(params.recipient, idC, params.sC - MINIMUM_LIQUIDITY, MIN_EXPIRATION_C, "");
 
         emit Derivable(
             'PoolCreated',                 // topic1: eventName
@@ -151,11 +155,6 @@ abstract contract Pool is IPool, Storage, Events, Constants {
             }
         }
     }
-
-    function _init(
-        uint a,
-        uint b
-    ) internal virtual returns (uint rA, uint rB, uint rC);
 
     function _swap(
         uint sideIn,

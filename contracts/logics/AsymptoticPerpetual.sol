@@ -10,22 +10,6 @@ import "../libs/abdk-consulting/abdk-libraries-solidity/ABDKMath64x64.sol";
 
 
 contract AsymptoticPerpetual is Pool {
-    function _init(
-        uint a,
-        uint b
-    ) internal override returns (uint rA, uint rB, uint rC) {
-        (uint twap, ) = _fetch();
-        uint t = block.timestamp - INIT_TIME;
-        uint decayRateX64 = _decayRate(t, HALF_LIFE);
-        State memory state = State(_reserve(), a, b);
-        Market memory market = _market(decayRateX64, twap);
-        (rA, rB) = _evaluate(market, state);
-        rC = state.R - rA - rB;
-        // require(4 * a * b <= R, "INVALID_PARAM");
-        s_a = a;
-        s_b = b;
-    }
-
     function _powu(uint x, uint y) internal pure returns (uint z) {
         // Calculate the first iteration of the loop in advance.
         z = y & 1 > 0 ? x : Q128;
