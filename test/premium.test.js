@@ -11,6 +11,8 @@ use(solidity)
 
 const HALF_LIFE = 0;
 
+const pe = (x) => ethers.utils.parseEther(String(x))
+
 describe("Premium", function () {
   async function fixture() {
     const [owner, accountA, accountB] = await ethers.getSigners();
@@ -109,10 +111,10 @@ describe("Premium", function () {
       oracle,
       reserveToken: weth.address,
       recipient: owner.address,
-      mark: bn(1000).shl(128).div(38),
+      mark: bn(38).shl(128),
       k: bn(5),
-      a: bn('30000000000'),
-      b: bn('30000000000'),
+      a: pe(1),
+      b: pe(1),
       initTime: 0,
       halfLife: bn(HALF_LIFE), // ten years
       premiumRate: '0',
@@ -121,9 +123,9 @@ describe("Premium", function () {
       discountRate: 0,
       feeHalfLife: 0
     }
-    params = await _init(oracleLibrary, numberToWei(1), params)
+    params = await _init(oracleLibrary, pe("5"), params)
     const poolNoPremiumAddress = await poolFactory.computePoolAddress(params);
-    await weth.transfer(poolNoPremiumAddress, numberToWei(1));
+    await weth.transfer(poolNoPremiumAddress, pe("5"));
     await poolFactory.createPool(params);
     const derivablePoolNoPremium = await ethers.getContractAt("AsymptoticPerpetual", poolNoPremiumAddress);
 
@@ -134,13 +136,13 @@ describe("Premium", function () {
       TOKEN_R: weth.address,
       ORACLE: oracle,
       K: bn(5),
-      MARK: bn(1000).shl(128).div(38),
+      MARK: bn(38).shl(128),
       INIT_TIME: bn(params.initTime),
       HALF_LIFE: bn(params.halfLife),
       PREMIUM_RATE: params.premiumRate
     }
     const poolAddress = await poolFactory.computePoolAddress(params);
-    await weth.transfer(poolAddress, numberToWei(1));
+    await weth.transfer(poolAddress, pe("5"));
     await poolFactory.createPool(params);
     const derivablePool = await ethers.getContractAt("AsymptoticPerpetual", poolAddress);
     await time.increase(100);
@@ -431,15 +433,14 @@ describe("Premium", function () {
     }
   }
 
-  it("RiskFactor > PremiumRate: Buy long 1e", async function () {
+  it("RiskFactor > PremiumRate: Buy long 1.7e", async function () {
     const { premiumBuyingLong } = await loadFixture(fixture)
-    await premiumBuyingLong(1)
+    await premiumBuyingLong(1.7)
   })
 
-  it("RiskFactor > PremiumRate: Buy long 0.5e", async function () {
-    const { premiumBuyingLong, fetchPrice, params } = await loadFixture(fixture)
-    await premiumBuyingLong(0.5)
-    await fetchPrice()
+  it("RiskFactor > PremiumRate: Buy long 3e", async function () {
+    const { premiumBuyingLong } = await loadFixture(fixture)
+    await premiumBuyingLong(3)
   })
 
   it("RiskFactor > PremiumRate: Buy long 2e", async function () {
@@ -510,14 +511,14 @@ describe("Premium", function () {
       .to.be.equal(withoutPremium)
   })
 
-  it("RiskFactor < -PremiumRate: Buy short 1e", async function () {
+  it("RiskFactor < -PremiumRate: Buy short 3e", async function () {
     const { premiumBuyingShort } = await loadFixture(fixture)
-    await premiumBuyingShort(1)
+    await premiumBuyingShort(3)
   })
 
-  it("RiskFactor < -PremiumRate: Buy short 0.7e", async function () {
+  it("RiskFactor < -PremiumRate: Buy short 1.7e", async function () {
     const { premiumBuyingShort } = await loadFixture(fixture)
-    await premiumBuyingShort(0.7)
+    await premiumBuyingShort(1.7)
   })
 
   it("RiskFactor < -PremiumRate: Buy short 2e", async function () {

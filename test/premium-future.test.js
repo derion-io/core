@@ -7,6 +7,8 @@ const { solidity } = require("ethereum-waffle");
 const { _init } = require("./shared/AsymptoticPerpetual");
 const { weiToNumber, bn, getDeltaSupply, numberToWei, packId, unpackId, encodeSqrtX96, encodePayload, attemptSwap, attemptStaticSwap } = require("./shared/utilities");
 const abiCoder = new ethers.utils.AbiCoder()
+
+const pe = (x) => ethers.utils.parseEther(String(x))
 use(solidity)
 
 const SECONDS_PER_DAY = 86400
@@ -114,10 +116,10 @@ describe("Premium and Future", function () {
       oracle,
       reserveToken: weth.address,
       recipient: owner.address,
-      mark: bn(1000).shl(128).div(38),
+      mark: bn(38).shl(128),
       k: bn(5),
-      a: bn('30000000000'),
-      b: bn('30000000000'),
+      a: pe(1),
+      b: pe(1),
       initTime: 0,
       halfLife: bn(toHalfLife(0.006)), // ten years
       premiumRate: '0',
@@ -126,9 +128,9 @@ describe("Premium and Future", function () {
       discountRate: bn(DC).shl(128).div(100),
       feeHalfLife: 0
     }
-    params = await _init(oracleLibrary, numberToWei(1), params)
+    params = await _init(oracleLibrary, pe("5"), params)
     const poolNoPremiumAddress = await poolFactory.computePoolAddress(params);
-    await weth.transfer(poolNoPremiumAddress, numberToWei(1));
+    await weth.transfer(poolNoPremiumAddress, pe("5"));
     await poolFactory.createPool(params);
     const derivablePoolNoPremium = await ethers.getContractAt("AsymptoticPerpetual", poolNoPremiumAddress);
 
@@ -145,7 +147,7 @@ describe("Premium and Future", function () {
       PREMIUM_RATE: params.premiumRate
     }
     const poolAddress = await poolFactory.computePoolAddress(params);
-    await weth.transfer(poolAddress, numberToWei(1));
+    await weth.transfer(poolAddress, pe("5"));
     await poolFactory.createPool(params);
     const derivablePool = await ethers.getContractAt("AsymptoticPerpetual", poolAddress);
     await time.increase(100);

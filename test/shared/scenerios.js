@@ -120,8 +120,8 @@ async function scenerio01() {
     recipient: owner.address,
     mark: bn(40).shl(128),
     k: bn(5),
-    a: bn('30000000000'),
-    b: bn('30000000000'),
+    a: numberToWei(1),
+    b: numberToWei(1),
     initTime: 0,
     halfLife: bn(HALF_LIFE),
     premiumRate: bn(1).shl(128).div(2),
@@ -130,7 +130,7 @@ async function scenerio01() {
     discountRate: 0,
     feeHalfLife: 0
   }
-  params = await _init(oracleLibrary, numberToWei(1), params)
+  params = await _init(oracleLibrary, numberToWei(5), params)
   const poolAddress = await poolFactory.computePoolAddress(params);
   let txSignerA = weth.connect(accountA);
   let txSignerB = weth.connect(accountB);
@@ -144,7 +144,8 @@ async function scenerio01() {
   await weth.deposit({
     value: '100000000000000000000000000000'
   })
-  await weth.transfer(poolAddress, numberToWei(1));
+  await weth.transfer(poolAddress, numberToWei(5));
+  console.log('pool 1')
   await poolFactory.createPool(params);
   const derivablePool = await ethers.getContractAt("AsymptoticPerpetual", await poolFactory.computePoolAddress(params));
 
@@ -296,10 +297,10 @@ async function scenerio02() {
     oracle,
     reserveToken: weth.address,
     recipient: owner.address,
-    mark: bn(20).shl(128),
+    mark: bn(35).shl(128),
     k: bn(5),
-    a: bn('30000000000'),
-    b: bn('30000000000'),
+    a: numberToWei(1),
+    b: numberToWei(1),
     initTime: 0,
     halfLife: bn(HALF_LIFE),
     premiumRate: bn(1).shl(128).div(2),
@@ -308,7 +309,7 @@ async function scenerio02() {
     discountRate: 0,
     feeHalfLife: 0
   }
-  params = await _init(oracleLibrary, numberToWei(1), params)
+  params = await _init(oracleLibrary, numberToWei(3.5), params)
   const poolAddress = await poolFactory.computePoolAddress(params);
   let txSignerA = weth.connect(accountA);
   let txSignerB = weth.connect(accountB);
@@ -322,7 +323,8 @@ async function scenerio02() {
   await weth.deposit({
     value: '100000000000000000000000000000'
   })
-  await weth.transfer(poolAddress, numberToWei(1));
+  await weth.transfer(poolAddress, numberToWei(3.5));
+  console.log('pool 2')
   await poolFactory.createPool(params);
   const derivablePool = await ethers.getContractAt("AsymptoticPerpetual", await poolFactory.computePoolAddress(params));
 

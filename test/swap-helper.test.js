@@ -162,15 +162,16 @@ describe("DDL v3", function () {
             discountRate: 0,
             feeHalfLife: 0
         }
-        params = await _init(oracleLibrary, pe("10"), params)
+        params = await _init(oracleLibrary, pe(5), params)
         const poolAddress = await poolFactory.computePoolAddress(params)
         await stateCalHelper.createPool(
             params,
             poolFactory.address, {
-                value: pe("10"),
+                value: pe(5),
             },
         )
 
+        console.log('xong pool 0')
         const derivablePool = await ethers.getContractAt("AsymptoticPerpetual", poolAddress)
 
         let params1 = {
@@ -191,7 +192,7 @@ describe("DDL v3", function () {
             discountRate: 0,
             feeHalfLife: 0
         }
-        params1 = await _init(oracleLibrary, pe("10000"), params1)
+        params1 = await _init(oracleLibrary, pe(5), params1)
         const poolAddress1 = await poolFactory.computePoolAddress(params1)
         // await weth.deposit({
         //     value: pe("1000000")
@@ -202,9 +203,10 @@ describe("DDL v3", function () {
             params1,
             poolFactory.address,
             {
-                value: pe("10000"),
+                value: pe(5),
             }
         )
+        console.log('xong pool 1')
 
         const derivablePool1 = await ethers.getContractAt("AsymptoticPerpetual", poolAddress1)
 

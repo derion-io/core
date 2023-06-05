@@ -141,12 +141,12 @@ describe("DDL v3", function () {
             discountRate: 0,
             feeHalfLife: 0
         }
-        params = await _init(oracleLibrary, pe("10000"), params)
+        params = await _init(oracleLibrary, pe("5"), params)
         const poolAddress = await poolFactory.computePoolAddress(params)
         await weth.deposit({
             value: pe("10000000000000000000")
         })
-        await weth.transfer(poolAddress, pe("10000"));
+        await weth.transfer(poolAddress, pe("5"));
         await poolFactory.createPool(params);
         const derivablePool = await ethers.getContractAt("AsymptoticPerpetual", await poolFactory.computePoolAddress(params))
         // deploy helper
@@ -164,6 +164,7 @@ describe("DDL v3", function () {
             stateCalHelper.address
         )
         await derivableHelper.deployed()
+
         // setup accA
         await weth.connect(accountA).deposit({
             value: pe("10000000000000000000")

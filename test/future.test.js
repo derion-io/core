@@ -195,29 +195,6 @@ DCs.forEach(DISCOUNT_RATE => {
       )
       await stateCalHelper.deployed()
 
-      await weth.approve(derivablePool.address, MaxUint256)
-      await attemptSwap(
-          derivablePool,
-          0,
-          0x00,
-          0x30,
-          pe("9995"),
-          stateCalHelper.address,
-          '0x0000000000000000000000000000000000000000',
-          owner.address
-      )
-
-      await weth.approve(derivablePool1.address, MaxUint256)
-      await attemptSwap(
-          derivablePool1,
-          0,
-          0x00,
-          0x30,
-          pe("95"),
-          stateCalHelper.address,
-          '0x0000000000000000000000000000000000000000',
-          owner.address
-      )
       const DerivableHelper = await ethers.getContractFactory("contracts/test/TestHelper.sol:TestHelper")
       const derivableHelper = await DerivableHelper.deploy(
         derivablePool.address,
@@ -233,6 +210,31 @@ DCs.forEach(DISCOUNT_RATE => {
       await weth.connect(accountB).deposit({
         value: pe("1000000")
       })
+
+      await weth.connect(accountB).approve(derivablePool.address, MaxUint256)
+      await derivablePool.connect(accountB).swap(
+        SIDE_R,
+        SIDE_C,
+        stateCalHelper.address,
+        encodePayload(0, SIDE_R, SIDE_C, pe("9995")),
+        12 * 60 * 60,
+        AddressZero,
+        accountB.address,
+        opts
+      )
+
+      await weth.connect(accountB).approve(derivablePool1.address, MaxUint256)
+      await derivablePool1.connect(accountB).swap(
+        SIDE_R,
+        SIDE_C,
+        stateCalHelper.address,
+        encodePayload(0, SIDE_R, SIDE_C, pe("95")),
+        12 * 60 * 60,
+        AddressZero,
+        accountB.address,
+        opts
+      )
+
       await usdc.transfer(accountB.address, pe("100000000"))
       return {
         owner,
