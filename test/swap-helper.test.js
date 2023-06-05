@@ -17,6 +17,7 @@ const compiledUniswapFactory = require("./compiled/UniswapV3Factory.json");
 const compiledUniswapRouter = require("./compiled/SwapRouter.json");
 const compiledUniswapv3PositionManager = require("./compiled/NonfungiblePositionManager.json");
 const compiledUniswapPool = require("./compiled/UniswapV3Pool.json");
+const { _init } = require("./shared/AsymptoticPerpetual")
 
 const fe = (x) => Number(ethers.utils.formatEther(x))
 const pe = (x) => ethers.utils.parseEther(String(x))
@@ -51,16 +52,13 @@ describe("DDL v3", function () {
     async function deployDDLv2() {
         const [owner, accountA] = await ethers.getSigners();
         const signer = owner;
-        // deploy logic container
-        const LogicContainer = await ethers.getContractFactory("LogicContainer")
-        const logicContainer = await LogicContainer.deploy()
-        await logicContainer.deployed()
+        // deploy oracle library
+        const OracleLibrary = await ethers.getContractFactory("TestOracleHelper")
+        const oracleLibrary = await OracleLibrary.deploy()
+        await oracleLibrary.deployed()
         // deploy pool factory
         const PoolFactory = await ethers.getContractFactory("PoolFactory")
-        const poolFactory = await PoolFactory.deploy(
-            owner.address, 
-            logicContainer.address,
-            12, HALF_LIFE*12)
+        const poolFactory = await PoolFactory.deploy(owner.address)
         // deploy UTR
         const UTR = require("@derivable/utr/build/UniversalTokenRouter.json")
         const UniversalRouter = new ethers.ContractFactory(UTR.abi, UTR.bytecode, owner)
@@ -146,24 +144,25 @@ describe("DDL v3", function () {
             bn(quoteTokenIndex).shl(255).add(bn(300).shl(256 - 64)).add(uniswapPair.address).toHexString(),
             32,
         )
-        const params = {
+        let params = {
             utr: utr.address,
             token: derivable1155.address,
             oracle,
             reserveToken: weth.address,
             recipient: owner.address,
             mark: bn(38).shl(128),
-            k: 5,
+            k: bn(5),
             a: pe(1),
             b: pe(1),
             initTime: 0,
-            halfLife: HALF_LIFE,
+            halfLife: bn(HALF_LIFE),
             premiumRate: bn(1).shl(128).div(2),
             minExpirationD: 0,
             minExpirationC: 0,
             discountRate: 0,
             feeHalfLife: 0
         }
+        params = await _init(oracleLibrary, pe("10"), params)
         const poolAddress = await poolFactory.computePoolAddress(params)
         await stateCalHelper.createPool(
             params,
@@ -174,24 +173,25 @@ describe("DDL v3", function () {
 
         const derivablePool = await ethers.getContractAt("AsymptoticPerpetual", poolAddress)
 
-        const params1 = {
+        let params1 = {
             utr: utr.address,
             token: derivable1155.address,
             oracle,
             reserveToken: weth.address,
             recipient: owner.address,
             mark: bn(38).shl(128),
-            k: 2,
+            k: bn(2),
             a: pe(1),
             b: pe(1),
             initTime: 0,
-            halfLife: HALF_LIFE,
+            halfLife: bn(HALF_LIFE),
             premiumRate: bn(1).shl(128).div(2),
             minExpirationD: 0,
             minExpirationC: 0,
             discountRate: 0,
             feeHalfLife: 0
         }
+        params1 = await _init(oracleLibrary, pe("10000"), params1)
         const poolAddress1 = await poolFactory.computePoolAddress(params1)
         // await weth.deposit({
         //     value: pe("1000000")

@@ -115,7 +115,7 @@ describe("Premium", function () {
       k: 5,
       a: '30000000000',
       b: '30000000000',
-      initTime: await time.latest(),
+      initTime: 0,
       halfLife: HALF_LIFE, // ten years
       premiumRate: '0',
       minExpirationD: 0,

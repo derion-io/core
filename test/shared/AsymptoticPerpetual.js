@@ -229,10 +229,27 @@ function _selectPrice(
     }
     return {rA, rB, market}
   }
-  
+}
+
+async function _init(oracleLibrary, R, params) {
+  const oraclePrice = await oracleLibrary.fetch(params.oracle)
+  const twap = oraclePrice.twap
+  const t = bn(0)
+  const decayRateX64 = _decayRate(t, params.halfLife)
+  const state = {a: params.a, b: params.b, R}
+  const market = _market(params.k, params.mark, decayRateX64, twap)
+  const {rA, rB} = _evaluate(market, state)
+  const rC = R.sub(rA).sub(rB)
+  return {
+    ...params,
+    sA: rA,
+    sB: rB,
+    sC: rC
+  }
 }
 
 module.exports = {
   _selectPrice,
-  _evaluate
+  _evaluate,
+  _init
 }

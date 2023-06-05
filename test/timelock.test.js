@@ -4,6 +4,7 @@ const {
 } = require("@nomicfoundation/hardhat-network-helpers")
 const chai = require("chai")
 const { solidity } = require("ethereum-waffle")
+const { _init } = require("./shared/AsymptoticPerpetual")
 chai.use(solidity)
 const expect = chai.expect
 const { AddressZero, MaxUint256 } = ethers.constants
@@ -30,16 +31,14 @@ describe("Timelock", function () {
   async function deployDDLv2() {
     const [owner, accountA, accountB] = await ethers.getSigners();
     const signer = owner;
-    // deploy logic container
-    const LogicContainer = await ethers.getContractFactory("LogicContainer")
-    const logicContainer = await LogicContainer.deploy()
-    await logicContainer.deployed()
+    // deploy oracle library
+    const OracleLibrary = await ethers.getContractFactory("TestOracleHelper")
+    const oracleLibrary = await OracleLibrary.deploy()
+    await oracleLibrary.deployed()
+
     // deploy pool factory
     const PoolFactory = await ethers.getContractFactory("PoolFactory")
-    const poolFactory = await PoolFactory.deploy(
-      owner.address, 
-      logicContainer.address,
-      12, HALF_LIFE*12)
+    const poolFactory = await PoolFactory.deploy(owner.address)
     // deploy UTR
     const UTR = require("@derivable/utr/build/UniversalTokenRouter.json")
     const UniversalRouter = new ethers.ContractFactory(UTR.abi, UTR.bytecode, owner)
@@ -116,24 +115,25 @@ describe("Timelock", function () {
       bn(quoteTokenIndex).shl(255).add(bn(300).shl(256 - 64)).add(uniswapPair.address).toHexString(),
       32,
     )
-    const params = {
+    let params = {
       utr: utr.address,
       token: derivable1155.address,
       oracle,
       reserveToken: weth.address,
       recipient: owner.address,
       mark: bn(38).shl(128),
-      k: 5,
+      k: bn(5),
       a: pe(1),
       b: pe(1),
       initTime: 0,
-      halfLife: HALF_LIFE,
+      halfLife: bn(HALF_LIFE),
       premiumRate: bn(1).shl(128).div(2),
       minExpirationD: 0,
       minExpirationC: 0,
       discountRate: 0,
       feeHalfLife: 0
     }
+    params = await _init(oracleLibrary, pe("1000000"), params)
     const poolAddress = await poolFactory.computePoolAddress(params)
     await weth.deposit({
       value: pe("1000000")
@@ -294,7 +294,7 @@ describe("Timelock", function () {
       const mintOutput2 = balanceAfter2.sub(balanceAfter1)
       const lockDuration = Number(mintOutput1.mul(10).add(mintOutput2.mul(30)).div(mintOutput1.add(mintOutput2)).toString())
 
-      await time.increase(lockDuration - 2)
+      await time.increase(lockDuration - 1)
 
       await expect(txSignerA.safeTransferFrom(
         accountA.address,

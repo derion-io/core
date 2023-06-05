@@ -122,7 +122,7 @@ describe("Premium and Future", function () {
       k: 5,
       a: '30000000000',
       b: '30000000000',
-      initTime: await time.latest(),
+      initTime: 0,
       halfLife: toHalfLife(0.006), // ten years
       premiumRate: '0',
       minExpirationD: MIN_EXPIRE,
