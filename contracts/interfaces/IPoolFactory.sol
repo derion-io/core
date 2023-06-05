@@ -19,7 +19,6 @@ struct Params {
     uint b;
     uint sA;
     uint sB;
-    uint sC;
 }
 
 interface IPoolFactory {

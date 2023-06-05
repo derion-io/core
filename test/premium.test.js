@@ -4,7 +4,7 @@ const {
 } = require("@nomicfoundation/hardhat-network-helpers");
 const { expect, use } = require("chai");
 const { solidity } = require("ethereum-waffle");
-const { _evaluate, _selectPrice } = require("./shared/AsymptoticPerpetual");
+const { _evaluate, _selectPrice, _init } = require("./shared/AsymptoticPerpetual");
 const { weiToNumber, bn, getDeltaSupply, numberToWei, packId, unpackId, encodeSqrtX96, encodePayload, attemptSwap, attemptStaticSwap } = require("./shared/utilities");
 const abiCoder = new ethers.utils.AbiCoder()
 use(solidity)
@@ -15,10 +15,11 @@ describe("Premium", function () {
   async function fixture() {
     const [owner, accountA, accountB] = await ethers.getSigners();
     const signer = owner;
-    // deploy logic container
-    const LogicContainer = await ethers.getContractFactory("LogicContainer")
-    const logicContainer = await LogicContainer.deploy()
-    await logicContainer.deployed()
+
+    // deploy oracle library
+    const OracleLibrary = await ethers.getContractFactory("TestOracleHelper")
+    const oracleLibrary = await OracleLibrary.deploy()
+    await oracleLibrary.deployed()
 
     // deploy UTR
     const UTR = require("@derivable/utr/build/UniversalTokenRouter.json")
@@ -28,10 +29,7 @@ describe("Premium", function () {
 
     // deploy pool factory
     const PoolFactory = await ethers.getContractFactory("PoolFactory");
-    const poolFactory = await PoolFactory.deploy(
-      owner.address, 
-      logicContainer.address,
-      12, 0);
+    const poolFactory = await PoolFactory.deploy( owner.address );
     await poolFactory.setFeeTo(owner.address)
 
     // weth test
@@ -105,24 +103,25 @@ describe("Premium", function () {
       bn(quoteTokenIndex).shl(255).add(bn(300).shl(256 - 64)).add(uniswapPair.address).toHexString(),
       32,
     )
-    const params = {
+    let params = {
       utr: utr.address,
       token: derivable1155.address,
       oracle,
       reserveToken: weth.address,
       recipient: owner.address,
       mark: bn(1000).shl(128).div(38),
-      k: 5,
-      a: '30000000000',
-      b: '30000000000',
+      k: bn(5),
+      a: bn('30000000000'),
+      b: bn('30000000000'),
       initTime: 0,
-      halfLife: HALF_LIFE, // ten years
+      halfLife: bn(HALF_LIFE), // ten years
       premiumRate: '0',
       minExpirationD: 0,
       minExpirationC: 0,
       discountRate: 0,
       feeHalfLife: 0
     }
+    params = await _init(oracleLibrary, numberToWei(1), params)
     const poolNoPremiumAddress = await poolFactory.computePoolAddress(params);
     await weth.transfer(poolNoPremiumAddress, numberToWei(1));
     await poolFactory.createPool(params);
@@ -153,11 +152,6 @@ describe("Premium", function () {
       weth.address
     )
     await stateCalHelper.deployed()
-
-    // deploy oracle library
-    const OracleLibrary = await ethers.getContractFactory("TestOracleHelper")
-    const oracleLibrary = await OracleLibrary.deploy()
-    await oracleLibrary.deployed()
 
     const DerivableHelper = await ethers.getContractFactory("contracts/test/TestHelper.sol:TestHelper")
     const derivableHelper = await DerivableHelper.deploy(

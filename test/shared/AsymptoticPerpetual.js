@@ -239,12 +239,10 @@ async function _init(oracleLibrary, R, params) {
   const state = {a: params.a, b: params.b, R}
   const market = _market(params.k, params.mark, decayRateX64, twap)
   const {rA, rB} = _evaluate(market, state)
-  const rC = R.sub(rA).sub(rB)
   return {
     ...params,
     sA: rA,
-    sB: rB,
-    sC: rC
+    sB: rB
   }
 }
 

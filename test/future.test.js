@@ -150,12 +150,12 @@ DCs.forEach(DISCOUNT_RATE => {
         discountRate: bn(DISCOUNT_RATE).shl(128).div(100),
         feeHalfLife: 0
       }
-      params = await _init(oracleLibrary, pe("100"), params)
+      params = await _init(oracleLibrary, pe("10000"), params)
       const poolAddress = await poolFactory.computePoolAddress(params)
       await weth.deposit({
         value: pe("1000000")
       })
-      await weth.transfer(poolAddress, pe("100"))
+      await weth.transfer(poolAddress, pe("10000"))
       await poolFactory.createPool(params)
       const derivablePool = await ethers.getContractAt("AsymptoticPerpetual", await poolFactory.computePoolAddress(params))
 

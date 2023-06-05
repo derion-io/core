@@ -48,8 +48,12 @@ abstract contract Pool is IPool, Storage, Events, Constants {
         INIT_TIME = params.initTime > 0 ? params.initTime : block.timestamp;
         require(block.timestamp >= INIT_TIME, "PIT");
 
-        // uint R = _reserve();
-        // require(4 * a * b <= R, "INVALID_PARAM");
+        uint R = IERC20(TOKEN_R).balanceOf(address(this));
+        uint sC = R - params.sA - params.sB;
+        require(
+            (params.sA <= R/2) && 
+            (params.sB <= R/2), "IP");
+
         s_a = params.a;
         s_b = params.b;
 
@@ -66,7 +70,7 @@ abstract contract Pool is IPool, Storage, Events, Constants {
         // mint tokens to recipient
         IERC1155Supply(TOKEN).mintLock(params.recipient, idA, params.sA - MINIMUM_LIQUIDITY, MIN_EXPIRATION_D, "");
         IERC1155Supply(TOKEN).mintLock(params.recipient, idB, params.sB - MINIMUM_LIQUIDITY, MIN_EXPIRATION_D, "");
-        IERC1155Supply(TOKEN).mintLock(params.recipient, idC, params.sC - MINIMUM_LIQUIDITY, MIN_EXPIRATION_C, "");
+        IERC1155Supply(TOKEN).mintLock(params.recipient, idC, sC - MINIMUM_LIQUIDITY, MIN_EXPIRATION_C, "");
 
         emit Derivable(
             'PoolCreated',                 // topic1: eventName

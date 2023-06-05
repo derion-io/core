@@ -133,7 +133,7 @@ describe("Timelock", function () {
       discountRate: 0,
       feeHalfLife: 0
     }
-    params = await _init(oracleLibrary, pe("1000000"), params)
+    params = await _init(oracleLibrary, pe("10000"), params)
     const poolAddress = await poolFactory.computePoolAddress(params)
     await weth.deposit({
       value: pe("1000000")
@@ -414,7 +414,7 @@ describe("Timelock", function () {
             eip: 20,
             token: weth.address,
             id: 0,
-            amountIn: '1',
+            amountIn: '2',
             recipient: derivablePool.address,
           }],
           code: derivablePool.address,
@@ -422,7 +422,7 @@ describe("Timelock", function () {
             SIDE_R,
             SIDE_C,
             stateCalHelper.address,
-            encodePayload(0, SIDE_R, SIDE_C, '1'),
+            encodePayload(0, SIDE_R, SIDE_C, '2'),
             60,
             owner.address,
             derivableHelper.address
@@ -463,4 +463,3 @@ describe("Timelock", function () {
 
   })
 })
-
