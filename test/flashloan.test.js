@@ -9,7 +9,7 @@ const { _init } = require("./shared/AsymptoticPerpetual")
 chai.use(solidity)
 const expect = chai.expect
 const { AddressZero, MaxUint256 } = ethers.constants
-const { bn, numberToWei, packId, encodeSqrtX96, encodePriceSqrt, encodePayload, weiToNumber } = require("./shared/utilities")
+const { bn, numberToWei, packId, encodeSqrtX96, encodePriceSqrt, encodePayload, weiToNumber, attemptSwap } = require("./shared/utilities")
 
 const fe = (x) => Number(ethers.utils.formatEther(x))
 const pe = (x) => ethers.utils.parseEther(String(x))
@@ -145,14 +145,17 @@ describe("DDL v3", function () {
       discountRate: 0,
       feeHalfLife: 0
     }
-    params = await _init(oracleLibrary, pe("10000"), params)
+    params = await _init(oracleLibrary, pe("5"), params)
     const poolAddress = await poolFactory.computePoolAddress(params)
     await weth.deposit({
       value: pe("10000000000000000000")
     })
-    await weth.transfer(poolAddress, pe("10000"));
+    await weth.transfer(poolAddress, pe("5"));
     await poolFactory.createPool(params);
     const derivablePool = await ethers.getContractAt("AsymptoticPerpetual", await poolFactory.computePoolAddress(params))
+    
+    await weth.approve(derivablePool.address, MaxUint256)
+    
     // deploy helper
     const StateCalHelper = await ethers.getContractFactory("contracts/Helper.sol:Helper")
     const stateCalHelper = await StateCalHelper.deploy(
@@ -160,6 +163,17 @@ describe("DDL v3", function () {
       weth.address
     )
     await stateCalHelper.deployed()
+
+    await attemptSwap(
+      derivablePool,
+      0,
+      0x00,
+      0x30,
+      pe("9995"),
+      stateCalHelper.address,
+      '0x0000000000000000000000000000000000000000',
+      owner.address
+    )
 
     const DerivableHelper = await ethers.getContractFactory("contracts/test/TestHelper.sol:TestHelper")
     const derivableHelper = await DerivableHelper.deploy(

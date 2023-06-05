@@ -12,6 +12,8 @@ import "./interfaces/IPool.sol";
 import "./logics/Storage.sol";
 import "./logics/Events.sol";
 
+import "hardhat/console.sol";
+
 abstract contract Pool is IPool, Storage, Events, Constants {
     uint public constant MINIMUM_LIQUIDITY = 10 ** 3;
 
@@ -50,9 +52,13 @@ abstract contract Pool is IPool, Storage, Events, Constants {
 
         uint R = IERC20(TOKEN_R).balanceOf(address(this));
         uint sC = R - params.sA - params.sB;
+        console.log(params.sA, params.sB, R/6);
         require(
             (params.sA <= R/2) && 
-            (params.sB <= R/2), "IP");
+            (params.sB <= R/2) && 
+            (params.sA >= R/6) && 
+            (params.sB >= R/6) && 
+            (sC >= R/6), "IP");
 
         s_a = params.a;
         s_b = params.b;

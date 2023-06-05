@@ -119,10 +119,10 @@ HLs.forEach(HALF_LIFE => {
         oracle,
         reserveToken: weth.address,
         recipient: owner.address,
-        mark: bn(1000).shl(128).div(38),
+        mark: bn(38).shl(128),
         k: bn(5),
-        a: bn('30000000000'),
-        b: bn('30000000000'),
+        a: numberToWei(1),
+        b: numberToWei(1),
         initTime: 0,
         halfLife: bn(HALF_LIFE),
         premiumRate: '0',
@@ -131,7 +131,7 @@ HLs.forEach(HALF_LIFE => {
         discountRate: 0,
         feeHalfLife: 0
       }
-      params = await _init(oracleLibrary, numberToWei(1), params)
+      params = await _init(oracleLibrary, numberToWei(5), params)
       const poolAddress = await poolFactory.computePoolAddress(params);
       let txSignerA = weth.connect(accountA);
       let txSignerB = weth.connect(accountB);
@@ -145,9 +145,11 @@ HLs.forEach(HALF_LIFE => {
       await weth.deposit({
         value: '100000000000000000000000000000'
       })
-      await weth.transfer(poolAddress, numberToWei(1));
+      await weth.transfer(poolAddress, numberToWei(5));
       await poolFactory.createPool(params);
       const derivablePool = await ethers.getContractAt("AsymptoticPerpetual", await poolFactory.computePoolAddress(params));
+
+      await weth.approve(derivablePool.address, '100000000000000000000000000');
 
       await time.increase(100);
       // deploy helper
@@ -170,7 +172,6 @@ HLs.forEach(HALF_LIFE => {
       const B_ID = packId(0x20, derivablePool.address);
       const R_ID = packId(0x00, derivablePool.address);
       const C_ID = packId(0x30, derivablePool.address);
-      await weth.approve(derivablePool.address, '100000000000000000000000000');
 
       txSignerA = weth.connect(accountA);
       txSignerB = weth.connect(accountB);
