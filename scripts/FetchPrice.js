@@ -8,7 +8,7 @@ const opts = {
 }
 
 async function main() {
-    const addressPath = path.join(__dirname, `./ARBTestnet.json`)
+    const addressPath = path.join(__dirname, `./json/ARBTestnet.json`)
     const addressList = JSON.parse(fs.readFileSync(addressPath, 'utf8'))
 
     // ganache

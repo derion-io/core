@@ -66,7 +66,7 @@ async function main() {
 
 function exportData(dictOutput) {
     let json = JSON.stringify(dictOutput, null, 2)
-    fs.writeFileSync(path.join(__dirname, "ARBTestnet.json"), json)
+    fs.writeFileSync(path.join(__dirname, "/json/ARBTestnet.json"), json)
 }
 
 // We recommend this pattern to be able to use async/await everywhere

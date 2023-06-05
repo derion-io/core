@@ -1,6 +1,5 @@
 const fs = require('fs')
 const path = require('path')
-const { packId } = require("../test/shared/utilities")
 
 const opts = {
     gasLimit: 30000000
@@ -51,7 +50,7 @@ task('deployPoolFactory', 'Use SingletonFatory to deploy PoolFactory contract')
                 console.log('Error: ', error)
             }
             // compute address
-            const addressPath = path.join(__dirname, `./${taskArgs.addr}.json`)
+            const addressPath = path.join(__dirname, `./json/${taskArgs.addr}.json`)
             const addressList = JSON.parse(fs.readFileSync(addressPath, 'utf8'))
             const initCodeHash = ethers.utils.keccak256(initBytecode)
             const address = ethers.utils.getCreate2Address(
@@ -90,7 +89,7 @@ task('deployTokenDescriptor', 'Use SingletonFatory to deploy TokenDescriptor con
                 console.log('Error: ', error)
             }
             // compute address
-            const addressPath = path.join(__dirname, `./${taskArgs.addr}.json`)
+            const addressPath = path.join(__dirname, `./json/${taskArgs.addr}.json`)
             const addressList = JSON.parse(fs.readFileSync(addressPath, 'utf8'))
             const initCodeHash = ethers.utils.keccak256(initBytecode)
             const address = ethers.utils.getCreate2Address(
@@ -121,7 +120,7 @@ task('deployToken', 'Use SingletonFatory to deploy Token contract')
             const contractWithSigner = contract.connect(wallet)
             const byteCode = require('../artifacts/contracts/Token.sol/Token.json').bytecode
 
-            const addressPath = path.join(__dirname, `./${taskArgs.addr}.json`)
+            const addressPath = path.join(__dirname, `./json/${taskArgs.addr}.json`)
             const addressList = JSON.parse(fs.readFileSync(addressPath, 'utf8'))
 
             const params = ethers.utils.defaultAbiCoder.encode(
@@ -170,7 +169,7 @@ task('deployHelper', 'Use SingletonFatory to deploy Helper contract')
             const contractWithSigner = contract.connect(wallet)
             const byteCode = require('../artifacts/contracts/Helper.sol/Helper.json').bytecode
 
-            const addressPath = path.join(__dirname, `./${taskArgs.addr}.json`)
+            const addressPath = path.join(__dirname, `./json/${taskArgs.addr}.json`)
             const addressList = JSON.parse(fs.readFileSync(addressPath, 'utf8'))
             const tokenAddress = addressList['token']
             const params = ethers.utils.defaultAbiCoder.encode(
@@ -204,16 +203,7 @@ task('deployHelper', 'Use SingletonFatory to deploy Helper contract')
         }
     )
 
-task('packID', 'Pack Id to mint token')
-    .addParam('id', 'Token ID')
-    .setAction(
-        async (taskArgs, hre) => {
-            const id = packId(taskArgs.id, '0x74DF0C44Ad399Ba0301caC00EAf741C72EF90B73')
-            console.log(id.toHexString())
-        }
-    )
-
 function exportData(dictOutput, fileName) {
     let json = JSON.stringify(dictOutput, null, 2)
-    fs.writeFileSync(path.join(__dirname, fileName + '.json'), json)
+    fs.writeFileSync(path.join(__dirname, '/json/' + fileName + '.json'), json)
 }
