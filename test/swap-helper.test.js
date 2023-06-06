@@ -171,7 +171,6 @@ describe("DDL v3", function () {
             },
         )
 
-        console.log('xong pool 0')
         const derivablePool = await ethers.getContractAt("AsymptoticPerpetual", poolAddress)
 
         let params1 = {
@@ -206,7 +205,6 @@ describe("DDL v3", function () {
                 value: pe(5),
             }
         )
-        console.log('xong pool 1')
 
         const derivablePool1 = await ethers.getContractAt("AsymptoticPerpetual", poolAddress1)
 

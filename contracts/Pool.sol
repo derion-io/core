@@ -51,14 +51,7 @@ abstract contract Pool is IPool, Storage, Events, Constants {
         require(block.timestamp >= INIT_TIME, "PIT");
 
         uint R = IERC20(TOKEN_R).balanceOf(address(this));
-        uint sC = R - params.sA - params.sB;
-        console.log(params.sA, params.sB, R/6);
-        require(
-            (params.sA <= R/2) && 
-            (params.sB <= R/2) && 
-            (params.sA >= R/6) && 
-            (params.sB >= R/6) && 
-            (sC >= R/6), "IP");
+        require(params.a <= R >> 1 && params.b <= R >> 1, "IP");
 
         s_a = params.a;
         s_b = params.b;
@@ -74,9 +67,10 @@ abstract contract Pool is IPool, Storage, Events, Constants {
         IERC1155Supply(TOKEN).mintVirtualSupply(idC, MINIMUM_LIQUIDITY);
 
         // mint tokens to recipient
-        IERC1155Supply(TOKEN).mintLock(params.recipient, idA, params.sA - MINIMUM_LIQUIDITY, MIN_EXPIRATION_D, "");
-        IERC1155Supply(TOKEN).mintLock(params.recipient, idB, params.sB - MINIMUM_LIQUIDITY, MIN_EXPIRATION_D, "");
-        IERC1155Supply(TOKEN).mintLock(params.recipient, idC, sC - MINIMUM_LIQUIDITY, MIN_EXPIRATION_C, "");
+        uint R3 = R/3;
+        IERC1155Supply(TOKEN).mintLock(params.recipient, idA, R3 - MINIMUM_LIQUIDITY, MIN_EXPIRATION_D, "");
+        IERC1155Supply(TOKEN).mintLock(params.recipient, idB, R3 - MINIMUM_LIQUIDITY, MIN_EXPIRATION_D, "");
+        IERC1155Supply(TOKEN).mintLock(params.recipient, idC, R - (R3<<1) - MINIMUM_LIQUIDITY, MIN_EXPIRATION_C, "");
 
         emit Derivable(
             'PoolCreated',                 // topic1: eventName

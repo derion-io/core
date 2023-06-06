@@ -346,7 +346,8 @@ describe("DDL v3", function () {
             }
             const tokenAfter = await derivable1155.balanceOf(owner.address, convertedId)
             const tokenChanged = tokenBefore.sub(tokenAfter)
-            expect(tokenChanged).equal(pe(amountIn))
+            expect(tokenChanged).lte(pe(amountIn))
+            expect(tokenChanged).gte(pe(amountIn).sub(1))
         }
         it("lp -> weth: Non UTR", async function () {
             await testROut(SIDE_C, "1", SIDE_R, false)

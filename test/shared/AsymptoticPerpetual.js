@@ -238,12 +238,8 @@ async function _init(oracleLibrary, R, params) {
   const decayRateX64 = _decayRate(t, params.halfLife)
   const state = {a: params.a, b: params.b, R}
   const market = _market(params.k, params.mark, decayRateX64, twap)
-  const {rA, rB} = _evaluate(market, state)
-  return {
-    ...params,
-    sA: rA,
-    sB: rB
-  }
+  // TODO: find (a,b) so rA = rB = R/3
+  return params
 }
 
 module.exports = {
