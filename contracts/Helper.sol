@@ -225,36 +225,37 @@ contract Helper is Constants, IHelper {
         ) = abi.decode(payload, (uint, uint, uint, uint));
         require(swapType == MAX_IN, 'Helper: UNSUPPORTED_SWAP_TYPE');
         state1 = State(state.R, state.a, state.b);
+        (uint rA1, uint rB1) = (rA, rB);
         if (sideIn == SIDE_R) {
             state1.R += amount;
             if (sideOut == SIDE_A) {
-                state1.a = _v(market.xkA, rA + amount, state1.R);
+                rA1 += amount;
             } else if (sideOut == SIDE_B) {
-                state1.b = _v(market.xkB, rB + amount, state1.R);
+                rB1 += amount;
             }
         } else {
             uint s = _supply(sideIn);
-
             if (sideIn == SIDE_A) {
                 uint rOut = FullMath.mulDiv(rA, amount, s);
+                rA1 -= rOut;
                 if (sideOut == SIDE_R) {
                     state1.R -= rOut;
                 }
-                state1.a = _v(market.xkA, rA - rOut, state1.R);
             } else if (sideIn == SIDE_B) {
                 uint rOut = FullMath.mulDiv(rB, amount, s);
+                rB1 -= rOut;
                 if (sideOut == SIDE_R) {
                     state1.R -= rOut;
                 }
-                state1.b = _v(market.xkB, rB - rOut, state1.R);
-            } else /*if (sideIn == SIDE_C)*/ {
+            } else if (sideIn == SIDE_C) {
                 if (sideOut == SIDE_R) {
                     uint rC = state.R - rA - rB;
                     uint rOut = FullMath.mulDiv(rC, amount, s);
                     state1.R -= rOut;
                 }
-                // state1.c
             }
         }
+        state1.a = _v(market.xkA, rA1, state1.R);
+        state1.b = _v(market.xkB, rB1, state1.R);
     }
 }
