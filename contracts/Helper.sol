@@ -236,13 +236,13 @@ contract Helper is Constants, IHelper {
         } else {
             uint s = _supply(sideIn);
             if (sideIn == SIDE_A) {
-                uint rOut = FullMath.mulDiv(rA, amount, s);
+                uint rOut = FullMath.mulDiv(amount, rA, s);
                 rA1 -= rOut;
                 if (sideOut == SIDE_R) {
                     state1.R -= rOut;
                 }
             } else if (sideIn == SIDE_B) {
-                uint rOut = FullMath.mulDiv(rB, amount, s);
+                uint rOut = FullMath.mulDiv(amount, rB, s);
                 rB1 -= rOut;
                 if (sideOut == SIDE_R) {
                     state1.R -= rOut;
@@ -250,7 +250,7 @@ contract Helper is Constants, IHelper {
             } else if (sideIn == SIDE_C) {
                 if (sideOut == SIDE_R) {
                     uint rC = state.R - rA - rB;
-                    uint rOut = FullMath.mulDiv(rC, amount, s);
+                    uint rOut = FullMath.mulDiv(amount, rC, s);
                     state1.R -= rOut;
                 }
             }
