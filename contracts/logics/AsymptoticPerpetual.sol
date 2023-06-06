@@ -125,19 +125,26 @@ contract AsymptoticPerpetual is Pool {
         // [TRANSITION]
         (uint rA1, uint rB1) = _evaluate(market, state1);
         if (sideIn == SIDE_R) {
+            require(rA1 >= rA && rB1 >= rB, "MI:R");
             amountIn = state1.R - state.R;
         } else {
+            require(state.R >= state1.R, "MI:NR");
             uint s = _supply(TOKEN, sideIn);
             if (sideIn == SIDE_A) {
+                require(rB1 >= rB, "MI:A");
                 amountIn = FullMath.mulDivRoundingUp(rA - rA1, s, rA);
                 s_a = state1.a;
-            } else if (sideIn == SIDE_B) {
-                amountIn = FullMath.mulDivRoundingUp(rB - rB1, s, rB);
-                s_b = state1.b;
-            } else if (sideIn == SIDE_C) {
-                uint rC = state.R - rA - rB;
-                uint rC1 = state1.R - rA1 - rB1;
-                amountIn = FullMath.mulDivRoundingUp(rC - rC1, s, rC);
+            } else {
+                require(rA1 >= rA, "MI:NA");
+                if (sideIn == SIDE_B) {
+                    amountIn = FullMath.mulDivRoundingUp(rB - rB1, s, rB);
+                    s_b = state1.b;
+                } else if (sideIn == SIDE_C) {
+                    require(rB1 >= rB, "MI:NB");
+                    uint rC = state.R - rA - rB;
+                    uint rC1 = state1.R - rA1 - rB1;
+                    amountIn = FullMath.mulDivRoundingUp(rC - rC1, s, rC);
+                }
             }
         }
         if (sideOut == SIDE_R) {
