@@ -145,7 +145,6 @@ async function scenerio01() {
     value: '100000000000000000000000000000'
   })
   await weth.transfer(poolAddress, numberToWei(5));
-  console.log('pool 1')
   await poolFactory.createPool(params);
   const derivablePool = await ethers.getContractAt("AsymptoticPerpetual", await poolFactory.computePoolAddress(params));
 
@@ -324,7 +323,6 @@ async function scenerio02() {
     value: '100000000000000000000000000000'
   })
   await weth.transfer(poolAddress, numberToWei(3.5));
-  console.log('pool 2')
   await poolFactory.createPool(params);
   const derivablePool = await ethers.getContractAt("AsymptoticPerpetual", await poolFactory.computePoolAddress(params));
 
