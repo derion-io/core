@@ -10,32 +10,6 @@ import "../libs/abdk-consulting/abdk-libraries-solidity/ABDKMath64x64.sol";
 
 
 contract AsymptoticPerpetual is Pool {
-    uint internal constant FEE_RATE = 12;    // takes 1/12 cut of LP interest rate
-
-    function _init(
-        uint a,
-        uint b
-    ) internal override returns (uint rA, uint rB, uint rC) {
-        (uint twap, ) = _fetch();
-        uint t = block.timestamp - INIT_TIME;
-        uint decayRateX64 = _decayRate(t, HALF_LIFE);
-        State memory state = State(_reserve(TOKEN_R), a, b);
-        Market memory market = _market(decayRateX64, twap);
-        (rA, rB) = _evaluate(market, state);
-        rC = state.R - rA - rB;
-        // uint R = IERC20(TOKEN_R).balanceOf(address(this));
-        // require(4 * a * b <= R, "INVALID_PARAM");
-        uint feeDecayRateX64 = _decayRate(t, HALF_LIFE * FEE_RATE);
-        s_R = FullMath.mulDivRoundingUp(state.R, feeDecayRateX64, Q64);
-        s_a = a;
-        s_b = b;
-    }
-
-    function _getR(uint R) internal view override returns (uint) {
-        uint feeRateX64 = _decayRate(block.timestamp - INIT_TIME, HALF_LIFE * FEE_RATE);
-        return FullMath.mulDiv(R, Q64, feeRateX64);
-    }
-
     function _powu(uint x, uint y) internal pure returns (uint z) {
         // Calculate the first iteration of the loop in advance.
         z = y & 1 > 0 ? x : Q128;
@@ -80,7 +54,7 @@ contract AsymptoticPerpetual is Pool {
         return IERC1155Supply(TOKEN).totalSupply(_packID(address(this), side));
     }
 
-    function _reserve(address TOKEN_R) internal view returns (uint R) {
+    function _reserve() internal view returns (uint R) {
         return IERC20(TOKEN_R).balanceOf(address(this));
     }
 
@@ -144,22 +118,10 @@ contract AsymptoticPerpetual is Pool {
     ) internal override returns(uint amountIn, uint amountOut) {
         require(sideIn != sideOut, 'SS');
         // [PRICE SELECTION]
-        // TODO: don't share variable if possible
-        amountIn = _decayRate(block.timestamp - INIT_TIME, HALF_LIFE * FEE_RATE);
-        State memory state = State(
-            FullMath.mulDiv(s_R, Q64, amountIn),
-            s_a,
-            s_b
-        );
+        State memory state = State(_reserve(), s_a, s_b);
         (Market memory market, uint rA, uint rB) = _selectPrice(state, sideIn, sideOut);
         // [CALCULATION]
         State memory state1 = IHelper(param.helper).swapToState(market, state, rA, rB, param.payload);
-        if (state.R != state1.R) {
-            uint R = FullMath.mulDivRoundingUp(state1.R, amountIn, Q64);
-            s_R = R;
-            // NOTE: amountIn >= Q64 always true, so the following re-calculation can be skipped
-            // state1.R = FullMath.mulDiv(R, Q64, amountIn);
-        }
         // [TRANSITION]
         (uint rA1, uint rB1) = _evaluate(market, state1);
         if (sideIn == SIDE_R) {

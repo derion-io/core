@@ -4,10 +4,11 @@ const {
 } = require("@nomicfoundation/hardhat-network-helpers")
 const chai = require("chai")
 const { solidity } = require("ethereum-waffle")
+const { _init } = require("./shared/AsymptoticPerpetual")
 chai.use(solidity)
 const expect = chai.expect
 const { AddressZero, MaxUint256 } = ethers.constants
-const { bn, numberToWei, packId, encodeSqrtX96, encodePriceSqrt, encodePayload, weiToNumber } = require("./shared/utilities")
+const { bn, numberToWei, packId, encodeSqrtX96, encodePriceSqrt, encodePayload, weiToNumber, attemptSwap } = require("./shared/utilities")
 
 const fe = (x) => Number(ethers.utils.formatEther(x))
 const pe = (x) => ethers.utils.parseEther(String(x))
@@ -39,9 +40,16 @@ describe("DDL v3", function () {
     async function deployDDLv2() {
         const [owner, accountA, accountB] = await ethers.getSigners();
         const signer = owner;
+        // deploy oracle library
+        const OracleLibrary = await ethers.getContractFactory("TestOracleHelper")
+        const oracleLibrary = await OracleLibrary.deploy()
+        await oracleLibrary.deployed()
+        
         // deploy pool factory
         const PoolFactory = await ethers.getContractFactory("PoolFactory")
-        const poolFactory = await PoolFactory.deploy(owner.address)
+        const poolFactory = await PoolFactory.deploy(
+            owner.address
+        )
         // deploy UTR
         const UTR = require("@derivable/utr/build/UniversalTokenRouter.json")
         const UniversalRouter = new ethers.ContractFactory(UTR.abi, UTR.bytecode, owner)
@@ -118,28 +126,31 @@ describe("DDL v3", function () {
             bn(quoteTokenIndex).shl(255).add(bn(300).shl(256 - 64)).add(uniswapPair.address).toHexString(),
             32,
         )
-        const params = {
+        let params = {
             utr: utr.address,
             token: derivable1155.address,
             oracle,
             reserveToken: weth.address,
             recipient: owner.address,
             mark: bn(38).shl(128),
-            k: 5,
+            k: bn(5),
             a: pe(1),
             b: pe(1),
             initTime: 0,
-            halfLife: HALF_LIFE,
+            halfLife: bn(HALF_LIFE),
             premiumRate: bn(1).shl(128).div(2),
             minExpirationD: 0,
             minExpirationC: 0,
-            discountRate: 0
+            discountRate: 0,
+            feeHalfLife: 0
         }
+        params = await _init(oracleLibrary, pe("5"), params)
         const poolAddress = await poolFactory.computePoolAddress(params)
         await weth.deposit({
             value: pe("10000000000000000000")
         })
-        await weth.transfer(poolAddress, pe("10000"));
+        await weth.transfer(poolAddress, pe("5"));
+       
         await poolFactory.createPool(params);
         const derivablePool = await ethers.getContractAt("AsymptoticPerpetual", await poolFactory.computePoolAddress(params))
         // deploy helper
@@ -150,6 +161,17 @@ describe("DDL v3", function () {
         )
         await stateCalHelper.deployed()
 
+        await weth.approve(derivablePool.address, MaxUint256)
+        await attemptSwap(
+            derivablePool,
+            0,
+            0x00,
+            0x30,
+            pe("9995"),
+            stateCalHelper.address,
+            '0x0000000000000000000000000000000000000000',
+            owner.address
+        )
         const DerivableHelper = await ethers.getContractFactory("contracts/test/TestHelper.sol:TestHelper")
         const derivableHelper = await DerivableHelper.deploy(
             derivablePool.address,
@@ -219,7 +241,7 @@ describe("DDL v3", function () {
     describe("Pool", function () {
         async function testRIn(sideIn, amountIn, sideOut, isUseUTR) {
             const { owner, weth, derivablePool, utr, stateCalHelper } = await loadFixture(deployDDLv2)
-            await weth.approve(derivablePool.address, MaxUint256)
+            
             const payer = isUseUTR ? owner.address : AddressZero
             const wethBefore = await weth.balanceOf(owner.address)
             if (isUseUTR) {
@@ -246,7 +268,7 @@ describe("DDL v3", function () {
                 }], opts)
             }
             else {
-                await weth.approve(derivablePool.address, MaxUint256)
+                
                 await derivablePool.swap(
                     sideIn,
                     sideOut,
@@ -286,7 +308,7 @@ describe("DDL v3", function () {
             const { owner, weth, derivablePool, derivable1155, utr, stateCalHelper } = await loadFixture(deployDDLv2)
             const convertedId = convertId(sideIn, derivablePool.address)
             const payer = isUseUTR ? owner.address : AddressZero
-            await weth.approve(derivablePool.address, MaxUint256)
+            
             const tokenBefore = await derivable1155.balanceOf(owner.address, convertedId)
             if (isUseUTR) {
                 await weth.approve(utr.address, MaxUint256)
@@ -324,7 +346,8 @@ describe("DDL v3", function () {
             }
             const tokenAfter = await derivable1155.balanceOf(owner.address, convertedId)
             const tokenChanged = tokenBefore.sub(tokenAfter)
-            expect(tokenChanged).equal(pe(amountIn))
+            expect(tokenChanged).lte(pe(amountIn))
+            expect(tokenChanged).gte(pe(amountIn).sub(1))
         }
         it("lp -> weth: Non UTR", async function () {
             await testROut(SIDE_C, "1", SIDE_R, false)
@@ -413,7 +436,7 @@ describe("DDL v3", function () {
         async function testPriceChange(isLong = true, wethAmountIn, priceChange, expected) {
             const { owner, weth, uniswapRouter, usdc, derivablePool, derivable1155, accountA, stateCalHelper } = await loadFixture(deployDDLv2)
             // swap weth -> long
-            await weth.approve(derivablePool.address, MaxUint256)
+            
             const wethBefore = await weth.balanceOf(owner.address)
             const tokenBefore = await derivable1155.balanceOf(owner.address, convertId(isLong ? SIDE_A : SIDE_B, derivablePool.address))
             await derivablePool.swap(
@@ -516,7 +539,7 @@ describe("DDL v3", function () {
             async function testSinglePositionPriceChangeDrastically(side, amountIn, priceChange, waitRecover) {
                 const { owner, weth, uniswapRouter, usdc, derivablePool, accountA, derivable1155, stateCalHelper } = await loadFixture(deployDDLv2)
     
-                await weth.approve(derivablePool.address, MaxUint256)
+                
                 const wethBefore = await weth.balanceOf(owner.address)
                 const tokenBefore = await derivable1155.balanceOf(owner.address, convertId(side, derivablePool.address))
                 await derivablePool.swap(
@@ -592,7 +615,7 @@ describe("DDL v3", function () {
     
                 let txSignerA = await weth.connect(accountA)
                 let txSignerB = await weth.connect(accountB)
-                await weth.approve(derivablePool.address, MaxUint256)
+                
                 await txSignerA.approve(derivablePool.address, MaxUint256)
                 await txSignerB.approve(derivablePool.address, MaxUint256)
     

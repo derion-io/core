@@ -5,10 +5,11 @@ const {
 const chai = require("chai")
 const { solidity } = require("ethereum-waffle")
 const { ethers } = require("hardhat")
+const { _init } = require("./shared/AsymptoticPerpetual")
 chai.use(solidity)
 const expect = chai.expect
 const { AddressZero, MaxUint256 } = ethers.constants
-const { bn, numberToWei, packId, encodeSqrtX96, encodePriceSqrt, encodePayload, weiToNumber } = require("./shared/utilities")
+const { bn, numberToWei, packId, encodeSqrtX96, encodePriceSqrt, encodePayload, weiToNumber, attemptSwap } = require("./shared/utilities")
 
 const fe = (x) => Number(ethers.utils.formatEther(x))
 const pe = (x) => ethers.utils.parseEther(String(x))
@@ -40,6 +41,12 @@ describe("DDL v3", function () {
   async function deployDDLv2() {
     const [owner, accountA, accountB] = await ethers.getSigners();
     const signer = owner;
+
+    // deploy oracle library
+    const OracleLibrary = await ethers.getContractFactory("TestOracleHelper")
+    const oracleLibrary = await OracleLibrary.deploy()
+    await oracleLibrary.deployed()
+
     // deploy pool factory
     const PoolFactory = await ethers.getContractFactory("PoolFactory")
     const poolFactory = await PoolFactory.deploy(owner.address)
@@ -120,30 +127,35 @@ describe("DDL v3", function () {
       bn(quoteTokenIndex).shl(255).add(bn(300).shl(256 - 64)).add(uniswapPair.address).toHexString(),
       32,
     )
-    const params = {
+    let params = {
       utr: utr.address,
       token: derivable1155.address,
       oracle,
       reserveToken: weth.address,
       recipient: owner.address,
       mark: bn(38).shl(128),
-      k: 5,
+      k: bn(5),
       a: pe(1),
       b: pe(1),
       initTime: 0,
-      halfLife: 0,
+      halfLife: bn(0),
       premiumRate: 0,
       minExpirationD: 0,
       minExpirationC: 0,
-      discountRate: 0
+      discountRate: 0,
+      feeHalfLife: 0
     }
+    params = await _init(oracleLibrary, pe("5"), params)
     const poolAddress = await poolFactory.computePoolAddress(params)
     await weth.deposit({
       value: pe("10000000000000000000")
     })
-    await weth.transfer(poolAddress, pe("10000"));
+    await weth.transfer(poolAddress, pe("5"));
     await poolFactory.createPool(params);
     const derivablePool = await ethers.getContractAt("AsymptoticPerpetual", await poolFactory.computePoolAddress(params))
+    
+    await weth.approve(derivablePool.address, MaxUint256)
+    
     // deploy helper
     const StateCalHelper = await ethers.getContractFactory("contracts/Helper.sol:Helper")
     const stateCalHelper = await StateCalHelper.deploy(
@@ -151,6 +163,17 @@ describe("DDL v3", function () {
       weth.address
     )
     await stateCalHelper.deployed()
+
+    await attemptSwap(
+      derivablePool,
+      0,
+      0x00,
+      0x30,
+      pe("9995"),
+      stateCalHelper.address,
+      '0x0000000000000000000000000000000000000000',
+      owner.address
+    )
 
     const DerivableHelper = await ethers.getContractFactory("contracts/test/TestHelper.sol:TestHelper")
     const derivableHelper = await DerivableHelper.deploy(

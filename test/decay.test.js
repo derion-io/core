@@ -4,6 +4,7 @@ const {
 } = require("@nomicfoundation/hardhat-network-helpers");
 const { expect, use } = require("chai");
 const { solidity } = require("ethereum-waffle");
+const { _init } = require("./shared/AsymptoticPerpetual");
 const { weiToNumber, bn, getDeltaSupply, numberToWei, packId, unpackId, encodeSqrtX96, encodePayload, attemptSwap, attemptStaticSwap } = require("./shared/utilities");
 
 use(solidity)
@@ -41,10 +42,15 @@ HLs.forEach(HALF_LIFE => {
       const utr = await UniversalRouter.deploy()
       await utr.deployed()
 
+      // deploy oracle library
+      const OracleLibrary = await ethers.getContractFactory("TestOracleHelper")
+      const oracleLibrary = await OracleLibrary.deploy()
+      await oracleLibrary.deployed()
+
       // deploy pool factory
       const PoolFactory = await ethers.getContractFactory("PoolFactory");
       const poolFactory = await PoolFactory.deploy(
-        owner.address,
+        owner.address
       );
       // weth test
       const compiledWETH = require("canonical-weth/build/contracts/WETH9.json")
@@ -107,23 +113,25 @@ HLs.forEach(HALF_LIFE => {
         bn(quoteTokenIndex).shl(255).add(bn(300).shl(256 - 64)).add(uniswapPair.address).toHexString(),
         32,
       )
-      const params = {
+      let params = {
         utr: utr.address,
         token: derivable1155.address,
         oracle,
         reserveToken: weth.address,
         recipient: owner.address,
-        mark: bn(1000).shl(128).div(38),
-        k: 5,
-        a: '30000000000',
-        b: '30000000000',
-        initTime: await time.latest(),
-        halfLife: HALF_LIFE,
+        mark: bn(38).shl(128),
+        k: bn(5),
+        a: numberToWei(1),
+        b: numberToWei(1),
+        initTime: 0,
+        halfLife: bn(HALF_LIFE),
         premiumRate: '0',
         minExpirationD: 0,
         minExpirationC: 0,
         discountRate: 0,
+        feeHalfLife: 0
       }
+      params = await _init(oracleLibrary, numberToWei(5), params)
       const poolAddress = await poolFactory.computePoolAddress(params);
       let txSignerA = weth.connect(accountA);
       let txSignerB = weth.connect(accountB);
@@ -137,9 +145,11 @@ HLs.forEach(HALF_LIFE => {
       await weth.deposit({
         value: '100000000000000000000000000000'
       })
-      await weth.transfer(poolAddress, numberToWei(1));
+      await weth.transfer(poolAddress, numberToWei(5));
       await poolFactory.createPool(params);
       const derivablePool = await ethers.getContractAt("AsymptoticPerpetual", await poolFactory.computePoolAddress(params));
+
+      await weth.approve(derivablePool.address, '100000000000000000000000000');
 
       await time.increase(100);
       // deploy helper
@@ -162,7 +172,6 @@ HLs.forEach(HALF_LIFE => {
       const B_ID = packId(0x20, derivablePool.address);
       const R_ID = packId(0x00, derivablePool.address);
       const C_ID = packId(0x30, derivablePool.address);
-      await weth.approve(derivablePool.address, '100000000000000000000000000');
 
       txSignerA = weth.connect(accountA);
       txSignerB = weth.connect(accountB);

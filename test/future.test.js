@@ -4,10 +4,11 @@ const {
 } = require("@nomicfoundation/hardhat-network-helpers")
 const chai = require("chai")
 const { solidity } = require("ethereum-waffle")
+const { _init } = require("./shared/AsymptoticPerpetual")
 chai.use(solidity)
 const expect = chai.expect
 const { AddressZero, MaxUint256 } = ethers.constants
-const { bn, numberToWei, packId, encodeSqrtX96, weiToNumber, encodePayload } = require("./shared/utilities")
+const { bn, numberToWei, packId, encodeSqrtX96, weiToNumber, encodePayload, attemptSwap } = require("./shared/utilities")
 
 const fe = (x) => Number(ethers.utils.formatEther(x))
 const pe = (x) => ethers.utils.parseEther(String(x))
@@ -48,9 +49,15 @@ DCs.forEach(DISCOUNT_RATE => {
     async function deployDDLv2() {
       const [owner, accountA, accountB] = await ethers.getSigners()
       const signer = owner
+      // deploy oracle library
+      const OracleLibrary = await ethers.getContractFactory("TestOracleHelper")
+      const oracleLibrary = await OracleLibrary.deploy()
+      await oracleLibrary.deployed()
       // deploy pool factory
       const PoolFactory = await ethers.getContractFactory("PoolFactory")
-      const poolFactory = await PoolFactory.deploy(owner.address)
+      const poolFactory = await PoolFactory.deploy(
+        owner.address
+      )
       // deploy UTR
       const UTR = require("@derivable/utr/build/UniversalTokenRouter.json")
       const UniversalRouter = new ethers.ContractFactory(UTR.abi, UTR.bytecode, owner)
@@ -125,53 +132,57 @@ DCs.forEach(DISCOUNT_RATE => {
         bn(quoteTokenIndex).shl(255).add(bn(300).shl(256 - 64)).add(uniswapPair.address).toHexString(),
         32,
       )
-      const params = {
+      let params = {
         utr: utr.address,
         token: derivable1155.address,
         oracle,
         reserveToken: weth.address,
         recipient: owner.address,
         mark: bn(38).shl(128),
-        k: 5,
+        k: bn(5),
         a: pe(1),
         b: pe(1),
         initTime: 0,
-        halfLife: toHalfLife(0.006),
+        halfLife: bn(toHalfLife(0.006)),
         premiumRate: 0,
         minExpirationD: 0,
         minExpirationC: 0,
-        discountRate: bn(DISCOUNT_RATE).shl(128).div(100)
+        discountRate: bn(DISCOUNT_RATE).shl(128).div(100),
+        feeHalfLife: 0
       }
+      params = await _init(oracleLibrary, pe("5"), params)
       const poolAddress = await poolFactory.computePoolAddress(params)
       await weth.deposit({
         value: pe("1000000")
       })
-      await weth.transfer(poolAddress, pe("100"))
+      await weth.transfer(poolAddress, pe("5"))
       await poolFactory.createPool(params)
       const derivablePool = await ethers.getContractAt("AsymptoticPerpetual", await poolFactory.computePoolAddress(params))
 
-      const params1 = {
+      let params1 = {
         utr: utr.address,
         token: derivable1155.address,
         oracle,
         reserveToken: weth.address,
         recipient: owner.address,
         mark: bn(38).shl(128),
-        k: 6,
+        k: bn(6),
         a: pe(1),
         b: pe(1),
         initTime: 0,
-        halfLife: toHalfLife(0.006),
+        halfLife: bn(toHalfLife(0.006)),
         premiumRate: '0',
         minExpirationD: 24 * 60 * 60,
         minExpirationC: 12 * 60 * 60,
-        discountRate: bn(DISCOUNT_RATE).shl(128).div(100)
+        discountRate: bn(DISCOUNT_RATE).shl(128).div(100),
+        feeHalfLife: 0
       }
+      params1 = await _init(oracleLibrary, pe("5"), params1)
       const poolAddress1 = await poolFactory.computePoolAddress(params1)
       await weth.deposit({
         value: pe("1000000")
       })
-      await weth.transfer(poolAddress1, pe("100"))
+      await weth.transfer(poolAddress1, pe("5"))
       await poolFactory.createPool(params1)
       const createPoolTimestamp = await time.latest()
       const derivablePool1 = await ethers.getContractAt("AsymptoticPerpetual", await poolFactory.computePoolAddress(params1))
@@ -199,6 +210,31 @@ DCs.forEach(DISCOUNT_RATE => {
       await weth.connect(accountB).deposit({
         value: pe("1000000")
       })
+
+      await weth.connect(accountB).approve(derivablePool.address, MaxUint256)
+      await derivablePool.connect(accountB).swap(
+        SIDE_R,
+        SIDE_C,
+        stateCalHelper.address,
+        encodePayload(0, SIDE_R, SIDE_C, pe("9995")),
+        12 * 60 * 60,
+        AddressZero,
+        accountB.address,
+        opts
+      )
+
+      await weth.connect(accountB).approve(derivablePool1.address, MaxUint256)
+      await derivablePool1.connect(accountB).swap(
+        SIDE_R,
+        SIDE_C,
+        stateCalHelper.address,
+        encodePayload(0, SIDE_R, SIDE_C, pe("95")),
+        12 * 60 * 60,
+        AddressZero,
+        accountB.address,
+        opts
+      )
+
       await usdc.transfer(accountB.address, pe("100000000"))
       return {
         owner,

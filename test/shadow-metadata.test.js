@@ -4,6 +4,7 @@ const {
 } = require("@nomicfoundation/hardhat-network-helpers")
 const chai = require("chai")
 const { solidity } = require("ethereum-waffle")
+const { _init } = require("./shared/AsymptoticPerpetual")
 chai.use(solidity)
 const expect = chai.expect
 const { AddressZero, MaxUint256 } = ethers.constants
@@ -39,6 +40,10 @@ describe("DDL v3", function () {
     async function deployDDLv2() {
         const [owner, accountA, accountB] = await ethers.getSigners();
         const signer = owner;
+        // deploy oracle library
+        const OracleLibrary = await ethers.getContractFactory("TestOracleHelper")
+        const oracleLibrary = await OracleLibrary.deploy()
+        await oracleLibrary.deployed()
         // deploy pool factory
         const PoolFactory = await ethers.getContractFactory("PoolFactory")
         const poolFactory = await PoolFactory.deploy(owner.address)
@@ -118,28 +123,30 @@ describe("DDL v3", function () {
             bn(quoteTokenIndex).shl(255).add(bn(300).shl(256 - 64)).add(uniswapPair.address).toHexString(),
             32,
         )
-        const params = {
+        let params = {
             utr: utr.address,
             token: derivable1155.address,
             oracle,
             reserveToken: weth.address,
             recipient: owner.address,
             mark: bn(38).shl(128),
-            k: 5,
+            k: bn(5),
             a: pe(1),
             b: pe(1),
             initTime: 0,
-            halfLife: HALF_LIFE,
+            halfLife: bn(HALF_LIFE),
             premiumRate: '0',
             minExpirationD: 0,
             minExpirationC: 0,
-            discountRate: 0
+            discountRate: 0,
+            feeHalfLife: 0
         }
+        params = await _init(oracleLibrary, pe("5"), params)
         const poolAddress = await poolFactory.computePoolAddress(params)
         await weth.deposit({
             value: pe("10000000000000000000")
         })
-        await weth.transfer(poolAddress, pe("10000"));
+        await weth.transfer(poolAddress, pe("5"));
         await poolFactory.createPool(params);
         const derivablePool = await ethers.getContractAt("AsymptoticPerpetual", await poolFactory.computePoolAddress(params))
         // deploy helper
@@ -157,6 +164,7 @@ describe("DDL v3", function () {
             stateCalHelper.address
         )
         await derivableHelper.deployed()
+
         // setup accA
         await weth.connect(accountA).deposit({
             value: pe("10000000000000000000")

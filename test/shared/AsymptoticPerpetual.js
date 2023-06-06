@@ -189,6 +189,21 @@ function _r(xk, v, R) {
   return r
 }
 
+function mulDivRoundingUp(a, b, x) {
+  let result = a.mul(b).div(x)
+  if (result.mul(x).div(b).lt(a))
+      result = result.add(1)
+  return result
+}
+
+function _v(xk, r, R) {
+  if (R.shr(1).gte(r)) {
+    return mulDivRoundingUp(r, Q128, xk)
+  }
+  const denominator = R.sub(r).mul(xk.shl(2)).div(Q128)
+  return mulDivRoundingUp(R, R, denominator)
+}
+
 function _evaluate(market, state) {
   const rA = _r(market.xkA, state.a, state.R)
   const rB = _r(market.xkB, state.b, state.R)
@@ -229,10 +244,23 @@ function _selectPrice(
     }
     return {rA, rB, market}
   }
-  
+}
+
+async function _init(oracleLibrary, R, params) {
+  const oraclePrice = await oracleLibrary.fetch(params.oracle)
+  const twap = oraclePrice.twap
+  const t = bn(0)
+  const decayRateX64 = _decayRate(t, params.halfLife)
+  const state = {a: params.a, b: params.b, R}
+  const market = _market(params.k, params.mark, decayRateX64, twap)
+  // TODO: find (a,b) so rA = rB = R/3
+  const a = _v(market.xkA, R.div(3), R)
+  const b = _v(market.xkB, R.div(3), R)
+  return params
 }
 
 module.exports = {
   _selectPrice,
-  _evaluate
+  _evaluate,
+  _init
 }

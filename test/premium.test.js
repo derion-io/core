@@ -4,17 +4,24 @@ const {
 } = require("@nomicfoundation/hardhat-network-helpers");
 const { expect, use } = require("chai");
 const { solidity } = require("ethereum-waffle");
-const { _evaluate, _selectPrice } = require("./shared/AsymptoticPerpetual");
+const { _evaluate, _selectPrice, _init } = require("./shared/AsymptoticPerpetual");
 const { weiToNumber, bn, getDeltaSupply, numberToWei, packId, unpackId, encodeSqrtX96, encodePayload, attemptSwap, attemptStaticSwap } = require("./shared/utilities");
 const abiCoder = new ethers.utils.AbiCoder()
 use(solidity)
 
 const HALF_LIFE = 0;
 
+const pe = (x) => ethers.utils.parseEther(String(x))
+
 describe("Premium", function () {
   async function fixture() {
     const [owner, accountA, accountB] = await ethers.getSigners();
     const signer = owner;
+
+    // deploy oracle library
+    const OracleLibrary = await ethers.getContractFactory("TestOracleHelper")
+    const oracleLibrary = await OracleLibrary.deploy()
+    await oracleLibrary.deployed()
 
     // deploy UTR
     const UTR = require("@derivable/utr/build/UniversalTokenRouter.json")
@@ -24,9 +31,7 @@ describe("Premium", function () {
 
     // deploy pool factory
     const PoolFactory = await ethers.getContractFactory("PoolFactory");
-    const poolFactory = await PoolFactory.deploy(
-      owner.address,
-    );
+    const poolFactory = await PoolFactory.deploy( owner.address );
     await poolFactory.setFeeTo(owner.address)
 
     // weth test
@@ -100,25 +105,27 @@ describe("Premium", function () {
       bn(quoteTokenIndex).shl(255).add(bn(300).shl(256 - 64)).add(uniswapPair.address).toHexString(),
       32,
     )
-    const params = {
+    let params = {
       utr: utr.address,
       token: derivable1155.address,
       oracle,
       reserveToken: weth.address,
       recipient: owner.address,
-      mark: bn(1000).shl(128).div(38),
-      k: 5,
-      a: '30000000000',
-      b: '30000000000',
-      initTime: await time.latest(),
-      halfLife: HALF_LIFE, // ten years
+      mark: bn(38).shl(128),
+      k: bn(5),
+      a: pe(1),
+      b: pe(1),
+      initTime: 0,
+      halfLife: bn(HALF_LIFE), // ten years
       premiumRate: '0',
       minExpirationD: 0,
       minExpirationC: 0,
-      discountRate: 0
+      discountRate: 0,
+      feeHalfLife: 0
     }
+    params = await _init(oracleLibrary, pe("5"), params)
     const poolNoPremiumAddress = await poolFactory.computePoolAddress(params);
-    await weth.transfer(poolNoPremiumAddress, numberToWei(1));
+    await weth.transfer(poolNoPremiumAddress, pe("5"));
     await poolFactory.createPool(params);
     const derivablePoolNoPremium = await ethers.getContractAt("AsymptoticPerpetual", poolNoPremiumAddress);
 
@@ -129,13 +136,13 @@ describe("Premium", function () {
       TOKEN_R: weth.address,
       ORACLE: oracle,
       K: bn(5),
-      MARK: bn(1000).shl(128).div(38),
+      MARK: bn(38).shl(128),
       INIT_TIME: bn(params.initTime),
       HALF_LIFE: bn(params.halfLife),
       PREMIUM_RATE: params.premiumRate
     }
     const poolAddress = await poolFactory.computePoolAddress(params);
-    await weth.transfer(poolAddress, numberToWei(1));
+    await weth.transfer(poolAddress, pe("5"));
     await poolFactory.createPool(params);
     const derivablePool = await ethers.getContractAt("AsymptoticPerpetual", poolAddress);
     await time.increase(100);
@@ -147,11 +154,6 @@ describe("Premium", function () {
       weth.address
     )
     await stateCalHelper.deployed()
-
-    // deploy oracle library
-    const OracleLibrary = await ethers.getContractFactory("TestOracleHelper")
-    const oracleLibrary = await OracleLibrary.deploy()
-    await oracleLibrary.deployed()
 
     const DerivableHelper = await ethers.getContractFactory("contracts/test/TestHelper.sol:TestHelper")
     const derivableHelper = await DerivableHelper.deploy(
@@ -431,15 +433,14 @@ describe("Premium", function () {
     }
   }
 
-  it("RiskFactor > PremiumRate: Buy long 1e", async function () {
+  it("RiskFactor > PremiumRate: Buy long 1.7e", async function () {
     const { premiumBuyingLong } = await loadFixture(fixture)
-    await premiumBuyingLong(1)
+    await premiumBuyingLong(1.7)
   })
 
-  it("RiskFactor > PremiumRate: Buy long 0.5e", async function () {
-    const { premiumBuyingLong, fetchPrice, params } = await loadFixture(fixture)
-    await premiumBuyingLong(0.5)
-    await fetchPrice()
+  it("RiskFactor > PremiumRate: Buy long 3e", async function () {
+    const { premiumBuyingLong } = await loadFixture(fixture)
+    await premiumBuyingLong(3)
   })
 
   it("RiskFactor > PremiumRate: Buy long 2e", async function () {
@@ -510,14 +511,14 @@ describe("Premium", function () {
       .to.be.equal(withoutPremium)
   })
 
-  it("RiskFactor < -PremiumRate: Buy short 1e", async function () {
+  it("RiskFactor < -PremiumRate: Buy short 3e", async function () {
     const { premiumBuyingShort } = await loadFixture(fixture)
-    await premiumBuyingShort(1)
+    await premiumBuyingShort(3)
   })
 
-  it("RiskFactor < -PremiumRate: Buy short 0.7e", async function () {
+  it("RiskFactor < -PremiumRate: Buy short 1.7e", async function () {
     const { premiumBuyingShort } = await loadFixture(fixture)
-    await premiumBuyingShort(0.7)
+    await premiumBuyingShort(1.7)
   })
 
   it("RiskFactor < -PremiumRate: Buy short 2e", async function () {

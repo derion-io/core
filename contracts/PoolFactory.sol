@@ -6,7 +6,7 @@ import "./interfaces/IPoolFactory.sol";
 import "./logics/AsymptoticPerpetual.sol";
 
 contract PoolFactory is IPoolFactory {
-    bytes32 immutable public BYTECODE_HASH = keccak256(type(AsymptoticPerpetual).creationCode);
+    bytes32 constant public BYTECODE_HASH = keccak256(type(AsymptoticPerpetual).creationCode);
 
     // storage
     address internal s_feeTo;
@@ -15,10 +15,9 @@ contract PoolFactory is IPoolFactory {
     // transient storage
     Params t_params;
 
-    constructor(address feeToSetter) {
-        if (feeToSetter == address(0)) {
-            feeToSetter = msg.sender;
-        }
+    constructor(
+        address feeToSetter
+    ) {
         s_feeToSetter = feeToSetter;
     }
 

@@ -34,7 +34,6 @@ abstract contract Pool is IPool, Storage, Events, Constants {
         FACTORY = IPoolFactory(msg.sender);
 
         Params memory params = IPoolFactory(msg.sender).getParams();
-        // TODO: require(4*params.a*params.b <= params.R, "invalid (R,a,b)");
         UTR = params.utr;
         TOKEN = params.token;
         ORACLE = params.oracle;
@@ -49,20 +48,27 @@ abstract contract Pool is IPool, Storage, Events, Constants {
         INIT_TIME = params.initTime > 0 ? params.initTime : block.timestamp;
         require(block.timestamp >= INIT_TIME, "PIT");
 
-        (uint rA, uint rB, uint rC) = _init(params.a, params.b);
+        uint R = IERC20(TOKEN_R).balanceOf(address(this));
+        require(params.a <= R >> 1 && params.b <= R >> 1, "IP");
+
+        s_a = params.a;
+        s_b = params.b;
+
         uint idA = _packID(address(this), SIDE_A);
         uint idB = _packID(address(this), SIDE_B);
         uint idC = _packID(address(this), SIDE_C);
 
+        // TODO: can this virtual supply be removed when we have new fee supply
         // permanently lock MINIMUM_LIQUIDITY for each side
         IERC1155Supply(TOKEN).mintVirtualSupply(idA, MINIMUM_LIQUIDITY);
         IERC1155Supply(TOKEN).mintVirtualSupply(idB, MINIMUM_LIQUIDITY);
         IERC1155Supply(TOKEN).mintVirtualSupply(idC, MINIMUM_LIQUIDITY);
 
         // mint tokens to recipient
-        IERC1155Supply(TOKEN).mintLock(params.recipient, idA, rA - MINIMUM_LIQUIDITY, MIN_EXPIRATION_D, "");
-        IERC1155Supply(TOKEN).mintLock(params.recipient, idB, rB - MINIMUM_LIQUIDITY, MIN_EXPIRATION_D, "");
-        IERC1155Supply(TOKEN).mintLock(params.recipient, idC, rC - MINIMUM_LIQUIDITY, MIN_EXPIRATION_C, "");
+        uint R3 = R/3;
+        IERC1155Supply(TOKEN).mintLock(params.recipient, idA, R3 - MINIMUM_LIQUIDITY, MIN_EXPIRATION_D, "");
+        IERC1155Supply(TOKEN).mintLock(params.recipient, idB, R3 - MINIMUM_LIQUIDITY, MIN_EXPIRATION_D, "");
+        IERC1155Supply(TOKEN).mintLock(params.recipient, idC, R - (R3<<1) - MINIMUM_LIQUIDITY, MIN_EXPIRATION_C, "");
 
         emit Derivable(
             'PoolCreated',                 // topic1: eventName
@@ -87,17 +93,9 @@ abstract contract Pool is IPool, Storage, Events, Constants {
     }
 
     function getStates() external view returns (uint R, uint a, uint b) {
-        R = _getR(s_R);
+        R = IERC20(TOKEN_R).balanceOf(address(this));
         a = s_a;
         b = s_b;
-    }
-
-    function collect() external returns (uint amount) {
-        uint R = _getR(s_R);
-        amount = IERC20(TOKEN_R).balanceOf(address(this)) - R;
-        address feeTo = FACTORY.getFeeTo();
-        require(feeTo != address(0), "FTNS");
-        TransferHelper.safeTransfer(TOKEN_R, feeTo, amount);
     }
 
     function swap(
@@ -160,16 +158,9 @@ abstract contract Pool is IPool, Storage, Events, Constants {
         }
     }
 
-    function _init(
-        uint a,
-        uint b
-    ) internal virtual returns (uint rA, uint rB, uint rC);
-
     function _swap(
         uint sideIn,
         uint sideOut,
         SwapParam memory param
     ) internal virtual returns(uint amountIn, uint amountOut);
-
-    function _getR(uint R) internal view virtual returns (uint);
 }
