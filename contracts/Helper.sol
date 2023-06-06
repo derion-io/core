@@ -236,24 +236,18 @@ contract Helper is Constants, IHelper {
         } else {
             uint s = _supply(sideIn);
             if (sideIn == SIDE_A) {
-                uint rOut = FullMath.mulDiv(amount, rA, s);
-                rA1 -= rOut;
-                if (sideOut == SIDE_R) {
-                    state1.R -= rOut;
-                }
+                amount = FullMath.mulDiv(amount, rA, s);
+                rA1 -= amount;
             } else if (sideIn == SIDE_B) {
-                uint rOut = FullMath.mulDiv(amount, rB, s);
-                rB1 -= rOut;
-                if (sideOut == SIDE_R) {
-                    state1.R -= rOut;
-                }
+                amount = FullMath.mulDiv(amount, rB, s);
+                rB1 -= amount;
             } else if (sideIn == SIDE_C) {
-                if (sideOut == SIDE_R) {
-                    uint rC = state.R - rA - rB;
-                    uint rOut = FullMath.mulDiv(amount, rC, s);
-                    state1.R -= rOut;
-                }
+                --amount; // SIDE_C sacrifices nymber rounding for A and B
+                uint rC = state.R - rA - rB;
+                amount = FullMath.mulDiv(amount, rC, s);
             }
+            require(sideOut == SIDE_R, 'Helper: UNSUPPORTED_SWAP_SIDEOUT');
+            state1.R -= amount;
         }
         state1.a = _v(market.xkA, rA1, state1.R);
         state1.b = _v(market.xkB, rB1, state1.R);
