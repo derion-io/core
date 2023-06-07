@@ -80,7 +80,7 @@ contract View is Storage, Constants {
         states.a = s_a;
         states.b = s_b;
         {
-            State memory state = State(states.R, states.a, states.b = s_b);
+            State memory state = State(states.R, states.a, states.b);
             uint decayRateX64 = _decayRate(block.timestamp - INIT_TIME, HALF_LIFE);
             (uint min, uint max) = _fetch(ORACLE);
             if (min > max) {
