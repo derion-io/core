@@ -90,9 +90,9 @@ contract View is Storage, Constants {
             uint rBMax;
             (states.rA, rBMax) = _evaluate(_market(k, MARK, decayRateX64, min), state);
             (rAMax, states.rB) = _evaluate(_market(k, MARK, decayRateX64, max), state);
-            states.rC = (states.rA + rBMax) > (rAMax + states.rB) ?
-                states.R - (states.rA + rBMax) :
-                states.R - (rAMax + states.rB);
+            rAMax += states.rB;
+            rBMax += states.rA;
+            states.rC = states.R - (rAMax > rBMax ? rAMax : rBMax);
             // states.xkA = market.xkA;
             // states.xKB = market.xkB;
         }
