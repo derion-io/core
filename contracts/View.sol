@@ -49,26 +49,34 @@ contract View is Storage, Constants {
         return 1000;
     }
 
+    function _market(
+        uint K,
+        uint MARK,
+        uint decayRateX64,
+        uint price
+    ) internal pure returns (Market memory market) {
+        market.xkA = _powu(FullMath.mulDiv(price, Q128, MARK), K);
+        market.xkB = uint(FullMath.mulDiv(Q256M/market.xkA, Q64, decayRateX64));
+        market.xkA = uint(FullMath.mulDiv(market.xkA, Q64, decayRateX64));
+    }
+
     function getStates(bytes32 ORACLE, uint MARK, address TOKEN_R, uint k, address TOKEN) external view returns (StateView memory states) {
-        (states.twap, states.spot) = _fetch(ORACLE);
-
-        uint idA = _packID(address(this), SIDE_A);
-        uint idB = _packID(address(this), SIDE_B);
-        uint idC = _packID(address(this), SIDE_C);
-
+        states.R = IERC20(TOKEN_R).balanceOf(address(this));
         states.a = s_a;
         states.b = s_b;
-
-        uint xk = _xk(states.twap, MARK, k);
-        states.xk = xk;
-
-        states.R = IERC20(TOKEN_R).balanceOf(address(this));
-        states.rA = _r(xk, s_a, states.R);
-        states.rB = _r(xk, s_b, states.R);
-
-        states.sA = IERC1155Supply(TOKEN).totalSupply(idA);
-        states.sB = IERC1155Supply(TOKEN).totalSupply(idB);
-        states.sC = IERC1155Supply(TOKEN).totalSupply(idC);
+        {
+            State memory state = State(states.R, states.a, states.b = s_b);
+            uint decayRateX64 = _decayRate(block.timestamp - config.INIT_TIME, config.HALF_LIFE);
+            (states.twap, states.spot) = _fetch(ORACLE);
+            uint price = (states.twap + states.spot) >> 1;
+            Market memory market = _market(K, MARK, decayRateX64, price);
+            (states.rA, states.rB) = _evaluate(market, state);
+            states.xkA = market.xkA;
+            states.xKB = market.xkB;
+        }
+        states.sA = IERC1155Supply(TOKEN).totalSupply(_packID(address(this), SIDE_A));
+        states.sB = IERC1155Supply(TOKEN).totalSupply(_packID(address(this), SIDE_B));
+        states.sC = IERC1155Supply(TOKEN).totalSupply(_packID(address(this), SIDE_C));
     }
 
     function _fetch(
