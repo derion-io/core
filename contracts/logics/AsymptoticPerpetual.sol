@@ -8,6 +8,7 @@ import "../libs/OracleLibrary.sol";
 import "../interfaces/IHelper.sol";
 import "../libs/abdk-consulting/abdk-libraries-solidity/ABDKMath64x64.sol";
 
+import "hardhat/console.sol";
 
 contract AsymptoticPerpetual is Pool {
     function _powu(uint x, uint y) internal pure returns (uint z) {
@@ -144,6 +145,7 @@ contract AsymptoticPerpetual is Pool {
                     amountIn = FullMath.mulDivRoundingUp(s, rC - rC1, rC);
                 }
             }
+            console.log('amountIn', amountIn);
         }
         if (sideOut == SIDE_R) {
             amountOut = state.R - state1.R;
