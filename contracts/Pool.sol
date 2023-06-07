@@ -13,8 +13,6 @@ import "./logics/Storage.sol";
 import "./logics/Events.sol";
 
 abstract contract Pool is IPool, Storage, Events, Constants {
-    uint public constant MINIMUM_LIQUIDITY = 10 ** 3;
-
     /// Immutables
     IPoolFactory internal immutable FACTORY;
     address internal immutable UTR;
@@ -58,17 +56,11 @@ abstract contract Pool is IPool, Storage, Events, Constants {
         uint idB = _packID(address(this), SIDE_B);
         uint idC = _packID(address(this), SIDE_C);
 
-        // TODO: can this virtual supply be removed when we have new fee supply
-        // permanently lock MINIMUM_LIQUIDITY for each side
-        IERC1155Supply(TOKEN).mintVirtualSupply(idA, MINIMUM_LIQUIDITY);
-        IERC1155Supply(TOKEN).mintVirtualSupply(idB, MINIMUM_LIQUIDITY);
-        IERC1155Supply(TOKEN).mintVirtualSupply(idC, MINIMUM_LIQUIDITY);
-
         // mint tokens to recipient
         uint R3 = R/3;
-        IERC1155Supply(TOKEN).mintLock(params.recipient, idA, R3 - MINIMUM_LIQUIDITY, MIN_EXPIRATION_D, "");
-        IERC1155Supply(TOKEN).mintLock(params.recipient, idB, R3 - MINIMUM_LIQUIDITY, MIN_EXPIRATION_D, "");
-        IERC1155Supply(TOKEN).mintLock(params.recipient, idC, R - (R3<<1) - MINIMUM_LIQUIDITY, MIN_EXPIRATION_C, "");
+        IERC1155Supply(TOKEN).mintLock(params.recipient, idA, R3, MIN_EXPIRATION_D, "");
+        IERC1155Supply(TOKEN).mintLock(params.recipient, idB, R3, MIN_EXPIRATION_D, "");
+        IERC1155Supply(TOKEN).mintLock(params.recipient, idC, R - (R3<<1), MIN_EXPIRATION_C, "");
 
         emit Derivable(
             'PoolCreated',                 // topic1: eventName

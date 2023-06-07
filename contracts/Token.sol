@@ -51,13 +51,6 @@ contract Token is ERC1155SupplyVirtual {
         super._mint(to, id, amount, block.timestamp + expiration, data);
     }
 
-    function mintVirtualSupply(
-        uint256 id,
-        uint256 amount
-    ) external onlyItsPool(id) {
-        super._mintVirtualSupply(id, amount);
-    }
-
     function burn(
         address from,
         uint256 id,

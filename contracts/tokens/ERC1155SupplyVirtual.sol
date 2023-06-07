@@ -6,6 +6,8 @@ pragma solidity ^0.8.0;
 
 import "@derivable/shadow-token/contracts/ShadowFactory.sol";
 
+// TODO: should we remove this contract?
+
 /**
  * @dev Extension of ERC1155 that adds tracking of total supply per id.
  *
@@ -61,15 +63,5 @@ abstract contract ERC1155SupplyVirtual is ShadowFactory {
                 }
             }
         }
-    }
-
-    /**
-     * @dev Increase the supply of token that belongs to no owner.
-     */
-    function _mintVirtualSupply(
-      uint256 id,
-      uint256 amount
-    ) internal {
-        _totalSupply[id] += amount;
     }
 }
