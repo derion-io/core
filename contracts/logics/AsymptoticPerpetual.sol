@@ -125,19 +125,24 @@ contract AsymptoticPerpetual is Pool {
         // [TRANSITION]
         (uint rA1, uint rB1) = _evaluate(market, state1);
         if (sideIn == SIDE_R) {
+            require(rA1 >= rA && rB1 >= rB, "MI:R");
             amountIn = state1.R - state.R;
         } else {
+            require(state.R >= state1.R, "MI:NR");
             uint s = _supply(TOKEN, sideIn);
             if (sideIn == SIDE_A) {
-                amountIn = FullMath.mulDivRoundingUp(rA - rA1, s, rA);
-                s_a = state1.a;
-            } else if (sideIn == SIDE_B) {
-                amountIn = FullMath.mulDivRoundingUp(rB - rB1, s, rB);
-                s_b = state1.b;
-            } else if (sideIn == SIDE_C) {
-                uint rC = state.R - rA - rB;
-                uint rC1 = state1.R - rA1 - rB1;
-                amountIn = FullMath.mulDivRoundingUp(rC - rC1, s, rC);
+                require(rB1 >= rB, "MI:A");
+                amountIn = FullMath.mulDivRoundingUp(s, rA - rA1, rA);
+            } else {
+                require(rA1 >= rA, "MI:NA");
+                if (sideIn == SIDE_B) {
+                    amountIn = FullMath.mulDivRoundingUp(s, rB - rB1, rB);
+                } else if (sideIn == SIDE_C) {
+                    require(rB1 >= rB, "MI:NB");
+                    uint rC = state.R - rA - rB;
+                    uint rC1 = state1.R - rA1 - rB1;
+                    amountIn = FullMath.mulDivRoundingUp(s, rC - rC1, rC);
+                }
             }
         }
         if (sideOut == SIDE_R) {
@@ -147,14 +152,14 @@ contract AsymptoticPerpetual is Pool {
             if (sideOut == SIDE_C) {
                 uint rC = state.R - rA - rB;
                 uint rC1 = state1.R - rA1 - rB1;
-                amountOut = FullMath.mulDiv(rC1 - rC, s, rC);
+                amountOut = FullMath.mulDiv(s, rC1 - rC, rC);
             } else {
                 amountOut = PREMIUM_RATE;
                 if (sideOut == SIDE_A) {
                     sideOut = Q128;
                     if (amountOut > 0 && rA1 > rB1) {
                         uint rC1 = state1.R - rA1 - rB1;
-                        uint imbaRate = FullMath.mulDiv(rA1 - rB1, Q128, rC1);
+                        uint imbaRate = FullMath.mulDiv(Q128, rA1 - rB1, rC1);
                         if (imbaRate > amountOut) {
                             sideOut = FullMath.mulDiv(Q128, amountOut, imbaRate);
                         }
@@ -167,13 +172,12 @@ contract AsymptoticPerpetual is Pool {
                         state1.a = state.a + FullMath.mulDiv(state1.a - state.a, sideOut, Q128);
                         rA1 = _r(market.xkA, state1.a, state1.R);
                     }
-                    amountOut = FullMath.mulDiv(rA1 - rA, s, rA);
-                    s_a = state1.a;
+                    amountOut = FullMath.mulDiv(s, rA1 - rA, rA);
                 } else if (sideOut == SIDE_B) {
                     sideOut = Q128;
                     if (amountOut > 0 && rB1 > rA1) {
                         uint rC1 = state1.R - rA1 - rB1;
-                        uint imbaRate = FullMath.mulDiv(rB1 - rA1, Q128, rC1);
+                        uint imbaRate = FullMath.mulDiv(Q128, rB1 - rA1, rC1);
                         if (imbaRate > amountOut) {
                             sideOut = FullMath.mulDiv(Q128, amountOut, imbaRate);
                         }
@@ -186,10 +190,15 @@ contract AsymptoticPerpetual is Pool {
                         state1.b = state.b + FullMath.mulDiv(state1.b - state.b, sideOut, Q128);
                         rB1 = _r(market.xkB, state1.b, state1.R);
                     }
-                    amountOut = FullMath.mulDiv(rB1 - rB, s, rB);
-                    s_b = state1.b;
+                    amountOut = FullMath.mulDiv(s, rB1 - rB, rB);
                 }
             }
+        }
+        if (state1.a != state.a) {
+            s_a = state1.a;
+        }
+        if (state1.b != state.b) {
+            s_b = state1.b;
         }
     }
 }
