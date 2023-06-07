@@ -82,12 +82,17 @@ contract View is Storage, Constants {
         {
             State memory state = State(states.R, states.a, states.b = s_b);
             uint decayRateX64 = _decayRate(block.timestamp - INIT_TIME, HALF_LIFE);
-            (states.twap, states.spot) = _fetch(ORACLE);
-            uint price = (states.twap + states.spot) >> 1;
-            Market memory market = _market(k, MARK, decayRateX64, price);
-            (states.rA, states.rB) = _evaluate(market, state);
-            states.xkA = market.xkA;
-//            states.xKB = market.xkB;
+            (uint min, uint max) = _fetch(ORACLE);
+            if (min > max) {
+                (min, max) = (max, min);
+            }
+            uint rAMax;
+            uint rBMax;
+            (states.rA, rBMax) = _evaluate(_market(k, MARK, decayRateX64, min), state);
+            (rAMax, states.rB) = _evaluate(_market(k, MARK, decayRateX64, max), state);
+            states.rC = states.R - rAMax - rBMax;
+            // states.xkA = market.xkA;
+            // states.xKB = market.xkB;
         }
         states.sA = IERC1155Supply(TOKEN).totalSupply(_packID(address(this), SIDE_A));
         states.sB = IERC1155Supply(TOKEN).totalSupply(_packID(address(this), SIDE_B));
