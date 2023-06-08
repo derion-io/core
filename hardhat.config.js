@@ -3,11 +3,8 @@ const dotenv = require("dotenv");
 dotenv.config({ path: __dirname + "/.env" });
 
 require("@nomiclabs/hardhat-ethers");
-require("@nomiclabs/hardhat-etherscan");
 require("hardhat-contract-sizer");
-require("@openzeppelin/hardhat-upgrades");
 require("hardhat-gas-reporter");
-require("hardhat-tracer");
 require("solidity-coverage");
 
 require("./scripts/DeployDDLCore.sf");
