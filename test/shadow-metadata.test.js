@@ -253,6 +253,14 @@ describe("DDL v3", function () {
             expect(lpDecimals).to.be.equals(18)
         })
 
+        it("Token name (symbol)", async function () {
+            const {
+                derivable1155
+            } = await loadFixture(deployDDLv2)
+            expect(await derivable1155.name()).to.be.equals('Derivable Position')
+            expect(await derivable1155.symbol()).to.be.equals('DERIVABLE-POS')
+        })
+
         it("Token metadata", async function () {
             const {
                 derivablePool,
@@ -272,26 +280,20 @@ describe("DDL v3", function () {
 
             // longMetadata
             expect(decodeDataURI(longMetadata).name).to.be.equals('Long 2.5x WETH/USDC (WETH)')
-            expect(decodeDataURI(longMetadata).description).to.be.equals('This NFT represents a token in a Derivable.\n' +
-                '\n' +
-                'Pool Address: ' + derivablePool.address.toLowerCase()
-            )
+            expect(decodeDataURI(longMetadata).description).to.be.equals('This fungible token represents a Derivable LONG x2.5 position for the WETH/USDC pool at '
+                + derivablePool.address.toLowerCase() + ' with WETH as the reserve token.')
             expect(decodeDataURI(longMetadata).image.substring(26)).to.be.equals(Buffer.from(logosvg).toString('base64'))
 
             // shortMetadata
             expect(decodeDataURI(shortMetadata).name).to.be.equals('Short 2.5x WETH/USDC (WETH)')
-            expect(decodeDataURI(shortMetadata).description).to.be.equals('This NFT represents a token in a Derivable.\n' +
-                '\n' +
-                'Pool Address: ' + derivablePool.address.toLowerCase()
-            )
+            expect(decodeDataURI(shortMetadata).description).to.be.equals('This fungible token represents a Derivable SHORT x2.5 position for the WETH/USDC pool at '
+                + derivablePool.address.toLowerCase() + ' with WETH as the reserve token.')
             expect(decodeDataURI(shortMetadata).image.substring(26)).to.be.equals(Buffer.from(logosvg).toString('base64'))
 
             // lpMetadata
             expect(decodeDataURI(lpMetadata).name).to.be.equals('LP 2.5x WETH/USDC (WETH)')
-            expect(decodeDataURI(lpMetadata).description).to.be.equals('This NFT represents a token in a Derivable.\n' +
-                '\n' +
-                'Pool Address: ' + derivablePool.address.toLowerCase()
-            )
+            expect(decodeDataURI(lpMetadata).description).to.be.equals('This is a Derivable Liquidity Provider token for the WETH/USDC x2.5 pool at '
+                + derivablePool.address.toLowerCase() + ' with WETH as the reserve token.')
             expect(decodeDataURI(lpMetadata).image.substring(26)).to.be.equals(Buffer.from(logosvg).toString('base64'))
         })
 

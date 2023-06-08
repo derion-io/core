@@ -41,8 +41,12 @@ contract Token is ERC1155SupplyVirtual {
         return operator == UTR || super.isApprovedForAll(account, operator);
     }
 
-    function name() public pure returns (string memory) {
-        return 'DERIVABLE NFT';
+    function name() external pure returns (string memory) {
+        return "Derivable Position";
+    }
+
+    function symbol() external pure returns (string memory) {
+        return "DERIVABLE-POS";
     }
 
     function mintLock(

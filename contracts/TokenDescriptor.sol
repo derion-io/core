@@ -54,9 +54,7 @@ contract TokenDescriptor is ITokenDescriptor {
                                 '{"name":"',
                                 _getName(base, quote, pool, side),
                                 '", "description":"',
-                                'This NFT represents a token in a Derivable.\\n',
-                                '\\nPool Address: ',
-                                Strings.toHexString(uint160(pool), 20),
+                                _getDescription(base, quote, pool, side),
                                 '", "image": "',
                                 'data:image/svg+xml;base64,',
                                 image,
@@ -66,6 +64,39 @@ contract TokenDescriptor is ITokenDescriptor {
                     )
                 )
             );
+    }
+
+    function _getDescription(address base, address quote, address pool, uint side) internal view returns (string memory) {
+        string memory sideStr;
+        if (side == SIDE_C) {
+            return string(
+                abi.encodePacked(
+                    "This is a Derivable Liquidity Provider token for the ",
+                    IERC20Metadata(base).symbol(), "/",
+                    IERC20Metadata(quote).symbol(), " ",
+                    "x", _getPower(IPool(pool).K()), " ",
+                    "pool at ", Strings.toHexString(uint160(pool), 20), " ",
+                    "with ", IERC20Metadata(IPool(pool).TOKEN_R()).symbol(), " as the reserve token."
+                )
+            );
+        } else {
+            if (side == SIDE_A) {
+                sideStr = "LONG";
+            } else if (side == SIDE_B) {
+                sideStr = "SHORT";
+            }
+            return string(
+                abi.encodePacked(
+                    "This fungible token represents a Derivable ",
+                    sideStr, " x", _getPower(IPool(pool).K()), " ",
+                    "position for the ",
+                    IERC20Metadata(base).symbol(), "/",
+                    IERC20Metadata(quote).symbol(), " ",
+                    "pool at ", Strings.toHexString(uint160(pool), 20), " ",
+                    "with ", IERC20Metadata(IPool(pool).TOKEN_R()).symbol(), " as the reserve token."
+                )
+            );
+        }
     }
 
     function _getName(address base, address quote, address pool, uint side) internal view returns (string memory) {
