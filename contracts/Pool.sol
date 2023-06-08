@@ -99,40 +99,16 @@ abstract contract Pool is IPool, Storage, Events, Constants {
         address payer,
         address recipient
     ) external override returns(uint amountIn, uint amountOut) {
+        SwapParam memory param = SwapParam(0, helper, payload);
         if (sideOut == SIDE_C) {
             require(expiration >= MIN_EXPIRATION_C, "IEC");
-        }
-        {
-            SwapParam memory param = SwapParam(0, helper, payload);
-            if (sideOut == SIDE_A || sideOut == SIDE_B) {
-                require(expiration >= MIN_EXPIRATION_D, "IED");
-                if (DISCOUNT_RATE > 0) {
-                    param.zeroInterestTime = (expiration - MIN_EXPIRATION_D) * DISCOUNT_RATE / Q128;
-                }
+        } else if (sideOut == SIDE_A || sideOut == SIDE_B) {
+            require(expiration >= MIN_EXPIRATION_D, "IED");
+            if (DISCOUNT_RATE > 0) {
+                param.zeroInterestTime = (expiration - MIN_EXPIRATION_D) * DISCOUNT_RATE / Q128;
             }
-            (amountIn, amountOut) = _swap(sideIn, sideOut, param);
         }
-        // TODO: reentrancy guard
-        if (sideOut == SIDE_R) {
-            TransferHelper.safeTransfer(TOKEN_R, recipient, amountOut);
-        } else {
-            if (sideOut == SIDE_C) {
-                if (expiration == 0) {
-                    expiration = MIN_EXPIRATION_C;
-                } else {
-                    require(expiration >= MIN_EXPIRATION_C, "IEC");
-                }
-            }
-            if (sideOut == SIDE_A || sideOut == SIDE_B) {
-                if (expiration == 0) {
-                    expiration = MIN_EXPIRATION_D;
-                } else {
-                    require(expiration >= MIN_EXPIRATION_D, "IED");
-                }
-            }
-            IERC1155Supply(TOKEN).mintLock(recipient, _packID(address(this), sideOut), amountOut, expiration, "");
-        }
-        // TODO: flash callback here
+        (amountIn, amountOut) = _swap(sideIn, sideOut, param);
         if (sideIn == SIDE_R) {
             if (payer != address(0)) {
                 IUniversalTokenRouter(UTR).pay(payer, address(this), 20, TOKEN_R, 0, amountIn);
@@ -147,6 +123,11 @@ abstract contract Pool is IPool, Storage, Events, Constants {
             } else {
                 IERC1155Supply(TOKEN).burn(msg.sender, idIn, amountIn);
             }
+        }
+        if (sideOut == SIDE_R) {
+            TransferHelper.safeTransfer(TOKEN_R, recipient, amountOut);
+        } else {
+            IERC1155Supply(TOKEN).mintLock(recipient, _packID(address(this), sideOut), amountOut, expiration, "");
         }
     }
 
