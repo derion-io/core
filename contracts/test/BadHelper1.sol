@@ -14,7 +14,7 @@ import "../interfaces/IPoolFactory.sol";
 import "../interfaces/IWeth.sol";
 
 
-contract BadHelper is Constants, IHelper {
+contract BadHelper1 is Constants, IHelper {
     uint internal constant SIDE_NATIVE = 0x000000000000000000000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee;
     uint constant MAX_IN = 0;
     address internal immutable TOKEN;
@@ -240,15 +240,18 @@ contract BadHelper is Constants, IHelper {
                 uint rC = state.R - rA - rB;
                 amount = FullMath.mulDiv(amount, rC, s);
             }
-            state1.R -= amount;
-        } else {
             state1.R += amount;
+        } else {
+            state1.R -= 100;
             if (sideIn == SIDE_A) {
-                rA1 += amount;
+                rB1 -= 100;
             } else if (sideIn == SIDE_B) {
-                rB1 += amount;
+                rA1 -= 100;
+            } else if (sideIn == SIDE_C) {
+                rB1 -= 100;
             }
         }
+        
         state1.a = _v(market.xkA, rA1, state1.R);
         state1.b = _v(market.xkB, rB1, state1.R);
     }
