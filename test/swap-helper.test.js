@@ -11,7 +11,7 @@ const {
     bn,
     numberToWei,
     packId,
-    encodeSqrtX96, weiToNumber,
+    encodeSqrtX96, weiToNumber, swapToSetPriceV3, encodePayload,
 } = require("./shared/utilities")
 const compiledUniswapFactory = require("./compiled/UniswapV3Factory.json");
 const compiledUniswapRouter = require("./compiled/SwapRouter.json");
@@ -118,6 +118,14 @@ describe("DDL v3", function () {
         )
         await stateCalHelper.deployed()
 
+        // deploy helper
+        const BadHelper = await ethers.getContractFactory("BadHelper")
+        const badHelper = await BadHelper.deploy(
+            derivable1155.address,
+            weth.address
+        )
+        await badHelper.deployed()
+
         await time.increase(1000);
         // add liquidity
         await usdc.approve(uniswapPositionManager.address, MaxUint256);
@@ -193,9 +201,9 @@ describe("DDL v3", function () {
         }
         params1 = await _init(oracleLibrary, pe(5), params1)
         const poolAddress1 = await poolFactory.computePoolAddress(params1)
-        // await weth.deposit({
-        //     value: pe("1000000")
-        // })
+        await weth.deposit({
+            value: pe("1000000000000000000")
+        })
         // await weth.transfer(poolAddress1, pe("10000"));
         // await poolFactory.createPool(params1);
         await stateCalHelper.createPool(
@@ -233,7 +241,8 @@ describe("DDL v3", function () {
             uniswapRouter,
             derivableHelper,
             uniswapPositionManager,
-            stateCalHelper
+            stateCalHelper,
+            badHelper
         }
     }
 
@@ -472,6 +481,62 @@ describe("DDL v3", function () {
         })
         it("swap C to native", async function () {
             await testSwap(SIDE_C)
+        })
+    })
+
+    describe("Helper attack", function () {
+        async function helperAttack (sideOut, amount, priceChange) {
+            const {derivablePool, badHelper, owner, weth, usdc, uniswapRouter} = await loadFixture(deployDDLv2)
+            await swapToSetPriceV3({
+                account: owner, 
+                quoteToken: usdc, 
+                baseToken: weth, 
+                uniswapRouter, 
+                initPrice: 1500, 
+                targetPrice: 1500 * priceChange
+            })
+            await time.increase(1000);
+            await expect(derivablePool.swap(
+                SIDE_R,
+                sideOut,
+                badHelper.address,
+                encodePayload(0, SIDE_R, sideOut, pe(amount)),
+                0,
+                ZERO_ADDRESS,
+                owner.address,
+                opts
+            )).to.be.reverted
+        }
+        it("Buy short 1e, price goes up 100%", async function() {
+            await helperAttack(SIDE_B, 1, 2)
+        })
+
+        it("Buy short 0.1e, price goes up 50%", async function() {
+            await helperAttack(SIDE_B, 0.1, 1.5)
+        })
+
+        it("Buy short 1e, price goes down 100%", async function() {
+            await helperAttack(SIDE_B, 0.1, 0.75)
+        })
+
+        it("Buy short 1e, price goes down 50%", async function() {
+            await helperAttack(SIDE_B, 0.1, 0.5)
+        })
+
+        it("Buy long 1e, price goes up 100%", async function() {
+            await helperAttack(SIDE_A, 1, 2)
+        })
+
+        it("Buy long 0.1e, price goes up 50%", async function() {
+            await helperAttack(SIDE_A, 0.1, 1.5)
+        })
+
+        it("Buy long 1e, price goes down 100%", async function() {
+            await helperAttack(SIDE_A, 0.1, 0.75)
+        })
+
+        it("Buy long 1e, price goes down 50%", async function() {
+            await helperAttack(SIDE_A, 0.1, 0.5)
         })
     })
 })
