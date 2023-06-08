@@ -13,10 +13,6 @@ const {
     packId,
     encodeSqrtX96, weiToNumber, swapToSetPriceV3, encodePayload,
 } = require("./shared/utilities")
-const compiledUniswapFactory = require("./compiled/UniswapV3Factory.json");
-const compiledUniswapRouter = require("./compiled/SwapRouter.json");
-const compiledUniswapv3PositionManager = require("./compiled/NonfungiblePositionManager.json");
-const compiledUniswapPool = require("./compiled/UniswapV3Pool.json");
 const { _init } = require("./shared/AsymptoticPerpetual")
 
 const fe = (x) => Number(ethers.utils.formatEther(x))
@@ -34,21 +30,12 @@ const SIDE_B = 0x20
 const SIDE_C = 0x30
 const SIDE_NATIVE = '0x000000000000000000000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee'
 
-const FROM_ROUTER = 10;
 const PAYMENT = 0;
-const TRANSFER = 1;
-const ALLOWANCE = 2;
 const CALL_VALUE = 2;
-
-const EIP_ETH = 0
-const ERC_721_BALANCE = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("UniversalTokenRouter.ERC_721_BALANCE"))
-const ACTION_IGNORE_ERROR = 1
-const ACTION_RECORD_CALL_RESULT = 2
-const ACTION_INJECT_CALL_RESULT = 4
 
 const HALF_LIFE = 10 * 365 * 24 * 60 * 60
 
-describe("DDL v3", function () {
+describe("Helper Attacks", function () {
     async function deployDDLv2() {
         const [owner, accountA] = await ethers.getSigners();
         const signer = owner;
