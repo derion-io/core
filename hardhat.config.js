@@ -8,6 +8,7 @@ require("hardhat-gas-reporter");
 require("solidity-coverage");
 
 require("./scripts/DeployDDLCore.sf");
+require("./scripts/utilities");
 
 module.exports = {
     defaultNetwork: 'hardhat',

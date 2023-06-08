@@ -50,7 +50,7 @@ async function main() {
         SECONDS_PER_DAY /
         Math.log2(1 / (1 - dailyFundingRate)))
 
-    const addressPath = path.join(__dirname, `./ARBTestnet.json`)
+    const addressPath = path.join(__dirname, `./json/ARBTestnet.json`)
     const addressList = JSON.parse(fs.readFileSync(addressPath, 'utf8'))
 
     const premiumRate = 0;
@@ -93,7 +93,7 @@ async function main() {
 
 function exportData(dictOutput) {
     let json = JSON.stringify(dictOutput, null, 2)
-    fs.writeFileSync(path.join(__dirname, "ARBTestnet.json"), json)
+    fs.writeFileSync(path.join(__dirname, "/json/ARBTestnet.json"), json)
 }
 
 // We recommend this pattern to be able to use async/await everywhere

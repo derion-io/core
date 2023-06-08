@@ -198,6 +198,11 @@ async function attemptStaticSwap(signer, swapType, sideIn, sideOut, amount, help
     )).amountOut
 }
 
+function decodeDataURI(data) {
+    const json = Buffer.from(data.substring(29), "base64").toString()
+    return JSON.parse(json)
+}
+
 module.exports = {
     stringToBytes32,
     calculateSwapToPrice,
@@ -211,5 +216,6 @@ module.exports = {
     encodePriceSqrt,
     encodePayload,
     attemptSwap,
-    attemptStaticSwap
+    attemptStaticSwap,
+    decodeDataURI
 }
