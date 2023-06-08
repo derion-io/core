@@ -11,12 +11,8 @@ const {
     bn,
     numberToWei,
     packId,
-    encodeSqrtX96, weiToNumber,
+    encodeSqrtX96, weiToNumber, swapToSetPriceV3, encodePayload,
 } = require("./shared/utilities")
-const compiledUniswapFactory = require("./compiled/UniswapV3Factory.json");
-const compiledUniswapRouter = require("./compiled/SwapRouter.json");
-const compiledUniswapv3PositionManager = require("./compiled/NonfungiblePositionManager.json");
-const compiledUniswapPool = require("./compiled/UniswapV3Pool.json");
 const { _init } = require("./shared/AsymptoticPerpetual")
 
 const fe = (x) => Number(ethers.utils.formatEther(x))
@@ -34,21 +30,12 @@ const SIDE_B = 0x20
 const SIDE_C = 0x30
 const SIDE_NATIVE = '0x000000000000000000000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee'
 
-const FROM_ROUTER = 10;
 const PAYMENT = 0;
-const TRANSFER = 1;
-const ALLOWANCE = 2;
 const CALL_VALUE = 2;
-
-const EIP_ETH = 0
-const ERC_721_BALANCE = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("UniversalTokenRouter.ERC_721_BALANCE"))
-const ACTION_IGNORE_ERROR = 1
-const ACTION_RECORD_CALL_RESULT = 2
-const ACTION_INJECT_CALL_RESULT = 4
 
 const HALF_LIFE = 10 * 365 * 24 * 60 * 60
 
-describe("DDL v3", function () {
+describe("Helper Attacks", function () {
     async function deployDDLv2() {
         const [owner, accountA] = await ethers.getSigners();
         const signer = owner;
@@ -117,6 +104,22 @@ describe("DDL v3", function () {
             weth.address
         )
         await stateCalHelper.deployed()
+
+        // deploy helper
+        const BadHelper = await ethers.getContractFactory("BadHelper")
+        const badHelper = await BadHelper.deploy(
+            derivable1155.address,
+            weth.address
+        )
+        await badHelper.deployed()
+
+        // deploy helper 1
+        const BadHelper1 = await ethers.getContractFactory("BadHelper1")
+        const badHelper1 = await BadHelper1.deploy(
+            derivable1155.address,
+            weth.address
+        )
+        await badHelper1.deployed()
 
         await time.increase(1000);
         // add liquidity
@@ -193,9 +196,9 @@ describe("DDL v3", function () {
         }
         params1 = await _init(oracleLibrary, pe(5), params1)
         const poolAddress1 = await poolFactory.computePoolAddress(params1)
-        // await weth.deposit({
-        //     value: pe("1000000")
-        // })
+        await weth.deposit({
+            value: pe("1000000000000000000")
+        })
         // await weth.transfer(poolAddress1, pe("10000"));
         // await poolFactory.createPool(params1);
         await stateCalHelper.createPool(
@@ -233,7 +236,24 @@ describe("DDL v3", function () {
             uniswapRouter,
             derivableHelper,
             uniswapPositionManager,
-            stateCalHelper
+            stateCalHelper,
+            badHelper,
+            badHelper1
+        }
+    }
+
+    function convertId(side, poolAddress) {
+        switch (side) {
+            case SIDE_R:
+                return packId(SIDE_R, poolAddress)
+            case SIDE_A:
+                return packId(SIDE_A, poolAddress)
+            case SIDE_B:
+                return packId(SIDE_B, poolAddress)
+            case SIDE_C:
+                return packId(SIDE_C, poolAddress)
+            default:
+                return 0
         }
     }
 
@@ -472,6 +492,97 @@ describe("DDL v3", function () {
         })
         it("swap C to native", async function () {
             await testSwap(SIDE_C)
+        })
+    })
+
+    describe("Helper attack", function () {
+        async function helperAttackBuyIn (sideOut, amount, revertReason) {
+            const {derivablePool, badHelper, owner, weth, usdc, uniswapRouter} = await loadFixture(deployDDLv2)
+            await expect(derivablePool.swap(
+                SIDE_R,
+                sideOut,
+                badHelper.address,
+                encodePayload(0, SIDE_R, sideOut, pe(amount)),
+                0,
+                ZERO_ADDRESS,
+                owner.address,
+                opts
+            )).to.be.revertedWith(revertReason)
+        }
+
+        async function buyInSwapBack (sideOut, amount, priceChange, helper, revertReason) {
+            const {
+                derivablePool, 
+                stateCalHelper, 
+                badHelper,
+                owner, 
+                weth, 
+                usdc, 
+                uniswapRouter,
+                derivable1155,
+                badHelper1
+            } = await loadFixture(deployDDLv2)
+
+            const tokenBefore =  await derivable1155.balanceOf(owner.address, convertId(sideOut, derivablePool.address))
+            await weth.approve(derivablePool.address, MaxUint256)
+            await derivablePool.swap(
+                SIDE_R,
+                sideOut,
+                stateCalHelper.address,
+                encodePayload(0, SIDE_R, sideOut, pe(amount)),
+                0,
+                ZERO_ADDRESS,
+                owner.address,
+                opts
+            )
+            const tokenAfter = await derivable1155.balanceOf(owner.address, convertId(sideOut, derivablePool.address))
+            const inputAmount = tokenAfter.sub(tokenBefore)
+            
+            await swapToSetPriceV3({
+                account: owner, 
+                quoteToken: usdc, 
+                baseToken: weth, 
+                uniswapRouter, 
+                initPrice: 1500, 
+                targetPrice: 1500 * priceChange
+            })
+            await time.increase(1000);
+
+            await derivable1155.setApprovalForAll(derivablePool.address, true);
+            await expect(derivablePool.swap(
+                sideOut,
+                SIDE_R,
+                helper ? badHelper1.address : badHelper.address,
+                encodePayload(0, sideOut, SIDE_R, inputAmount),
+                0,
+                ZERO_ADDRESS,
+                owner.address,
+                opts
+            )).to.be.revertedWith(revertReason)
+        }
+
+        it("sideIn R | Try to break rA1 >= rA", async function() {
+            await helperAttackBuyIn(SIDE_B, 1, "MI:R")
+        })
+
+        it("sideIn R | Try to break rB1 >= rB", async function() {
+            await helperAttackBuyIn(SIDE_A, 1, "MI:R")
+        })
+
+        it("sideIn A | Try to break state.R >= state1.R", async function() {
+            await buyInSwapBack(SIDE_A, 1, 2, 0, "MI:NR")
+        })
+
+        it("sideIn A | Try to break rB1 >= rB", async function() {
+            await buyInSwapBack(SIDE_A, 1, 2, 1, "MI:A")
+        })
+
+        it("sideIn B | Try to break rA1 >= rA", async function() {
+            await buyInSwapBack(SIDE_B, 1, 2, 1, "MI:NA")
+        })
+
+        it("sideIn C | Try to break rB1 >= rB", async function() {
+            await buyInSwapBack(SIDE_C, 1, 2, 1, "MI:NB")
         })
     })
 })

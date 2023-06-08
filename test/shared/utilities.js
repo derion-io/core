@@ -14,6 +14,10 @@ const stringToBytes32 = (text) => {
 const ONE = ethers.BigNumber.from(1)
 const TWO = ethers.BigNumber.from(2)
 
+const opts = {
+    gasLimit: 30000000
+}
+
 const bn = ethers.BigNumber.from
 const numberToWei = (number, decimal = 18) => {
     return ethers.utils.parseUnits(number.toString(), decimal)
@@ -203,6 +207,23 @@ function decodeDataURI(data) {
     return JSON.parse(json)
 }
 
+async function swapToSetPriceV3({ account, quoteToken, baseToken, uniswapRouter, initPrice, targetPrice }) {
+    const quoteTokenIndex = baseToken.address.toLowerCase() < quoteToken.address.toLowerCase() ? 1 : 0
+    const priceX96 = encodeSqrtX96(quoteTokenIndex ? targetPrice : 1, quoteTokenIndex ? 1 : targetPrice)
+    const tx = await uniswapRouter.connect(account).exactInputSingle({
+        payer: account.address,
+        tokenIn: (initPrice < targetPrice) ? quoteToken.address : baseToken.address,
+        tokenOut: (initPrice < targetPrice) ? baseToken.address : quoteToken.address,
+        fee: 500,
+        sqrtPriceLimitX96: priceX96,
+        recipient: account.address,
+        deadline: new Date().getTime() + 100000,
+        amountIn: numberToWei("1000000000000000000"),
+        amountOutMinimum: 0,
+    }, opts)
+    await tx.wait(1)
+}
+
 module.exports = {
     stringToBytes32,
     calculateSwapToPrice,
@@ -217,5 +238,6 @@ module.exports = {
     encodePayload,
     attemptSwap,
     attemptStaticSwap,
-    decodeDataURI
+    decodeDataURI,
+    swapToSetPriceV3,
 }
