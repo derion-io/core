@@ -14,7 +14,6 @@ import "./logics/Events.sol";
 
 abstract contract Pool is IPool, Storage, Events, Constants {
     /// Immutables
-    IPoolFactory internal immutable FACTORY;
     address internal immutable UTR;
     bytes32 public immutable ORACLE; // QTI(1) reserve(32) WINDOW(32) PAIR(160)
     uint public immutable K;
@@ -23,14 +22,13 @@ abstract contract Pool is IPool, Storage, Events, Constants {
     uint internal immutable MARK;
     uint internal immutable INIT_TIME;
     uint internal immutable HALF_LIFE;
+
     uint internal immutable PREMIUM_RATE;
     uint32 internal immutable MIN_EXPIRATION_D;
     uint32 internal immutable MIN_EXPIRATION_C;
     uint internal immutable DISCOUNT_RATE;
 
     constructor() {
-        FACTORY = IPoolFactory(msg.sender);
-
         Params memory params = IPoolFactory(msg.sender).getParams();
         UTR = params.utr;
         TOKEN = params.token;
@@ -75,7 +73,7 @@ abstract contract Pool is IPool, Storage, Events, Constants {
                 INIT_TIME,
                 HALF_LIFE,
                 PREMIUM_RATE,
-                params.k
+                K
             ))
         );
     }
