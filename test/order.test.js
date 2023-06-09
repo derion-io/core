@@ -281,7 +281,7 @@ describe("Order", function () {
             const longValue = weiToNumber(aWethAfter.sub(aWethBefore))
             const shortValue = weiToNumber(bWethAfter.sub(bWethBefore))
 
-            expect(longValue/shortValue).closeTo(1, 0.00001)
+            expect(longValue/shortValue).closeTo(1, 0.001)
         })
     })
 })

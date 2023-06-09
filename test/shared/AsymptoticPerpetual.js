@@ -4,6 +4,9 @@ const {
 } = require("@nomicfoundation/hardhat-network-helpers");
 const { ethers } = require("hardhat");
 const { ZERO, Q128, Q64, Q256M, SIDE_A, SIDE_B, SIDE_C, SIDE_R } = require("./constant");
+const { mulDivRoundingUp } = require("./FullMath");
+const { _v } = require("./Helper");
+const { packId } = require("./utilities");
 const bn = ethers.BigNumber.from
 
 const numberToWei = (number, decimal = 18) => {
@@ -189,21 +192,6 @@ function _r(xk, v, R) {
   return r
 }
 
-function mulDivRoundingUp(a, b, x) {
-  let result = a.mul(b).div(x)
-  if (result.mul(x).div(b).lt(a))
-      result = result.add(1)
-  return result
-}
-
-function _v(xk, r, R) {
-  if (R.shr(1).gte(r)) {
-    return mulDivRoundingUp(r, Q128, xk)
-  }
-  const denominator = R.sub(r).mul(xk.shl(2)).div(Q128)
-  return mulDivRoundingUp(R, R, denominator)
-}
-
 function _evaluate(market, state) {
   const rA = _r(market.xkA, state.a, state.R)
   const rB = _r(market.xkB, state.b, state.R)
@@ -259,8 +247,59 @@ async function _init(oracleLibrary, R, params) {
   return params
 }
 
+async function _swap(
+  sideIn, 
+  sideOut,
+  derivable1155,
+  pool,
+  state,
+  state1,
+  price
+) {
+  let amountIn
+  let amountOut
+  const {rA, rB, market} = price
+  const evalData = _evaluate(market, state1)
+  const rA1 = evalData.rA
+  const rB1 = evalData.rB
+  if (sideIn == SIDE_R) {
+    amountIn = state1.R.sub(state.R)
+  } else {
+    const s = await derivable1155.totalSupply(packId(sideOut, pool.address))
+    if (sideIn == SIDE_A) {
+      amountIn = mulDivRoundingUp(s, rA.sub(rA1), rA)
+    } else {
+      if (sideIn == SIDE_B) {
+        amountIn = mulDivRoundingUp(s, rB.sub(rB1), rB)
+      } else if (sideIn == SIDE_C) {
+        const rC = state.R.sub(rA).sub(rB)
+        const rC1 = state1.R.sub(rA1).sub(rB1)
+        amountIn = mulDivRoundingUp(s, rC.sub(rC1), rC)
+      }
+    }
+  }
+  if (sideOut == SIDE_R) {
+    amountOut = state.R.sub(state1.R)
+  } else {
+    const s = await derivable1155.totalSupply(packId(sideOut, pool.address))
+    if (sideOut == SIDE_C) {
+      const rC = state.R.sub(rA).sub(rB)
+      const rC1 = state1.R.sub(rA1).sub(rB1)
+      amountOut = s.mul(rC1.sub(rC)).div(rC)
+    } else {
+      if (sideOut == SIDE_A) {
+        amountOut = s.mul(rA1.sub(rA)).div(rA)
+      } else if (sideOut == SIDE_B) {
+        amountOut = s.mul(rB1.sub(rB)).div(rB)
+      }
+    }
+  }
+  return {amountIn, amountOut}
+}
+
 module.exports = {
   _selectPrice,
   _evaluate,
-  _init
+  _init,
+  _swap
 }

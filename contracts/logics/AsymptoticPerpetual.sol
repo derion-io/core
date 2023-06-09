@@ -10,6 +10,8 @@ import "../libs/abdk-consulting/abdk-libraries-solidity/ABDKMath64x64.sol";
 
 
 contract AsymptoticPerpetual is Pool {
+    uint constant OPEN_RATE = 9997 * Q128 / 10000;
+
     function _powu(uint x, uint y) internal pure returns (uint z) {
         // Calculate the first iteration of the loop in advance.
         z = y & 1 > 0 ? x : Q128;
@@ -156,12 +158,12 @@ contract AsymptoticPerpetual is Pool {
             } else {
                 amountOut = PREMIUM_RATE;
                 if (sideOut == SIDE_A) {
-                    sideOut = Q128;
+                    sideOut = OPEN_RATE;
                     if (amountOut > 0 && rA1 > rB1) {
                         uint rC1 = state1.R - rA1 - rB1;
                         uint imbaRate = FullMath.mulDiv(Q128, rA1 - rB1, rC1);
                         if (imbaRate > amountOut) {
-                            sideOut = FullMath.mulDiv(Q128, amountOut, imbaRate);
+                            sideOut = FullMath.mulDiv(sideOut, amountOut, imbaRate);
                         }
                     }
                     if (param.zeroInterestTime > 0) {
@@ -174,12 +176,12 @@ contract AsymptoticPerpetual is Pool {
                     }
                     amountOut = FullMath.mulDiv(s, rA1 - rA, rA);
                 } else if (sideOut == SIDE_B) {
-                    sideOut = Q128;
+                    sideOut = OPEN_RATE;
                     if (amountOut > 0 && rB1 > rA1) {
                         uint rC1 = state1.R - rA1 - rB1;
                         uint imbaRate = FullMath.mulDiv(Q128, rB1 - rA1, rC1);
                         if (imbaRate > amountOut) {
-                            sideOut = FullMath.mulDiv(Q128, amountOut, imbaRate);
+                            sideOut = FullMath.mulDiv(sideOut, amountOut, imbaRate);
                         }
                     }
                     if (param.zeroInterestTime > 0) {
