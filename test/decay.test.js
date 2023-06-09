@@ -129,7 +129,8 @@ HLs.forEach(HALF_LIFE => {
         minExpirationD: 0,
         minExpirationC: 0,
         discountRate: 0,
-        feeHalfLife: 0
+        feeHalfLife: 0,
+        openRate: 0
       }
       params = await _init(oracleLibrary, numberToWei(5), params)
       const poolAddress = await poolFactory.computePoolAddress(params);

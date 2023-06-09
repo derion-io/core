@@ -126,7 +126,8 @@ describe("Premium and Future", function () {
       minExpirationD: MIN_EXPIRE,
       minExpirationC: MIN_EXPIRE,
       discountRate: bn(DC).shl(128).div(100),
-      feeHalfLife: 0
+      feeHalfLife: 0,
+      openRate: 0
     }
     params = await _init(oracleLibrary, pe("5"), params)
     const poolNoPremiumAddress = await poolFactory.computePoolAddress(params);

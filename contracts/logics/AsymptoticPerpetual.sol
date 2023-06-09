@@ -10,8 +10,6 @@ import "../libs/abdk-consulting/abdk-libraries-solidity/ABDKMath64x64.sol";
 
 
 contract AsymptoticPerpetual is Pool {
-    uint constant OPEN_RATE = 9997 * Q128 / 10000;
-
     function _powu(uint x, uint y) internal pure returns (uint z) {
         // Calculate the first iteration of the loop in advance.
         z = y & 1 > 0 ? x : Q128;

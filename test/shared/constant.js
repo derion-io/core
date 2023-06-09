@@ -1,4 +1,4 @@
-const { ethers } = require("hardhat");
+const ethers = require("ethers");
 const bn = ethers.BigNumber.from
 
 const ZERO = bn(0)

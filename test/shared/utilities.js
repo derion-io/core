@@ -1,5 +1,6 @@
 const ethers = require('ethers')
 const bnjs = require('bignumber.js')
+const { Q128 } = require('./constant')
 bnjs.config({ EXPONENTIAL_AT: 999999, DECIMAL_PLACES: 40 })
 
 const abiCoder = new ethers.utils.AbiCoder()
@@ -17,7 +18,6 @@ const TWO = ethers.BigNumber.from(2)
 const opts = {
     gasLimit: 30000000
 }
-
 const bn = ethers.BigNumber.from
 const numberToWei = (number, decimal = 18) => {
     return ethers.utils.parseUnits(number.toString(), decimal)
@@ -224,6 +224,10 @@ async function swapToSetPriceV3({ account, quoteToken, baseToken, uniswapRouter,
     await tx.wait(1)
 }
 
+function feeToOpenRate(fee) {
+    return bn((1-fee)*10000).mul(Q128).div(10000)
+}
+
 module.exports = {
     stringToBytes32,
     calculateSwapToPrice,
@@ -240,4 +244,5 @@ module.exports = {
     attemptStaticSwap,
     decodeDataURI,
     swapToSetPriceV3,
+    feeToOpenRate
 }

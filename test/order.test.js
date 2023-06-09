@@ -130,7 +130,8 @@ describe("Order", function () {
             minExpirationD: 0,
             minExpirationC: 0,
             discountRate: 0,
-            feeHalfLife: 0
+            feeHalfLife: 0,
+            openRate: 0
         }
         const poolAddress = await poolFactory.computePoolAddress(params)
         await weth.deposit({
