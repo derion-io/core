@@ -52,12 +52,6 @@ describe("Price selection", function () {
       owner.address
     )
 
-    // deploy pool factory test
-    const PoolFactoryTest = await ethers.getContractFactory("PoolFactoryTest")
-    const poolFactoryTest = await PoolFactoryTest.deploy(
-      owner.address
-    )
-
     // deploy UTR
     const UTR = require("@derivable/utr/build/UniversalTokenRouter.json")
     const UniversalRouter = new ethers.ContractFactory(UTR.abi, UTR.bytecode, owner)
@@ -83,56 +77,23 @@ describe("Price selection", function () {
     const erc20Factory = new ethers.ContractFactory(compiledERC20.abi, compiledERC20.bytecode, signer);
     const usdc = await erc20Factory.deploy(numberToWei('100000000000000000000'));
 
-    // uniswap factory
-    const compiledUniswapFactory = require("./compiled/UniswapV3Factory.json");
-    const UniswapFactory = await new ethers.ContractFactory(compiledUniswapFactory.abi, compiledUniswapFactory.bytecode, signer);
-    const uniswapFactory = await UniswapFactory.deploy()
-
     //WETH
     const compiledWETH = require("canonical-weth/build/contracts/WETH9.json")
     const WETH = await new ethers.ContractFactory(compiledWETH.abi, compiledWETH.bytecode, signer);
     const weth = await WETH.deploy();
 
-    // uniswap router
-    const compiledUniswapRouter = require("./compiled/SwapRouter.json");
-    const UniswapRouter = new ethers.ContractFactory(compiledUniswapRouter.abi, compiledUniswapRouter.bytecode, signer);
-    // uniswap PM
-    const compiledUniswapv3PositionManager = require("./compiled/NonfungiblePositionManager.json");
-    const Uniswapv3PositionManager = new ethers.ContractFactory(compiledUniswapv3PositionManager.abi, compiledUniswapv3PositionManager.bytecode, signer);
-    // setup uniswap
-    const uniswapRouter = await UniswapRouter.deploy(uniswapFactory.address, weth.address);
-    const uniswapPositionManager = await Uniswapv3PositionManager.deploy(uniswapFactory.address, weth.address, '0x0000000000000000000000000000000000000000')
-    await uniswapFactory.createPool(usdc.address, weth.address, 500)
-    const compiledUniswapPool = require("./compiled/UniswapV3Pool.json");
-    const pairAddress = await uniswapFactory.getPool(usdc.address, weth.address, 500)
-    const uniswapPair = new ethers.Contract(pairAddress, compiledUniswapPool.abi, signer);
-    await usdc.approve(uniswapRouter.address, MaxUint256);
-    await weth.approve(uniswapRouter.address, MaxUint256);
     const quoteTokenIndex = weth.address.toLowerCase() < usdc.address.toLowerCase() ? 1 : 0
     const initPriceX96 = encodeSqrtX96(quoteTokenIndex ? 1500 : 1, quoteTokenIndex ? 1 : 1500)
-    const a = await uniswapPair.initialize(initPriceX96)
-    a.wait(1);
-    await time.increase(1000);
-    // add liquidity
-    await usdc.approve(uniswapPositionManager.address, MaxUint256);
-    await weth.approve(uniswapPositionManager.address, MaxUint256);
-    await uniswapPositionManager.mint({
-      token0: quoteTokenIndex ? weth.address : usdc.address,
-      token1: quoteTokenIndex ? usdc.address : weth.address,
-      fee: 500,
-      tickLower: Math.ceil(-887272 / 10) * 10,
-      tickUpper: Math.floor(887272 / 10) * 10,
-      amount0Desired: quoteTokenIndex ? pe('100') : pe('150000'),
-      amount1Desired: quoteTokenIndex ? pe('150000') : pe('100'),
-      amount0Min: 0,
-      amount1Min: 0,
-      recipient: owner.address,
-      deadline: new Date().getTime() + 100000
-    }, {
-      value: pe('100'),
-      gasLimit: 30000000
-    })
-    await time.increase(1000);
+    
+    // INIT PAIRRRRR 
+    const Univ3PoolMock = await ethers.getContractFactory("Univ3PoolMock")
+    const uniswapPair = await Univ3PoolMock.deploy(
+      initPriceX96, 
+      initPriceX96,
+      quoteTokenIndex ? weth.address : usdc.address,
+      quoteTokenIndex ? usdc.address : weth.address,
+    )
+    await uniswapPair.deployed()
 
     await weth.deposit({
       value: pe("10000000000000000000")
@@ -167,12 +128,6 @@ describe("Price selection", function () {
     await poolFactory.createPool(params);
     const derivablePool = await ethers.getContractAt("AsymptoticPerpetual", await poolFactory.computePoolAddress(params))
 
-    // deploy test pool
-    const poolTestAddress = await poolFactoryTest.computePoolAddress(params)
-    await weth.transfer(poolTestAddress, pe("5"));
-    await poolFactoryTest.createPool(params);
-    const derivablePoolTest = await ethers.getContractAt("AsymptoticPerpetualTest", poolTestAddress)
-
     // deploy helper
     const StateCalHelper = await ethers.getContractFactory("contracts/Helper.sol:Helper")
     const stateCalHelper = await StateCalHelper.deploy(
@@ -182,13 +137,8 @@ describe("Price selection", function () {
     await stateCalHelper.deployed()
 
     await weth.approve(derivablePool.address, MaxUint256)
-    await weth.approve(derivablePoolTest.address, MaxUint256)
 
-    await derivable1155.setApprovalForAll(derivablePoolTest.address, true)
     await derivable1155.setApprovalForAll(derivablePool.address, true)
-
-    await usdc.approve(uniswapRouter.address, MaxUint256);
-    await weth.approve(uniswapRouter.address, MaxUint256);
 
     return {
       owner,
@@ -197,31 +147,18 @@ describe("Price selection", function () {
       weth,
       usdc,
       utr,
-      uniswapFactory,
       derivablePool,
       derivable1155,
-      uniswapRouter,
-      uniswapPositionManager,
       stateCalHelper,
-      derivablePoolTest
+      uniswapPair
     }
   }
 
-  async function swapToSetPriceV3({ account, quoteToken, baseToken, uniswapRouter, initPrice, targetPrice }) {
+  async function swapToSetPriceV3({ quoteToken, baseToken, uniswapPair, targetTwap, targetSpot }) {
     const quoteTokenIndex = baseToken.address.toLowerCase() < quoteToken.address.toLowerCase() ? 1 : 0
-    const priceX96 = encodeSqrtX96(quoteTokenIndex ? targetPrice : 1, quoteTokenIndex ? 1 : targetPrice)
-    const tx = await uniswapRouter.connect(account).exactInputSingle({
-      payer: account.address,
-      tokenIn: (initPrice < targetPrice) ? quoteToken.address : baseToken.address,
-      tokenOut: (initPrice < targetPrice) ? baseToken.address : quoteToken.address,
-      fee: 500,
-      sqrtPriceLimitX96: priceX96,
-      recipient: account.address,
-      deadline: new Date().getTime() + 100000,
-      amountIn: pe("1000000000000000000"),
-      amountOutMinimum: 0,
-    }, opts)
-    await tx.wait(1)
+    const priceTwapX96 = encodeSqrtX96(quoteTokenIndex ? targetTwap : 1, quoteTokenIndex ? 1 : targetTwap)
+    const priceSpotX96 = encodeSqrtX96(quoteTokenIndex ? targetSpot : 1, quoteTokenIndex ? 1 : targetSpot)
+    await uniswapPair.setPrice(priceSpotX96, priceTwapX96)
   }
 
   async function testPriceSelection(targetPrice, sideIn, sideOut) {
@@ -229,24 +166,13 @@ describe("Price selection", function () {
       owner,
       usdc,
       weth,
-      derivablePoolTest,
       derivablePool,
       stateCalHelper,
-      uniswapRouter
+      uniswapPair
     } = await loadFixture(fixture)
 
-    await swapToSetPriceV3({
-      account: owner,
-      quoteToken: usdc,
-      baseToken: weth,
-      uniswapRouter,
-      initPrice: 1500,
-      targetPrice
-    })
-
-    await time.increase(1000)
-
-    const actual = (await derivablePool.callStatic.swap(
+    // twap = spot = 1500
+    const firstOut = (await derivablePool.callStatic.swap(
       sideIn,
       sideOut,
       stateCalHelper.address,
@@ -256,29 +182,63 @@ describe("Price selection", function () {
       owner.address
     )).amountOut
 
-    const outTwap = (await derivablePoolTest.callStatic.swapSelectPrice(
+    // twap = spot = targetPrice
+    await swapToSetPriceV3({
+      quoteToken: usdc,
+      baseToken: weth,
+      uniswapPair,
+      targetTwap: targetPrice,
+      targetSpot: targetPrice
+    })
+    const secondOut = (await derivablePool.callStatic.swap(
       sideIn,
       sideOut,
       stateCalHelper.address,
       encodePayload(0, sideIn, sideOut, pe(0.1)),
       0,
       AddressZero,
-      owner.address,
-      true
+      owner.address
     )).amountOut
-    const outSpot = (await derivablePoolTest.callStatic.swapSelectPrice(
+
+    // twap = targetPrice, spot = 1500
+    await swapToSetPriceV3({
+      quoteToken: usdc,
+      baseToken: weth,
+      uniswapPair,
+      targetTwap: targetPrice,
+      targetSpot: 1500
+    })
+    const thirdOut = (await derivablePool.callStatic.swap(
       sideIn,
       sideOut,
       stateCalHelper.address,
       encodePayload(0, sideIn, sideOut, pe(0.1)),
       0,
       AddressZero,
-      owner.address,
-      false
+      owner.address
+    )).amountOut
+
+    // twap = 1500, spot = targetPrice
+    await swapToSetPriceV3({
+      quoteToken: usdc,
+      baseToken: weth,
+      uniswapPair,
+      targetTwap: 1500,
+      targetSpot: targetPrice
+    })
+    const fourthOut = (await derivablePool.callStatic.swap(
+      sideIn,
+      sideOut,
+      stateCalHelper.address,
+      encodePayload(0, sideIn, sideOut, pe(0.1)),
+      0,
+      AddressZero,
+      owner.address
     )).amountOut
     
-    const min = outTwap.lte(outSpot) ? outTwap : outSpot
-    expect(min).to.be.equal(actual)
+    const min = firstOut.lte(secondOut) ? firstOut : secondOut
+    expect(min).to.be.equal(thirdOut)
+    expect(min).to.be.equal(fourthOut)
   }
 
   it("Price up; R->A", async function () {
