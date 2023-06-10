@@ -8,7 +8,7 @@ const { _init } = require("./shared/AsymptoticPerpetual")
 chai.use(solidity)
 const expect = chai.expect
 const { AddressZero, MaxUint256 } = ethers.constants
-const { bn, numberToWei, packId, encodeSqrtX96, weiToNumber, encodePayload, attemptSwap } = require("./shared/utilities")
+const { bn, numberToWei, packId, encodeSqrtX96, weiToNumber, encodePayload, attemptSwap, feeToOpenRate } = require("./shared/utilities")
 
 const fe = (x) => Number(ethers.utils.formatEther(x))
 const pe = (x) => ethers.utils.parseEther(String(x))
@@ -149,7 +149,7 @@ DCs.forEach(DISCOUNT_RATE => {
         minExpirationC: 0,
         discountRate: bn(DISCOUNT_RATE).shl(128).div(100),
         feeHalfLife: 0,
-        openRate: 0
+        openRate: feeToOpenRate(0)
       }
       params = await _init(oracleLibrary, pe("5"), params)
       const poolAddress = await poolFactory.computePoolAddress(params)
@@ -177,7 +177,7 @@ DCs.forEach(DISCOUNT_RATE => {
         minExpirationC: 12 * 60 * 60,
         discountRate: bn(DISCOUNT_RATE).shl(128).div(100),
         feeHalfLife: 0,
-        openRate: 0
+        openRate: feeToOpenRate(0)
       }
       params1 = await _init(oracleLibrary, pe("5"), params1)
       const poolAddress1 = await poolFactory.computePoolAddress(params1)

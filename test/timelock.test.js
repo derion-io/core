@@ -8,7 +8,7 @@ const { _init } = require("./shared/AsymptoticPerpetual")
 chai.use(solidity)
 const expect = chai.expect
 const { AddressZero, MaxUint256 } = ethers.constants
-const { bn, numberToWei, packId, encodeSqrtX96, encodePriceSqrt, encodePayload } = require("./shared/utilities")
+const { bn, numberToWei, packId, encodeSqrtX96, encodePriceSqrt, encodePayload, feeToOpenRate } = require("./shared/utilities")
 
 const fe = (x) => Number(ethers.utils.formatEther(x))
 const pe = (x) => ethers.utils.parseEther(String(x))
@@ -132,7 +132,7 @@ describe("Timelock", function () {
       minExpirationC: 0,
       discountRate: 0,
       feeHalfLife: 0,
-      openRate: 0
+      openRate: feeToOpenRate(0)
     }
     params = await _init(oracleLibrary, pe("5"), params)
     const poolAddress = await poolFactory.computePoolAddress(params)

@@ -129,7 +129,7 @@ async function scenerio01() {
     minExpirationC: 0,
     discountRate: 0,
     feeHalfLife: 0,
-    openRate: 0
+    openRate: feeToOpenRate(0)
   }
   params = await _init(oracleLibrary, numberToWei(5), params)
   const poolAddress = await poolFactory.computePoolAddress(params);
@@ -308,7 +308,7 @@ async function scenerio02() {
     minExpirationC: 0,
     discountRate: 0,
     feeHalfLife: 0,
-    openRate: 0
+    openRate: feeToOpenRate(0)
   }
   params = await _init(oracleLibrary, numberToWei(3.5), params)
   const poolAddress = await poolFactory.computePoolAddress(params);
@@ -488,7 +488,7 @@ function getOpenFeeScenerios(fee) {
       minExpirationC: 0,
       discountRate: 0,
       feeHalfLife: 0,
-      openRate: 0
+      openRate: feeToOpenRate(0)
     }
     params = await _init(oracleLibrary, numberToWei(5), params)
     const poolAddress = await poolFactory.computePoolAddress(params);

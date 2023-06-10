@@ -225,7 +225,7 @@ async function swapToSetPriceV3({ account, quoteToken, baseToken, uniswapRouter,
 }
 
 function feeToOpenRate(fee) {
-    return bn((1-fee)*10000).mul(Q128).div(10000)
+    return bn(((1-fee)*10000).toFixed(0)).mul(Q128).div(10000)
 }
 
 module.exports = {

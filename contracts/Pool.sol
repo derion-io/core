@@ -43,7 +43,7 @@ abstract contract Pool is IPool, Storage, Events, Constants {
         DISCOUNT_RATE = params.discountRate;
         PREMIUM_RATE = params.premiumRate;
         INIT_TIME = params.initTime > 0 ? params.initTime : block.timestamp;
-        OPEN_RATE = params.openRate > 0 ? params.openRate : Q128;
+        OPEN_RATE = params.openRate;
         require(block.timestamp >= INIT_TIME, "PIT");
 
         uint R = IERC20(TOKEN_R).balanceOf(address(this));
