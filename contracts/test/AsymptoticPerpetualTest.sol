@@ -3,15 +3,13 @@ pragma solidity ^0.8.0;
 
 import "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 
-import "../Pool.sol";
+import "./PoolTest.sol";
 import "../libs/OracleLibrary.sol";
 import "../interfaces/IHelper.sol";
 import "../libs/abdk-consulting/abdk-libraries-solidity/ABDKMath64x64.sol";
 
-import "hardhat/console.sol";
 
-
-contract AsymptoticPerpetual is Pool {
+contract AsymptoticPerpetualTest is PoolTest {
     function _powu(uint x, uint y) internal pure returns (uint z) {
         // Calculate the first iteration of the loop in advance.
         z = y & 1 > 0 ? x : Q128;
@@ -87,41 +85,28 @@ contract AsymptoticPerpetual is Pool {
 
     function _selectPrice(
         State memory state,
-        uint sideIn,
-        uint sideOut
+        bool takeTwap
     ) internal view returns (Market memory market, uint rA, uint rB) {
         uint decayRateX64 = _decayRate(block.timestamp - INIT_TIME, HALF_LIFE);
-        (uint min, uint max) = _fetch();
-        if (min > max) {
-            (min, max) = (max, min);
-        }
-        if (sideOut == SIDE_A || sideIn == SIDE_B) {
-            market = _market(decayRateX64, max);
-            (rA, rB) = _evaluate(market, state);
-        } else if (sideOut == SIDE_B || sideIn == SIDE_A) {
-            market = _market(decayRateX64, min);
-            (rA, rB) = _evaluate(market, state);
+        (uint twap, uint spot) = _fetch();
+        if (takeTwap) {
+          market = _market(decayRateX64, twap);
         } else {
-            // TODO: assisting flag for min/max
-            market = _market(decayRateX64, min);
-            (rA, rB) = _evaluate(market, state);
-            if ((sideIn == SIDE_R) == rB > rA) {
-                // TODO: unit test for this case
-                market = _market(decayRateX64, max);
-                (rA, rB) = _evaluate(market, state);
-            }
+          market = _market(decayRateX64, spot);
         }
+        (rA, rB) = _evaluate(market, state);
     }
 
     function _swap(
         uint sideIn,
         uint sideOut,
+        bool takeTwap,
         SwapParam memory param
     ) internal override returns(uint amountIn, uint amountOut) {
         require(sideIn != sideOut, 'SS');
         // [PRICE SELECTION]
         State memory state = State(_reserve(), s_a, s_b);
-        (Market memory market, uint rA, uint rB) = _selectPrice(state, sideIn, sideOut);
+        (Market memory market, uint rA, uint rB) = _selectPrice(state, takeTwap);
         // [CALCULATION]
         State memory state1 = IHelper(param.helper).swapToState(market, state, rA, rB, param.payload);
         // [TRANSITION]
@@ -158,12 +143,12 @@ contract AsymptoticPerpetual is Pool {
             } else {
                 amountOut = PREMIUM_RATE;
                 if (sideOut == SIDE_A) {
-                    sideOut = OPEN_RATE;
+                    sideOut = Q128;
                     if (amountOut > 0 && rA1 > rB1) {
                         uint rC1 = state1.R - rA1 - rB1;
                         uint imbaRate = FullMath.mulDiv(Q128, rA1 - rB1, rC1);
                         if (imbaRate > amountOut) {
-                            sideOut = FullMath.mulDiv(sideOut, amountOut, imbaRate);
+                            sideOut = FullMath.mulDiv(Q128, amountOut, imbaRate);
                         }
                     }
                     if (param.zeroInterestTime > 0) {
@@ -176,12 +161,12 @@ contract AsymptoticPerpetual is Pool {
                     }
                     amountOut = FullMath.mulDiv(s, rA1 - rA, rA);
                 } else if (sideOut == SIDE_B) {
-                    sideOut = OPEN_RATE;
+                    sideOut = Q128;
                     if (amountOut > 0 && rB1 > rA1) {
                         uint rC1 = state1.R - rA1 - rB1;
                         uint imbaRate = FullMath.mulDiv(Q128, rB1 - rA1, rC1);
                         if (imbaRate > amountOut) {
-                            sideOut = FullMath.mulDiv(sideOut, amountOut, imbaRate);
+                            sideOut = FullMath.mulDiv(Q128, amountOut, imbaRate);
                         }
                     }
                     if (param.zeroInterestTime > 0) {
