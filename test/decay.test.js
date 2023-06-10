@@ -5,7 +5,7 @@ const {
 const { expect, use } = require("chai");
 const { solidity } = require("ethereum-waffle");
 const { _init } = require("./shared/AsymptoticPerpetual");
-const { weiToNumber, bn, getDeltaSupply, numberToWei, packId, unpackId, encodeSqrtX96, encodePayload, attemptSwap, attemptStaticSwap } = require("./shared/utilities");
+const { weiToNumber, bn, getDeltaSupply, numberToWei, packId, unpackId, encodeSqrtX96, encodePayload, attemptSwap, attemptStaticSwap, feeToOpenRate } = require("./shared/utilities");
 
 use(solidity)
 
@@ -129,7 +129,8 @@ HLs.forEach(HALF_LIFE => {
         minExpirationD: 0,
         minExpirationC: 0,
         discountRate: 0,
-        feeHalfLife: 0
+        feeHalfLife: 0,
+        openRate: feeToOpenRate(0)
       }
       params = await _init(oracleLibrary, numberToWei(5), params)
       const poolAddress = await poolFactory.computePoolAddress(params);

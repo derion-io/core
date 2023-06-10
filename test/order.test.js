@@ -7,7 +7,7 @@ const { solidity } = require("ethereum-waffle")
 chai.use(solidity)
 const expect = chai.expect
 const { AddressZero, MaxUint256 } = ethers.constants
-const { bn, numberToWei, packId, encodeSqrtX96, encodePriceSqrt, encodePayload, weiToNumber, attemptSwap } = require("./shared/utilities")
+const { bn, numberToWei, packId, encodeSqrtX96, encodePriceSqrt, encodePayload, weiToNumber, attemptSwap, feeToOpenRate } = require("./shared/utilities")
 
 const fe = (x) => Number(ethers.utils.formatEther(x))
 const pe = (x) => ethers.utils.parseEther(String(x))
@@ -130,7 +130,8 @@ describe("Order", function () {
             minExpirationD: 0,
             minExpirationC: 0,
             discountRate: 0,
-            feeHalfLife: 0
+            feeHalfLife: 0,
+            openRate: feeToOpenRate(0)
         }
         const poolAddress = await poolFactory.computePoolAddress(params)
         await weth.deposit({

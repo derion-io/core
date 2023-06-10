@@ -11,7 +11,7 @@ const {
     bn,
     numberToWei,
     packId,
-    encodeSqrtX96, weiToNumber, swapToSetPriceV3, encodePayload,
+    encodeSqrtX96, weiToNumber, swapToSetPriceV3, encodePayload, feeToOpenRate,
 } = require("./shared/utilities")
 const { _init } = require("./shared/AsymptoticPerpetual")
 
@@ -163,7 +163,8 @@ describe("Helper Attacks", function () {
             minExpirationD: 0,
             minExpirationC: 0,
             discountRate: 0,
-            feeHalfLife: 0
+            feeHalfLife: 0,
+            openRate: feeToOpenRate(0)
         }
         params = await _init(oracleLibrary, pe(5), params)
         const poolAddress = await poolFactory.computePoolAddress(params)
@@ -192,7 +193,8 @@ describe("Helper Attacks", function () {
             minExpirationD: 0,
             minExpirationC: 0,
             discountRate: 0,
-            feeHalfLife: 0
+            feeHalfLife: 0,
+            openRate: feeToOpenRate(0)
         }
         params1 = await _init(oracleLibrary, pe(5), params1)
         const poolAddress1 = await poolFactory.computePoolAddress(params1)

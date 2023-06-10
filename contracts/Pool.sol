@@ -27,6 +27,7 @@ abstract contract Pool is IPool, Storage, Events, Constants {
     uint32 internal immutable MIN_EXPIRATION_D;
     uint32 internal immutable MIN_EXPIRATION_C;
     uint internal immutable DISCOUNT_RATE;
+    uint internal immutable OPEN_RATE;
 
     constructor() {
         Params memory params = IPoolFactory(msg.sender).getParams();
@@ -42,6 +43,7 @@ abstract contract Pool is IPool, Storage, Events, Constants {
         DISCOUNT_RATE = params.discountRate;
         PREMIUM_RATE = params.premiumRate;
         INIT_TIME = params.initTime > 0 ? params.initTime : block.timestamp;
+        OPEN_RATE = params.openRate;
         require(block.timestamp >= INIT_TIME, "PIT");
 
         uint R = IERC20(TOKEN_R).balanceOf(address(this));

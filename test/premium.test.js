@@ -5,7 +5,7 @@ const {
 const { expect, use } = require("chai");
 const { solidity } = require("ethereum-waffle");
 const { _evaluate, _selectPrice, _init } = require("./shared/AsymptoticPerpetual");
-const { weiToNumber, bn, getDeltaSupply, numberToWei, packId, unpackId, encodeSqrtX96, encodePayload, attemptSwap, attemptStaticSwap } = require("./shared/utilities");
+const { weiToNumber, bn, getDeltaSupply, numberToWei, packId, unpackId, encodeSqrtX96, encodePayload, attemptSwap, attemptStaticSwap, feeToOpenRate } = require("./shared/utilities");
 const abiCoder = new ethers.utils.AbiCoder()
 use(solidity)
 
@@ -121,7 +121,8 @@ describe("Premium", function () {
       minExpirationD: 0,
       minExpirationC: 0,
       discountRate: 0,
-      feeHalfLife: 0
+      feeHalfLife: 0,
+      openRate: feeToOpenRate(0)
     }
     params = await _init(oracleLibrary, pe("5"), params)
     const poolNoPremiumAddress = await poolFactory.computePoolAddress(params);
