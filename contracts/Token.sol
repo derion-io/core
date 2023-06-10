@@ -67,6 +67,13 @@ contract Token is ERC1155SupplyVirtual {
         super._burn(from, id, amount);
     }
 
+    function burn(
+        uint256 id,
+        uint256 amount
+    ) external virtual {
+        super._burn(msg.sender, id, amount);
+    }
+
     modifier onlyDescriptorSetter() {
         require(msg.sender == s_descriptorSetter, "UNAUTHORIZED");
         _;
