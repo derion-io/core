@@ -39,7 +39,15 @@ contract Univ3PoolMock {
             uint8 feeProtocol,
             bool unlocked
         ) {
-        sqrtPriceX96 = TickMath.getSqrtRatioAtTick(TickMath.getTickAtSqrtRatio(spot));
+        return (
+            TickMath.getSqrtRatioAtTick(TickMath.getTickAtSqrtRatio(spot)),
+            0,
+            0,
+            0,
+            0,
+            0,
+            false
+        );
     }
 
     function observe(uint32[] calldata secondsAgos)
