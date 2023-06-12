@@ -4,5 +4,5 @@ pragma solidity ^0.8.0;
 contract Storage {
     uint internal s_a;
     uint internal s_b;
-    uint internal s_collectedRate;
+    uint internal s_collectedRate = 1 << 64;
 }

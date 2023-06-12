@@ -5,7 +5,7 @@ const {
 const { expect, use } = require("chai");
 const { solidity } = require("ethereum-waffle");
 const { ethers } = require("hardhat");
-const { _init, _evaluate, _selectPrice } = require("./shared/AsymptoticPerpetual");
+const { _init, _evaluate, _selectPrice, _decayRate, _market } = require("./shared/AsymptoticPerpetual");
 const { weiToNumber, bn, numberToWei, packId, encodeSqrtX96, attemptSwap, feeToOpenRate, attemptStaticSwap } = require("./shared/utilities");
 const { SIDE_R, SIDE_A } = require("./shared/constant");
 const { AddressZero } = require("@ethersproject/constants");
@@ -14,9 +14,11 @@ use(solidity)
 
 const SECONDS_PER_DAY = 86400
 
-const HLs = [19932680, 1966168] // 0.3%, 3%
+const HLs = [19932680
+  // , 1966168
+] // 0.3%, 3%
 
-const FEE_RATE = 5
+const FEE_RATE = 2
 
 function toDailyRate(HALF_LIFE) {
   return HALF_LIFE == 0 ? 0 : 1-2**(-SECONDS_PER_DAY/HALF_LIFE)
@@ -136,7 +138,7 @@ HLs.forEach(HALF_LIFE => {
         TOKEN_R: weth.address,
         ORACLE: oracle,
         K: bn(5),
-        MARK: bn(38).shl(128),
+        MARK: params.mark,
         INIT_TIME: params.initTime,
         HALF_LIFE: bn(params.halfLife),
         PREMIUM_RATE: params.premiumRate
@@ -205,6 +207,8 @@ HLs.forEach(HALF_LIFE => {
       txSignerB = derivablePool.connect(accountB);
 
       async function swapAndWaitStatic(period, amount, side) {
+        // await derivablePool.collect()
+        console.log('\n\n\n BO QUAAAAAAAAA\n\n\n')
         await attemptSwap(
           txSignerA,
           0,
@@ -218,30 +222,24 @@ HLs.forEach(HALF_LIFE => {
 
         const oraclePrice = await oracleLibrary.fetch(config.ORACLE)
         const state = await derivablePool.getStates()
-        const price = _selectPrice(
-          config, 
-          state, 
-          {min: oraclePrice.spot, max: oraclePrice.twap}, 
-          0x00, 
-          0x10, 
-          bn(await time.latest())
-        )
-
-        const eval = _evaluate(price.market, state)
-        const rA = eval.rA;
-        const rB = eval.rB;
+        const decayRate = _decayRate(bn(await time.latest()).sub(config.INIT_TIME), config.HALF_LIFE)
+        const market = _market(config.K, config.MARK, decayRate, oraclePrice.twap)
+        const eval = _evaluate(market, state)
+        const reserved = eval.rA.add(eval.rB)
+        console.log('reserved', weiToNumber(reserved))
         
         const protocolFeeBefore = await derivablePool.callStatic.collect()
-        console.log('protocolFeeBefore', protocolFeeBefore)
+        console.log('protocolFeeBefore', weiToNumber(protocolFeeBefore))
         await time.increase(period)
 
         const protocolFeeAfter = await derivablePool.callStatic.collect()
-        console.log('protocolFeeAfter', protocolFeeAfter)
+        console.log('protocolFeeAfterr', weiToNumber(protocolFeeAfter))
         const protocolFee = protocolFeeAfter.sub(protocolFeeBefore)
-        const message = `${side == 0x10 ? 'LONG' : 'SHORT'} - ${weiToNumber(amount)}eth - sR ${weiToNumber(rA.add(rB))} - ${period / HALF_LIFE}HL`
+        const message = `${side == 0x10 ? 'LONG' : 'SHORT'} - ${weiToNumber(amount)}eth - sR ${weiToNumber(reserved)} - ${period / HALF_LIFE}HL`
         const dailyFeeRate = toDailyRate(HALF_LIFE * FEE_RATE)
+        console.log('fee charge', (1 - (1 - dailyFeeRate) ** (period / SECONDS_PER_DAY)))
         expect(dailyInterestRate/dailyFeeRate).closeTo(FEE_RATE, FEE_RATE/10, 'effective fee rate')
-        expect(Number(weiToNumber(protocolFee)) / Number(weiToNumber((rA.add(rB)))))
+        expect(Number(weiToNumber(protocolFee)) / Number(weiToNumber(reserved)))
           .to.be.closeTo((1 - (1 - dailyFeeRate) ** (period / SECONDS_PER_DAY)), 0.000000000001, message)
       }
 

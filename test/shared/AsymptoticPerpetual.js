@@ -301,5 +301,7 @@ module.exports = {
   _selectPrice,
   _evaluate,
   _init,
-  _swap
+  _swap,
+  _decayRate,
+  _market
 }
