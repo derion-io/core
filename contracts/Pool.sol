@@ -15,6 +15,7 @@ import "./logics/Events.sol";
 abstract contract Pool is IPool, Storage, Events, Constants {
     /// Immutables
     address internal immutable UTR;
+    address internal immutable FACTORY;
     bytes32 public immutable ORACLE; // QTI(1) reserve(32) WINDOW(32) PAIR(160)
     uint public immutable K;
     address internal immutable TOKEN;
@@ -28,9 +29,11 @@ abstract contract Pool is IPool, Storage, Events, Constants {
     uint32 internal immutable MIN_EXPIRATION_C;
     uint internal immutable DISCOUNT_RATE;
     uint internal immutable OPEN_RATE;
+    uint internal immutable PROTOCOL_HALF_LIFE;
 
     constructor() {
         Params memory params = IPoolFactory(msg.sender).getParams();
+        FACTORY = msg.sender;
         UTR = params.utr;
         TOKEN = params.token;
         ORACLE = params.oracle;
@@ -44,6 +47,7 @@ abstract contract Pool is IPool, Storage, Events, Constants {
         PREMIUM_RATE = params.premiumRate;
         INIT_TIME = params.initTime > 0 ? params.initTime : block.timestamp;
         OPEN_RATE = params.openRate;
+        PROTOCOL_HALF_LIFE = params.halfLife * 5;
         require(block.timestamp >= INIT_TIME, "PIT");
 
         uint R = IERC20(TOKEN_R).balanceOf(address(this));
@@ -131,9 +135,17 @@ abstract contract Pool is IPool, Storage, Events, Constants {
         }
     }
 
+    function collect() external returns (uint fee) {
+        fee = _collect();
+        require(fee > 0);
+        TransferHelper.safeTransfer(TOKEN_R, IPoolFactory(FACTORY).getFeeTo(), fee);
+    }
+
     function _swap(
         uint sideIn,
         uint sideOut,
         SwapParam memory param
     ) internal virtual returns(uint amountIn, uint amountOut);
+
+    function _collect() internal virtual returns (uint fee);
 }

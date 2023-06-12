@@ -72,7 +72,7 @@ contract AsymptoticPerpetual is Pool {
         market.xkA = uint(FullMath.mulDiv(market.xkA, Q64, decayRateX64));
     }
 
-    function _decayRate (
+    function _decayRate(
         uint elapsed,
         uint halfLife
     ) internal pure returns (uint rateX64) {
@@ -154,6 +154,10 @@ contract AsymptoticPerpetual is Pool {
                 uint rC1 = state1.R - rA1 - rB1;
                 amountOut = FullMath.mulDiv(s, rC1 - rC, rC);
             } else {
+                {
+                    uint rateX64 = _decayRate(block.timestamp - INIT_TIME, PROTOCOL_HALF_LIFE);
+                    s = FullMath.mulDiv(s, rateX64, Q64);
+                }
                 amountOut = PREMIUM_RATE;
                 if (sideOut == SIDE_A) {
                     sideOut = OPEN_RATE;
@@ -200,5 +204,40 @@ contract AsymptoticPerpetual is Pool {
         if (state1.b != state.b) {
             s_b = state1.b;
         }
+    }
+
+    function _collect() internal override returns (uint fee) {
+        uint rateX64 = _decayRate(block.timestamp - INIT_TIME, PROTOCOL_HALF_LIFE);
+        require(s_collectedRate < rateX64, "NRC");
+
+        State memory state = State(_reserve(), s_a, s_b);
+        uint decayRateX64 = _decayRate(block.timestamp - INIT_TIME, HALF_LIFE);
+        (uint min, uint max) = _fetch();
+        if (min > max) {
+            (min, max) = (max, min);
+        }
+
+        // collect A side
+        uint sA = _supply(TOKEN, SIDE_A);
+        uint sACollected = FullMath.mulDivRoundingUp(sA, s_collectedRate, Q64);
+        sA = FullMath.mulDiv(sA, rateX64, Q64);
+        if (sA > sACollected) {
+            Market memory market = _market(decayRateX64, min);
+            (uint rA,) = _evaluate(market, state);
+            uint fA = sA - sACollected;
+            fee += FullMath.mulDiv(rA, fA, sA);
+        }
+        // collect B side
+        uint sB = _supply(TOKEN, SIDE_B);
+        uint sBCollected = FullMath.mulDivRoundingUp(sB, s_collectedRate, Q64);
+        sB = FullMath.mulDiv(sB, rateX64, Q64);
+        if (sB > sBCollected) {
+            Market memory market = _market(decayRateX64, max);
+            (, uint rB) = _evaluate(market, state);
+            uint fB = sB - sBCollected;
+            fee += FullMath.mulDiv(rB, fB, sB);
+        }
+
+        s_collectedRate = rateX64; // update the storage
     }
 }

@@ -6,7 +6,7 @@ const { expect, use } = require("chai");
 const { solidity } = require("ethereum-waffle");
 const { ethers } = require("hardhat");
 const { _init } = require("./shared/AsymptoticPerpetual");
-const { weiToNumber, bn, numberToWei, packId, encodeSqrtX96, attemptSwap } = require("./shared/utilities");
+const { weiToNumber, bn, numberToWei, packId, encodeSqrtX96, attemptSwap, feeToOpenRate } = require("./shared/utilities");
 
 use(solidity)
 
@@ -14,7 +14,7 @@ const SECONDS_PER_DAY = 86400
 
 const HLs = [19932680, 1966168] // 0.3%, 3%
 
-const FEE_RATE = 12
+const FEE_RATE = 5
 
 function toDailyRate(HALF_LIFE) {
   return HALF_LIFE == 0 ? 0 : 1-2**(-SECONDS_PER_DAY/HALF_LIFE)
@@ -126,7 +126,7 @@ HLs.forEach(HALF_LIFE => {
         minExpirationC: 0,
         discountRate: 0,
         feeHalfLife: 0,
-        openRate: 0
+        openRate: feeToOpenRate(0)
       }
       params = await _init(oracleLibrary, numberToWei(1), params)
       const poolAddress = await poolFactory.computePoolAddress(params);
@@ -181,6 +181,7 @@ HLs.forEach(HALF_LIFE => {
       txSignerB = derivablePool.connect(accountB);
 
       async function swapAndWaitStatic(period, amount, side) {
+        await derivablePool.collect()
         await attemptSwap(
           txSignerA,
           0,
@@ -193,6 +194,7 @@ HLs.forEach(HALF_LIFE => {
         )
 
         const sR = (await derivablePool.getStates())[0]
+        
         const protocolFeeBefore = await derivablePool.callStatic.collect()
         await time.increase(period)
 
