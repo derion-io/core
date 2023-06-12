@@ -5,8 +5,10 @@ const {
 const { expect, use } = require("chai");
 const { solidity } = require("ethereum-waffle");
 const { ethers } = require("hardhat");
-const { _init } = require("./shared/AsymptoticPerpetual");
-const { weiToNumber, bn, numberToWei, packId, encodeSqrtX96, attemptSwap, feeToOpenRate } = require("./shared/utilities");
+const { _init, _evaluate, _selectPrice } = require("./shared/AsymptoticPerpetual");
+const { weiToNumber, bn, numberToWei, packId, encodeSqrtX96, attemptSwap, feeToOpenRate, attemptStaticSwap } = require("./shared/utilities");
+const { SIDE_R, SIDE_A } = require("./shared/constant");
+const { AddressZero } = require("@ethersproject/constants");
 
 use(solidity)
 
@@ -119,7 +121,7 @@ HLs.forEach(HALF_LIFE => {
         k: bn(5),
         a: bn('30000000000'),
         b: bn('30000000000'),
-        initTime: 0,
+        initTime: bn(await time.latest()),
         halfLife: bn(HALF_LIFE),
         premiumRate: bn(1).shl(128).div(2),
         minExpirationD: 0,
@@ -128,6 +130,18 @@ HLs.forEach(HALF_LIFE => {
         feeHalfLife: 0,
         openRate: feeToOpenRate(0)
       }
+
+      const config = {
+        TOKEN: derivable1155.address,
+        TOKEN_R: weth.address,
+        ORACLE: oracle,
+        K: bn(5),
+        MARK: bn(38).shl(128),
+        INIT_TIME: params.initTime,
+        HALF_LIFE: bn(params.halfLife),
+        PREMIUM_RATE: params.premiumRate
+      }
+
       params = await _init(oracleLibrary, numberToWei(1), params)
       const poolAddress = await poolFactory.computePoolAddress(params);
       let txSignerA = weth.connect(accountA);
@@ -145,6 +159,15 @@ HLs.forEach(HALF_LIFE => {
       await weth.transfer(poolAddress, numberToWei(1));
       await poolFactory.createPool(params);
       const derivablePool = await ethers.getContractAt("AsymptoticPerpetual", await poolFactory.computePoolAddress(params));
+
+      const params1 = {
+        ...params,
+        halfLife: bn(0)
+      }
+      const pool1Address = await poolFactory.computePoolAddress(params1);
+      await weth.transfer(pool1Address, numberToWei(1));
+      await poolFactory.createPool(params1);
+      const poolNoHL = await ethers.getContractAt("AsymptoticPerpetual", pool1Address);
 
       await time.increase(100);
       // deploy helper
@@ -168,6 +191,7 @@ HLs.forEach(HALF_LIFE => {
       const R_ID = packId(0x00, derivablePool.address);
       const C_ID = packId(0x30, derivablePool.address);
       await weth.approve(derivablePool.address, '100000000000000000000000000');
+      await weth.approve(poolNoHL.address, '100000000000000000000000000');
 
       txSignerA = weth.connect(accountA);
       txSignerB = weth.connect(accountB);
@@ -181,7 +205,6 @@ HLs.forEach(HALF_LIFE => {
       txSignerB = derivablePool.connect(accountB);
 
       async function swapAndWaitStatic(period, amount, side) {
-        await derivablePool.collect()
         await attemptSwap(
           txSignerA,
           0,
@@ -193,17 +216,32 @@ HLs.forEach(HALF_LIFE => {
           accountA.address
         )
 
-        const sR = (await derivablePool.getStates())[0]
+        const oraclePrice = await oracleLibrary.fetch(config.ORACLE)
+        const state = await derivablePool.getStates()
+        const price = _selectPrice(
+          config, 
+          state, 
+          {min: oraclePrice.spot, max: oraclePrice.twap}, 
+          0x00, 
+          0x10, 
+          bn(await time.latest())
+        )
+
+        const eval = _evaluate(price.market, state)
+        const rA = eval.rA;
+        const rB = eval.rB;
         
         const protocolFeeBefore = await derivablePool.callStatic.collect()
+        console.log('protocolFeeBefore', protocolFeeBefore)
         await time.increase(period)
 
         const protocolFeeAfter = await derivablePool.callStatic.collect()
+        console.log('protocolFeeAfter', protocolFeeAfter)
         const protocolFee = protocolFeeAfter.sub(protocolFeeBefore)
-        const message = `${side == 0x10 ? 'LONG' : 'SHORT'} - ${weiToNumber(amount)}eth - sR ${weiToNumber(sR)} - ${period / HALF_LIFE}HL`
+        const message = `${side == 0x10 ? 'LONG' : 'SHORT'} - ${weiToNumber(amount)}eth - sR ${weiToNumber(rA.add(rB))} - ${period / HALF_LIFE}HL`
         const dailyFeeRate = toDailyRate(HALF_LIFE * FEE_RATE)
         expect(dailyInterestRate/dailyFeeRate).closeTo(FEE_RATE, FEE_RATE/10, 'effective fee rate')
-        expect(Number(weiToNumber(protocolFee)) / Number(weiToNumber((sR))))
+        expect(Number(weiToNumber(protocolFee)) / Number(weiToNumber((rA.add(rB)))))
           .to.be.closeTo((1 - (1 - dailyFeeRate) ** (period / SECONDS_PER_DAY)), 0.000000000001, message)
       }
 
@@ -251,92 +289,123 @@ HLs.forEach(HALF_LIFE => {
         txSignerB,
         swapAndWaitStatic,
         swapAndWait,
-        stateCalHelper
+        stateCalHelper,
+        poolNoHL
       }
     }
 
     describe("Long", function () {
+      // it ("Test", async function () {
+      //   const {owner, derivablePool, poolNoHL, stateCalHelper} = await loadFixture(deployDDLv2);
+      //   await time.increase(6 * 30 * 24 * 3600)
+      //   console.log('HL')
+      //   const amountOut = await attemptStaticSwap(
+      //     derivablePool,
+      //     0,
+      //     SIDE_R,
+      //     SIDE_A,
+      //     numberToWei(0.5),
+      //     stateCalHelper.address,
+      //     AddressZero,
+      //     owner.address
+      //   )
+      //   console.log('No HL')
+      //   const amountOutNoHL = await attemptStaticSwap(
+      //     poolNoHL,
+      //     0,
+      //     SIDE_R,
+      //     SIDE_A,
+      //     numberToWei(0.5),
+      //     stateCalHelper.address,
+      //     AddressZero,
+      //     owner.address
+      //   )
+
+      //   console.log((1 - dailyInterestRate*1.2)**(6 * 30))
+        
+      //   console.log(weiToNumber(amountOutNoHL)/weiToNumber(amountOut))
+      // })
       it("Wait 1 day - static", async function () {
         const { swapAndWaitStatic } = await loadFixture(deployDDLv2);
         await swapAndWaitStatic(24 * 3600, numberToWei(2), 0x10)
       })
 
-      it("Wait 2 days - static", async function () {
-        const { swapAndWaitStatic } = await loadFixture(deployDDLv2);
-        await swapAndWaitStatic(3 * 24 * 3600, numberToWei(0.1), 0x10)
-      })
+      // it("Wait 2 days - static", async function () {
+      //   const { swapAndWaitStatic } = await loadFixture(deployDDLv2);
+      //   await swapAndWaitStatic(3 * 24 * 3600, numberToWei(0.1), 0x10)
+      // })
 
-      it("Wait 7 days - static", async function () {
-        const { swapAndWaitStatic } = await loadFixture(deployDDLv2);
-        await swapAndWaitStatic(7 * 24 * 3600, numberToWei(0.1), 0x10)
-      })
+      // it("Wait 7 days - static", async function () {
+      //   const { swapAndWaitStatic } = await loadFixture(deployDDLv2);
+      //   await swapAndWaitStatic(7 * 24 * 3600, numberToWei(0.1), 0x10)
+      // })
 
-      it("Wait 6 months - static", async function () {
-        const { swapAndWaitStatic } = await loadFixture(deployDDLv2);
-        await swapAndWaitStatic(6 * 30 * 24 * 3600, numberToWei(2), 0x10)
-      })
+      // it("Wait 6 months - static", async function () {
+      //   const { swapAndWaitStatic } = await loadFixture(deployDDLv2);
+      //   await swapAndWaitStatic(6 * 30 * 24 * 3600, numberToWei(2), 0x10)
+      // })
 
-      it("Wait 1 day", async function () {
-        const { swapAndWait } = await loadFixture(deployDDLv2);
-        await swapAndWait(24 * 3600, numberToWei(2), 0x10)
-      })
+      // it("Wait 1 day", async function () {
+      //   const { swapAndWait } = await loadFixture(deployDDLv2);
+      //   await swapAndWait(24 * 3600, numberToWei(2), 0x10)
+      // })
 
-      it("Wait 2 days", async function () {
-        const { swapAndWait } = await loadFixture(deployDDLv2);
-        await swapAndWait(3 * 24 * 3600, numberToWei(0.1), 0x10)
-      })
+      // it("Wait 2 days", async function () {
+      //   const { swapAndWait } = await loadFixture(deployDDLv2);
+      //   await swapAndWait(3 * 24 * 3600, numberToWei(0.1), 0x10)
+      // })
 
-      it("Wait 7 days", async function () {
-        const { swapAndWait } = await loadFixture(deployDDLv2);
-        await swapAndWait(7 * 24 * 3600, numberToWei(0.1), 0x10)
-      })
+      // it("Wait 7 days", async function () {
+      //   const { swapAndWait } = await loadFixture(deployDDLv2);
+      //   await swapAndWait(7 * 24 * 3600, numberToWei(0.1), 0x10)
+      // })
 
-      it("Wait 6 months", async function () {
-        const { swapAndWait } = await loadFixture(deployDDLv2);
-        await swapAndWait(6 * 30 * 24 * 3600, numberToWei(2), 0x10)
-      })
+      // it("Wait 6 months", async function () {
+      //   const { swapAndWait } = await loadFixture(deployDDLv2);
+      //   await swapAndWait(6 * 30 * 24 * 3600, numberToWei(2), 0x10)
+      // })
     })
 
     describe("Short", function () {
-      it("Wait 1 day - static", async function () {
-        const { swapAndWaitStatic } = await loadFixture(deployDDLv2);
-        await swapAndWaitStatic(SECONDS_PER_DAY, numberToWei(1), 0x20)
-      })
+      // it("Wait 1 day - static", async function () {
+      //   const { swapAndWaitStatic } = await loadFixture(deployDDLv2);
+      //   await swapAndWaitStatic(SECONDS_PER_DAY, numberToWei(1), 0x20)
+      // })
 
-      it("Wait 2 days - static", async function () {
-        const { swapAndWaitStatic } = await loadFixture(deployDDLv2);
-        await swapAndWaitStatic(2 * 24 * 3600, numberToWei(0.1), 0x20)
-      })
+      // it("Wait 2 days - static", async function () {
+      //   const { swapAndWaitStatic } = await loadFixture(deployDDLv2);
+      //   await swapAndWaitStatic(2 * 24 * 3600, numberToWei(0.1), 0x20)
+      // })
 
-      it("Wait 7 days - static", async function () {
-        const { swapAndWaitStatic } = await loadFixture(deployDDLv2);
-        await swapAndWaitStatic(7 * 24 * 3600, numberToWei(0.1), 0x10)
-      })
+      // it("Wait 7 days - static", async function () {
+      //   const { swapAndWaitStatic } = await loadFixture(deployDDLv2);
+      //   await swapAndWaitStatic(7 * 24 * 3600, numberToWei(0.1), 0x10)
+      // })
 
-      it("Wait 6 months - static", async function () {
-        const { swapAndWaitStatic } = await loadFixture(deployDDLv2);
-        await swapAndWaitStatic(6 * 30 * 24 * 3600, numberToWei(2), 0x20)
-      })
+      // it("Wait 6 months - static", async function () {
+      //   const { swapAndWaitStatic } = await loadFixture(deployDDLv2);
+      //   await swapAndWaitStatic(6 * 30 * 24 * 3600, numberToWei(2), 0x20)
+      // })
 
-      it("Wait 1 day", async function () {
-        const { swapAndWait } = await loadFixture(deployDDLv2);
-        await swapAndWait(SECONDS_PER_DAY, numberToWei(1), 0x20)
-      })
+      // it("Wait 1 day", async function () {
+      //   const { swapAndWait } = await loadFixture(deployDDLv2);
+      //   await swapAndWait(SECONDS_PER_DAY, numberToWei(1), 0x20)
+      // })
 
-      it("Wait 2 days", async function () {
-        const { swapAndWait } = await loadFixture(deployDDLv2);
-        await swapAndWait(2 * 24 * 3600, numberToWei(0.1), 0x20)
-      })
+      // it("Wait 2 days", async function () {
+      //   const { swapAndWait } = await loadFixture(deployDDLv2);
+      //   await swapAndWait(2 * 24 * 3600, numberToWei(0.1), 0x20)
+      // })
 
-      it("Wait 7 days", async function () {
-        const { swapAndWait } = await loadFixture(deployDDLv2);
-        await swapAndWait(7 * 24 * 3600, numberToWei(0.1), 0x10)
-      })
+      // it("Wait 7 days", async function () {
+      //   const { swapAndWait } = await loadFixture(deployDDLv2);
+      //   await swapAndWait(7 * 24 * 3600, numberToWei(0.1), 0x10)
+      // })
 
-      it("Wait 6 months", async function () {
-        const { swapAndWait } = await loadFixture(deployDDLv2);
-        await swapAndWait(6 * 30 * 24 * 3600, numberToWei(2), 0x20)
-      })
+      // it("Wait 6 months", async function () {
+      //   const { swapAndWait } = await loadFixture(deployDDLv2);
+      //   await swapAndWait(6 * 30 * 24 * 3600, numberToWei(2), 0x20)
+      // })
     })
   })
 })
