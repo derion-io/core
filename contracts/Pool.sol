@@ -12,7 +12,6 @@ import "./interfaces/IPool.sol";
 import "./logics/Storage.sol";
 import "./logics/Events.sol";
 
-import "hardhat/console.sol";
 
 abstract contract Pool is IPool, Storage, Events, Constants {
     /// Immutables
@@ -139,7 +138,6 @@ abstract contract Pool is IPool, Storage, Events, Constants {
 
     function collect() external returns (uint fee) {
         fee = _collect();
-        require(fee > 0);
         TransferHelper.safeTransfer(TOKEN_R, IPoolFactory(FACTORY).getFeeTo(), fee);
     }
 

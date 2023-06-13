@@ -8,8 +8,6 @@ import "../libs/OracleLibrary.sol";
 import "../interfaces/IHelper.sol";
 import "../libs/abdk-consulting/abdk-libraries-solidity/ABDKMath64x64.sol";
 
-import "hardhat/console.sol";
-
 
 contract AsymptoticPerpetual is Pool {
     function _powu(uint x, uint y) internal pure returns (uint z) {
@@ -225,8 +223,7 @@ contract AsymptoticPerpetual is Pool {
         sA = FullMath.mulDiv(sA, rateX64, Q64);
         if (sA > sACollected) {
             Market memory market = _market(decayRateX64, min);
-            (uint rA, uint rB) = _evaluate(market, state);
-            console.log('TH1', rA + rB);
+            (uint rA,) = _evaluate(market, state);
             uint fA = sA - sACollected;
             fee += FullMath.mulDiv(rA, fA, sA);
         }
@@ -236,8 +233,7 @@ contract AsymptoticPerpetual is Pool {
         sB = FullMath.mulDiv(sB, rateX64, Q64);
         if (sB > sBCollected) {
             Market memory market = _market(decayRateX64, max);
-            (uint rA, uint rB) = _evaluate(market, state);
-            console.log('TH2', rA + rB);
+            (, uint rB) = _evaluate(market, state);
             uint fB = sB - sBCollected;
             fee += FullMath.mulDiv(rB, fB, sB);
         }

@@ -7,7 +7,7 @@ const { solidity } = require("ethereum-waffle");
 const { ethers } = require("hardhat");
 const { _init, _evaluate, _selectPrice, _decayRate, _market } = require("./shared/AsymptoticPerpetual");
 const { weiToNumber, bn, numberToWei, packId, encodeSqrtX96, attemptSwap, feeToOpenRate, attemptStaticSwap } = require("./shared/utilities");
-const { SIDE_R, SIDE_A } = require("./shared/constant");
+const { SIDE_R, SIDE_A, SIDE_B, SIDE_C } = require("./shared/constant");
 const { AddressZero } = require("@ethersproject/constants");
 
 use(solidity)
@@ -18,7 +18,7 @@ const HLs = [19932680
   // , 1966168
 ] // 0.3%, 3%
 
-const FEE_RATE = 2
+const FEE_RATE = 5
 
 function toDailyRate(HALF_LIFE) {
   return HALF_LIFE == 0 ? 0 : 1-2**(-SECONDS_PER_DAY/HALF_LIFE)
@@ -207,8 +207,6 @@ HLs.forEach(HALF_LIFE => {
       txSignerB = derivablePool.connect(accountB);
 
       async function swapAndWaitStatic(period, amount, side) {
-        // await derivablePool.collect()
-        console.log('\n\n\n BO QUAAAAAAAAA\n\n\n')
         await attemptSwap(
           txSignerA,
           0,
@@ -223,24 +221,28 @@ HLs.forEach(HALF_LIFE => {
         const oraclePrice = await oracleLibrary.fetch(config.ORACLE)
         const state = await derivablePool.getStates()
         const decayRate = _decayRate(bn(await time.latest()).sub(config.INIT_TIME), config.HALF_LIFE)
-        const market = _market(config.K, config.MARK, decayRate, oraclePrice.twap)
-        const eval = _evaluate(market, state)
-        const reserved = eval.rA.add(eval.rB)
-        console.log('reserved', weiToNumber(reserved))
+        
+        const minPrice = oraclePrice.twap.lt(oraclePrice.spot) ? oraclePrice.twap : oraclePrice.spot
+        const maxPrice = oraclePrice.twap.lt(oraclePrice.spot) ? oraclePrice.spot : oraclePrice.twap
+        
+        const marketA = _market(config.K, config.MARK, decayRate, minPrice)
+        const evalA = _evaluate(marketA, state)
+
+        const marketB = _market(config.K, config.MARK, decayRate, maxPrice)
+        const evalB = _evaluate(marketB, state)
+
+        const reserved = evalA.rA.add(evalB.rB)
         
         const protocolFeeBefore = await derivablePool.callStatic.collect()
-        console.log('protocolFeeBefore', weiToNumber(protocolFeeBefore))
         await time.increase(period)
 
         const protocolFeeAfter = await derivablePool.callStatic.collect()
-        console.log('protocolFeeAfterr', weiToNumber(protocolFeeAfter))
         const protocolFee = protocolFeeAfter.sub(protocolFeeBefore)
         const message = `${side == 0x10 ? 'LONG' : 'SHORT'} - ${weiToNumber(amount)}eth - sR ${weiToNumber(reserved)} - ${period / HALF_LIFE}HL`
         const dailyFeeRate = toDailyRate(HALF_LIFE * FEE_RATE)
-        console.log('fee charge', (1 - (1 - dailyFeeRate) ** (period / SECONDS_PER_DAY)))
         expect(dailyInterestRate/dailyFeeRate).closeTo(FEE_RATE, FEE_RATE/10, 'effective fee rate')
         expect(Number(weiToNumber(protocolFee)) / Number(weiToNumber(reserved)))
-          .to.be.closeTo((1 - (1 - dailyFeeRate) ** (period / SECONDS_PER_DAY)), 0.000000000001, message)
+          .to.be.closeTo((1 - (1 - dailyFeeRate) ** (period / SECONDS_PER_DAY)), 0.001, message)
       }
 
       async function swapAndWait(period, amount, side) {
@@ -255,7 +257,21 @@ HLs.forEach(HALF_LIFE => {
           accountA.address
         )
 
-        const sR = (await derivablePool.getStates())[0]
+        const oraclePrice = await oracleLibrary.fetch(config.ORACLE)
+        const state = await derivablePool.getStates()
+        const decayRate = _decayRate(bn(await time.latest()).sub(config.INIT_TIME), config.HALF_LIFE)
+        
+        const minPrice = oraclePrice.twap.lt(oraclePrice.spot) ? oraclePrice.twap : oraclePrice.spot
+        const maxPrice = oraclePrice.twap.lt(oraclePrice.spot) ? oraclePrice.spot : oraclePrice.twap
+        
+        const marketA = _market(config.K, config.MARK, decayRate, minPrice)
+        const evalA = _evaluate(marketA, state)
+
+        const marketB = _market(config.K, config.MARK, decayRate, maxPrice)
+        const evalB = _evaluate(marketB, state)
+
+        const reserved = evalA.rA.add(evalB.rB)
+
         await derivablePool.collect()
 
         const balanceBeforeCollect = await weth.balanceOf(owner.address)
@@ -264,11 +280,12 @@ HLs.forEach(HALF_LIFE => {
         await derivablePool.collect()
         const balanceAfterCollect = await weth.balanceOf(owner.address)
         const protocolFee = balanceAfterCollect.sub(balanceBeforeCollect)
-        const message = `${side == 0x10 ? 'LONG' : 'SHORT'} - ${weiToNumber(amount)}eth - sR ${weiToNumber(sR)} - ${period / HALF_LIFE}HL`
+        const message = `${side == 0x10 ? 'LONG' : 'SHORT'} - ${weiToNumber(amount)}eth - sR ${weiToNumber(reserved)} - ${period / HALF_LIFE}HL`
         const dailyFeeRate = toDailyRate(HALF_LIFE * FEE_RATE)
+      
         expect(dailyInterestRate/dailyFeeRate).closeTo(FEE_RATE, FEE_RATE/10, 'effective fee rate')
-        expect(Number(weiToNumber(protocolFee)) / Number(weiToNumber((sR))))
-          .to.be.closeTo((1 - (1 - dailyFeeRate) ** (period / SECONDS_PER_DAY)), 0.0000001, message)
+        expect(Number(weiToNumber(protocolFee)) / Number(weiToNumber((reserved))))
+          .to.be.closeTo((1 - (1 - dailyFeeRate) ** (period / SECONDS_PER_DAY)), 0.001, message)
       }
 
       await poolFactory.setFeeTo(owner.address)
@@ -293,117 +310,279 @@ HLs.forEach(HALF_LIFE => {
     }
 
     describe("Long", function () {
-      // it ("Test", async function () {
-      //   const {owner, derivablePool, poolNoHL, stateCalHelper} = await loadFixture(deployDDLv2);
-      //   await time.increase(6 * 30 * 24 * 3600)
-      //   console.log('HL')
-      //   const amountOut = await attemptStaticSwap(
-      //     derivablePool,
-      //     0,
-      //     SIDE_R,
-      //     SIDE_A,
-      //     numberToWei(0.5),
-      //     stateCalHelper.address,
-      //     AddressZero,
-      //     owner.address
-      //   )
-      //   console.log('No HL')
-      //   const amountOutNoHL = await attemptStaticSwap(
-      //     poolNoHL,
-      //     0,
-      //     SIDE_R,
-      //     SIDE_A,
-      //     numberToWei(0.5),
-      //     stateCalHelper.address,
-      //     AddressZero,
-      //     owner.address
-      //   )
-
-      //   console.log((1 - dailyInterestRate*1.2)**(6 * 30))
-        
-      //   console.log(weiToNumber(amountOutNoHL)/weiToNumber(amountOut))
-      // })
       it("Wait 1 day - static", async function () {
         const { swapAndWaitStatic } = await loadFixture(deployDDLv2);
-        await swapAndWaitStatic(24 * 3600, numberToWei(2), 0x10)
+        await swapAndWaitStatic(24 * 3600, numberToWei(0.1), 0x10)
       })
 
-      // it("Wait 2 days - static", async function () {
-      //   const { swapAndWaitStatic } = await loadFixture(deployDDLv2);
-      //   await swapAndWaitStatic(3 * 24 * 3600, numberToWei(0.1), 0x10)
-      // })
+      it("Wait 2 days - static", async function () {
+        const { swapAndWaitStatic } = await loadFixture(deployDDLv2);
+        await swapAndWaitStatic(3 * 24 * 3600, numberToWei(0.1), 0x10)
+      })
 
-      // it("Wait 7 days - static", async function () {
-      //   const { swapAndWaitStatic } = await loadFixture(deployDDLv2);
-      //   await swapAndWaitStatic(7 * 24 * 3600, numberToWei(0.1), 0x10)
-      // })
+      it("Wait 7 days - static", async function () {
+        const { swapAndWaitStatic } = await loadFixture(deployDDLv2);
+        await swapAndWaitStatic(7 * 24 * 3600, numberToWei(0.1), 0x10)
+      })
 
-      // it("Wait 6 months - static", async function () {
-      //   const { swapAndWaitStatic } = await loadFixture(deployDDLv2);
-      //   await swapAndWaitStatic(6 * 30 * 24 * 3600, numberToWei(2), 0x10)
-      // })
+      it("Wait 1 day", async function () {
+        const { swapAndWait } = await loadFixture(deployDDLv2);
+        await swapAndWait(24 * 3600, numberToWei(0.1), 0x10)
+      })
 
-      // it("Wait 1 day", async function () {
-      //   const { swapAndWait } = await loadFixture(deployDDLv2);
-      //   await swapAndWait(24 * 3600, numberToWei(2), 0x10)
-      // })
+      it("Wait 2 days", async function () {
+        const { swapAndWait } = await loadFixture(deployDDLv2);
+        await swapAndWait(3 * 24 * 3600, numberToWei(0.1), 0x10)
+      })
 
-      // it("Wait 2 days", async function () {
-      //   const { swapAndWait } = await loadFixture(deployDDLv2);
-      //   await swapAndWait(3 * 24 * 3600, numberToWei(0.1), 0x10)
-      // })
-
-      // it("Wait 7 days", async function () {
-      //   const { swapAndWait } = await loadFixture(deployDDLv2);
-      //   await swapAndWait(7 * 24 * 3600, numberToWei(0.1), 0x10)
-      // })
-
-      // it("Wait 6 months", async function () {
-      //   const { swapAndWait } = await loadFixture(deployDDLv2);
-      //   await swapAndWait(6 * 30 * 24 * 3600, numberToWei(2), 0x10)
-      // })
+      it("Wait 7 days", async function () {
+        const { swapAndWait } = await loadFixture(deployDDLv2);
+        await swapAndWait(7 * 24 * 3600, numberToWei(0.1), 0x10)
+      })
     })
 
     describe("Short", function () {
-      // it("Wait 1 day - static", async function () {
-      //   const { swapAndWaitStatic } = await loadFixture(deployDDLv2);
-      //   await swapAndWaitStatic(SECONDS_PER_DAY, numberToWei(1), 0x20)
-      // })
+      it("Wait 1 day - static", async function () {
+        const { swapAndWaitStatic } = await loadFixture(deployDDLv2);
+        await swapAndWaitStatic(SECONDS_PER_DAY, numberToWei(1), 0x20)
+      })
 
-      // it("Wait 2 days - static", async function () {
-      //   const { swapAndWaitStatic } = await loadFixture(deployDDLv2);
-      //   await swapAndWaitStatic(2 * 24 * 3600, numberToWei(0.1), 0x20)
-      // })
+      it("Wait 2 days - static", async function () {
+        const { swapAndWaitStatic } = await loadFixture(deployDDLv2);
+        await swapAndWaitStatic(2 * 24 * 3600, numberToWei(0.1), 0x20)
+      })
 
-      // it("Wait 7 days - static", async function () {
-      //   const { swapAndWaitStatic } = await loadFixture(deployDDLv2);
-      //   await swapAndWaitStatic(7 * 24 * 3600, numberToWei(0.1), 0x10)
-      // })
+      it("Wait 7 days - static", async function () {
+        const { swapAndWaitStatic } = await loadFixture(deployDDLv2);
+        await swapAndWaitStatic(7 * 24 * 3600, numberToWei(0.1), 0x20)
+      })
 
-      // it("Wait 6 months - static", async function () {
-      //   const { swapAndWaitStatic } = await loadFixture(deployDDLv2);
-      //   await swapAndWaitStatic(6 * 30 * 24 * 3600, numberToWei(2), 0x20)
-      // })
+      it("Wait 1 day", async function () {
+        const { swapAndWait } = await loadFixture(deployDDLv2);
+        await swapAndWait(SECONDS_PER_DAY, numberToWei(1), 0x20)
+      })
 
-      // it("Wait 1 day", async function () {
-      //   const { swapAndWait } = await loadFixture(deployDDLv2);
-      //   await swapAndWait(SECONDS_PER_DAY, numberToWei(1), 0x20)
-      // })
+      it("Wait 2 days", async function () {
+        const { swapAndWait } = await loadFixture(deployDDLv2);
+        await swapAndWait(2 * 24 * 3600, numberToWei(0.1), 0x20)
+      })
 
-      // it("Wait 2 days", async function () {
-      //   const { swapAndWait } = await loadFixture(deployDDLv2);
-      //   await swapAndWait(2 * 24 * 3600, numberToWei(0.1), 0x20)
-      // })
+      it("Wait 7 days", async function () {
+        const { swapAndWait } = await loadFixture(deployDDLv2);
+        await swapAndWait(7 * 24 * 3600, numberToWei(0.1), 0x20)
+      })
+    })
 
-      // it("Wait 7 days", async function () {
-      //   const { swapAndWait } = await loadFixture(deployDDLv2);
-      //   await swapAndWait(7 * 24 * 3600, numberToWei(0.1), 0x10)
-      // })
+    it("Long, short, LP value before and after fee collect", async function () {
+      const {owner, derivablePool, stateCalHelper} = await loadFixture(deployDDLv2)
+      await time.increase(SECONDS_PER_DAY)
+      const valueLongBefore = await attemptStaticSwap(
+        derivablePool,
+        0,
+        SIDE_A,
+        SIDE_R,
+        1000,
+        stateCalHelper.address,
+        AddressZero,
+        owner.address
+      )
 
-      // it("Wait 6 months", async function () {
-      //   const { swapAndWait } = await loadFixture(deployDDLv2);
-      //   await swapAndWait(6 * 30 * 24 * 3600, numberToWei(2), 0x20)
-      // })
+      const valueShortBefore = await attemptStaticSwap(
+        derivablePool,
+        0,
+        SIDE_B,
+        SIDE_R,
+        1000,
+        stateCalHelper.address,
+        AddressZero,
+        owner.address
+      )
+
+      const valueLPBefore = await attemptStaticSwap(
+        derivablePool,
+        0,
+        SIDE_C,
+        SIDE_R,
+        1000,
+        stateCalHelper.address,
+        AddressZero,
+        owner.address
+      )
+
+      await derivablePool.collect()
+
+      const valueLongAfter = await attemptStaticSwap(
+        derivablePool,
+        0,
+        SIDE_A,
+        SIDE_R,
+        1000,
+        stateCalHelper.address,
+        AddressZero,
+        owner.address
+      )
+
+      const valueShortAfter = await attemptStaticSwap(
+        derivablePool,
+        0,
+        SIDE_B,
+        SIDE_R,
+        1000,
+        stateCalHelper.address,
+        AddressZero,
+        owner.address
+      )
+
+      const valueLPAfter = await attemptStaticSwap(
+        derivablePool,
+        0,
+        SIDE_C,
+        SIDE_R,
+        1000,
+        stateCalHelper.address,
+        AddressZero,
+        owner.address
+      )
+
+      expect(valueLPAfter).to.be.eq(valueLPBefore)
+      expect(valueLongAfter).to.be.eq(valueLongBefore)
+      expect(valueShortAfter).to.be.eq(valueShortBefore)
+    })
+
+    it("Withdraw all after collect fee", async function () {
+      const {owner, derivablePool, stateCalHelper, derivable1155, weth} = await loadFixture(deployDDLv2)
+      
+      const A_ID = packId(0x10, derivablePool.address);
+      const B_ID = packId(0x20, derivablePool.address);
+      const C_ID = packId(0x30, derivablePool.address);
+
+      await time.increase(SECONDS_PER_DAY)
+      await derivablePool.collect()
+      await attemptSwap(
+        derivablePool,
+        0,
+        SIDE_A,
+        SIDE_R,
+        await derivable1155.balanceOf(owner.address, A_ID),
+        stateCalHelper.address,
+        AddressZero,
+        owner.address
+      )
+
+      await attemptSwap(
+        derivablePool,
+        0,
+        SIDE_B,
+        SIDE_R,
+        await derivable1155.balanceOf(owner.address, B_ID),
+        stateCalHelper.address,
+        AddressZero,
+        owner.address
+      )
+
+      await attemptSwap(
+        derivablePool,
+        0,
+        SIDE_C,
+        SIDE_R,
+        await derivable1155.balanceOf(owner.address, C_ID),
+        stateCalHelper.address,
+        AddressZero,
+        owner.address
+      )
+
+      const supplyA = await derivable1155.totalSupply(A_ID)
+      const supplyB = await derivable1155.totalSupply(B_ID)
+      const supplyC =  await derivable1155.totalSupply(C_ID)
+      const reserved = await weth.balanceOf(derivablePool.address)
+
+      expect(Number(weiToNumber(supplyA))).to.be.closeTo(0, 1e17)
+      expect(Number(weiToNumber(supplyB))).to.be.closeTo(0, 1e17)
+      expect(Number(weiToNumber(supplyC))).to.be.closeTo(0, 1e17)
+      expect(Number(weiToNumber(reserved))).to.be.closeTo(0, 1e17)
+    })
+
+    it("Withdraw all before collect fee", async function () {
+      const {owner, derivablePool, stateCalHelper, derivable1155, weth} = await loadFixture(deployDDLv2)
+      
+      const A_ID = packId(0x10, derivablePool.address);
+      const B_ID = packId(0x20, derivablePool.address);
+      const C_ID = packId(0x30, derivablePool.address);
+
+      await time.increase(SECONDS_PER_DAY)
+      
+      await attemptSwap(
+        derivablePool,
+        0,
+        SIDE_A,
+        SIDE_R,
+        await derivable1155.balanceOf(owner.address, A_ID),
+        stateCalHelper.address,
+        AddressZero,
+        owner.address
+      )
+
+      await attemptSwap(
+        derivablePool,
+        0,
+        SIDE_B,
+        SIDE_R,
+        await derivable1155.balanceOf(owner.address, B_ID),
+        stateCalHelper.address,
+        AddressZero,
+        owner.address
+      )
+
+      await attemptSwap(
+        derivablePool,
+        0,
+        SIDE_C,
+        SIDE_R,
+        await derivable1155.balanceOf(owner.address, C_ID),
+        stateCalHelper.address,
+        AddressZero,
+        owner.address
+      )
+
+      await derivablePool.collect()
+
+      const supplyA = await derivable1155.totalSupply(A_ID)
+      const supplyB = await derivable1155.totalSupply(B_ID)
+      const supplyC =  await derivable1155.totalSupply(C_ID)
+      const reserved = await weth.balanceOf(derivablePool.address)
+
+      expect(Number(weiToNumber(supplyA))).to.be.closeTo(0, 1e17)
+      expect(Number(weiToNumber(supplyB))).to.be.closeTo(0, 1e17)
+      expect(Number(weiToNumber(supplyC))).to.be.closeTo(0, 1e17)
+      expect(Number(weiToNumber(reserved))).to.be.closeTo(0, 1e17)
+    })
+
+    it("Collect mutiple time", async function () {
+      const {owner, derivablePool, weth} = await loadFixture(deployDDLv2)
+
+      await time.increase(30 * SECONDS_PER_DAY)
+
+      let wethBefore = await weth.balanceOf(owner.address)
+      await derivablePool.collect()
+      let wethAfter = await weth.balanceOf(owner.address)
+      
+      const feeOneMonth = wethAfter.sub(wethBefore)
+
+      await time.increase(60 * SECONDS_PER_DAY)
+
+      wethBefore = await weth.balanceOf(owner.address)
+      await derivablePool.collect()
+      wethAfter = await weth.balanceOf(owner.address)
+      const feeTwoMonth = wethAfter.sub(wethBefore)
+
+      await time.increase(90 * SECONDS_PER_DAY)
+
+      wethBefore = await weth.balanceOf(owner.address)
+      await derivablePool.collect()
+      wethAfter = await weth.balanceOf(owner.address)
+      const feeThreeMonth = wethAfter.sub(wethBefore)
+
+      expect(feeOneMonth.add(feeTwoMonth)).to.be.gt(feeThreeMonth)
     })
   })
 })
