@@ -12,6 +12,8 @@ import "./interfaces/IPool.sol";
 import "./logics/Storage.sol";
 import "./logics/Events.sol";
 
+import "hardhat/console.sol";
+
 
 abstract contract Pool is IPool, Storage, Events, Constants {
     /// Immutables
@@ -56,6 +58,8 @@ abstract contract Pool is IPool, Storage, Events, Constants {
 
         s_a = params.a;
         s_b = params.b;
+        s_lastTimeSwapA = INIT_TIME;
+        s_lastTimeSwapB = INIT_TIME;
 
         uint idA = _packID(address(this), SIDE_A);
         uint idB = _packID(address(this), SIDE_B);
@@ -140,6 +144,8 @@ abstract contract Pool is IPool, Storage, Events, Constants {
         address feeTo = IPoolFactory(FACTORY).getFeeTo();
         require(msg.sender == feeTo, "ERR");
         fee = _collect();
+        console.log("fee", fee);
+        console.log("weth", IERC20(TOKEN_R).balanceOf(address(this)));
         TransferHelper.safeTransfer(TOKEN_R, feeTo, fee);
     }
 

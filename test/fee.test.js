@@ -119,7 +119,7 @@ HLs.forEach(HALF_LIFE => {
         oracle,
         reserveToken: weth.address,
         recipient: owner.address,
-        mark: bn(1000).shl(128).div(38),
+        mark: bn(38).shl(128),
         k: bn(5),
         a: bn('30000000000'),
         b: bn('30000000000'),
@@ -583,18 +583,14 @@ HLs.forEach(HALF_LIFE => {
     })
 
     it("Open position do not change fee", async function () {
-      const {owner, derivablePool, weth, stateCalHelper} = await loadFixture(deployDDLv2)
-
-      await time.increase(SECONDS_PER_DAY)
-
-      const beforeSwapCollect = await derivablePool.callStatic.collect()
+      const {owner, derivablePool, derivable1155, stateCalHelper, A_ID, B_ID} = await loadFixture(deployDDLv2)
 
       await attemptSwap(
         derivablePool,
         0,
         SIDE_R,
         SIDE_A,
-        numberToWei(1),
+        numberToWei(0.01),
         stateCalHelper.address,
         AddressZero,
         owner.address
@@ -605,21 +601,47 @@ HLs.forEach(HALF_LIFE => {
         0,
         SIDE_R,
         SIDE_B,
-        numberToWei(1),
+        numberToWei(0.01),
         stateCalHelper.address,
         AddressZero,
         owner.address
       )
+      
+      await time.increase(30*SECONDS_PER_DAY)
 
+      const beforeSwapCollect = await derivablePool.callStatic.collect()
+      let tokenBalance = await derivable1155.balanceOf(owner.address, A_ID)
+      await attemptSwap(
+        derivablePool,
+        0,
+        SIDE_R,
+        SIDE_A,
+        numberToWei(0.01),
+        stateCalHelper.address,
+        AddressZero,
+        owner.address
+      )
+      tokenBalance = await derivable1155.balanceOf(owner.address, B_ID)
+      await attemptSwap(
+        derivablePool,
+        0,
+        SIDE_R,
+        SIDE_B,
+        numberToWei(0.01),
+        stateCalHelper.address,
+        AddressZero,
+        owner.address
+      )
       const afterSwapCollect = await derivablePool.callStatic.collect()
 
-      expect(beforeSwapCollect).to.be.eq(afterSwapCollect)
+      expect(Number(weiToNumber(beforeSwapCollect)))
+      .to.be.closeTo(Number(weiToNumber(afterSwapCollect)), 0.0001)
     })
 
     it("Close position do not change fee", async function () {
       const {owner, derivablePool, weth, stateCalHelper} = await loadFixture(deployDDLv2)
 
-      await time.increase(SECONDS_PER_DAY)
+      await time.increase(30 * SECONDS_PER_DAY)
 
       const beforeSwapCollect = await derivablePool.callStatic.collect()
 
@@ -647,7 +669,8 @@ HLs.forEach(HALF_LIFE => {
 
       const afterSwapCollect = await derivablePool.callStatic.collect()
 
-      expect(beforeSwapCollect).to.be.eq(afterSwapCollect)
+      expect(Number(weiToNumber(beforeSwapCollect)))
+      .to.be.closeTo(Number(weiToNumber(afterSwapCollect)), 0.0001)
     })
   })
 })

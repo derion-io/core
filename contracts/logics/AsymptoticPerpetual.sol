@@ -41,7 +41,7 @@ contract AsymptoticPerpetual is Pool {
     }
 
     // r(v)
-    function _r(uint xk, uint v, uint R) internal pure returns (uint r) {
+    function _r(uint xk, uint v, uint R) internal view returns (uint r) {
         r = FullMath.mulDiv(v, xk, Q128);
         if (r > R >> 1) {
             uint denominator = FullMath.mulDiv(v, xk << 2, Q128);
@@ -58,7 +58,7 @@ contract AsymptoticPerpetual is Pool {
         return IERC20(TOKEN_R).balanceOf(address(this));
     }
 
-    function _evaluate(Market memory market, State memory state) internal pure returns (uint rA, uint rB) {
+    function _evaluate(Market memory market, State memory state) internal view returns (uint rA, uint rB) {
         rA = _r(market.xkA, state.a, state.R);
         rB = _r(market.xkB, state.b, state.R);
     }
@@ -117,11 +117,25 @@ contract AsymptoticPerpetual is Pool {
         SwapParam memory param
     ) internal override returns(uint amountIn, uint amountOut) {
         require(sideIn != sideOut, 'SS');
+        {
+            uint maxLastTime = s_lastTimeSwapA > s_lastTimeSwapB ? s_lastTimeSwapA : s_lastTimeSwapB;
+            s_aCumulative += s_a * (block.timestamp - maxLastTime);
+            s_bCumulative += s_b * (block.timestamp - maxLastTime);
+        }
+        
         // [PRICE SELECTION]
         State memory state = State(_reserve(), s_a, s_b);
         (Market memory market, uint rA, uint rB) = _selectPrice(state, sideIn, sideOut);
         // [CALCULATION]
         uint s = _supply(TOKEN, sideIn);
+        if (sideIn == SIDE_A) {
+            s_cumulativeA += s * (block.timestamp - s_lastTimeSwapA);
+            s_lastTimeSwapA = block.timestamp;
+        } else if (sideIn == SIDE_B) {
+            s_cumulativeB += s * (block.timestamp - s_lastTimeSwapB);
+            s_lastTimeSwapB = block.timestamp;
+        }
+
         if (sideIn == SIDE_A || sideIn == SIDE_B) {
             uint rateX64 = _decayRate(block.timestamp - INIT_TIME, PROTOCOL_HALF_LIFE);
             s = FullMath.mulDiv(s, rateX64, Q64);
@@ -163,6 +177,13 @@ contract AsymptoticPerpetual is Pool {
                 uint rC1 = state1.R - rA1 - rB1;
                 amountOut = FullMath.mulDiv(s, rC1 - rC, rC);
             } else {
+                if (sideOut == SIDE_A) {
+                    s_cumulativeA += s * (block.timestamp - s_lastTimeSwapA);
+                    s_lastTimeSwapA = block.timestamp;
+                } else if (sideOut == SIDE_B) {
+                    s_cumulativeB += s * (block.timestamp - s_lastTimeSwapB);
+                    s_lastTimeSwapB = block.timestamp;
+                }
                 {
                     uint rateX64 = _decayRate(block.timestamp - INIT_TIME, PROTOCOL_HALF_LIFE);
                     s = FullMath.mulDiv(s, rateX64, Q64);
@@ -219,7 +240,16 @@ contract AsymptoticPerpetual is Pool {
         uint rateX64 = _decayRate(block.timestamp - INIT_TIME, PROTOCOL_HALF_LIFE);
         require(s_collectedRate < rateX64, "NRC");
 
-        State memory state = State(_reserve(), s_a, s_b);
+        {
+            uint maxLastTime = s_lastTimeSwapA > s_lastTimeSwapB ? s_lastTimeSwapA : s_lastTimeSwapB;
+            s_aCumulative += s_a * (block.timestamp - maxLastTime);
+            s_bCumulative += s_b * (block.timestamp - maxLastTime);
+        }
+
+        State memory state = State(
+            _reserve(), 
+            s_aCumulative / (block.timestamp - INIT_TIME), 
+            s_bCumulative / (block.timestamp - INIT_TIME));
         uint decayRateX64 = _decayRate(block.timestamp - INIT_TIME, HALF_LIFE);
         (uint min, uint max) = _fetch();
         if (min > max) {
@@ -228,6 +258,8 @@ contract AsymptoticPerpetual is Pool {
 
         // collect A side
         uint sA = _supply(TOKEN, SIDE_A);
+        s_cumulativeA += sA * (block.timestamp - s_lastTimeSwapA);
+        sA = s_cumulativeA / (block.timestamp - INIT_TIME);
         uint sACollected = FullMath.mulDivRoundingUp(sA, s_collectedRate, Q64);
         sA = FullMath.mulDiv(sA, rateX64, Q64);
         if (sA > sACollected) {
@@ -238,6 +270,8 @@ contract AsymptoticPerpetual is Pool {
         }
         // collect B side
         uint sB = _supply(TOKEN, SIDE_B);
+        s_cumulativeB += sB * (block.timestamp - s_lastTimeSwapB);
+        sB = s_cumulativeB / (block.timestamp - INIT_TIME);
         uint sBCollected = FullMath.mulDivRoundingUp(sB, s_collectedRate, Q64);
         sB = FullMath.mulDiv(sB, rateX64, Q64);
         if (sB > sBCollected) {
@@ -246,7 +280,9 @@ contract AsymptoticPerpetual is Pool {
             uint fB = sB - sBCollected;
             fee += FullMath.mulDiv(rB, fB, sB);
         }
-
-        s_collectedRate = rateX64; // update the storage
+        // update the storage
+        s_collectedRate = rateX64; 
+        s_lastTimeSwapA = block.timestamp;
+        s_lastTimeSwapB = block.timestamp;
     }
 }
