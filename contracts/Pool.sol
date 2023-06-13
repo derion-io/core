@@ -137,8 +137,10 @@ abstract contract Pool is IPool, Storage, Events, Constants {
     }
 
     function collect() external returns (uint fee) {
+        address feeTo = IPoolFactory(FACTORY).getFeeTo();
+        require(msg.sender == feeTo, "ERR");
         fee = _collect();
-        TransferHelper.safeTransfer(TOKEN_R, IPoolFactory(FACTORY).getFeeTo(), fee);
+        TransferHelper.safeTransfer(TOKEN_R, feeTo, fee);
     }
 
     function _swap(

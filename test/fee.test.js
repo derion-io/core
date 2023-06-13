@@ -292,6 +292,8 @@ HLs.forEach(HALF_LIFE => {
 
       return {
         C_ID,
+        A_ID,
+        B_ID,
         utr,
         owner,
         weth,
@@ -450,11 +452,7 @@ HLs.forEach(HALF_LIFE => {
     })
 
     it("Withdraw all after collect fee", async function () {
-      const {owner, derivablePool, stateCalHelper, derivable1155, weth} = await loadFixture(deployDDLv2)
-      
-      const A_ID = packId(0x10, derivablePool.address);
-      const B_ID = packId(0x20, derivablePool.address);
-      const C_ID = packId(0x30, derivablePool.address);
+      const {owner, derivablePool, stateCalHelper, derivable1155, weth, A_ID, B_ID, C_ID} = await loadFixture(deployDDLv2)
 
       await time.increase(SECONDS_PER_DAY)
       await derivablePool.collect()
@@ -503,11 +501,7 @@ HLs.forEach(HALF_LIFE => {
     })
 
     it("Withdraw all before collect fee", async function () {
-      const {owner, derivablePool, stateCalHelper, derivable1155, weth} = await loadFixture(deployDDLv2)
-      
-      const A_ID = packId(0x10, derivablePool.address);
-      const B_ID = packId(0x20, derivablePool.address);
-      const C_ID = packId(0x30, derivablePool.address);
+      const {owner, derivablePool, stateCalHelper, derivable1155, weth, A_ID, B_ID, C_ID} = await loadFixture(deployDDLv2)
 
       await time.increase(SECONDS_PER_DAY)
       
@@ -568,6 +562,9 @@ HLs.forEach(HALF_LIFE => {
       
       const feeOneMonth = wethAfter.sub(wethBefore)
 
+      const dailyRate = toDailyRate(HALF_LIFE)
+      console.log('dailyRate', dailyRate)
+
       await time.increase(60 * SECONDS_PER_DAY)
 
       wethBefore = await weth.balanceOf(owner.address)
@@ -583,6 +580,74 @@ HLs.forEach(HALF_LIFE => {
       const feeThreeMonth = wethAfter.sub(wethBefore)
 
       expect(feeOneMonth.add(feeTwoMonth)).to.be.gt(feeThreeMonth)
+    })
+
+    it("Open position do not change fee", async function () {
+      const {owner, derivablePool, weth, stateCalHelper} = await loadFixture(deployDDLv2)
+
+      await time.increase(SECONDS_PER_DAY)
+
+      const beforeSwapCollect = await derivablePool.callStatic.collect()
+
+      await attemptSwap(
+        derivablePool,
+        0,
+        SIDE_R,
+        SIDE_A,
+        numberToWei(1),
+        stateCalHelper.address,
+        AddressZero,
+        owner.address
+      )
+
+      await attemptSwap(
+        derivablePool,
+        0,
+        SIDE_R,
+        SIDE_B,
+        numberToWei(1),
+        stateCalHelper.address,
+        AddressZero,
+        owner.address
+      )
+
+      const afterSwapCollect = await derivablePool.callStatic.collect()
+
+      expect(beforeSwapCollect).to.be.eq(afterSwapCollect)
+    })
+
+    it("Close position do not change fee", async function () {
+      const {owner, derivablePool, weth, stateCalHelper} = await loadFixture(deployDDLv2)
+
+      await time.increase(SECONDS_PER_DAY)
+
+      const beforeSwapCollect = await derivablePool.callStatic.collect()
+
+      await attemptSwap(
+        derivablePool,
+        0,
+        SIDE_A,
+        SIDE_R,
+        numberToWei(0.01),
+        stateCalHelper.address,
+        AddressZero,
+        owner.address
+      )
+
+      await attemptSwap(
+        derivablePool,
+        0,
+        SIDE_B,
+        SIDE_R,
+        numberToWei(0.01),
+        stateCalHelper.address,
+        AddressZero,
+        owner.address
+      )
+
+      const afterSwapCollect = await derivablePool.callStatic.collect()
+
+      expect(beforeSwapCollect).to.be.eq(afterSwapCollect)
     })
   })
 })
