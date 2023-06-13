@@ -4,11 +4,16 @@ pragma solidity ^0.8.0;
 import "./IPool.sol";
 
 interface IHelper {
+    struct ReserveParam {
+        uint rA;
+        uint rB;
+        uint sIn;
+    }
+
     function swapToState(
         Market calldata market,
         State calldata state,
-        uint rA,
-        uint rB,
+        ReserveParam calldata reserveParam,
         bytes calldata payload
     ) external view returns(State memory state1);
 }

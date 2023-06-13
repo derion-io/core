@@ -121,7 +121,17 @@ contract AsymptoticPerpetual is Pool {
         State memory state = State(_reserve(), s_a, s_b);
         (Market memory market, uint rA, uint rB) = _selectPrice(state, sideIn, sideOut);
         // [CALCULATION]
-        State memory state1 = IHelper(param.helper).swapToState(market, state, rA, rB, param.payload);
+        uint s = _supply(TOKEN, sideIn);
+        if (sideIn == SIDE_A || sideIn == SIDE_B) {
+            uint rateX64 = _decayRate(block.timestamp - INIT_TIME, PROTOCOL_HALF_LIFE);
+            s = FullMath.mulDiv(s, rateX64, Q64);
+        } 
+        State memory state1 = IHelper(param.helper).swapToState(
+            market, 
+            state, 
+            IHelper.ReserveParam(rA, rB, s),
+            param.payload
+        );
         // [TRANSITION]
         (uint rA1, uint rB1) = _evaluate(market, state1);
         if (sideIn == SIDE_R) {
@@ -129,7 +139,6 @@ contract AsymptoticPerpetual is Pool {
             amountIn = state1.R - state.R;
         } else {
             require(state.R >= state1.R, "MI:NR");
-            uint s = _supply(TOKEN, sideIn);
             if (sideIn == SIDE_A) {
                 require(rB1 >= rB, "MI:A");
                 amountIn = FullMath.mulDivRoundingUp(s, rA - rA1, rA);
@@ -148,7 +157,7 @@ contract AsymptoticPerpetual is Pool {
         if (sideOut == SIDE_R) {
             amountOut = state.R - state1.R;
         } else {
-            uint s = _supply(TOKEN, sideOut);
+            s = _supply(TOKEN, sideOut);
             if (sideOut == SIDE_C) {
                 uint rC = state.R - rA - rB;
                 uint rC1 = state1.R - rA1 - rB1;

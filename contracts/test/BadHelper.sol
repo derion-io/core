@@ -214,8 +214,7 @@ contract BadHelper is Constants, IHelper {
     function swapToState(
         Market calldata market,
         State calldata state,
-        uint rA,
-        uint rB,
+        ReserveParam calldata reserveParam,
         bytes calldata payload
     ) external view override returns (State memory state1) {
         (
@@ -226,19 +225,18 @@ contract BadHelper is Constants, IHelper {
         ) = abi.decode(payload, (uint, uint, uint, uint));
         require(swapType == MAX_IN, 'Helper: UNSUPPORTED_SWAP_TYPE');
         state1 = State(state.R, state.a, state.b);
-        (uint rA1, uint rB1) = (rA, rB);
+        (uint rA1, uint rB1) = (reserveParam.rA, reserveParam.rB);
         if (sideIn == SIDE_R) {
-            uint s = _supply(SIDE_C);
             if (sideOut == SIDE_B) {
-                amount = FullMath.mulDiv(amount, rA, s);
+                amount = FullMath.mulDiv(amount, reserveParam.rA, reserveParam.sIn);
                 rA1 -= amount;
             } else if (sideOut == SIDE_A) {
-                amount = FullMath.mulDiv(amount, rB, s);
+                amount = FullMath.mulDiv(amount, reserveParam.rB, reserveParam.sIn);
                 rB1 -= amount;
             } else if (sideOut == SIDE_C) {
                 --amount; // SIDE_C sacrifices number rounding for A and B
-                uint rC = state.R - rA - rB;
-                amount = FullMath.mulDiv(amount, rC, s);
+                uint rC = state.R - reserveParam.rA - reserveParam.rB;
+                amount = FullMath.mulDiv(amount, rC, reserveParam.sIn);
             }
             state1.R -= amount;
         } else {
