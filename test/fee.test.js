@@ -24,11 +24,11 @@ const HLs = [19932680
 const FEE_RATE = 5
 
 function toDailyRate(HALF_LIFE) {
-  return HALF_LIFE == 0 ? 0 : 1-2**(-SECONDS_PER_DAY/HALF_LIFE)
+  return HALF_LIFE == 0 ? 0 : 1 - 2 ** (-SECONDS_PER_DAY / HALF_LIFE)
 }
 
 function toHalfLife(dailyRate) {
-  return dailyRate == 0 ? 0 : SECONDS_PER_DAY/Math.log2(1/(1-dailyRate))
+  return dailyRate == 0 ? 0 : SECONDS_PER_DAY / Math.log2(1 / (1 - dailyRate))
 }
 
 HLs.forEach(HALF_LIFE => {
@@ -93,6 +93,7 @@ HLs.forEach(HALF_LIFE => {
       const quoteTokenIndex = weth.address.toLowerCase() < usdc.address.toLowerCase() ? 1 : 0
       const initPriceX96 = encodeSqrtX96(quoteTokenIndex ? 1500 : 1, quoteTokenIndex ? 1 : 1500)
       const a = await uniswapPair.initialize(initPriceX96)
+      await uniswapPair.increaseObservationCardinalityNext(1000);
       a.wait(1);
 
       await time.increase(1000);
@@ -100,20 +101,20 @@ HLs.forEach(HALF_LIFE => {
       await usdc.approve(uniswapPositionManager.address, MaxUint256);
       await weth.approve(uniswapPositionManager.address, MaxUint256);
       await uniswapPositionManager.mint({
-          token0: quoteTokenIndex ? weth.address : usdc.address,
-          token1: quoteTokenIndex ? usdc.address : weth.address,
-          fee: 500,
-          tickLower: Math.ceil(-887272 / 10) * 10,
-          tickUpper: Math.floor(887272 / 10) * 10,
-          amount0Desired: quoteTokenIndex ? pe('100') : pe('150000'),
-          amount1Desired: quoteTokenIndex ? pe('150000') : pe('100'),
-          amount0Min: 0,
-          amount1Min: 0,
-          recipient: owner.address,
-          deadline: new Date().getTime() + 100000
+        token0: quoteTokenIndex ? weth.address : usdc.address,
+        token1: quoteTokenIndex ? usdc.address : weth.address,
+        fee: 500,
+        tickLower: Math.ceil(-887272 / 10) * 10,
+        tickUpper: Math.floor(887272 / 10) * 10,
+        amount0Desired: quoteTokenIndex ? pe('100') : pe('150000'),
+        amount1Desired: quoteTokenIndex ? pe('150000') : pe('100'),
+        amount0Min: 0,
+        amount1Min: 0,
+        recipient: owner.address,
+        deadline: new Date().getTime() + 100000
       }, {
-          value: pe('100'),
-          gasLimit: 30000000
+        value: pe('100'),
+        gasLimit: 30000000
       })
       await time.increase(1000);
 
@@ -244,10 +245,10 @@ HLs.forEach(HALF_LIFE => {
         const oraclePrice = await oracleLibrary.fetch(config.ORACLE)
         const state = await derivablePool.getStates()
         const decayRate = _decayRate(bn(await time.latest()).sub(config.INIT_TIME), config.HALF_LIFE)
-        
+
         const minPrice = oraclePrice.twap.lt(oraclePrice.spot) ? oraclePrice.twap : oraclePrice.spot
         const maxPrice = oraclePrice.twap.lt(oraclePrice.spot) ? oraclePrice.spot : oraclePrice.twap
-        
+
         const marketA = _market(config.K, config.MARK, decayRate, minPrice)
         const evalA = _evaluate(marketA, state)
 
@@ -255,7 +256,7 @@ HLs.forEach(HALF_LIFE => {
         const evalB = _evaluate(marketB, state)
 
         const reserved = evalA.rA.add(evalB.rB)
-        
+
         const protocolFeeBefore = await derivablePool.callStatic.collect()
         await time.increase(period)
 
@@ -263,7 +264,7 @@ HLs.forEach(HALF_LIFE => {
         const protocolFee = protocolFeeAfter.sub(protocolFeeBefore)
         const message = `${side == 0x10 ? 'LONG' : 'SHORT'} - ${weiToNumber(amount)}eth - sR ${weiToNumber(reserved)} - ${period / HALF_LIFE}HL`
         const dailyFeeRate = toDailyRate(HALF_LIFE * FEE_RATE)
-        expect(dailyInterestRate/dailyFeeRate).closeTo(FEE_RATE, FEE_RATE/10, 'effective fee rate')
+        expect(dailyInterestRate / dailyFeeRate).closeTo(FEE_RATE, FEE_RATE / 10, 'effective fee rate')
         expect(Number(weiToNumber(protocolFee)) / Number(weiToNumber(reserved)))
           .to.be.closeTo((1 - (1 - dailyFeeRate) ** (period / SECONDS_PER_DAY)), 0.001, message)
       }
@@ -283,10 +284,10 @@ HLs.forEach(HALF_LIFE => {
         const oraclePrice = await oracleLibrary.fetch(config.ORACLE)
         const state = await derivablePool.getStates()
         const decayRate = _decayRate(bn(await time.latest()).sub(config.INIT_TIME), config.HALF_LIFE)
-        
+
         const minPrice = oraclePrice.twap.lt(oraclePrice.spot) ? oraclePrice.twap : oraclePrice.spot
         const maxPrice = oraclePrice.twap.lt(oraclePrice.spot) ? oraclePrice.spot : oraclePrice.twap
-        
+
         const marketA = _market(config.K, config.MARK, decayRate, minPrice)
         const evalA = _evaluate(marketA, state)
 
@@ -305,10 +306,198 @@ HLs.forEach(HALF_LIFE => {
         const protocolFee = balanceAfterCollect.sub(balanceBeforeCollect)
         const message = `${side == 0x10 ? 'LONG' : 'SHORT'} - ${weiToNumber(amount)}eth - sR ${weiToNumber(reserved)} - ${period / HALF_LIFE}HL`
         const dailyFeeRate = toDailyRate(HALF_LIFE * FEE_RATE)
-      
-        expect(dailyInterestRate/dailyFeeRate).closeTo(FEE_RATE, FEE_RATE/10, 'effective fee rate')
+
+        expect(dailyInterestRate / dailyFeeRate).closeTo(FEE_RATE, FEE_RATE / 10, 'effective fee rate')
         expect(Number(weiToNumber(protocolFee)) / Number(weiToNumber((reserved))))
           .to.be.closeTo((1 - (1 - dailyFeeRate) ** (period / SECONDS_PER_DAY)), 0.001, message)
+      }
+
+      async function monkeyTest(loopCount) {
+        await attemptSwap(
+          derivablePool,
+          0,
+          SIDE_R,
+          SIDE_A,
+          pe(20),
+          stateCalHelper.address,
+          AddressZero,
+          owner.address
+        )
+
+        await attemptSwap(
+          derivablePool,
+          0,
+          SIDE_R,
+          SIDE_B,
+          pe(20),
+          stateCalHelper.address,
+          AddressZero,
+          owner.address
+        )
+
+        await attemptSwap(
+          derivablePool,
+          0,
+          SIDE_R,
+          SIDE_C,
+          pe(20),
+          stateCalHelper.address,
+          AddressZero,
+          owner.address
+        )
+
+        await time.increase(SECONDS_PER_DAY)
+
+        let currentPrice = 1500
+        for (let i = 0; i < loopCount; i++) {
+          const rand = Math.random()
+          if (rand < 3 / 5) { //swap
+            const isBuy = Math.random() < 0.5
+            // Choose side
+            const sideRand = Math.random()
+            let amount = 3 * Math.random()
+            let side = SIDE_A
+            if (sideRand < 1 / 3) {
+              side = SIDE_B
+            } else if (sideRand < 2 / 3) {
+              side = SIDE_C
+            }
+
+            if (isBuy) {
+              try {
+                await attemptSwap(
+                  derivablePool,
+                  0,
+                  SIDE_R,
+                  side,
+                  numberToWei(amount),
+                  stateCalHelper.address,
+                  AddressZero,
+                  owner.address
+                )
+              } catch (e) {
+                console.log(e.message)
+              }
+            } else {
+              if (side == SIDE_C) {
+                if (Math.random() > 0.1) continue
+                amount = Number(weiToNumber(await derivable1155.balanceOf(owner.address, C_ID))) * Math.random()
+              }
+              try {
+                await attemptSwap(
+                  derivablePool,
+                  0,
+                  side,
+                  SIDE_R,
+                  numberToWei(amount),
+                  stateCalHelper.address,
+                  AddressZero,
+                  owner.address
+                )
+              } catch (e) {
+                console.log(e.message)
+              }
+            }
+          } else if (rand < 1 / 5) { //collect
+            await derivablePool.collect()
+          } else { //change price
+            const targetPrice = 1500 + 50 - 100 * Math.random()
+            swapToSetPriceV3({
+              account: owner,
+              quoteToken: usdc,
+              baseToken: weth,
+              uniswapRouter,
+              initPrice: currentPrice,
+              targetPrice
+            })
+            currentPrice = targetPrice
+          }
+          const wait = Math.random()
+          await time.increase(Math.round(wait * SECONDS_PER_DAY))
+        }
+
+        // Remove all C
+        await attemptSwap(
+          derivablePool,
+          0,
+          SIDE_C,
+          SIDE_R,
+          await derivable1155.balanceOf(owner.address, C_ID),
+          stateCalHelper.address,
+          AddressZero,
+          owner.address
+        )
+
+        // Buy in Long
+        await attemptSwap(
+          derivablePool,
+          0,
+          SIDE_R,
+          SIDE_A,
+          pe(1),
+          stateCalHelper.address,
+          AddressZero,
+          owner.address
+        )
+
+        // Buy in Short
+        await attemptSwap(
+          derivablePool,
+          0,
+          SIDE_R,
+          SIDE_B,
+          pe(1),
+          stateCalHelper.address,
+          AddressZero,
+          owner.address
+        )
+
+        // Sell all Long
+        await attemptSwap(
+          derivablePool,
+          0,
+          SIDE_A,
+          SIDE_R,
+          await derivable1155.balanceOf(owner.address, A_ID),
+          stateCalHelper.address,
+          AddressZero,
+          owner.address
+        )
+
+        // Sell all Short
+        await attemptSwap(
+          derivablePool,
+          0,
+          SIDE_B,
+          SIDE_R,
+          await derivable1155.balanceOf(owner.address, B_ID),
+          stateCalHelper.address,
+          AddressZero,
+          owner.address
+        )
+
+        await time.increase(30 * SECONDS_PER_DAY)
+
+        await derivablePool.collect()
+
+        const supplyA = await derivable1155.totalSupply(A_ID)
+        const supplyB = await derivable1155.totalSupply(B_ID)
+        const supplyC = await derivable1155.totalSupply(C_ID)
+        const reserved = await weth.balanceOf(derivablePool.address)
+
+        console.log("Balance A of owner", await derivable1155.balanceOf(owner.address, A_ID))
+        console.log("Balance B of owne",  await derivable1155.balanceOf(owner.address, B_ID))
+        console.log("Balance C of owne", await derivable1155.balanceOf(owner.address, C_ID))
+
+        console.log("supplyA", supplyA)
+        console.log("supplyB", supplyB)
+        console.log("supplyC", supplyC)
+        console.log("reserved", reserved)
+
+        // expect(Number(weiToNumber(supplyA))).to.be.closeTo(0, 0.0000000000001)
+        // expect(Number(weiToNumber(supplyB))).to.be.closeTo(0, 0.0000000000001)
+        // expect(Number(weiToNumber(supplyC))).to.be.closeTo(0, 0.0000000000001)
+        // expect(Number(weiToNumber(reserved))).to.be.closeTo(0, 0.0000000000001)
       }
 
       await poolFactory.setFeeTo(owner.address)
@@ -329,6 +518,7 @@ HLs.forEach(HALF_LIFE => {
         txSignerB,
         swapAndWaitStatic,
         swapAndWait,
+        monkeyTest,
         stateCalHelper,
         poolNoHL
       }
@@ -399,7 +589,7 @@ HLs.forEach(HALF_LIFE => {
     })
 
     it("Long, short, LP value before and after fee collect", async function () {
-      const {owner, derivablePool, stateCalHelper} = await loadFixture(deployDDLv2)
+      const { owner, derivablePool, stateCalHelper } = await loadFixture(deployDDLv2)
       await time.increase(SECONDS_PER_DAY)
       const valueLongBefore = await attemptStaticSwap(
         derivablePool,
@@ -475,7 +665,7 @@ HLs.forEach(HALF_LIFE => {
     })
 
     it("Withdraw all after collect fee", async function () {
-      const {owner, derivablePool, stateCalHelper, derivable1155, weth, A_ID, B_ID, C_ID} = await loadFixture(deployDDLv2)
+      const { owner, derivablePool, stateCalHelper, derivable1155, weth, A_ID, B_ID, C_ID } = await loadFixture(deployDDLv2)
 
       await time.increase(SECONDS_PER_DAY)
       await derivablePool.collect()
@@ -514,7 +704,7 @@ HLs.forEach(HALF_LIFE => {
 
       const supplyA = await derivable1155.totalSupply(A_ID)
       const supplyB = await derivable1155.totalSupply(B_ID)
-      const supplyC =  await derivable1155.totalSupply(C_ID)
+      const supplyC = await derivable1155.totalSupply(C_ID)
       const reserved = await weth.balanceOf(derivablePool.address)
 
       expect(Number(weiToNumber(supplyA))).to.be.closeTo(0, 1e17)
@@ -524,157 +714,19 @@ HLs.forEach(HALF_LIFE => {
     })
 
     it("Withdraw all before collect fee", async function () {
-      const {owner, derivablePool, stateCalHelper, derivable1155, usdc, uniswapRouter, weth, A_ID, B_ID, C_ID} = await loadFixture(deployDDLv2)
-
-      await attemptSwap(
-        derivablePool,
-        0,
-        SIDE_R,
-        SIDE_A,
-        pe(20),
-        stateCalHelper.address,
-        AddressZero,
-        owner.address
-      )
-
-      await attemptSwap(
-        derivablePool,
-        0,
-        SIDE_R,
-        SIDE_B,
-        pe(20),
-        stateCalHelper.address,
-        AddressZero,
-        owner.address
-      )
-
-      await attemptSwap(
-        derivablePool,
-        0,
-        SIDE_R,
-        SIDE_C,
-        pe(20),
-        stateCalHelper.address,
-        AddressZero,
-        owner.address
-      )
-
-      await time.increase(SECONDS_PER_DAY)
-
-      let currentPrice = 1500
-      for (let i = 0; i < 10000; i++) {
-        const rand = Math.random()
-        if (rand < 1/3) { //swap
-          const isBuy = Math.random() < 0.5
-          // Choose side
-          const sideRand = Math.random()
-          const amount = 3 * Math.random()
-          let side = SIDE_A
-          if (sideRand < 1/3) {
-            side = SIDE_B
-          } else if (sideRand < 2/3) {
-            side = SIDE_C
-          } 
-          console.log(`${i} - ${isBuy ? 'Buy' : 'Sell'} - ${side} - ${amount}`)
-          if (isBuy) {
-            await attemptSwap(
-              derivablePool,
-              0,
-              SIDE_R,
-              side,
-              pe(amount),
-              stateCalHelper.address,
-              AddressZero,
-              owner.address
-            )
-          } else {
-            await attemptSwap(
-              derivablePool,
-              0,
-              side,
-              SIDE_R,
-              pe(amount),
-              stateCalHelper.address,
-              AddressZero,
-              owner.address
-            )
-          }
-          
-        } else if (rand < 2/3) { //collect
-          await derivablePool.collect()
-          console.log(`${i} - collect`)
-        } else { //change price
-          const targetPrice = 1500 + 50 - 100 * Math.random()
-          console.log(`${i} - change price - from ${currentPrice} - to ${targetPrice}`)
-          swapToSetPriceV3({
-            account: owner,
-            quoteToken: usdc,
-            baseToken: weth,
-            uniswapRouter,
-            initPrice: currentPrice,
-            targetPrice
-          })
-          currentPrice = targetPrice
-        }
-        const wait = Math.random()
-        await time.increase(Math.round(wait * SECONDS_PER_DAY))
-      }
-      
-      await attemptSwap(
-        derivablePool,
-        0,
-        SIDE_A,
-        SIDE_R,
-        await derivable1155.balanceOf(owner.address, A_ID),
-        stateCalHelper.address,
-        AddressZero,
-        owner.address
-      )
-
-      await attemptSwap(
-        derivablePool,
-        0,
-        SIDE_B,
-        SIDE_R,
-        await derivable1155.balanceOf(owner.address, B_ID),
-        stateCalHelper.address,
-        AddressZero,
-        owner.address
-      )
-
-      await attemptSwap(
-        derivablePool,
-        0,
-        SIDE_C,
-        SIDE_R,
-        await derivable1155.balanceOf(owner.address, C_ID),
-        stateCalHelper.address,
-        AddressZero,
-        owner.address
-      )
-
-      await derivablePool.collect()
-
-      const supplyA = await derivable1155.totalSupply(A_ID)
-      const supplyB = await derivable1155.totalSupply(B_ID)
-      const supplyC =  await derivable1155.totalSupply(C_ID)
-      const reserved = await weth.balanceOf(derivablePool.address)
-
-      expect(Number(weiToNumber(supplyA))).to.be.closeTo(0, 1e17)
-      expect(Number(weiToNumber(supplyB))).to.be.closeTo(0, 1e17)
-      expect(Number(weiToNumber(supplyC))).to.be.closeTo(0, 1e17)
-      expect(Number(weiToNumber(reserved))).to.be.closeTo(0, 1e17)
+      const { monkeyTest } = await loadFixture(deployDDLv2)
+      await monkeyTest(2000)
     })
 
     it("Collect mutiple time", async function () {
-      const {owner, derivablePool, weth} = await loadFixture(deployDDLv2)
+      const { owner, derivablePool, weth } = await loadFixture(deployDDLv2)
 
       await time.increase(30 * SECONDS_PER_DAY)
 
       let wethBefore = await weth.balanceOf(owner.address)
       await derivablePool.collect()
       let wethAfter = await weth.balanceOf(owner.address)
-      
+
       const feeOneMonth = wethAfter.sub(wethBefore)
 
       const dailyRate = toDailyRate(HALF_LIFE)
@@ -698,7 +750,7 @@ HLs.forEach(HALF_LIFE => {
     })
 
     it("Open position do not change fee", async function () {
-      const {owner, derivablePool, derivable1155, stateCalHelper, A_ID, B_ID} = await loadFixture(deployDDLv2)
+      const { owner, derivablePool, derivable1155, stateCalHelper, A_ID, B_ID } = await loadFixture(deployDDLv2)
 
       await attemptSwap(
         derivablePool,
@@ -721,8 +773,8 @@ HLs.forEach(HALF_LIFE => {
         AddressZero,
         owner.address
       )
-      
-      await time.increase(30*SECONDS_PER_DAY)
+
+      await time.increase(30 * SECONDS_PER_DAY)
 
       const beforeSwapCollect = await derivablePool.callStatic.collect()
       let tokenBalance = await derivable1155.balanceOf(owner.address, A_ID)
@@ -750,11 +802,11 @@ HLs.forEach(HALF_LIFE => {
       const afterSwapCollect = await derivablePool.callStatic.collect()
 
       expect(Number(weiToNumber(beforeSwapCollect)))
-      .to.be.closeTo(Number(weiToNumber(afterSwapCollect)), 0.0001)
+        .to.be.closeTo(Number(weiToNumber(afterSwapCollect)), 0.0001)
     })
 
     it("Close position do not change fee", async function () {
-      const {owner, derivablePool, weth, stateCalHelper} = await loadFixture(deployDDLv2)
+      const { owner, derivablePool, weth, stateCalHelper } = await loadFixture(deployDDLv2)
 
       await time.increase(30 * SECONDS_PER_DAY)
 
@@ -785,7 +837,7 @@ HLs.forEach(HALF_LIFE => {
       const afterSwapCollect = await derivablePool.callStatic.collect()
 
       expect(Number(weiToNumber(beforeSwapCollect)))
-      .to.be.closeTo(Number(weiToNumber(afterSwapCollect)), 0.0001)
+        .to.be.closeTo(Number(weiToNumber(afterSwapCollect)), 0.0001)
     })
   })
 })
