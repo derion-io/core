@@ -41,7 +41,7 @@ contract AsymptoticPerpetual is Pool {
     }
 
     // r(v)
-    function _r(uint xk, uint v, uint R) internal pure returns (uint r) {
+    function _r(uint xk, uint v, uint R) internal view returns (uint r) {
         r = FullMath.mulDiv(v, xk, Q128);
         if (r > R >> 1) {
             uint denominator = FullMath.mulDiv(v, xk << 2, Q128);
@@ -58,7 +58,7 @@ contract AsymptoticPerpetual is Pool {
         return IERC20(TOKEN_R).balanceOf(address(this));
     }
 
-    function _evaluate(Market memory market, State memory state) internal pure returns (uint rA, uint rB) {
+    function _evaluate(Market memory market, State memory state) internal view returns (uint rA, uint rB) {
         rA = _r(market.xkA, state.a, state.R);
         rB = _r(market.xkB, state.b, state.R);
     }
@@ -120,6 +120,7 @@ contract AsymptoticPerpetual is Pool {
         // [PRICE SELECTION]
         State memory state = State(_reserve(), s_a, s_b);
         (Market memory market, uint rA, uint rB) = _selectPrice(state, sideIn, sideOut);
+        console.log('reserve', _reserve());
         // [CALCULATION]
         uint s = _supply(TOKEN, sideIn);
         if (sideIn == SIDE_A || sideIn == SIDE_B) {
@@ -134,6 +135,7 @@ contract AsymptoticPerpetual is Pool {
         );
         // [TRANSITION]
         (uint rA1, uint rB1) = _evaluate(market, state1);
+        console.log('rA1, rB1', rA1, rB1);
         if (sideIn == SIDE_R) {
             require(rA1 >= rA && rB1 >= rB, "MI:R");
             amountIn = state1.R - state.R;
@@ -217,7 +219,6 @@ contract AsymptoticPerpetual is Pool {
 
     function _collect() internal override returns (uint fee) {
         uint rateX64 = _decayRate(block.timestamp - INIT_TIME, PROTOCOL_HALF_LIFE);
-        require(s_collectedRate < rateX64, "NRC");
 
         State memory state = State(_reserve(), s_a, s_b);
         uint decayRateX64 = _decayRate(block.timestamp - INIT_TIME, HALF_LIFE);
@@ -228,25 +229,23 @@ contract AsymptoticPerpetual is Pool {
 
         // collect A side
         uint sA = _supply(TOKEN, SIDE_A);
-        uint sACollected = FullMath.mulDivRoundingUp(sA, s_collectedRate, Q64);
-        sA = FullMath.mulDiv(sA, rateX64, Q64);
-        if (sA > sACollected) {
+        uint sA1 = FullMath.mulDiv(sA, rateX64, Q64);
+        if (sA > s_fACollected) {
             Market memory market = _market(decayRateX64, min);
             (uint rA,) = _evaluate(market, state);
-            uint fA = sA - sACollected;
+            uint fA = sA1 - sA - s_fACollected;
             fee += FullMath.mulDiv(rA, fA, sA);
+            s_fACollected += fA;
         }
         // collect B side
         uint sB = _supply(TOKEN, SIDE_B);
-        uint sBCollected = FullMath.mulDivRoundingUp(sB, s_collectedRate, Q64);
-        sB = FullMath.mulDiv(sB, rateX64, Q64);
-        if (sB > sBCollected) {
+        uint sB1 = FullMath.mulDiv(sB, rateX64, Q64);
+        if (sB > s_fBCollected) {
             Market memory market = _market(decayRateX64, max);
             (, uint rB) = _evaluate(market, state);
-            uint fB = sB - sBCollected;
+            uint fB = sB1 - sB - s_fBCollected;
             fee += FullMath.mulDiv(rB, fB, sB);
+            s_fBCollected += fB;
         }
-
-        s_collectedRate = rateX64; // update the storage
     }
 }

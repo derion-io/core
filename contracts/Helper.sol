@@ -13,6 +13,8 @@ import "./interfaces/IPool.sol";
 import "./interfaces/IPoolFactory.sol";
 import "./interfaces/IWeth.sol";
 
+import "hardhat/console.sol";
+
 contract Helper is Constants, IHelper {
     uint internal constant SIDE_NATIVE = 0x000000000000000000000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee;
     uint constant MAX_IN = 0;
@@ -54,7 +56,7 @@ contract Helper is Constants, IHelper {
     }
 
     // v(r)
-    function _v(uint xk, uint r, uint R) internal pure returns (uint v) {
+    function _v(uint xk, uint r, uint R) internal view returns (uint v) {
         if (r <= R >> 1) {
             return FullMath.mulDivRoundingUp(r, Q128, xk);
         }
@@ -215,7 +217,7 @@ contract Helper is Constants, IHelper {
         State calldata state,
         ReserveParam calldata reserveParam,
         bytes calldata payload
-    ) external pure override returns (State memory state1) {
+    ) external view override returns (State memory state1) {
         (
         uint swapType,
         uint sideIn,
