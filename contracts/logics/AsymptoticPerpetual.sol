@@ -229,22 +229,22 @@ contract AsymptoticPerpetual is Pool {
 
         // collect A side
         uint sA = _supply(TOKEN, SIDE_A);
-        uint sA1 = FullMath.mulDiv(sA, rateX64, Q64);
-        if (sA > s_fACollected) {
+        uint sAF = FullMath.mulDiv(sA, rateX64, Q64);
+        if (sAF > sA + s_fACollected) {
             Market memory market = _market(decayRateX64, min);
             (uint rA,) = _evaluate(market, state);
-            uint fA = sA1 - sA - s_fACollected;
-            fee += FullMath.mulDiv(rA, fA, sA);
+            uint fA = sAF - sA - s_fACollected;
+            fee += FullMath.mulDiv(rA, fA, sAF);
             s_fACollected += fA;
         }
         // collect B side
         uint sB = _supply(TOKEN, SIDE_B);
-        uint sB1 = FullMath.mulDiv(sB, rateX64, Q64);
-        if (sB > s_fBCollected) {
+        uint sBF = FullMath.mulDiv(sB, rateX64, Q64);
+        if (sBF > sB + s_fBCollected) {
             Market memory market = _market(decayRateX64, max);
             (, uint rB) = _evaluate(market, state);
-            uint fB = sB1 - sB - s_fBCollected;
-            fee += FullMath.mulDiv(rB, fB, sB);
+            uint fB = sBF - sB - s_fBCollected;
+            fee += FullMath.mulDiv(rB, fB, sBF);
             s_fBCollected += fB;
         }
     }
