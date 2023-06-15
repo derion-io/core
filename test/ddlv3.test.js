@@ -194,6 +194,7 @@ describe("DDL v3", function () {
             owner,
             accountA,
             accountB,
+            poolFactory,
             weth,
             usdc,
             utr,
@@ -238,6 +239,23 @@ describe("DDL v3", function () {
                 return 0
         }
     }
+
+    describe("PoolFactory", function () {
+        it("get/setFeeToSetter", async function () {
+            const { owner, accountA, poolFactory } = await loadFixture(deployDDLv2)
+            expect(await poolFactory.getFeeToSetter()).equal(owner.address)
+            await expect(poolFactory.connect(accountA).setFeeToSetter(accountA.address)).to.be.revertedWith("UNA")
+            await poolFactory.setFeeToSetter(accountA.address)
+            expect(await poolFactory.getFeeToSetter()).equal(accountA.address)
+        })
+        it("get/setFeeTo", async function () {
+            const { owner, accountA, poolFactory } = await loadFixture(deployDDLv2)
+            expect(await poolFactory.getFeeTo()).equal(AddressZero)
+            await expect(poolFactory.connect(accountA).setFeeTo(accountA.address)).to.be.revertedWith("UNA")
+            await poolFactory.setFeeTo(accountA.address)
+            expect(await poolFactory.getFeeTo()).equal(accountA.address)
+        })
+    })
 
     describe("Pool", function () {
         async function testRIn(sideIn, amountIn, sideOut, isUseUTR) {
