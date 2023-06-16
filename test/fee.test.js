@@ -127,7 +127,7 @@ HLs.forEach(HALF_LIFE => {
         PREMIUM_RATE: params.premiumRate
       }
 
-      params = await _init(oracleLibrary, numberToWei(1), params)
+      params = await _init(oracleLibrary, numberToWei(10), params)
       const poolAddress = await poolFactory.computePoolAddress(params);
       let txSignerA = weth.connect(accountA);
       let txSignerB = weth.connect(accountB);
@@ -141,7 +141,7 @@ HLs.forEach(HALF_LIFE => {
       await weth.deposit({
         value: '100000000000000000000000000000'
       })
-      await weth.transfer(poolAddress, numberToWei(1));
+      await weth.transfer(poolAddress, numberToWei(10));
       await poolFactory.createPool(params);
       const derivablePool = await ethers.getContractAt("AsymptoticPerpetual", await poolFactory.computePoolAddress(params));
 
@@ -150,7 +150,7 @@ HLs.forEach(HALF_LIFE => {
         halfLife: bn(0)
       }
       const pool1Address = await poolFactory.computePoolAddress(params1);
-      await weth.transfer(pool1Address, numberToWei(1));
+      await weth.transfer(pool1Address, numberToWei(10));
       await poolFactory.createPool(params1);
       const poolNoHL = await ethers.getContractAt("AsymptoticPerpetual", pool1Address);
 
@@ -701,14 +701,16 @@ HLs.forEach(HALF_LIFE => {
       const { owner, derivablePool, derivable1155, stateCalHelper, A_ID, B_ID } = await loadFixture(deployDDLv2)
 
       await time.increase(30 * SECONDS_PER_DAY)
-      
+      console.log("\nOPEN POSITION\n")
       const beforeSwapCollect = await derivablePool.callStatic.collect()
+      console.log("Before", weiToNumber(beforeSwapCollect))
+
       await attemptSwap(
         derivablePool,
         0,
         SIDE_R,
         SIDE_A,
-        numberToWei(0.01),
+        numberToWei(1),
         stateCalHelper.address,
         AddressZero,
         owner.address
@@ -718,12 +720,15 @@ HLs.forEach(HALF_LIFE => {
         0,
         SIDE_R,
         SIDE_B,
-        numberToWei(0.01),
+        numberToWei(1),
         stateCalHelper.address,
         AddressZero,
         owner.address
       )
       const afterSwapCollect = await derivablePool.callStatic.collect()
+
+      
+      console.log("Afterr", weiToNumber(afterSwapCollect))
 
       expect(Number(weiToNumber(beforeSwapCollect)))
         .to.be.closeTo(Number(weiToNumber(afterSwapCollect)), 0.0001)
@@ -737,7 +742,7 @@ HLs.forEach(HALF_LIFE => {
         0,
         SIDE_R,
         SIDE_A,
-        numberToWei(0.1),
+        numberToWei(1),
         stateCalHelper.address,
         AddressZero,
         owner.address
@@ -747,17 +752,19 @@ HLs.forEach(HALF_LIFE => {
         0,
         SIDE_R,
         SIDE_B,
-        numberToWei(0.1),
+        numberToWei(1),
         stateCalHelper.address,
         AddressZero,
         owner.address
       )
 
-      await derivablePool.collect()
-
       await time.increase(30 * SECONDS_PER_DAY)
 
+      console.log("\nCLOSE POSITION\n")
+      
       const beforeSwapCollect = await derivablePool.callStatic.collect()
+
+      console.log("Before", weiToNumber(beforeSwapCollect))
 
       await attemptSwap(
         derivablePool,
@@ -782,6 +789,8 @@ HLs.forEach(HALF_LIFE => {
       )
 
       const afterSwapCollect = await derivablePool.callStatic.collect()
+
+      console.log("Afterr", weiToNumber(afterSwapCollect))
 
       expect(Number(weiToNumber(beforeSwapCollect)))
         .to.be.closeTo(Number(weiToNumber(afterSwapCollect)), 0.0001)

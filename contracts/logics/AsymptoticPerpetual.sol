@@ -233,7 +233,8 @@ contract AsymptoticPerpetual is Pool {
             uint sAVirtual = FullMath.mulDiv(sA, rateX64, Q64);
             Market memory market = _market(decayRateX64, min);
             (uint rA,) = _evaluate(market, state);
-            console.log('rA', rA, 'price', min);
+            console.log('sA', sA);
+            console.log('rA', rA);
             fee += FullMath.mulDiv(rA, sAVirtual - sA, sA);
         }
 
@@ -243,7 +244,8 @@ contract AsymptoticPerpetual is Pool {
             uint sBVirtual = FullMath.mulDiv(sB, rateX64, Q64);
             Market memory market = _market(decayRateX64, max);
             (, uint rB) = _evaluate(market, state);
-            console.log('rB', rB, 'price', max);
+            console.log('sB', sB);
+            console.log('rB', rB);
             fee += FullMath.mulDiv(rB, sBVirtual - sB, sB);
         }
 
