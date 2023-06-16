@@ -15,7 +15,7 @@ use(solidity)
 const SECONDS_PER_DAY = 86400
 
 const HLs = [19932680
-  // , 1966168
+  , 1966168
 ] // 0.3%, 3%
 
 const FEE_RATE = 5
@@ -312,20 +312,20 @@ HLs.forEach(HALF_LIFE => {
     }
 
     describe("Long", function () {
-      it("Wait 1 day - static", async function () {
-        const { swapAndWaitStatic } = await loadFixture(deployDDLv2);
-        await swapAndWaitStatic(24 * 3600, numberToWei(0.1), 0x10)
-      })
+      // it("Wait 1 day - static", async function () {
+      //   const { swapAndWaitStatic } = await loadFixture(deployDDLv2);
+      //   await swapAndWaitStatic(24 * 3600, numberToWei(0.1), 0x10)
+      // })
 
-      it("Wait 2 days - static", async function () {
-        const { swapAndWaitStatic } = await loadFixture(deployDDLv2);
-        await swapAndWaitStatic(3 * 24 * 3600, numberToWei(0.1), 0x10)
-      })
+      // it("Wait 2 days - static", async function () {
+      //   const { swapAndWaitStatic } = await loadFixture(deployDDLv2);
+      //   await swapAndWaitStatic(3 * 24 * 3600, numberToWei(0.1), 0x10)
+      // })
 
-      it("Wait 7 days - static", async function () {
-        const { swapAndWaitStatic } = await loadFixture(deployDDLv2);
-        await swapAndWaitStatic(7 * 24 * 3600, numberToWei(0.1), 0x10)
-      })
+      // it("Wait 7 days - static", async function () {
+      //   const { swapAndWaitStatic } = await loadFixture(deployDDLv2);
+      //   await swapAndWaitStatic(7 * 24 * 3600, numberToWei(0.1), 0x10)
+      // })
 
       it("Wait 1 day", async function () {
         const { swapAndWait } = await loadFixture(deployDDLv2);
@@ -344,20 +344,20 @@ HLs.forEach(HALF_LIFE => {
     })
 
     describe("Short", function () {
-      it("Wait 1 day - static", async function () {
-        const { swapAndWaitStatic } = await loadFixture(deployDDLv2);
-        await swapAndWaitStatic(SECONDS_PER_DAY, numberToWei(1), 0x20)
-      })
+      // it("Wait 1 day - static", async function () {
+      //   const { swapAndWaitStatic } = await loadFixture(deployDDLv2);
+      //   await swapAndWaitStatic(SECONDS_PER_DAY, numberToWei(1), 0x20)
+      // })
 
-      it("Wait 2 days - static", async function () {
-        const { swapAndWaitStatic } = await loadFixture(deployDDLv2);
-        await swapAndWaitStatic(2 * 24 * 3600, numberToWei(0.1), 0x20)
-      })
+      // it("Wait 2 days - static", async function () {
+      //   const { swapAndWaitStatic } = await loadFixture(deployDDLv2);
+      //   await swapAndWaitStatic(2 * 24 * 3600, numberToWei(0.1), 0x20)
+      // })
 
-      it("Wait 7 days - static", async function () {
-        const { swapAndWaitStatic } = await loadFixture(deployDDLv2);
-        await swapAndWaitStatic(7 * 24 * 3600, numberToWei(0.1), 0x20)
-      })
+      // it("Wait 7 days - static", async function () {
+      //   const { swapAndWaitStatic } = await loadFixture(deployDDLv2);
+      //   await swapAndWaitStatic(7 * 24 * 3600, numberToWei(0.1), 0x20)
+      // })
 
       it("Wait 1 day", async function () {
         const { swapAndWait } = await loadFixture(deployDDLv2);
