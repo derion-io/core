@@ -56,7 +56,7 @@ contract Helper is Constants, IHelper {
     }
 
     // v(r)
-    function _v(uint xk, uint r, uint R) internal view returns (uint v) {
+    function _v(uint xk, uint r, uint R) internal pure returns (uint v) {
         if (r <= R >> 1) {
             return FullMath.mulDivRoundingUp(r, Q128, xk);
         }
@@ -227,6 +227,7 @@ contract Helper is Constants, IHelper {
         require(swapType == MAX_IN, 'Helper: UNSUPPORTED_SWAP_TYPE');
         state1 = State(state.R, state.a, state.b);
         (uint rA1, uint rB1) = (reserveParam.rA, reserveParam.rB);
+        uint sIn = _supply(sideIn);
         if (sideIn == SIDE_R) {
             state1.R += amount;
             if (sideOut == SIDE_A) {
@@ -236,15 +237,14 @@ contract Helper is Constants, IHelper {
             }
         } else {
             if (sideIn == SIDE_A) {
-                amount = FullMath.mulDiv(amount, reserveParam.rA, reserveParam.sIn);
+                amount = FullMath.mulDiv(amount, reserveParam.rA, sIn);
                 rA1 -= amount;
             } else if (sideIn == SIDE_B) {
-                amount = FullMath.mulDiv(amount, reserveParam.rB, reserveParam.sIn);
+                amount = FullMath.mulDiv(amount, reserveParam.rB, sIn);
                 rB1 -= amount;
             } else if (sideIn == SIDE_C) {
                 --amount; // SIDE_C sacrifices number rounding for A and B
-                uint rC = state.R - reserveParam.rA - reserveParam.rB;
-                amount = FullMath.mulDiv(amount, rC, reserveParam.sIn);
+                amount = FullMath.mulDiv(amount, reserveParam.rC, sIn);
             }
             require(sideOut == SIDE_R, 'Helper: UNSUPPORTED_SWAP_SIDEOUT');
             state1.R -= amount;

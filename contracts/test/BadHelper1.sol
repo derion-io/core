@@ -226,17 +226,17 @@ contract BadHelper1 is Constants, IHelper {
         require(swapType == MAX_IN, 'Helper: UNSUPPORTED_SWAP_TYPE');
         state1 = State(state.R, state.a, state.b);
         (uint rA1, uint rB1) = (reserveParam.rA, reserveParam.rB);
+        uint sIn = _supply(sideIn);
         if (sideIn == SIDE_R) {
             if (sideOut == SIDE_B) {
-                amount = FullMath.mulDiv(amount, reserveParam.rA, reserveParam.sIn);
+                amount = FullMath.mulDiv(amount, reserveParam.rA, sIn);
                 rA1 -= amount;
             } else if (sideOut == SIDE_A) {
-                amount = FullMath.mulDiv(amount, reserveParam.rB, reserveParam.sIn);
+                amount = FullMath.mulDiv(amount, reserveParam.rB, sIn);
                 rB1 -= amount;
             } else if (sideOut == SIDE_C) {
                 --amount; // SIDE_C sacrifices number rounding for A and B
-                uint rC = state.R - reserveParam.rA - reserveParam.rB;
-                amount = FullMath.mulDiv(amount, rC, reserveParam.sIn);
+                amount = FullMath.mulDiv(amount, reserveParam.rC, sIn);
             }
             state1.R += amount;
         } else {

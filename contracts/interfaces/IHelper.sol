@@ -7,7 +7,7 @@ interface IHelper {
     struct ReserveParam {
         uint rA;
         uint rB;
-        uint sIn;
+        uint rC;
     }
 
     function swapToState(
