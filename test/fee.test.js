@@ -771,7 +771,7 @@ HLs.forEach(HALF_LIFE => {
         0,
         SIDE_A,
         SIDE_R,
-        await derivable1155.balanceOf(owner.address, A_ID),
+        (await derivable1155.balanceOf(owner.address, A_ID)).sub(100),
         stateCalHelper.address,
         AddressZero,
         owner.address
@@ -782,7 +782,7 @@ HLs.forEach(HALF_LIFE => {
         0,
         SIDE_B,
         SIDE_R,
-        await derivable1155.balanceOf(owner.address, B_ID),
+        (await derivable1155.balanceOf(owner.address, B_ID)).sub(100),
         stateCalHelper.address,
         AddressZero,
         owner.address

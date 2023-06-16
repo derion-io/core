@@ -21,6 +21,8 @@ struct SwapParam {
 struct Market {
     uint xkA;
     uint xkB;
+    uint xkAC;
+    uint xkBC;
 }
 
 struct State {
