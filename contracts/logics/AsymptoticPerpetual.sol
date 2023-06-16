@@ -120,11 +120,10 @@ contract AsymptoticPerpetual is Pool {
         // [PRICE SELECTION]
         State memory state = State(_reserve(), s_a, s_b);
         (Market memory market, uint rA, uint rB) = _selectPrice(state, sideIn, sideOut);
-        console.log('reserve', _reserve());
         // [CALCULATION]
         uint s = _supply(TOKEN, sideIn);
         if (sideIn == SIDE_A || sideIn == SIDE_B) {
-            uint rateX64 = _decayRate(block.timestamp - INIT_TIME, PROTOCOL_HALF_LIFE);
+            uint rateX64 = _decayRate(block.timestamp - s_lastFeeCollected, PROTOCOL_HALF_LIFE);
             s = FullMath.mulDiv(s, rateX64, Q64);
         } 
         State memory state1 = IHelper(param.helper).swapToState(
@@ -135,7 +134,7 @@ contract AsymptoticPerpetual is Pool {
         );
         // [TRANSITION]
         (uint rA1, uint rB1) = _evaluate(market, state1);
-        console.log('rA1, rB1', rA1, rB1);
+        
         if (sideIn == SIDE_R) {
             require(rA1 >= rA && rB1 >= rB, "MI:R");
             amountIn = state1.R - state.R;
@@ -144,6 +143,7 @@ contract AsymptoticPerpetual is Pool {
             if (sideIn == SIDE_A) {
                 require(rB1 >= rB, "MI:A");
                 amountIn = FullMath.mulDivRoundingUp(s, rA - rA1, rA);
+                console.log("actual amount", amountIn);
             } else {
                 require(rA1 >= rA, "MI:NA");
                 if (sideIn == SIDE_B) {
@@ -218,7 +218,7 @@ contract AsymptoticPerpetual is Pool {
     }
 
     function _collect() internal override returns (uint fee) {
-        uint rateX64 = _decayRate(block.timestamp - INIT_TIME, PROTOCOL_HALF_LIFE);
+        uint rateX64 = _decayRate(block.timestamp - s_lastFeeCollected, PROTOCOL_HALF_LIFE);
 
         State memory state = State(_reserve(), s_a, s_b);
         uint decayRateX64 = _decayRate(block.timestamp - INIT_TIME, HALF_LIFE);
@@ -229,23 +229,24 @@ contract AsymptoticPerpetual is Pool {
 
         // collect A side
         uint sA = _supply(TOKEN, SIDE_A);
-        uint sAF = FullMath.mulDiv(sA, rateX64, Q64);
-        if (sAF > sA + s_fACollected) {
+        if (sA > 0) {
+            uint sAVirtual = FullMath.mulDiv(sA, rateX64, Q64);
             Market memory market = _market(decayRateX64, min);
             (uint rA,) = _evaluate(market, state);
-            uint fA = sAF - sA - s_fACollected;
-            fee += FullMath.mulDiv(rA, fA, sAF);
-            s_fACollected += fA;
+            console.log('rA', rA, 'price', min);
+            fee += FullMath.mulDiv(rA, sAVirtual - sA, sA);
         }
+
         // collect B side
         uint sB = _supply(TOKEN, SIDE_B);
-        uint sBF = FullMath.mulDiv(sB, rateX64, Q64);
-        if (sBF > sB + s_fBCollected) {
+        if (sB > 0) {
+            uint sBVirtual = FullMath.mulDiv(sB, rateX64, Q64);
             Market memory market = _market(decayRateX64, max);
             (, uint rB) = _evaluate(market, state);
-            uint fB = sBF - sB - s_fBCollected;
-            fee += FullMath.mulDiv(rB, fB, sBF);
-            s_fBCollected += fB;
+            console.log('rB', rB, 'price', max);
+            fee += FullMath.mulDiv(rB, sBVirtual - sB, sB);
         }
+
+        s_lastFeeCollected = block.timestamp;
     }
 }

@@ -57,6 +57,7 @@ abstract contract Pool is IPool, Storage, Events, Constants {
 
         s_a = params.a;
         s_b = params.b;
+        s_lastFeeCollected = INIT_TIME;
 
         uint idA = _packID(address(this), SIDE_A);
         uint idB = _packID(address(this), SIDE_B);
