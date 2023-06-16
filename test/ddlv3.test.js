@@ -257,6 +257,37 @@ describe("DDL v3", function () {
         })
     })
 
+    describe("Token", function () {
+        it("isApprovedForAll", async function () {
+            const { owner, derivable1155, accountA, utr } = await loadFixture(deployDDLv2)
+            expect(await derivable1155.isApprovedForAll(owner.address, accountA.address)).equal(false)
+            await derivable1155.setApprovalForAll(accountA.address, true)
+            expect(await derivable1155.isApprovedForAll(owner.address, accountA.address)).equal(true)
+            expect(await derivable1155.isApprovedForAll(owner.address, utr.address)).equal(true)
+        })
+        it("setDescriptorSetter", async function () {
+            const { owner, derivable1155, accountA, accountB, utr } = await loadFixture(deployDDLv2)
+            // deploy descriptor
+            const TokenDescriptor = await ethers.getContractFactory("TokenDescriptor")
+            const tokenDescriptor = await TokenDescriptor.deploy()
+            await tokenDescriptor.deployed()
+            await expect(derivable1155.connect(accountA).setDescriptorSetter(accountB.address)).to.be.revertedWith("UNAUTHORIZED")
+            await expect(derivable1155.connect(accountA).setDescriptor(tokenDescriptor.address)).to.be.revertedWith("UNAUTHORIZED")
+            await derivable1155.setDescriptorSetter(accountA.address)
+            await derivable1155.connect(accountA).setDescriptor(tokenDescriptor.address)
+        })
+        describe("ERC1155SupplyVirtual", function () {
+            it("exists", async function () {
+                const { derivable1155, derivablePool} = await loadFixture(deployDDLv2)
+                expect(await derivable1155.exists(convertId(SIDE_A, derivablePool.address))).equal(true)
+                expect(await derivable1155.exists(convertId(SIDE_B, derivablePool.address))).equal(true)
+                expect(await derivable1155.exists(convertId(SIDE_C, derivablePool.address))).equal(true)
+                expect(await derivable1155.exists(convertId(SIDE_R, derivablePool.address))).equal(false)
+                expect(await derivable1155.exists(0)).equal(false)
+            })
+        })
+    })
+
     describe("Pool", function () {
         async function testRIn(sideIn, amountIn, sideOut, isUseUTR) {
             const { owner, weth, derivablePool, utr, stateCalHelper } = await loadFixture(deployDDLv2)
