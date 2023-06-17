@@ -330,6 +330,44 @@ describe("Helper Attacks", function () {
         it("Pool0/C -> pool1/C", async function () {
             await testSwapMultiPool(SIDE_C, "0.0001", SIDE_C)
         })
+        it("check leftOver", async function () {
+            const {
+                owner,
+                weth,
+                derivablePool,
+                derivablePool1,
+                utr,
+                derivable1155,
+                stateCalHelper
+            } = await loadFixture(deployDDLv2)
+            expect(await weth.balanceOf(stateCalHelper.address)).equal(0)
+            // transfer a small amount of token_r to helper contract
+            await weth.transfer(stateCalHelper.address, pe(0.00001))
+            expect(await weth.balanceOf(stateCalHelper.address)).equal(10000000000000)
+            await weth.approve(derivablePool.address, MaxUint256)
+            await utr.exec([], [{
+                inputs: [{
+                    mode: PAYMENT,
+                    eip: 1155,
+                    token: derivable1155.address,
+                    id: packId(SIDE_A, derivablePool.address),
+                    amountIn: pe(0.0001),
+                    recipient: derivablePool.address,
+                }],
+                code: stateCalHelper.address,
+                data: (await stateCalHelper.populateTransaction.swap({
+                    sideIn: SIDE_A,
+                    poolIn: derivablePool.address,
+                    sideOut: SIDE_B,
+                    poolOut: derivablePool1.address,
+                    amountIn: pe(0.0001),
+                    expiration: 0,
+                    payer: owner.address,
+                    recipient: owner.address
+                })).data,
+            }], opts)
+            expect(await weth.balanceOf(stateCalHelper.address)).equal(0)
+        })
     })
 
     describe("Swap in 1 pool", function () {
@@ -338,7 +376,6 @@ describe("Helper Attacks", function () {
                 owner,
                 weth,
                 derivablePool,
-                derivablePool1,
                 utr,
                 derivable1155,
                 stateCalHelper
