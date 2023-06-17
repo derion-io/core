@@ -12,6 +12,8 @@ import "./interfaces/IPool.sol";
 import "./logics/Storage.sol";
 import "./logics/Events.sol";
 
+import "hardhat/console.sol";
+
 abstract contract Pool is IPool, Storage, Events, Constants {
     /// Immutables
     address internal immutable UTR;
@@ -30,6 +32,7 @@ abstract contract Pool is IPool, Storage, Events, Constants {
     uint internal immutable OPEN_RATE;
 
     constructor() {
+        console.log('AAAAA');
         Params memory params = IPoolFactory(msg.sender).getParams();
         UTR = params.utr;
         TOKEN = params.token;
@@ -47,21 +50,25 @@ abstract contract Pool is IPool, Storage, Events, Constants {
         require(block.timestamp >= INIT_TIME, "PIT");
 
         uint R = IERC20(TOKEN_R).balanceOf(address(this));
+        console.log('R', R);
         require(params.a <= R >> 1 && params.b <= R >> 1, "IP");
 
         s_a = params.a;
         s_b = params.b;
 
+        console.log(1);
         uint idA = _packID(address(this), SIDE_A);
         uint idB = _packID(address(this), SIDE_B);
         uint idC = _packID(address(this), SIDE_C);
 
         // mint tokens to recipient
         uint R3 = R/3;
+        console.log(2);
         IERC1155Supply(TOKEN).mintLock(params.recipient, idA, R3, MIN_EXPIRATION_D, "");
         IERC1155Supply(TOKEN).mintLock(params.recipient, idB, R3, MIN_EXPIRATION_D, "");
         IERC1155Supply(TOKEN).mintLock(params.recipient, idC, R - (R3<<1), MIN_EXPIRATION_C, "");
 
+        console.log(1);
         emit Derivable(
             'PoolCreated',                 // topic1: eventName
             _addressToBytes32(msg.sender), // topic2: factory

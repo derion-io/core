@@ -583,10 +583,132 @@ function getOpenFeeScenerios(fee) {
   }
 }
 
+function loadFixtureFromParams (arrParams, options) {
+  async function fixture () {
+    const [owner, accountA, accountB] = await ethers.getSigners();
+    const signer = owner;
 
+    // deploy utr
+    const UTR = require("@derivable/utr/build/UniversalTokenRouter.json")
+    const UniversalRouter = new ethers.ContractFactory(UTR.abi, UTR.bytecode, owner)
+    const utr = await UniversalRouter.deploy()
+    console.log(utr.address)
+    await utr.deployed()
+
+    // deploy oracle library
+    const OracleLibrary = await ethers.getContractFactory("TestOracleHelper")
+    const oracleLibrary = await OracleLibrary.deploy()
+    await oracleLibrary.deployed()
+
+    // deploy pool factory
+    const PoolFactory = await ethers.getContractFactory("PoolFactory");
+    const poolFactory = await PoolFactory.deploy(
+      owner.address
+    );
+  
+    // deploy descriptor
+    const TokenDescriptor = await ethers.getContractFactory("TokenDescriptor")
+    const tokenDescriptor = await TokenDescriptor.deploy()
+    await tokenDescriptor.deployed()
+
+    // deploy token1155
+    const Token = await ethers.getContractFactory("Token")
+    const derivable1155 = await Token.deploy(
+      utr.address,
+      owner.address,
+      tokenDescriptor.address
+    )
+    await derivable1155.deployed()
+
+    // USDC
+    const compiledERC20 = require("@uniswap/v2-core/build/ERC20.json");
+    const erc20Factory = new ethers.ContractFactory(compiledERC20.abi, compiledERC20.bytecode, signer);
+    const usdc = await erc20Factory.deploy(numberToWei('100000000000000000000'));
+
+    // WETH
+    const compiledWETH = require("canonical-weth/build/contracts/WETH9.json")
+    const WETH = await new ethers.ContractFactory(compiledWETH.abi, compiledWETH.bytecode, signer);
+    const weth = await WETH.deploy();
+    await weth.deposit({
+      value: numberToWei("10000000000000000000")
+    })
+    
+    // INIT PAIRRRRR 
+    const quoteTokenIndex = weth.address.toLowerCase() < usdc.address.toLowerCase() ? 1 : 0
+    const initPriceX96 = encodeSqrtX96(quoteTokenIndex ? 1500 : 1, quoteTokenIndex ? 1 : 1500)
+    const Univ3PoolMock = await ethers.getContractFactory("Univ3PoolMock")
+    const uniswapPair = await Univ3PoolMock.deploy(
+      initPriceX96, 
+      initPriceX96,
+      quoteTokenIndex ? weth.address : usdc.address,
+      quoteTokenIndex ? usdc.address : weth.address,
+    )
+    await uniswapPair.deployed()
+
+    // deploy ddl pool
+    const oracle = ethers.utils.hexZeroPad(
+      bn(quoteTokenIndex).shl(255).add(bn(300).shl(256 - 64)).add(uniswapPair.address).toHexString(),
+      32,
+    )
+    const pools = arrParams.forEach(async params => {
+      let realParams = {
+        utr: utr.address,
+        token: derivable1155.address,
+        oracle,
+        reserveToken: weth.address,
+        recipient: owner.address,
+        ...params
+      }
+      realParams = await _init(oracleLibrary, numberToWei(options.initReserved || "5"), realParams)
+      console.log('params', realParams)
+      const poolAddress = await poolFactory.computePoolAddress(realParams)
+      console.log(options.initReserved || "5")
+      await weth.transfer(poolAddress, numberToWei(options.initReserved || "5"))
+      await poolFactory.createPool(realParams)
+      console.log(22222222222)
+
+      await weth.approve(poolAddress, MaxUint256)
+      await derivable1155.setApprovalForAll(poolAddress, true)
+
+      return await ethers.getContractAt("AsymptoticPerpetual", poolAddress)
+    })
+
+    // deploy helper
+    const StateCalHelper = await ethers.getContractFactory("contracts/Helper.sol:Helper")
+    const stateCalHelper = await StateCalHelper.deploy(
+      derivable1155.address,
+      weth.address
+    )
+    await stateCalHelper.deployed()
+
+    let returns = {
+      owner,
+      accountA,
+      accountB,
+      weth,
+      usdc,
+      utr,
+      derivablePools: pools,
+      derivable1155,
+      stateCalHelper,
+      uniswapPair
+    }
+
+    if (options.callback) {
+      returns = {
+        ...returns,
+        ...(await options.callback(returns))
+      }
+    }
+
+    return returns
+  }
+  return fixture
+}
 
 module.exports = {
   scenerio01,
   scenerio02,
-  getOpenFeeScenerios
+  getOpenFeeScenerios,
+  loadFixtureFromParams
 } 
