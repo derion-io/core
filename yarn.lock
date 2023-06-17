@@ -72,15 +72,15 @@
   resolved "https://registry.yarnpkg.com/@colors/colors/-/colors-1.5.0.tgz#bb504579c1cae923e6576a4f5da43d25f97bdbd9"
   integrity sha512-ooWCrlZP11i8GImSjTHYHLkvFDP48nS4+204nGb1RiX/WXYHmJA2III9/e2DWVabCESdW7hBAEzHRqUn9OUVvQ==
 
-"@derivable/erc1155-timelock@git+ssh://git@github.com:derivable-labs/erc1155-timelock.git":
+"@derivable/erc1155-timelock@git+ssh://git@github.com:derivable-labs/erc1155-timelock.git#38802cf1d2edac22af26b08efd579d306cc0ddb9":
   version "4.8.2"
-  resolved "git+ssh://git@github.com:derivable-labs/erc1155-timelock.git#b302210c38ec7341f6eb2b9ffbf99400296190e2"
+  resolved "git+ssh://git@github.com:derivable-labs/erc1155-timelock.git#38802cf1d2edac22af26b08efd579d306cc0ddb9"
 
-"@derivable/shadow-token@git+ssh://git@github.com:derivable-labs/shadow-token.git":
+"@derivable/shadow-token@git+ssh://git@github.com:derivable-labs/shadow-token.git#b1aaccf62586486f73c5695b06d5488c9196761a":
   version "1.0.0"
-  resolved "git+ssh://git@github.com:derivable-labs/shadow-token.git#c1a64b3ca399d1fbf6ae64a78dbf65dcc8beb1fe"
+  resolved "git+ssh://git@github.com:derivable-labs/shadow-token.git#b1aaccf62586486f73c5695b06d5488c9196761a"
   dependencies:
-    "@derivable/erc1155-timelock" "git+ssh://git@github.com:derivable-labs/erc1155-timelock.git"
+    "@derivable/erc1155-timelock" "git+ssh://git@github.com:derivable-labs/erc1155-timelock.git#38802cf1d2edac22af26b08efd579d306cc0ddb9"
 
 "@derivable/utr@git+ssh://git@github.com:derivable-labs/utr.git":
   version "1.0.0"

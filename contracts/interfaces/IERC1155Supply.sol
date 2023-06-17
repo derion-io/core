@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-interface IERC1155Supply {
+import "@derivable/erc1155-timelock/contracts/token/ERC1155/IERC1155Timelock.sol";
+
+interface IERC1155Supply is IERC1155Timelock {
     /**
      * @dev Total amount of tokens in with a given id.
      */

@@ -72,6 +72,27 @@ contract AsymptoticPerpetual is Pool {
         market.xkA = uint(FullMath.mulDiv(market.xkA, Q64, decayRateX64));
     }
 
+    // TODO: allow PoolFactory to config this
+    uint constant MATURITY_COEFFICIENT = 8;
+
+    function _maturityPayoff(uint maturity, uint amountOut) internal view override returns (uint) {
+        unchecked {
+            // TODO: merge MIN_EXPIRATION_C and MIN_EXPIRATION_D in to one config: MATURITY
+            uint MATURITY = MIN_EXPIRATION_C;
+            if (block.timestamp <= maturity) {
+                return amountOut;
+            }
+            uint t = maturity - block.timestamp;
+            if (MATURITY <= t) {
+                return 0;
+            }
+            t = Q64 - Q64 * t / MATURITY; // TODO: rounding up here?
+            t *= MATURITY_COEFFICIENT;
+            t = uint(int(ABDKMath64x64.exp_2(-int128(uint128(t)))));
+            return FullMath.mulDiv(amountOut, t, Q64);
+        }
+    }
+
     function _decayRate (
         uint elapsed,
         uint halfLife

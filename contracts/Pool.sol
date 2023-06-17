@@ -122,7 +122,10 @@ abstract contract Pool is IPool, Storage, Events, Constants {
                 IERC1155Supply(TOKEN).burn(payer, idIn, amountIn);
             } else {
                 IERC1155Supply(TOKEN).burn(msg.sender, idIn, amountIn);
+                payer = msg.sender;
             }
+            uint maturity = IERC1155Supply(TOKEN).locktimeOf(payer, idIn);
+            amountOut = _maturityPayoff(maturity, amountOut);
         }
         if (sideOut == SIDE_R) {
             TransferHelper.safeTransfer(TOKEN_R, recipient, amountOut);
@@ -136,4 +139,6 @@ abstract contract Pool is IPool, Storage, Events, Constants {
         uint sideOut,
         SwapParam memory param
     ) internal virtual returns(uint amountIn, uint amountOut);
+
+    function _maturityPayoff(uint maturity, uint amountOut) internal view virtual returns (uint);
 }
