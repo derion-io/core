@@ -5,7 +5,7 @@ const {
 const { expect, use } = require("chai");
 const { solidity } = require("ethereum-waffle");
 const { _init } = require("./AsymptoticPerpetual");
-const { weiToNumber, bn, getDeltaSupply, numberToWei, packId, unpackId, encodeSqrtX96, encodePayload, feeToOpenRate } = require("./utilities");
+const { bn, numberToWei, packId, encodeSqrtX96, encodePayload, feeToOpenRate } = require("./utilities");
 
 use(solidity)
 
@@ -650,7 +650,7 @@ function loadFixtureFromParams (arrParams, options) {
       bn(quoteTokenIndex).shl(255).add(bn(300).shl(256 - 64)).add(uniswapPair.address).toHexString(),
       32,
     )
-    const pools = arrParams.forEach(async params => {
+    const pools = await Promise.all(arrParams.map(async params => {
       let realParams = {
         utr: utr.address,
         token: derivable1155.address,
@@ -660,18 +660,20 @@ function loadFixtureFromParams (arrParams, options) {
         ...params
       }
       realParams = await _init(oracleLibrary, numberToWei(options.initReserved || "5"), realParams)
-      console.log('params', realParams)
       const poolAddress = await poolFactory.computePoolAddress(realParams)
-      console.log(options.initReserved || "5")
       await weth.transfer(poolAddress, numberToWei(options.initReserved || "5"))
       await poolFactory.createPool(realParams)
-      console.log(22222222222)
 
-      await weth.approve(poolAddress, MaxUint256)
+      await weth.approve(poolAddress, ethers.constants.MaxUint256)
+      await weth.connect(accountA).approve(poolAddress, ethers.constants.MaxUint256)
+      await weth.connect(accountB).approve(poolAddress, ethers.constants.MaxUint256)
+
       await derivable1155.setApprovalForAll(poolAddress, true)
+      await derivable1155.connect(accountA).setApprovalForAll(poolAddress, true)
+      await derivable1155.connect(accountB).setApprovalForAll(poolAddress, true)
 
       return await ethers.getContractAt("AsymptoticPerpetual", poolAddress)
-    })
+    }))
 
     // deploy helper
     const StateCalHelper = await ethers.getContractFactory("contracts/Helper.sol:Helper")

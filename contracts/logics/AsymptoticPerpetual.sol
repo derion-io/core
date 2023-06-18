@@ -79,7 +79,7 @@ contract AsymptoticPerpetual is Pool {
         unchecked {
             // TODO: merge MIN_EXPIRATION_C and MIN_EXPIRATION_D in to one config: MATURITY
             uint MATURITY = MIN_EXPIRATION_C;
-            if (block.timestamp <= maturity) {
+            if (block.timestamp >= maturity) {
                 return amountOut;
             }
             uint t = maturity - block.timestamp;
@@ -88,7 +88,7 @@ contract AsymptoticPerpetual is Pool {
             }
             t = Q64 - Q64 * t / MATURITY; // TODO: rounding up here?
             t *= MATURITY_COEFFICIENT;
-            t = uint(int(ABDKMath64x64.exp_2(-int128(uint128(t)))));
+            t = Q64 - uint(int(ABDKMath64x64.exp_2(-int128(uint128(t)))));
             return FullMath.mulDiv(amountOut, t, Q64);
         }
     }
