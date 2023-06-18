@@ -6,13 +6,13 @@ const { SIDE_R, SIDE_A, SIDE_B, Q64 } = require("./shared/constant")
 const { AddressZero } = require("@ethersproject/constants")
 const { expect } = require("chai")
 
-const exps = [1, 8, 10]
+const exps = [0.9, 1, 8]
 
 exps.forEach(exp => describe(`Maturity - EXP = ${exp}`, function () {
     const fixture = loadFixtureFromParams([{
         ...baseParams,
         maturity: 60,
-        maturityExp: Q64.div(exp),
+        maturityExp: exp >= 1 ? Q64.div(exp) : Q64.mul(10).div(exp*10),
     }, baseParams], {})
 
     async function closePositionPayOff(side, t) {
