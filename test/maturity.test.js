@@ -6,11 +6,13 @@ const { SIDE_R, SIDE_A, SIDE_B, Q64 } = require("./shared/constant")
 const { AddressZero } = require("@ethersproject/constants")
 const { expect } = require("chai")
 
-describe('Maturity', function () {
+const exps = [1, 8, 10]
+
+exps.forEach(exp => describe(`Maturity - EXP = ${exp}`, function () {
     const fixture = loadFixtureFromParams([{
         ...baseParams,
         maturity: 60,
-        maturityExp: Q64.div(8),
+        maturityExp: Q64.div(exp),
     }, baseParams], {})
 
     async function closePositionPayOff(side, t) {
@@ -71,7 +73,7 @@ describe('Maturity', function () {
             expect(amountOut).to.be.eq(amountOutNoMaturity)
         else
             expect(Number(weiToNumber(amountOut))/Number(weiToNumber(amountOutNoMaturity)))
-            .to.be.closeTo(1-256**(t/60-1), 1e-10)
+            .to.be.closeTo(1-2**(exp*(t/60-1)), 1e-10)
     }
 
     it('User should get amountOut = 0 if t < maturity', async function () {
@@ -145,4 +147,4 @@ describe('Maturity', function () {
     it('User should get full amount if T - t = MATURITY, buy Short', async function () {
         await closePositionPayOff(SIDE_B, 0)
     })
-})
+}))
