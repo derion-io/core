@@ -35,8 +35,8 @@ contract PoolFactory is IPoolFactory {
                 params.k,
                 params.halfLife,
                 params.premiumRate,
-                params.minExpirationD,
-                params.minExpirationC,
+                params.maturity,
+                params.maturityCoefficient,
                 params.discountRate,
                 params.openRate
             )

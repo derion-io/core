@@ -26,8 +26,8 @@ abstract contract Pool is IPool, Storage, Events, Constants {
     uint internal immutable HALF_LIFE;
 
     uint internal immutable PREMIUM_RATE;
-    uint32 internal immutable MIN_EXPIRATION_D;
-    uint32 internal immutable MIN_EXPIRATION_C;
+    uint32 internal immutable MATURITY;
+    uint internal immutable MATURITY_COEFFICIENT;
     uint internal immutable DISCOUNT_RATE;
     uint internal immutable OPEN_RATE;
 
@@ -40,8 +40,8 @@ abstract contract Pool is IPool, Storage, Events, Constants {
         K = params.k;
         MARK = params.mark;
         HALF_LIFE = params.halfLife;
-        MIN_EXPIRATION_D = params.minExpirationD;
-        MIN_EXPIRATION_C = params.minExpirationC;
+        MATURITY = params.maturity;
+        MATURITY_COEFFICIENT = params.maturityCoefficient;
         DISCOUNT_RATE = params.discountRate;
         PREMIUM_RATE = params.premiumRate;
         INIT_TIME = params.initTime > 0 ? params.initTime : block.timestamp;
@@ -60,9 +60,9 @@ abstract contract Pool is IPool, Storage, Events, Constants {
 
         // mint tokens to recipient
         uint R3 = R/3;
-        IERC1155Supply(TOKEN).mintLock(params.recipient, idA, R3, MIN_EXPIRATION_D, "");
-        IERC1155Supply(TOKEN).mintLock(params.recipient, idB, R3, MIN_EXPIRATION_D, "");
-        IERC1155Supply(TOKEN).mintLock(params.recipient, idC, R - (R3<<1), MIN_EXPIRATION_C, "");
+        IERC1155Supply(TOKEN).mintLock(params.recipient, idA, R3, MATURITY, "");
+        IERC1155Supply(TOKEN).mintLock(params.recipient, idB, R3, MATURITY, "");
+        IERC1155Supply(TOKEN).mintLock(params.recipient, idC, R - (R3<<1), MATURITY, "");
 
         emit Derivable(
             'PoolCreated',                 // topic1: eventName
@@ -102,12 +102,12 @@ abstract contract Pool is IPool, Storage, Events, Constants {
         address recipient
     ) external override returns(uint amountIn, uint amountOut) {
         SwapParam memory param = SwapParam(0, helper, payload);
-        if (sideOut == SIDE_C) {
-            require(expiration >= MIN_EXPIRATION_C, "IEC");
-        } else if (sideOut == SIDE_A || sideOut == SIDE_B) {
-            require(expiration >= MIN_EXPIRATION_D, "IED");
+        if (sideOut != SIDE_R) {
+            require(expiration >= MATURITY, "IE");
+        }
+        if (sideOut == SIDE_A || sideOut == SIDE_B) {
             if (DISCOUNT_RATE > 0) {
-                param.zeroInterestTime = (expiration - MIN_EXPIRATION_D) * DISCOUNT_RATE / Q128;
+                param.zeroInterestTime = (expiration - MATURITY) * DISCOUNT_RATE / Q128;
             }
         }
         (amountIn, amountOut) = _swap(sideIn, sideOut, param);

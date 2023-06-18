@@ -145,8 +145,8 @@ DCs.forEach(DISCOUNT_RATE => {
         initTime: 0,
         halfLife: bn(toHalfLife(0.006)),
         premiumRate: 0,
-        minExpirationD: 0,
-        minExpirationC: 0,
+        maturity: 0,
+        maturityCoefficient: 0,
         discountRate: bn(DISCOUNT_RATE).shl(128).div(100),
         feeHalfLife: 0,
         openRate: feeToOpenRate(0)
@@ -173,8 +173,8 @@ DCs.forEach(DISCOUNT_RATE => {
         initTime: 0,
         halfLife: bn(toHalfLife(0.006)),
         premiumRate: '0',
-        minExpirationD: 24 * 60 * 60,
-        minExpirationC: 12 * 60 * 60,
+        maturity: 12 * 60 * 60,
+        maturityCoefficient: 8,
         discountRate: bn(DISCOUNT_RATE).shl(128).div(100),
         feeHalfLife: 0,
         openRate: feeToOpenRate(0)

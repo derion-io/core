@@ -10,8 +10,8 @@ const baseParams = {
     initTime: 0,
     halfLife: bn(0),
     premiumRate: bn(0),
-    minExpirationD: 0,
-    minExpirationC: 0,
+    maturity: 0,
+    maturityCoefficient: 0,
     discountRate: 0,
     feeHalfLife: 0,
     openRate: feeToOpenRate(0)

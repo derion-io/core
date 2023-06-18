@@ -11,8 +11,8 @@ struct Params {
     uint    halfLife;
     uint    premiumRate;
     uint32  initTime;
-    uint32  minExpirationD;
-    uint32  minExpirationC;
+    uint32  maturity;
+    uint    maturityCoefficient;
     uint    discountRate;
     uint    openRate;
     uint k;

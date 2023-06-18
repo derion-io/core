@@ -9,8 +9,8 @@ const { expect } = require("chai")
 describe('Maturity', function () {
     const fixture = loadFixtureFromParams([{
         ...baseParams,
-        minExpirationC: 60,
-        minExpirationD: 60
+        maturity: 60,
+        maturityCoefficient: 8,
     }, baseParams], {})
 
     async function closePositionPayOff(side, t) {
