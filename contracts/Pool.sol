@@ -43,7 +43,7 @@ abstract contract Pool is IPool, Storage, Events, Constants {
         HALF_LIFE = params.halfLife;
         MATURITY = params.maturity;
         MATURITY_EXP = params.maturityExp;
-        MATURITY_COEF = Q64;
+        MATURITY_COEF = params.maturityCoef;
         DISCOUNT_RATE = params.discountRate;
         PREMIUM_RATE = params.premiumRate;
         INIT_TIME = params.initTime > 0 ? params.initTime : block.timestamp;

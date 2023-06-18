@@ -12,7 +12,8 @@ struct Params {
     uint    premiumRate;
     uint32  initTime;
     uint32  maturity;
-    uint    maturityExp;
+    uint    maturityExp;    // x64
+    uint    maturityCoef;   // x64
     uint    discountRate;
     uint    openRate;
     uint k;

@@ -9,10 +9,12 @@ const { expect } = require("chai")
 const exps = [0.9, 1, 8]
 
 exps.forEach(exp => describe(`Maturity - EXP = ${exp}`, function () {
+    const coef = 1
     const fixture = loadFixtureFromParams([{
         ...baseParams,
         maturity: 60,
-        maturityExp: exp >= 1 ? Q64.div(exp) : Q64.mul(10).div(exp*10),
+        maturityExp: bn(exp*1000).shl(64).div(1000),
+        maturityCoef: bn(coef*1000).shl(64).div(1000),
     }, baseParams], {})
 
     async function closePositionPayOff(side, t) {
