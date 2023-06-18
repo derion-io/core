@@ -126,7 +126,7 @@ async function scenerio01() {
     halfLife: bn(HALF_LIFE),
     premiumRate: bn(1).shl(128).div(2),
     maturity: 0,
-    maturityCoefficient: 0,
+    maturityExp: 0,
     discountRate: 0,
     feeHalfLife: 0,
     openRate: feeToOpenRate(0)
@@ -305,7 +305,7 @@ async function scenerio02() {
     halfLife: bn(HALF_LIFE),
     premiumRate: bn(1).shl(128).div(2),
     maturity: 0,
-    maturityCoefficient: 0,
+    maturityExp: 0,
     discountRate: 0,
     feeHalfLife: 0,
     openRate: feeToOpenRate(0)
@@ -485,7 +485,7 @@ function getOpenFeeScenerios(fee) {
       halfLife: bn(0),
       premiumRate: bn(1).shl(128).div(2),
       maturity: 0,
-      maturityCoefficient: 0,
+      maturityExp: 0,
       discountRate: 0,
       feeHalfLife: 0,
       openRate: feeToOpenRate(0)
@@ -592,7 +592,6 @@ function loadFixtureFromParams (arrParams, options) {
     const UTR = require("@derivable/utr/build/UniversalTokenRouter.json")
     const UniversalRouter = new ethers.ContractFactory(UTR.abi, UTR.bytecode, owner)
     const utr = await UniversalRouter.deploy()
-    console.log(utr.address)
     await utr.deployed()
 
     // deploy oracle library

@@ -42,7 +42,7 @@ abstract contract Pool is IPool, Storage, Events, Constants {
         MARK = params.mark;
         HALF_LIFE = params.halfLife;
         MATURITY = params.maturity;
-        MATURITY_EXP = params.maturityCoefficient;
+        MATURITY_EXP = params.maturityExp;
         MATURITY_COEF = Q64;
         DISCOUNT_RATE = params.discountRate;
         PREMIUM_RATE = params.premiumRate;
@@ -99,17 +99,17 @@ abstract contract Pool is IPool, Storage, Events, Constants {
         uint sideOut,
         address helper,
         bytes calldata payload,
-        uint32 expiration,
+        uint32 maturity,
         address payer,
         address recipient
     ) external override returns(uint amountIn, uint amountOut) {
         SwapParam memory param = SwapParam(0, helper, payload);
         if (sideOut != SIDE_R) {
-            require(expiration >= MATURITY, "IE");
+            require(maturity >= MATURITY, "IE");
         }
         if (sideOut == SIDE_A || sideOut == SIDE_B) {
             if (DISCOUNT_RATE > 0) {
-                param.zeroInterestTime = (expiration - MATURITY) * DISCOUNT_RATE / Q128;
+                param.zeroInterestTime = (maturity - MATURITY) * DISCOUNT_RATE / Q128;
             }
         }
         (amountIn, amountOut) = _swap(sideIn, sideOut, param);
@@ -128,13 +128,13 @@ abstract contract Pool is IPool, Storage, Events, Constants {
                 IERC1155Supply(TOKEN).burn(msg.sender, idIn, amountIn);
                 payer = msg.sender;
             }
-            uint maturity = IERC1155Supply(TOKEN).locktimeOf(payer, idIn);
-            amountOut = _maturityPayoff(maturity, amountOut);
+            uint maturityOut = IERC1155Supply(TOKEN).locktimeOf(payer, idIn);
+            amountOut = _maturityPayoff(maturityOut, amountOut);
         }
         if (sideOut == SIDE_R) {
             TransferHelper.safeTransfer(TOKEN_R, recipient, amountOut);
         } else {
-            IERC1155Supply(TOKEN).mintLock(recipient, _packID(address(this), sideOut), amountOut, expiration, "");
+            IERC1155Supply(TOKEN).mintLock(recipient, _packID(address(this), sideOut), amountOut, maturity, "");
         }
     }
 

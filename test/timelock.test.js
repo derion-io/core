@@ -129,7 +129,7 @@ describe("Timelock", function () {
       halfLife: bn(HALF_LIFE),
       premiumRate: bn(1).shl(128).div(2),
       maturity: 0,
-      maturityCoefficient: 0,
+      maturityExp: 0,
       discountRate: 0,
       feeHalfLife: 0,
       openRate: feeToOpenRate(0)

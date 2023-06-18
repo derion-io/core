@@ -161,7 +161,7 @@ describe("Helper Attacks", function () {
             halfLife: bn(HALF_LIFE),
             premiumRate: bn(1).shl(128).div(2),
             maturity: 0,
-            maturityCoefficient: 0,
+            maturityExp: 0,
             discountRate: 0,
             feeHalfLife: 0,
             openRate: feeToOpenRate(0)
@@ -191,7 +191,7 @@ describe("Helper Attacks", function () {
             halfLife: bn(HALF_LIFE),
             premiumRate: bn(1).shl(128).div(2),
             maturity: 0,
-            maturityCoefficient: 0,
+            maturityExp: 0,
             discountRate: 0,
             feeHalfLife: 0,
             openRate: feeToOpenRate(0)
@@ -290,7 +290,7 @@ describe("Helper Attacks", function () {
                     sideOut: sideOut,
                     poolOut: derivablePool1.address,
                     amountIn: pe(amountIn),
-                    expiration: 0,
+                    maturity: 0,
                     payer: owner.address,
                     recipient: owner.address
                 })).data,
@@ -361,7 +361,7 @@ describe("Helper Attacks", function () {
                     sideOut: SIDE_B,
                     poolOut: derivablePool1.address,
                     amountIn: pe(0.0001),
-                    expiration: 0,
+                    maturity: 0,
                     payer: owner.address,
                     recipient: owner.address
                 })).data,
@@ -402,7 +402,7 @@ describe("Helper Attacks", function () {
                     sideOut: sideOut,
                     poolOut: derivablePool.address,
                     amountIn: pe(amountIn),
-                    expiration: 0,
+                    maturity: 0,
                     payer: owner.address,
                     recipient: owner.address
                 })).data,
@@ -452,7 +452,7 @@ describe("Helper Attacks", function () {
                     sideOut: sideOut,
                     poolOut: derivablePool.address,
                     amountIn: pe(amountIn),
-                    expiration: 0,
+                    maturity: 0,
                     payer: owner.address,
                     recipient: owner.address
                 })).data,
@@ -510,7 +510,7 @@ describe("Helper Attacks", function () {
                     sideOut: SIDE_NATIVE,
                     poolOut: derivablePool.address,
                     amountIn: balanceInBefore,
-                    expiration: 0,
+                    maturity: 0,
                     payer: owner.address,
                     recipient: owner.address
                 })).data,

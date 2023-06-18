@@ -44,7 +44,7 @@ contract TestHelper {
     function swapInAll(
         uint sideIn,
         uint sideOut,
-        uint32 expiration,
+        uint32 maturity,
         address payer,
         address recipient
     ) external returns (uint, uint) {
@@ -60,7 +60,7 @@ contract TestHelper {
             sideOut,
             HELPER,
             payload,
-            expiration,
+            maturity,
             payer,
             recipient
         );

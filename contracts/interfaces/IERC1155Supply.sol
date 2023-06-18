@@ -18,7 +18,7 @@ interface IERC1155Supply is IERC1155Timelock {
         address to,
         uint256 id,
         uint256 amount,
-        uint32 expiration,
+        uint32 maturity,
         bytes memory data
     ) external;
 

@@ -1,8 +1,8 @@
 const { loadFixture, time } = require("@nomicfoundation/hardhat-network-helpers")
 const { baseParams } = require("./shared/baseParams")
 const { loadFixtureFromParams } = require("./shared/scenerios")
-const { attemptSwap, weiToNumber, numberToWei, attemptStaticSwap } = require("./shared/utilities")
-const { SIDE_R, SIDE_A, SIDE_B } = require("./shared/constant")
+const { attemptSwap, weiToNumber, numberToWei, attemptStaticSwap, bn } = require("./shared/utilities")
+const { SIDE_R, SIDE_A, SIDE_B, Q64 } = require("./shared/constant")
 const { AddressZero } = require("@ethersproject/constants")
 const { expect } = require("chai")
 
@@ -10,7 +10,7 @@ describe('Maturity', function () {
     const fixture = loadFixtureFromParams([{
         ...baseParams,
         maturity: 60,
-        maturityCoefficient: 8,
+        maturityExp: Q64.div(8),
     }, baseParams], {})
 
     async function closePositionPayOff(side, t) {
@@ -135,6 +135,14 @@ describe('Maturity', function () {
     })
 
     it('User should get full amount if T - t > MATURITY, buy Short', async function () {
+        await closePositionPayOff(SIDE_B, -1)
+    })
+
+    it('User should get full amount if T - t = MATURITY, buy Long', async function () {
+        await closePositionPayOff(SIDE_A, 0)
+    })
+
+    it('User should get full amount if T - t = MATURITY, buy Short', async function () {
         await closePositionPayOff(SIDE_B, 0)
     })
 })

@@ -124,7 +124,7 @@ describe("Premium and Future", function () {
       halfLife: bn(toHalfLife(0.006)), // ten years
       premiumRate: '0',
       maturity: MIN_EXPIRE,
-      maturityCoefficient: 0,
+      maturityExp: 0,
       discountRate: bn(DC).shl(128).div(100),
       feeHalfLife: 0,
       openRate: feeToOpenRate(0)

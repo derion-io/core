@@ -82,7 +82,6 @@ contract AsymptoticPerpetual is Pool {
                 return 0;
             }
             t = Q64 - Q64 * t / MATURITY; // TODO: rounding up here?
-            t *= MATURITY_EXP;
             t = t * Q64 / MATURITY_EXP;
             t = Q64 - uint(int(ABDKMath64x64.exp_2(-int128(uint128(t)))));
             return FullMath.mulDiv(amountOut, t*MATURITY_COEF, Q128);
