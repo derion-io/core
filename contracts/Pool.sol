@@ -27,7 +27,8 @@ abstract contract Pool is IPool, Storage, Events, Constants {
 
     uint internal immutable PREMIUM_RATE;
     uint32 internal immutable MATURITY;
-    uint internal immutable MATURITY_COEFFICIENT;
+    uint internal immutable MATURITY_COEF;
+    uint internal immutable MATURITY_EXP;
     uint internal immutable DISCOUNT_RATE;
     uint internal immutable OPEN_RATE;
 
@@ -41,7 +42,8 @@ abstract contract Pool is IPool, Storage, Events, Constants {
         MARK = params.mark;
         HALF_LIFE = params.halfLife;
         MATURITY = params.maturity;
-        MATURITY_COEFFICIENT = params.maturityCoefficient;
+        MATURITY_EXP = params.maturityCoefficient;
+        MATURITY_COEF = Q64;
         DISCOUNT_RATE = params.discountRate;
         PREMIUM_RATE = params.premiumRate;
         INIT_TIME = params.initTime > 0 ? params.initTime : block.timestamp;
