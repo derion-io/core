@@ -127,6 +127,7 @@ async function scenerio01() {
     premiumRate: bn(1).shl(128).div(2),
     maturity: 0,
     maturityExp: 0,
+    maturityCoef: 0,
     discountRate: 0,
     feeHalfLife: 0,
     openRate: feeToOpenRate(0)
@@ -306,6 +307,7 @@ async function scenerio02() {
     premiumRate: bn(1).shl(128).div(2),
     maturity: 0,
     maturityExp: 0,
+    maturityCoef: 0,
     discountRate: 0,
     feeHalfLife: 0,
     openRate: feeToOpenRate(0)
@@ -486,6 +488,7 @@ function getOpenFeeScenerios(fee) {
       premiumRate: bn(1).shl(128).div(2),
       maturity: 0,
       maturityExp: 0,
+      maturityCoef: 0,
       discountRate: 0,
       feeHalfLife: 0,
       openRate: feeToOpenRate(0)

@@ -6,10 +6,25 @@ const { SIDE_R, SIDE_A, SIDE_B, Q64 } = require("./shared/constant")
 const { AddressZero } = require("@ethersproject/constants")
 const { expect } = require("chai")
 
-const exps = [0.9, 1, 8]
+const configs = [{
+    exp: 0.9,
+    coef: 1
+}, {
+    exp: 1,
+    coef: 1
+}, {
+    exp: 8,
+    coef: 1
+}, {
+    exp: 8,
+    coef: 0
+}, {
+    exp: 8,
+    coef: 0.9
+}]
 
-exps.forEach(exp => describe(`Maturity - EXP = ${exp}`, function () {
-    const coef = 1
+configs.forEach(config => describe(`Maturity - EXP = ${config.exp}, COEF ${config.coef}`, function () {
+    const {exp, coef} = config
     const fixture = loadFixtureFromParams([{
         ...baseParams,
         maturity: 60,
@@ -75,7 +90,7 @@ exps.forEach(exp => describe(`Maturity - EXP = ${exp}`, function () {
             expect(amountOut).to.be.eq(amountOutNoMaturity)
         else
             expect(Number(weiToNumber(amountOut))/Number(weiToNumber(amountOutNoMaturity)))
-            .to.be.closeTo(1-2**(exp*(t/60-1)), 1e-10)
+            .to.be.closeTo(coef*(1-2**(exp*(t/60-1))), 1e-10)
     }
 
     it('User should get amountOut = 0 if t < maturity', async function () {

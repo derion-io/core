@@ -130,6 +130,7 @@ describe("Timelock", function () {
       premiumRate: bn(1).shl(128).div(2),
       maturity: 0,
       maturityExp: 0,
+      maturityCoef: 0,
       discountRate: 0,
       feeHalfLife: 0,
       openRate: feeToOpenRate(0)

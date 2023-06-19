@@ -125,6 +125,7 @@ describe("Premium and Future", function () {
       premiumRate: '0',
       maturity: MIN_EXPIRE,
       maturityExp: 0,
+      maturityCoef: 0,
       discountRate: bn(DC).shl(128).div(100),
       feeHalfLife: 0,
       openRate: feeToOpenRate(0)
