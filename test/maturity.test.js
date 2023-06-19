@@ -31,7 +31,7 @@ configs.forEach(config => describe(`Maturity - EXP = ${config.exp}, COEF ${confi
     const {exp, coef} = config
     const fixture = loadFixtureFromParams([{
         ...baseParams,
-        maturity: 0,
+        maturity: 60,
         maturityExp: bn(exp*1000).shl(64).div(1000),
         maturityCoef: bn(coef*1000).shl(64).div(1000),
     }, baseParams], {})
