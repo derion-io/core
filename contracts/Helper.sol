@@ -240,8 +240,9 @@ contract Helper is Constants, IHelper {
                 uint rC = state.R - rA - rB;
                 amount = FullMath.mulDiv(amount, rC, s);
             }
-            require(sideOut == SIDE_R, 'Helper: UNSUPPORTED_SWAP_SIDEOUT');
-            state1.R -= amount;
+            if(sideOut == SIDE_R) {
+                state1.R -= amount;
+            }
         }
         state1.a = _v(market.xkA, rA1, state1.R);
         state1.b = _v(market.xkB, rB1, state1.R);
