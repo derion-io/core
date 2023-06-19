@@ -146,9 +146,9 @@ configs.forEach(config => describe(`Maturity - EXP = ${config.exp}, COEF ${confi
         )
 
         sides.forEach((side, index) => {
-            console.log(`side ${side} - value before ${valuesBefore[index]} - value after ${valuesAfter[index]}`)
+            expect(Number(weiToNumber(valuesBefore[index]))/Number(weiToNumber(valuesAfter[index]))).to.be.closeTo(1, 1e17)
         })
-        console.log(`to side ${toSide} - value before ${toSideValueBefore} - value after ${toSideValueAfter}`)
+        expect(toSideValueBefore).to.be.lt(toSideValueAfter)
     }
 
     async function closePositionPayOff(side, t) {
@@ -286,22 +286,18 @@ configs.forEach(config => describe(`Maturity - EXP = ${config.exp}, COEF ${confi
 
     describe("Beneficiary Side", function () {
         it("Side A's value should be increased, after B->A payoff", async function () {
-            console.log("\nSide A's value should be increased, after B->A payoff\n")
             await beneficiarySideFromPayOff(SIDE_B, SIDE_A)
         })
     
         it("Side B's value should be increased, after A->B payoff", async function () {
-            console.log("\nSide B's value should be increased, after A->B payoff\n")
             await beneficiarySideFromPayOff(SIDE_A, SIDE_B)
         })
     
         it("Side C's value should be increased, after B->C payoff", async function () {
-            console.log("\nSide C's value should be increased, after B->C payoff\n")
             await beneficiarySideFromPayOff(SIDE_B, SIDE_C)
         })
     
         it("Side C's value should be increased, after A->C payoff", async function () {
-            console.log("\nSide C's value should be increased, after A->C payoff\n")
             await beneficiarySideFromPayOff(SIDE_A, SIDE_C)
         })
     })
