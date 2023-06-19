@@ -220,13 +220,9 @@ contract Helper is Constants, IHelper {
         require(swapType == MAX_IN, 'Helper: UNSUPPORTED_SWAP_TYPE');
         state1 = State(state.R, state.a, state.b);
         (uint rA1, uint rB1) = (rA, rB);
+
         if (sideIn == SIDE_R) {
             state1.R += amount;
-            if (sideOut == SIDE_A) {
-                rA1 += amount;
-            } else if (sideOut == SIDE_B) {
-                rB1 += amount;
-            }
         } else {
             uint s = _supply(sideIn);
             if (sideIn == SIDE_A) {
@@ -235,15 +231,21 @@ contract Helper is Constants, IHelper {
             } else if (sideIn == SIDE_B) {
                 amount = FullMath.mulDiv(amount, rB, s);
                 rB1 -= amount;
-            } else if (sideIn == SIDE_C) {
+            } else /*if (sideIn == SIDE_C)*/ {
                 --amount; // SIDE_C sacrifices number rounding for A and B
                 uint rC = state.R - rA - rB;
                 amount = FullMath.mulDiv(amount, rC, s);
             }
-            if(sideOut == SIDE_R) {
-                state1.R -= amount;
-            }
         }
+
+        if (sideOut == SIDE_R) {
+            state1.R -= amount;
+        } else if (sideOut == SIDE_A) {
+            rA1 += amount;
+        } else if (sideOut == SIDE_B) {
+            rB1 += amount;
+        }
+
         state1.a = _v(market.xkA, rA1, state1.R);
         state1.b = _v(market.xkB, rB1, state1.R);
     }
