@@ -25,8 +25,8 @@ abstract contract Pool is IPool, Storage, Events, Constants {
 
     uint internal immutable PREMIUM_RATE;
     uint32 internal immutable MATURITY;
-    uint internal immutable MATURITY_COEF;
-    uint internal immutable MATURITY_EXP;
+    uint32 internal immutable MATURITY_VEST;
+    uint internal immutable MATURITY_RATE;
     uint internal immutable DISCOUNT_RATE;
     uint internal immutable OPEN_RATE;
 
@@ -40,8 +40,8 @@ abstract contract Pool is IPool, Storage, Events, Constants {
         MARK = params.mark;
         HALF_LIFE = params.halfLife;
         MATURITY = params.maturity;
-        MATURITY_EXP = params.maturityExp;
-        MATURITY_COEF = params.maturityCoef;
+        MATURITY_VEST = params.maturityVest;
+        MATURITY_RATE = params.maturityRate;
         DISCOUNT_RATE = params.discountRate;
         PREMIUM_RATE = params.premiumRate;
         INIT_TIME = params.initTime > 0 ? params.initTime : block.timestamp;
@@ -60,9 +60,9 @@ abstract contract Pool is IPool, Storage, Events, Constants {
 
         // mint tokens to recipient
         uint R3 = R/3;
-        IERC1155Supply(TOKEN).mintLock(params.recipient, idA, R3, uint32(INIT_TIME) + MATURITY, "");
-        IERC1155Supply(TOKEN).mintLock(params.recipient, idB, R3, uint32(INIT_TIME) + MATURITY, "");
-        IERC1155Supply(TOKEN).mintLock(params.recipient, idC, R - (R3<<1), uint32(INIT_TIME) + MATURITY, "");
+        IERC1155Supply(TOKEN).mintLock(params.recipient, idA, R3, MATURITY, "");
+        IERC1155Supply(TOKEN).mintLock(params.recipient, idB, R3, MATURITY, "");
+        IERC1155Supply(TOKEN).mintLock(params.recipient, idC, R - (R3<<1), MATURITY, "");
 
         emit Derivable(
             'PoolCreated',                 // topic1: eventName
@@ -112,7 +112,7 @@ abstract contract Pool is IPool, Storage, Events, Constants {
         if (sideOut == SIDE_A || sideOut == SIDE_B) {
             if (DISCOUNT_RATE > 0) {
                 // TODO: maturity
-                param.zeroInterestTime = (maturity - block.timestamp - MATURITY) * DISCOUNT_RATE / Q128;
+                param.zeroInterestTime = (maturity - MATURITY) * DISCOUNT_RATE / Q128;
             }
         }
         (amountIn, amountOut) = _swap(sideIn, sideOut, param);

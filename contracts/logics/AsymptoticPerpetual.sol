@@ -74,17 +74,18 @@ contract AsymptoticPerpetual is Pool {
 
     function _maturityPayoff(uint maturity, uint amountOut) internal view override returns (uint) {
         unchecked {
-            if (block.timestamp >= maturity) {
+            if (maturity <= block.timestamp) {
                 return amountOut;
             }
-            uint t = maturity - block.timestamp;
-            if (MATURITY <= t) {
+            uint remain = maturity - block.timestamp;
+            if (MATURITY <= remain) {
                 return 0;
             }
-            t = Q64 - Q64 * t / MATURITY; // TODO: rounding up here?
-            t = t * MATURITY_EXP / Q64;
-            t = Q64 - uint(int(ABDKMath64x64.exp_2(-int128(uint128(t)))));
-            return FullMath.mulDiv(amountOut, t*MATURITY_COEF, Q128);
+            uint elapsed = MATURITY - remain;
+            if (elapsed < MATURITY_VEST) {
+                amountOut = amountOut * elapsed / MATURITY_VEST;
+            }
+            return FullMath.mulDiv(amountOut, MATURITY_RATE, Q128);
         }
     }
 

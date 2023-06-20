@@ -33,8 +33,8 @@ configs.forEach(config => describe(`Maturity - EXP = ${config.exp}, COEF ${confi
     const fixture = loadFixtureFromParams([{
         ...baseParams,
         maturity: 60,
-        maturityExp: bn(exp*1000).shl(64).div(1000),
-        maturityCoef: bn(coef*1000).shl(64).div(1000),
+        maturityVest: Math.floor(60 / exp),
+        maturityRate: bn(coef*1000).shl(128).div(1000),
     }, baseParams], {})
 
     async function beneficiarySideFromPayOff(fromSide, toSide) {

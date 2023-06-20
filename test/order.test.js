@@ -128,8 +128,8 @@ describe("Order", function () {
             halfLife: bn(HALF_LIFE),
             premiumRate: 0,
             maturity: 0,
-            maturityExp: 0,
-            maturityCoef: 0,
+            maturityVest: 0,
+            maturityRate: 0,
             discountRate: 0,
             feeHalfLife: 0,
             openRate: feeToOpenRate(0)
