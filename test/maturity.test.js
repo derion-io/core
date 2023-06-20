@@ -22,7 +22,8 @@ const configs = [
 {
     exp: 8,
     coef: 0
-}, {
+}, 
+{
     exp: 8,
     coef: 0.9
 }
@@ -181,7 +182,7 @@ configs.forEach(config => describe(`Maturity - EXP = ${config.exp}, COEF ${confi
             accountA.address,
             0
         )
-        await time.increase(118 - t)
+        await time.increaseTo(curTime + 120 - t)
 
         const amountOutNoMaturity = await attemptStaticSwap(
             poolNoMaturity.connect(accountA),
@@ -207,11 +208,20 @@ configs.forEach(config => describe(`Maturity - EXP = ${config.exp}, COEF ${confi
             0
         )
 
-        if (t <= 0)
+        if (t <= 0) {
             expect(amountOut).to.be.eq(amountOutNoMaturity)
+        }
         else {
-            expect(Number(weiToNumber(amountOut))/Number(weiToNumber(amountOutNoMaturity)))
-            .to.be.closeTo(coef*(1-2**(exp*(t/60-1))), 1e-10)
+            const vesting_maturity = Math.floor(60 / exp)
+            const elapse = 60 - t;
+            if (elapse < vesting_maturity) {
+                expect(Number(weiToNumber(amountOut))/Number(weiToNumber(amountOutNoMaturity)))
+                .to.be.closeTo(coef * elapse/vesting_maturity, 1e-10)
+            } else {
+                expect(Number(weiToNumber(amountOut))/Number(weiToNumber(amountOutNoMaturity)))
+                .to.be.closeTo(coef, 1e-10)
+            }
+            
         }
     }
 

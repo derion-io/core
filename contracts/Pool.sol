@@ -112,7 +112,7 @@ abstract contract Pool is IPool, Storage, Events, Constants {
         if (sideOut == SIDE_A || sideOut == SIDE_B) {
             if (DISCOUNT_RATE > 0) {
                 // TODO: maturity
-                param.zeroInterestTime = (maturity - MATURITY) * DISCOUNT_RATE / Q128;
+                param.zeroInterestTime = (maturity - block.timestamp - MATURITY) * DISCOUNT_RATE / Q128;
             }
         }
         (amountIn, amountOut) = _swap(sideIn, sideOut, param);
