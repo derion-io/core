@@ -272,7 +272,7 @@ DCs.forEach(DISCOUNT_RATE => {
           AddressZero,
           accountB.address,
           opts
-        )).to.be.revertedWith('IED')
+        )).to.be.revertedWith('IE')
         await expect(derivablePool1.swap(
           SIDE_A,
           SIDE_C,
@@ -282,15 +282,15 @@ DCs.forEach(DISCOUNT_RATE => {
           AddressZero,
           accountB.address,
           opts
-        )).to.be.revertedWith('IEC')
+        )).to.be.revertedWith('IE')
         await time.setNextBlockTimestamp(createPoolTimestamp + 12 * 60 * 60 - 1)
-        await expect(derivable1155.safeTransferFrom(
+        await derivable1155.safeTransferFrom(
           owner.address,
           accountB.address,
           convertId(SIDE_C, derivablePool1.address),
           await derivable1155.balanceOf(owner.address, convertId(SIDE_C, derivablePool1.address)),
           0x0
-        )).to.be.revertedWith('unexpired')
+        )
         await time.increase(1)
         await derivable1155.safeTransferFrom(
           owner.address,
@@ -300,13 +300,13 @@ DCs.forEach(DISCOUNT_RATE => {
           0x0
         )
         await time.setNextBlockTimestamp(createPoolTimestamp + 24 * 60 * 60 - 1)
-        await expect(derivable1155.safeTransferFrom(
+        await derivable1155.safeTransferFrom(
           owner.address,
           accountB.address,
           convertId(SIDE_A, derivablePool1.address),
           await derivable1155.balanceOf(owner.address, convertId(SIDE_A, derivablePool1.address)),
           0x0
-        )).to.be.revertedWith('unexpired')
+        )
         await time.increase(1)
         await derivable1155.safeTransferFrom(
           owner.address,
