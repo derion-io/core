@@ -221,7 +221,7 @@ DCs.forEach(DISCOUNT_RATE => {
         SIDE_C,
         stateCalHelper.address,
         encodePayload(0, SIDE_R, SIDE_C, pe("9995")),
-        12 * 60 * 60,
+        await time.latest() + 12 * 60 * 60,
         AddressZero,
         accountB.address,
         opts
@@ -233,7 +233,7 @@ DCs.forEach(DISCOUNT_RATE => {
         SIDE_C,
         stateCalHelper.address,
         encodePayload(0, SIDE_R, SIDE_C, pe("95")),
-        12 * 60 * 60,
+        await time.latest() + 1 + 12 * 60 * 60,
         AddressZero,
         accountB.address,
         opts
@@ -268,7 +268,7 @@ DCs.forEach(DISCOUNT_RATE => {
           SIDE_A,
           stateCalHelper.address,
           encodePayload(0, SIDE_R, SIDE_A, pe(1)),
-          0,
+          await time.latest() + 1,
           AddressZero,
           accountB.address,
           opts
@@ -278,7 +278,7 @@ DCs.forEach(DISCOUNT_RATE => {
           SIDE_C,
           stateCalHelper.address,
           encodePayload(0, SIDE_A, SIDE_R, pe(1)),
-          0,
+          await time.latest() + 1,
           AddressZero,
           accountB.address,
           opts
@@ -353,7 +353,7 @@ DCs.forEach(DISCOUNT_RATE => {
             SIDE_A,
             stateCalHelper.address,
             encodePayload(0, SIDE_R, SIDE_A, pe(1)),
-            maturity,
+            await time.latest() + 1 + maturity,
             AddressZero,
             accountA.address,
             opts
@@ -386,7 +386,7 @@ DCs.forEach(DISCOUNT_RATE => {
             SIDE_A,
             stateCalHelper.address,
             encodePayload(0, SIDE_R, SIDE_A, pe(1)),
-            maturity,
+            await time.latest() + 1 + maturity,
             AddressZero,
             accountA.address,
             opts
@@ -445,7 +445,7 @@ DCs.forEach(DISCOUNT_RATE => {
             SIDE_A,
             stateCalHelper.address,
             encodePayload(0, SIDE_R, SIDE_A, pe(1)),
-            maturity,
+            await time.latest() + 1 + maturity,
             AddressZero,
             accountA.address,
             opts

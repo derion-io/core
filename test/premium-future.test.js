@@ -224,7 +224,7 @@ describe("Premium and Future", function () {
       0x10,
       stateCalHelper.address,
       payload,
-      365 * SECONDS_PER_DAY,
+      await time.latest() + 365 * SECONDS_PER_DAY,
       '0x0000000000000000000000000000000000000000',
       accountA.address
     )
@@ -242,7 +242,7 @@ describe("Premium and Future", function () {
       0x20,
       stateCalHelper.address,
       payload,
-      365 * SECONDS_PER_DAY,
+      await time.latest() + 365 * SECONDS_PER_DAY,
       '0x0000000000000000000000000000000000000000',
       accountA.address
     )

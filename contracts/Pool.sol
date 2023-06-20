@@ -60,9 +60,9 @@ abstract contract Pool is IPool, Storage, Events, Constants {
 
         // mint tokens to recipient
         uint R3 = R/3;
-        IERC1155Supply(TOKEN).mintLock(params.recipient, idA, R3, MATURITY, "");
-        IERC1155Supply(TOKEN).mintLock(params.recipient, idB, R3, MATURITY, "");
-        IERC1155Supply(TOKEN).mintLock(params.recipient, idC, R - (R3<<1), MATURITY, "");
+        IERC1155Supply(TOKEN).mintLock(params.recipient, idA, R3, uint32(INIT_TIME) + MATURITY, "");
+        IERC1155Supply(TOKEN).mintLock(params.recipient, idB, R3, uint32(INIT_TIME) + MATURITY, "");
+        IERC1155Supply(TOKEN).mintLock(params.recipient, idC, R - (R3<<1), uint32(INIT_TIME) + MATURITY, "");
 
         emit Derivable(
             'PoolCreated',                 // topic1: eventName
@@ -112,7 +112,7 @@ abstract contract Pool is IPool, Storage, Events, Constants {
         if (sideOut == SIDE_A || sideOut == SIDE_B) {
             if (DISCOUNT_RATE > 0) {
                 // TODO: maturity
-                param.zeroInterestTime = (maturity - MATURITY) * DISCOUNT_RATE / Q128;
+                param.zeroInterestTime = (maturity - block.timestamp - MATURITY) * DISCOUNT_RATE / Q128;
             }
         }
         (amountIn, amountOut) = _swap(sideIn, sideOut, param);

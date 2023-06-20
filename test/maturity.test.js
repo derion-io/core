@@ -10,7 +10,8 @@ const configs = [
 {
     exp: 0.9,
     coef: 1
-}, {
+}, 
+{
     exp: 1,
     coef: 1
 }, 
@@ -54,7 +55,7 @@ configs.forEach(config => describe(`Maturity - EXP = ${config.exp}, COEF ${confi
             stateCalHelper.address,
             AddressZero,
             accountA.address,
-            120
+            await time.latest() + 120
         )
 
         await attemptSwap(
@@ -66,7 +67,7 @@ configs.forEach(config => describe(`Maturity - EXP = ${config.exp}, COEF ${confi
             stateCalHelper.address,
             AddressZero,
             accountA.address,
-            120
+            await time.latest() + 120
         )
 
         await attemptSwap(
@@ -78,7 +79,7 @@ configs.forEach(config => describe(`Maturity - EXP = ${config.exp}, COEF ${confi
             stateCalHelper.address,
             AddressZero,
             accountA.address,
-            120
+            await time.latest() + 120
         )
 
         const valuesBefore = await Promise.all(sides.map(async side => {
@@ -104,7 +105,7 @@ configs.forEach(config => describe(`Maturity - EXP = ${config.exp}, COEF ${confi
             stateCalHelper.address,
             AddressZero,
             accountB.address,
-            60
+            0
         )
 
         await attemptSwap(
@@ -116,7 +117,7 @@ configs.forEach(config => describe(`Maturity - EXP = ${config.exp}, COEF ${confi
             stateCalHelper.address,
             AddressZero,
             accountB.address,
-            60
+            0
         )
 
         const valuesAfter = await Promise.all(sides.map(async side => {
@@ -142,7 +143,7 @@ configs.forEach(config => describe(`Maturity - EXP = ${config.exp}, COEF ${confi
             stateCalHelper.address,
             AddressZero,
             owner.address,
-            120
+            await time.latest() + 120
         )
 
         sides.forEach((side, index) => {
@@ -156,6 +157,7 @@ configs.forEach(config => describe(`Maturity - EXP = ${config.exp}, COEF ${confi
         const derivablePool = derivablePools[0]
         const poolNoMaturity = derivablePools[1]
 
+        const curTime = await time.latest()
         await attemptSwap(
             derivablePool,
             0,
@@ -165,7 +167,7 @@ configs.forEach(config => describe(`Maturity - EXP = ${config.exp}, COEF ${confi
             stateCalHelper.address,
             AddressZero,
             accountA.address,
-            120
+            curTime + 120
         )
 
         await attemptSwap(
@@ -179,19 +181,7 @@ configs.forEach(config => describe(`Maturity - EXP = ${config.exp}, COEF ${confi
             accountA.address,
             0
         )
-        await time.increase(119 - t)
-
-        const amountOut = await attemptStaticSwap(
-            derivablePool.connect(accountA),
-            0,
-            side,
-            SIDE_R,
-            numberToWei(1),
-            stateCalHelper.address,
-            AddressZero,
-            accountA.address,
-            0
-        )
+        await time.increase(118 - t)
 
         const amountOutNoMaturity = await attemptStaticSwap(
             poolNoMaturity.connect(accountA),
@@ -205,11 +195,24 @@ configs.forEach(config => describe(`Maturity - EXP = ${config.exp}, COEF ${confi
             0
         )
 
+        const amountOut = await attemptStaticSwap(
+            derivablePool.connect(accountA),
+            0,
+            side,
+            SIDE_R,
+            numberToWei(1),
+            stateCalHelper.address,
+            AddressZero,
+            accountA.address,
+            0
+        )
+
         if (t <= 0)
             expect(amountOut).to.be.eq(amountOutNoMaturity)
-        else
+        else {
             expect(Number(weiToNumber(amountOut))/Number(weiToNumber(amountOutNoMaturity)))
             .to.be.closeTo(coef*(1-2**(exp*(t/60-1))), 1e-10)
+        }
     }
 
     it('User should get amountOut = 0 if t < maturity', async function () {
@@ -225,7 +228,7 @@ configs.forEach(config => describe(`Maturity - EXP = ${config.exp}, COEF ${confi
             stateCalHelper.address,
             AddressZero,
             accountA.address,
-            120
+            await time.latest() + 120
         )
 
         await time.increase(45)
@@ -239,7 +242,7 @@ configs.forEach(config => describe(`Maturity - EXP = ${config.exp}, COEF ${confi
             stateCalHelper.address,
             AddressZero,
             accountA.address,
-            60
+            0
         )
         expect(amountOut).to.be.eq(0)
     })
