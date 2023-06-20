@@ -103,10 +103,15 @@ abstract contract Pool is IPool, Storage, Events, Constants {
     ) external override returns(uint amountIn, uint amountOut) {
         SwapParam memory param = SwapParam(0, helper, payload);
         if (sideOut != SIDE_R) {
-            require(maturity >= MATURITY, "IE");
+            if (maturity == 0) {
+                maturity = uint32(block.timestamp) + MATURITY;
+            } else {
+                require(maturity - block.timestamp >= MATURITY, "IE");
+            }
         }
         if (sideOut == SIDE_A || sideOut == SIDE_B) {
             if (DISCOUNT_RATE > 0) {
+                // TODO: maturity
                 param.zeroInterestTime = (maturity - MATURITY) * DISCOUNT_RATE / Q128;
             }
         }
