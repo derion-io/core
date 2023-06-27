@@ -2,6 +2,7 @@
 pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
 import "@derivable/utr/contracts/interfaces/IUniversalTokenRouter.sol";
 import "@uniswap/lib/contracts/libraries/TransferHelper.sol";
 
@@ -11,7 +12,7 @@ import "./interfaces/IERC1155Supply.sol";
 import "./interfaces/IPool.sol";
 import "./logics/Storage.sol";
 
-abstract contract Pool is IPool, Storage, Constants {
+abstract contract Pool is IPool, ERC1155Holder, Storage, Constants {
     /// immutables
     address internal immutable FEE_TO;
 
@@ -115,8 +116,8 @@ abstract contract Pool is IPool, Storage, Constants {
         } else {
             uint idIn = _packID(address(this), sideIn);
             if (payer != address(0)) {
-                IUniversalTokenRouter(UTR).discard(payer, 1155, TOKEN, idIn, amountIn);
-                IERC1155Supply(TOKEN).burn(payer, idIn, amountIn);
+                IUniversalTokenRouter(UTR).pay(payer, address(this), 1155, TOKEN, idIn, amountIn);
+                IERC1155Supply(TOKEN).burn(address(this), idIn, amountIn);
             } else {
                 IERC1155Supply(TOKEN).burn(msg.sender, idIn, amountIn);
                 payer = msg.sender;
