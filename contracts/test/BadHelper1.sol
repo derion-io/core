@@ -213,7 +213,7 @@ contract BadHelper1 is Constants, IHelper {
 
     function swapToState(
         uint xk,
-        State calldata state,
+        uint R,
         uint rA,
         uint rB,
         bytes calldata payload
@@ -225,7 +225,7 @@ contract BadHelper1 is Constants, IHelper {
             uint amount
         ) = abi.decode(payload, (uint, uint, uint, uint));
         require(swapType == MAX_IN, 'Helper: UNSUPPORTED_SWAP_TYPE');
-        state1 = State(state.R, state.a, state.b);
+        state1.R = R;
         (uint rA1, uint rB1) = (rA, rB);
         if (sideIn == SIDE_R) {
             uint s = _supply(SIDE_C);
@@ -237,7 +237,7 @@ contract BadHelper1 is Constants, IHelper {
                 rB1 -= amount;
             } else if (sideOut == SIDE_C) {
                 --amount; // SIDE_C sacrifices number rounding for A and B
-                uint rC = state.R - rA - rB;
+                uint rC = R - rA - rB;
                 amount = FullMath.mulDiv(amount, rC, s);
             }
             state1.R += amount;

@@ -6,7 +6,7 @@ import "./IPool.sol";
 interface IHelper {
     function swapToState(
         uint xk,
-        State calldata state,
+        uint R,
         uint rA,
         uint rB,
         bytes calldata payload
