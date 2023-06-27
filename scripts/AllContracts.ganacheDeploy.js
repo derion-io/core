@@ -2,8 +2,9 @@ const { ethers } = require("hardhat")
 const fs = require('fs')
 const path = require('path')
 const { bn } = require("../test/shared/utilities")
-const { numberToWei, encodeSqrtX96, packId, delay} = require("./shared/utilities")
+const { numberToWei, encodeSqrtX96, packId, delay, feeToOpenRate} = require("./shared/utilities")
 const compiledUniswapPool = require("./compiled/UniswapV3Pool.json");
+const {_init} = require("../test/shared/AsymptoticPerpetual");
 const { MaxUint256, AddressZero } = ethers.constants
 
 const fe = (x) => Number(ethers.utils.formatEther(x))
@@ -76,7 +77,7 @@ async function main() {
     addressList["uniswapFactory"] = uniswapFactory.address
     // deploy pool factory
     const PoolFactory = await ethers.getContractFactory("PoolFactory")
-    const poolFactory = await PoolFactory.deploy(owner.address)
+    const poolFactory = await PoolFactory.deploy(owner.address, 0)
     console.log('poolFactory: ', poolFactory.address)
     addressList["poolFactory"] = poolFactory.address
 
@@ -121,23 +122,30 @@ async function main() {
     await network.provider.send("evm_increaseTime", [1000])
 
     // deploy logic
-    const AsymptoticPerpetual = await ethers.getContractFactory("AsymptoticPerpetual")
-    const asymptoticPerpetual = await AsymptoticPerpetual.deploy()
-    await asymptoticPerpetual.deployed()
-    console.log('logic: ', asymptoticPerpetual.address)
-    addressList["logic"] = asymptoticPerpetual.address
+    // const AsymptoticPerpetual = await ethers.getContractFactory("AsymptoticPerpetual")
+    // const asymptoticPerpetual = await AsymptoticPerpetual.deploy()
+    // await asymptoticPerpetual.deployed()
+    // console.log('logic: ', asymptoticPerpetual.address)
+    // addressList["logic"] = asymptoticPerpetual.address
+
+    // deploy descriptor
+    const TokenDescriptor = await ethers.getContractFactory("TokenDescriptor")
+    const tokenDescriptor = await TokenDescriptor.deploy()
+    await tokenDescriptor.deployed()
 
     // deploy token1155
     const Token = await ethers.getContractFactory("Token")
     const derivable1155 = await Token.deploy(
-        utr.address
+        utr.address,
+        owner.address,
+        tokenDescriptor.address
     )
     console.log('token: ', derivable1155.address)
     addressList["token"] = derivable1155.address
     await derivable1155.deployed()
 
     // deploy helper
-    const StateCalHelper = await ethers.getContractFactory("contracts/Helper.sol:Helper")
+    const StateCalHelper = await ethers.getContractFactory("Helper")
     const stateCalHelper = await StateCalHelper.deploy(
         derivable1155.address,
         weth.address
@@ -146,29 +154,37 @@ async function main() {
     console.log(`stateCalHelper: ${stateCalHelper.address}`)
     addressList["stateCalHelper"] = stateCalHelper.address
 
+    // deploy oracle library
+    const OracleLibrary = await ethers.getContractFactory("TestOracleHelper")
+    const oracleLibrary = await OracleLibrary.deploy()
+    await oracleLibrary.deployed()
+
     // deploy ddl pool
     const oracle = ethers.utils.hexZeroPad(
         bn(quoteTokenIndex).shl(255).add(bn(300).shl(256 - 64)).add(uniswapPair.address).toHexString(),
         32,
     )
-    const params = {
+    let params = {
         utr: utr.address,
         token: derivable1155.address,
-        logic: asymptoticPerpetual.address,
         oracle,
         reserveToken: weth.address,
         recipient: owner.address,
         mark: bn(38).shl(128),
-        k: 5,
+        k: bn(5),
         a: numberToWei(1),
         b: numberToWei(1),
         initTime: 0,
-        halfLife: HALF_LIFE,
+        halfLife: bn(HALF_LIFE),
         premiumRate: bn(1).shl(128).div(2),
-        minExpirationD: 0,
-        minExpirationC: 0,
+        maturity: 0,
+        maturityVest: 0,
+        maturityRate: 0,
         discountRate: 0,
+        feeHalfLife: 0,
+        openRate: feeToOpenRate(0)
     }
+    params = await _init(oracleLibrary, numberToWei(5), params)
     const poolAddress = await poolFactory.computePoolAddress(params)
     await stateCalHelper.createPool(params, poolFactory.address, {value: pe(10)})
     const derivablePool = await ethers.getContractAt("Pool", poolAddress)
@@ -179,20 +195,22 @@ async function main() {
     const params1 = {
         utr: utr.address,
         token: derivable1155.address,
-        logic: asymptoticPerpetual.address,
         oracle,
         reserveToken: weth.address,
         recipient: owner.address,
         mark: bn(38).shl(128),
-        k: 2,
+        k: bn(2),
         a: numberToWei(1),
         b: numberToWei(1),
         initTime: 0,
-        halfLife: HALF_LIFE,
+        halfLife: bn(HALF_LIFE),
         premiumRate: bn(1).shl(128).div(2),
-        minExpirationD: 0,
-        minExpirationC: 0,
+        maturity: 0,
+        maturityVest: 0,
+        maturityRate: 0,
         discountRate: 0,
+        feeHalfLife: 0,
+        openRate: feeToOpenRate(0)
     }
     const poolAddress1 = await poolFactory.computePoolAddress(params1)
     await stateCalHelper.createPool(params1, poolFactory.address, {value: pe(10)})
@@ -208,16 +226,22 @@ async function main() {
     const params2 = {
         utr: utr.address,
         token: derivable1155.address,
-        logic: asymptoticPerpetual.address,
         oracle: oracleBtc,
         reserveToken: weth.address,
         recipient: owner.address,
         mark: bn(38).shl(128),
-        k: 16,
+        k: bn(16),
         a: numberToWei(1),
         b: numberToWei(1),
         initTime: 0,
-        halfLife: HALF_LIFE
+        halfLife: bn(HALF_LIFE),
+        premiumRate: bn(1).shl(128).div(2),
+        maturity: 0,
+        maturityVest: 0,
+        maturityRate: 0,
+        discountRate: 0,
+        feeHalfLife: 0,
+        openRate: feeToOpenRate(0)
     }
     const poolAddress2 = await poolFactory.computePoolAddress(params2)
     await stateCalHelper.createPool(params2, poolFactory.address, {value: pe(10), gasLimit: 30000000})
@@ -225,20 +249,25 @@ async function main() {
     console.log(`pool2: ${derivablePool2.address}`)
     addressList["pool2"] = derivablePool2.address
 
-
     const params3 = {
         utr: utr.address,
         token: derivable1155.address,
-        logic: asymptoticPerpetual.address,
         oracle,
         reserveToken: usdc.address,
         recipient: owner.address,
         mark: bn(38).shl(128),
-        k: 16,
+        k: bn(16),
         a: numberToWei(1),
         b: numberToWei(1),
         initTime: 0,
-        halfLife: HALF_LIFE
+        halfLife: bn(HALF_LIFE),
+        premiumRate: bn(1).shl(128).div(2),
+        maturity: 0,
+        maturityVest: 0,
+        maturityRate: 0,
+        discountRate: 0,
+        feeHalfLife: 0,
+        openRate: feeToOpenRate(0)
     }
     const poolAddress3 = await poolFactory.computePoolAddress(params3)
     await usdc.transfer(poolAddress3, pe("10000"));
