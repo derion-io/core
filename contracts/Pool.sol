@@ -124,8 +124,8 @@ abstract contract Pool is IPool, ERC1155Holder, Storage, Constants {
                 IERC1155Supply(TOKEN).burn(msg.sender, idIn, amountIn);
                 payment.payer = msg.sender;
             }
-            uint maturityOut = IERC1155Supply(TOKEN).locktimeOf(payment.payer, idIn);
-            amountOut = _maturityPayoff(maturityOut, amountOut);
+            uint inputMaturity = IERC1155Supply(TOKEN).locktimeOf(payment.payer, idIn);
+            amountOut = _maturityPayoff(inputMaturity, amountOut);
         }
         if (param.sideOut == SIDE_R) {
             TransferHelper.safeTransfer(TOKEN_R, payment.recipient, amountOut);
