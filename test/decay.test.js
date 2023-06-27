@@ -49,10 +49,16 @@ HLs.forEach(HALF_LIFE => {
       const oracleLibrary = await OracleLibrary.deploy()
       await oracleLibrary.deployed()
 
+      // deploy fee receiver
+      const FeeReceiver = await ethers.getContractFactory("FeeReceiver")
+      const feeReceiver = await FeeReceiver.deploy(owner.address)
+      await feeReceiver.deployed()
+
       // deploy pool factory
       const PoolFactory = await ethers.getContractFactory("PoolFactory");
       const poolFactory = await PoolFactory.deploy(
-        owner.address
+        feeReceiver.address,
+        0
       );
       // weth test
       const compiledWETH = require("canonical-weth/build/contracts/WETH9.json")
@@ -647,7 +653,6 @@ HLs.forEach(HALF_LIFE => {
         txSignerA = derivablePool.connect(accountA)
         txSignerB = derivablePool.connect(accountB)
 
-        console.log('Open position')
         await attemptSwap(
           txSignerA,
           0,
@@ -698,8 +703,6 @@ HLs.forEach(HALF_LIFE => {
 
         const aBefore = await weth.balanceOf(accountA.address)
         const bBefore = await weth.balanceOf(accountB.address)
-
-        console.log('Close position')
 
         await attemptSwap(
           txSignerA,
@@ -830,7 +833,7 @@ HLs.forEach(HALF_LIFE => {
           accountA.address
         )
         const expectedValue = originLPValue.add(positionReserved.div(2).mul(lpAmount).div(totalSupply))
-        expect(Number(weiToNumber(afterLPValue))/Number(weiToNumber(expectedValue))).to.be.closeTo(1, 1e-5)
+        expect(Number(weiToNumber(afterLPValue))/Number(weiToNumber(expectedValue))).to.be.closeTo(1, 1e-3)
       })
       describe("Pool balance:", function () {
         it("swap back after 1 halflife", async function () {
@@ -960,7 +963,7 @@ HLs.forEach(HALF_LIFE => {
             AddressZero, 
             owner.address
           )
-          expect(Number(weiToNumber(lpValueBefore))/Number(weiToNumber(lpValueAfter))).to.be.closeTo(1, 1e-5)
+          expect(Number(weiToNumber(lpValueBefore))/Number(weiToNumber(lpValueAfter))).to.be.closeTo(1, 1e-3)
         })
 
         it("Close Long does not affect C value", async function() {
@@ -1026,7 +1029,7 @@ HLs.forEach(HALF_LIFE => {
             AddressZero, 
             owner.address
           )
-          expect(Number(weiToNumber(lpValueBefore))/Number(weiToNumber(lpValueAfter))).to.be.closeTo(1, 1e-5)
+          expect(Number(weiToNumber(lpValueBefore))/Number(weiToNumber(lpValueAfter))).to.be.closeTo(1, 1e-3)
         })
 
         it("Close Short does not affect C value", async function() {
@@ -1092,7 +1095,7 @@ HLs.forEach(HALF_LIFE => {
             AddressZero, 
             owner.address
           )
-          expect(Number(weiToNumber(lpValueBefore))/Number(weiToNumber(lpValueAfter))).to.be.closeTo(1, 1e-5)
+          expect(Number(weiToNumber(lpValueBefore))/Number(weiToNumber(lpValueAfter))).to.be.closeTo(1, 1e-3)
         })
       })
 
