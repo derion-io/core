@@ -109,7 +109,9 @@ abstract contract Pool is IPool, ERC1155Holder, Storage, Constants {
         (amountIn, amountOut) = _swap(sideIn, sideOut, param);
         if (sideIn == SIDE_R) {
             if (payer != address(0)) {
+                uint expected = amountIn + IERC20(TOKEN_R).balanceOf(address(this));
                 IUniversalTokenRouter(UTR).pay(payer, address(this), 20, TOKEN_R, 0, amountIn);
+                require(expected <= IERC20(TOKEN_R).balanceOf(address(this)), "BP");
             } else {
                 TransferHelper.safeTransferFrom(TOKEN_R, msg.sender, address(this), amountIn);
             }
