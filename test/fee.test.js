@@ -267,3 +267,87 @@ HLs.forEach(HALF_LIFE => {
     })
   })
 })
+
+describe("FeeReceiver", function() {
+  async function fixture() {
+    const [owner, accountA, accountB] = await ethers.getSigners();
+    const signer = owner;
+
+    // deploy fee receiver
+    const FeeReceiver = await ethers.getContractFactory("FeeReceiver")
+    const feeReceiver = await FeeReceiver.deploy(owner.address)
+    await feeReceiver.deployed()
+
+    // erc20 factory
+    const compiledERC20 = require("@uniswap/v2-core/build/ERC20.json");
+    const erc20Factory = new ethers.ContractFactory(compiledERC20.abi, compiledERC20.bytecode, signer);
+    const usdc = await erc20Factory.deploy(numberToWei(100000000000));
+
+    return {
+      owner, 
+      accountA,
+      accountB,
+      feeReceiver,
+      usdc
+    }
+  }
+
+  it("Can be received native token", async function() {
+    const {owner, feeReceiver} = await loadFixture(fixture)
+    const tx = {
+      to: feeReceiver.address,
+      value: numberToWei(1)
+    };
+    const transaction = await owner.sendTransaction(tx);
+    transaction.wait()
+  })
+  it("Only setter can set collector", async function() {
+    const {accountA, owner, feeReceiver} = await loadFixture(fixture)
+    await expect(feeReceiver.connect(accountA).setCollector(accountA.address))
+    .to.be.revertedWith('FeeReciever: NOT_SETTER')
+    await feeReceiver.setCollector(accountA.address)
+    expect(await feeReceiver.getCollector()).to.be.eq(accountA.address)
+  })
+  it("Only setter can set setter", async function() {
+    const {accountA, owner, feeReceiver} = await loadFixture(fixture)
+    await expect(feeReceiver.connect(accountA).setCollector(accountA.address))
+    .to.be.revertedWith('FeeReciever: NOT_SETTER')
+    await feeReceiver.setSetter(accountA.address)
+    expect(await feeReceiver.getSetter()).to.be.eq(accountA.address)
+  })
+  it("Only collector can collect", async function() {
+    const {accountA, accountB, owner, feeReceiver, usdc} = await loadFixture(fixture)
+    await feeReceiver.setCollector(owner.address)
+    await expect(feeReceiver.connect(accountA).collect(
+      AddressZero,
+      accountA.address,
+      1
+    ))
+    .to.be.revertedWith('FeeReciever: NOT_COLLECTOR')
+    
+    await usdc.transfer(feeReceiver.address, 100)
+    const tx = {
+      to: feeReceiver.address,
+      value: 100
+    };
+    const transaction = await owner.sendTransaction(tx);
+    await transaction.wait()
+
+    const ethBalanceBefore = await accountB.getBalance()
+    const usdcBefore = await usdc.balanceOf(accountB.address)
+    await feeReceiver.collect(
+      AddressZero,
+      accountB.address,
+      1
+    )
+    await feeReceiver.collect(
+      usdc.address,
+      accountB.address,
+      1
+    )
+    const ethBalanceAfter = await accountB.getBalance()
+    const usdcAfter = await usdc.balanceOf(accountB.address)
+    expect(usdcAfter.sub(usdcBefore)).to.be.eq(1)
+    expect(ethBalanceAfter.sub(ethBalanceBefore)).to.be.eq(1)
+  })
+})
