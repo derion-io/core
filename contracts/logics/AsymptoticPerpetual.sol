@@ -133,9 +133,9 @@ contract AsymptoticPerpetual is Pool {
         {
             uint decayRateX64 = _decayRate(block.timestamp - s_i, HALF_LIFE);
             // TODO: transaction frequency effect
-            uint a = FullMath.mulDiv(state.a, Q64, decayRateX64);
-            uint b = FullMath.mulDiv(state.b, Q64, decayRateX64);
-            if (a != state.a || b != state.b) {
+            uint a = FullMath.mulDivRoundingUp(state.a, Q64, decayRateX64);
+            uint b = FullMath.mulDivRoundingUp(state.b, Q64, decayRateX64);
+            if (a < state.a || b < state.b) {
                 state.a = a;
                 state.b = b;
                 s_i = uint32(block.timestamp);
@@ -145,10 +145,9 @@ contract AsymptoticPerpetual is Pool {
         (uint xk, uint rA, uint rB) = _selectPrice(state, sideIn, sideOut);
         // [PROTOCOL FEE]
         {
-            // TODO: combine with other fee, and return to Pool to transfer
-            uint feeRateX64 = _decayRate(block.timestamp - s_f, HALF_LIFE * FEE_RATE);
-            uint rAF = FullMath.mulDiv(rA, Q64, feeRateX64);
-            uint rBF = FullMath.mulDiv(rB, Q64, feeRateX64);
+            uint feeRateX64 = _decayRate(block.timestamp - s_f, HL_FEE);
+            uint rAF = FullMath.mulDivRoundingUp(rA, Q64, feeRateX64);
+            uint rBF = FullMath.mulDivRoundingUp(rB, Q64, feeRateX64);
             if (rAF < rA || rBF < rB) {
                 uint fee = rA - rAF + rB - rBF;
                 TransferHelper.safeTransfer(TOKEN_R, FEE_TO, fee);
