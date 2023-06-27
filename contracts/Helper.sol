@@ -207,6 +207,7 @@ contract Helper is Constants, IHelper {
         );
     }
 
+    // TODO: premiumRate is passed from client to payload
     function swapToState(
         uint premiumRate,
         Slippable calldata __,
@@ -220,6 +221,7 @@ contract Helper is Constants, IHelper {
         ) = abi.decode(payload, (uint, uint, uint, uint));
         require(swapType == MAX_IN, 'Helper: UNSUPPORTED_SWAP_TYPE');
 
+        // TODO: handle SIDE_B, and unsupported premium swap
         if (premiumRate > 0 && sideIn == SIDE_R && sideOut == SIDE_A) {
             uint a = _solve(__, amount, premiumRate);
             if (a < amount) {
@@ -259,6 +261,7 @@ contract Helper is Constants, IHelper {
         state1.b = _v(Q256M/__.xk, rB1, state1.R);
     }
 
+    // TODO: handle overflow: returns amount to disable premium calculation
     function _solve(Slippable calldata __, uint amount, uint premiumRate) internal pure returns (uint) {
         uint b = __.rA - __.rB;
         uint c = __.R- __.rA - __.rB;
