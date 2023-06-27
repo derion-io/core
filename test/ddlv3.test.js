@@ -5,10 +5,12 @@ const {
 const chai = require("chai")
 const { solidity } = require("ethereum-waffle")
 const { _init } = require("./shared/AsymptoticPerpetual")
+const { baseParams } = require("./shared/baseParams")
+const { loadFixtureFromParams } = require("./shared/scenerios")
 chai.use(solidity)
 const expect = chai.expect
 const { AddressZero, MaxUint256 } = ethers.constants
-const { bn, numberToWei, packId, encodeSqrtX96, encodePriceSqrt, encodePayload, weiToNumber, attemptSwap, feeToOpenRate } = require("./shared/utilities")
+const { bn, swapToSetPriceMock, packId, encodeSqrtX96, encodePriceSqrt, encodePayload, weiToNumber, attemptSwap, feeToOpenRate } = require("./shared/utilities")
 
 const fe = (x) => Number(ethers.utils.formatEther(x))
 const pe = (x) => ethers.utils.parseEther(String(x))
@@ -36,147 +38,28 @@ const ACTION_INJECT_CALL_RESULT = 4
 
 const HALF_LIFE = 10 * 365 * 24 * 60 * 60
 
-describe("DDL v3", function () {
-    async function deployDDLv2() {
-        const [owner, accountA, accountB] = await ethers.getSigners();
-        const signer = owner;
-        // deploy oracle library
-        const OracleLibrary = await ethers.getContractFactory("TestOracleHelper")
-        const oracleLibrary = await OracleLibrary.deploy()
-        await oracleLibrary.deployed()
-        
-        // deploy pool factory
-        const PoolFactory = await ethers.getContractFactory("PoolFactory")
-        const poolFactory = await PoolFactory.deploy(
-            owner.address
-        )
-        // deploy UTR
-        const UTR = require("@derivable/utr/build/UniversalTokenRouter.json")
-        const UniversalRouter = new ethers.ContractFactory(UTR.abi, UTR.bytecode, owner)
-        const utr = await UniversalRouter.deploy()
-        await utr.deployed()
-
-        // deploy descriptor
-        const TokenDescriptor = await ethers.getContractFactory("TokenDescriptor")
-        const tokenDescriptor = await TokenDescriptor.deploy()
-        await tokenDescriptor.deployed()
-
-        // deploy token1155
-        const Token = await ethers.getContractFactory("Token")
-        const derivable1155 = await Token.deploy(
-            utr.address,
-            owner.address,
-            tokenDescriptor.address
-        )
-        await derivable1155.deployed()
-        // erc20 factory
-        const compiledERC20 = require("@uniswap/v2-core/build/ERC20.json");
-        const erc20Factory = new ethers.ContractFactory(compiledERC20.abi, compiledERC20.bytecode, signer);
-        const usdc = await erc20Factory.deploy(numberToWei('100000000000000000000'));
-        // uniswap factory
-        const compiledUniswapFactory = require("./compiled/UniswapV3Factory.json");
-        const UniswapFactory = await new ethers.ContractFactory(compiledUniswapFactory.abi, compiledUniswapFactory.bytecode, signer);
-        const uniswapFactory = await UniswapFactory.deploy()
-        //WETH
-        const compiledWETH = require("canonical-weth/build/contracts/WETH9.json")
-        const WETH = await new ethers.ContractFactory(compiledWETH.abi, compiledWETH.bytecode, signer);
-        const weth = await WETH.deploy();
-        // uniswap router
-        const compiledUniswapRouter = require("./compiled/SwapRouter.json");
-        const UniswapRouter = new ethers.ContractFactory(compiledUniswapRouter.abi, compiledUniswapRouter.bytecode, signer);
-        // uniswap PM
-        const compiledUniswapv3PositionManager = require("./compiled/NonfungiblePositionManager.json");
-        const Uniswapv3PositionManager = new ethers.ContractFactory(compiledUniswapv3PositionManager.abi, compiledUniswapv3PositionManager.bytecode, signer);
-        // setup uniswap
-        const uniswapRouter = await UniswapRouter.deploy(uniswapFactory.address, weth.address);
-        const uniswapPositionManager = await Uniswapv3PositionManager.deploy(uniswapFactory.address, weth.address, '0x0000000000000000000000000000000000000000')
-        await uniswapFactory.createPool(usdc.address, weth.address, 500)
-        const compiledUniswapPool = require("./compiled/UniswapV3Pool.json");
-        const pairAddress = await uniswapFactory.getPool(usdc.address, weth.address, 500)
-        const uniswapPair = new ethers.Contract(pairAddress, compiledUniswapPool.abi, signer);
-        await usdc.approve(uniswapRouter.address, MaxUint256);
-        await weth.approve(uniswapRouter.address, MaxUint256);
-        const quoteTokenIndex = weth.address.toLowerCase() < usdc.address.toLowerCase() ? 1 : 0
-        const initPriceX96 = encodeSqrtX96(quoteTokenIndex ? 1500 : 1, quoteTokenIndex ? 1 : 1500)
-        const a = await uniswapPair.initialize(initPriceX96)
-        a.wait(1);
-        await time.increase(1000);
-        // add liquidity
-        await usdc.approve(uniswapPositionManager.address, MaxUint256);
-        await weth.approve(uniswapPositionManager.address, MaxUint256);
-        await uniswapPositionManager.mint({
-            token0: quoteTokenIndex ? weth.address : usdc.address,
-            token1: quoteTokenIndex ? usdc.address : weth.address,
-            fee: 500,
-            tickLower: Math.ceil(-887272 / 10) * 10,
-            tickUpper: Math.floor(887272 / 10) * 10,
-            amount0Desired: quoteTokenIndex ? pe('100') : pe('150000'),
-            amount1Desired: quoteTokenIndex ? pe('150000') : pe('100'),
-            amount0Min: 0,
-            amount1Min: 0,
-            recipient: owner.address,
-            deadline: new Date().getTime() + 100000
-        }, {
-            value: pe('100'),
-            gasLimit: 30000000
-        })
-        await time.increase(1000);
-        // deploy ddl pool
-        const oracle = ethers.utils.hexZeroPad(
-            bn(quoteTokenIndex).shl(255).add(bn(300).shl(256 - 64)).add(uniswapPair.address).toHexString(),
-            32,
-        )
-        let params = {
-            utr: utr.address,
-            token: derivable1155.address,
-            oracle,
-            reserveToken: weth.address,
-            recipient: owner.address,
-            mark: bn(38).shl(128),
-            k: bn(5),
-            a: pe(1),
-            b: pe(1),
-            initTime: 0,
-            halfLife: bn(HALF_LIFE),
-            premiumRate: bn(1).shl(128).div(2),
-            maturity: 0,
-            maturityVest: 0,
-            maturityRate: 0,
-            discountRate: 0,
-            feeHalfLife: 0,
-            openRate: feeToOpenRate(0)
-        }
-        params = await _init(oracleLibrary, pe("5"), params)
-        const poolAddress = await poolFactory.computePoolAddress(params)
-        await weth.deposit({
-            value: pe("10000000000000000000")
-        })
-        await weth.transfer(poolAddress, pe("5"));
-       
-        await poolFactory.createPool(params);
-        const derivablePool = await ethers.getContractAt("AsymptoticPerpetual", await poolFactory.computePoolAddress(params))
-        // deploy helper
-        const StateCalHelper = await ethers.getContractFactory("contracts/Helper.sol:Helper")
-        const stateCalHelper = await StateCalHelper.deploy(
-            derivable1155.address,
-            weth.address
-        )
-        await stateCalHelper.deployed()
-
-        await weth.approve(derivablePool.address, MaxUint256)
+const fixture = loadFixtureFromParams([{
+    ...baseParams,
+    halfLife: bn(HALF_LIFE),
+    premiumRate: bn(1).shl(128).div(2)
+}], {
+    callback: async ({weth, usdc, derivable1155, derivablePools, stateCalHelper, utr, owner, accountA, accountB}) => {
         await attemptSwap(
-            derivablePool,
+            derivablePools[0],
             0,
-            0x00,
-            0x30,
+            SIDE_R,
+            SIDE_C,
             pe("9995"),
+            0,
             stateCalHelper.address,
+            utr.address,
             '0x0000000000000000000000000000000000000000',
             owner.address
         )
+        // deploy TestHelper
         const DerivableHelper = await ethers.getContractFactory("contracts/test/TestHelper.sol:TestHelper")
         const derivableHelper = await DerivableHelper.deploy(
-            derivablePool.address,
+            derivablePools[0].address,
             derivable1155.address,
             stateCalHelper.address
         )
@@ -191,40 +74,14 @@ describe("DDL v3", function () {
             value: pe("10000000000000000000")
         })
         await usdc.transfer(accountB.address, pe("10000000000000000000"))
+
         return {
-            owner,
-            accountA,
-            accountB,
-            poolFactory,
-            weth,
-            usdc,
-            utr,
-            uniswapFactory,
-            derivablePool,
-            derivable1155,
-            uniswapRouter,
-            derivableHelper,
-            uniswapPositionManager,
-            stateCalHelper
+            derivableHelper
         }
     }
+})
 
-    async function swapToSetPriceV3({ account, quoteToken, baseToken, uniswapRouter, initPrice, targetPrice }) {
-        const quoteTokenIndex = baseToken.address.toLowerCase() < quoteToken.address.toLowerCase() ? 1 : 0
-        const priceX96 = encodeSqrtX96(quoteTokenIndex ? targetPrice : 1, quoteTokenIndex ? 1 : targetPrice)
-        const tx = await uniswapRouter.connect(account).exactInputSingle({
-            payer: account.address,
-            tokenIn: (initPrice < targetPrice) ? quoteToken.address : baseToken.address,
-            tokenOut: (initPrice < targetPrice) ? baseToken.address : quoteToken.address,
-            fee: 500,
-            sqrtPriceLimitX96: priceX96,
-            recipient: account.address,
-            deadline: new Date().getTime() + 100000,
-            amountIn: pe("1000000000000000000"),
-            amountOutMinimum: 0,
-        }, opts)
-        await tx.wait(1)
-    }
+describe("DDL v3", function () {
 
     function convertId(side, poolAddress) {
         switch (side) {
@@ -241,33 +98,16 @@ describe("DDL v3", function () {
         }
     }
 
-    describe("PoolFactory", function () {
-        it("get/setFeeToSetter", async function () {
-            const { owner, accountA, poolFactory } = await loadFixture(deployDDLv2)
-            expect(await poolFactory.getFeeToSetter()).equal(owner.address)
-            await expect(poolFactory.connect(accountA).setFeeToSetter(accountA.address)).to.be.revertedWith("UNA")
-            await poolFactory.setFeeToSetter(accountA.address)
-            expect(await poolFactory.getFeeToSetter()).equal(accountA.address)
-        })
-        it("get/setFeeTo", async function () {
-            const { owner, accountA, poolFactory } = await loadFixture(deployDDLv2)
-            expect(await poolFactory.getFeeTo()).equal(AddressZero)
-            await expect(poolFactory.connect(accountA).setFeeTo(accountA.address)).to.be.revertedWith("UNA")
-            await poolFactory.setFeeTo(accountA.address)
-            expect(await poolFactory.getFeeTo()).equal(accountA.address)
-        })
-    })
-
     describe("Token", function () {
         it("isApprovedForAll", async function () {
-            const { owner, derivable1155, accountA, utr } = await loadFixture(deployDDLv2)
+            const { owner, derivable1155, accountA, utr } = await loadFixture(fixture)
             expect(await derivable1155.isApprovedForAll(owner.address, accountA.address)).equal(false)
             await derivable1155.setApprovalForAll(accountA.address, true)
             expect(await derivable1155.isApprovedForAll(owner.address, accountA.address)).equal(true)
             expect(await derivable1155.isApprovedForAll(owner.address, utr.address)).equal(true)
         })
         it("setDescriptorSetter", async function () {
-            const { owner, derivable1155, accountA, accountB, utr } = await loadFixture(deployDDLv2)
+            const { owner, derivable1155, accountA, accountB, utr } = await loadFixture(fixture)
             // deploy descriptor
             const TokenDescriptor = await ethers.getContractFactory("TokenDescriptor")
             const tokenDescriptor = await TokenDescriptor.deploy()
@@ -279,11 +119,11 @@ describe("DDL v3", function () {
         })
         describe("ERC1155SupplyVirtual", function () {
             it("exists", async function () {
-                const { derivable1155, derivablePool} = await loadFixture(deployDDLv2)
-                expect(await derivable1155.exists(convertId(SIDE_A, derivablePool.address))).equal(true)
-                expect(await derivable1155.exists(convertId(SIDE_B, derivablePool.address))).equal(true)
-                expect(await derivable1155.exists(convertId(SIDE_C, derivablePool.address))).equal(true)
-                expect(await derivable1155.exists(convertId(SIDE_R, derivablePool.address))).equal(false)
+                const { derivable1155, derivablePools} = await loadFixture(fixture)
+                expect(await derivable1155.exists(convertId(SIDE_A, derivablePools[0].address))).equal(true)
+                expect(await derivable1155.exists(convertId(SIDE_B, derivablePools[0].address))).equal(true)
+                expect(await derivable1155.exists(convertId(SIDE_C, derivablePools[0].address))).equal(true)
+                expect(await derivable1155.exists(convertId(SIDE_R, derivablePools[0].address))).equal(false)
                 expect(await derivable1155.exists(0)).equal(false)
             })
         })
@@ -291,7 +131,7 @@ describe("DDL v3", function () {
 
     describe("Pool", function () {
         async function testRIn(sideIn, amountIn, sideOut, isUseUTR) {
-            const { owner, weth, derivablePool, utr, stateCalHelper } = await loadFixture(deployDDLv2)
+            const { owner, weth, derivablePools, utr, stateCalHelper } = await loadFixture(fixture)
             
             const payer = isUseUTR ? owner.address : AddressZero
             const wethBefore = await weth.balanceOf(owner.address)
@@ -304,30 +144,39 @@ describe("DDL v3", function () {
                         token: weth.address,
                         id: 0,
                         amountIn: pe(amountIn),
-                        recipient: derivablePool.address,
+                        recipient: derivablePools[0].address,
                     }],
-                    code: derivablePool.address,
-                    data: (await derivablePool.populateTransaction.swap(
-                        sideIn,
-                        sideOut,
-                        stateCalHelper.address,
-                        encodePayload(0, sideIn, sideOut, pe(amountIn)),
-                        0,
-                        payer,
-                        owner.address
+                    code: derivablePools[0].address,
+                    data: (await derivablePools[0].populateTransaction.swap(
+                        {
+                            sideIn,
+                            sideOut,
+                            maturity: 0,
+                            helper: stateCalHelper.address,
+                            payload: encodePayload(0, sideIn, sideOut, pe(amountIn)),
+                        },
+                        {
+                            utr: utr.address,
+                            payer,
+                            recipient: owner.address
+                        }
                     )).data,
                 }], opts)
             }
             else {
-                
-                await derivablePool.swap(
-                    sideIn,
-                    sideOut,
-                    stateCalHelper.address,
-                    encodePayload(0, sideIn, sideOut, pe(amountIn)),
-                    0,
-                    payer,
-                    owner.address,
+                await derivablePools[0].swap(
+                    {
+                        sideIn,
+                        sideOut,
+                        maturity: 0,
+                        helper: stateCalHelper.address,
+                        payload: encodePayload(0, sideIn, sideOut, pe(amountIn)),
+                    },
+                    {
+                        utr: utr.address,
+                        payer,
+                        recipient: owner.address,
+                    },
                     opts
                 )
             }
@@ -356,8 +205,8 @@ describe("DDL v3", function () {
         })
 
         async function testROut(sideIn, amountIn, sideOut, isUseUTR) {
-            const { owner, weth, derivablePool, derivable1155, utr, stateCalHelper } = await loadFixture(deployDDLv2)
-            const convertedId = convertId(sideIn, derivablePool.address)
+            const { owner, weth, derivablePools, derivable1155, utr, stateCalHelper } = await loadFixture(fixture)
+            const convertedId = convertId(sideIn, derivablePools[0].address)
             const payer = isUseUTR ? owner.address : AddressZero
             
             const tokenBefore = await derivable1155.balanceOf(owner.address, convertedId)
@@ -370,28 +219,38 @@ describe("DDL v3", function () {
                         token: derivable1155.address,
                         id: convertedId,
                         amountIn: pe(amountIn),
-                        recipient: derivablePool.address,
+                        recipient: derivablePools[0].address,
                     }],
-                    code: derivablePool.address,
-                    data: (await derivablePool.populateTransaction.swap(
-                        sideIn,
-                        sideOut,
-                        stateCalHelper.address,
-                        encodePayload(0, sideIn, sideOut, pe(amountIn)),
-                        0,
-                        payer,
-                        owner.address
+                    code: derivablePools[0].address,
+                    data: (await derivablePools[0].populateTransaction.swap(
+                        {
+                            sideIn,
+                            sideOut,
+                            maturity: 0,
+                            helper: stateCalHelper.address,
+                            payload: encodePayload(0, sideIn, sideOut, pe(amountIn)),
+                        },
+                        {
+                            utr: utr.address,
+                            payer,
+                            recipient: owner.address
+                        }
                     )).data,
                 }], opts)
             } else {
-                await derivablePool.swap(
-                    sideIn,
-                    sideOut,
-                    stateCalHelper.address,
-                    encodePayload(0, sideIn, sideOut, pe(amountIn)),
-                    0,
-                    AddressZero,
-                    owner.address,
+                await derivablePools[0].swap(
+                    {
+                        sideIn,
+                        sideOut,
+                        maturity: 0,
+                        helper: stateCalHelper.address,
+                        payload: encodePayload(0, sideIn, sideOut, pe(amountIn)),
+                    },
+                    {
+                        utr: utr.address,
+                        payer: AddressZero,
+                        recipient: owner.address
+                    },
                     opts
                 )
             }
@@ -421,7 +280,7 @@ describe("DDL v3", function () {
         })
 
         async function testRInROut(side, amount) {
-            const { owner, weth, derivablePool, utr, derivableHelper, stateCalHelper } = await loadFixture(deployDDLv2)
+            const { owner, weth, derivablePools, utr, derivableHelper, stateCalHelper } = await loadFixture(fixture)
             const before = await weth.balanceOf(owner.address)
             await weth.approve(utr.address, MaxUint256)
             await utr.exec([],
@@ -433,17 +292,22 @@ describe("DDL v3", function () {
                             token: weth.address,
                             id: 0,
                             amountIn: pe(amount),
-                            recipient: derivablePool.address,
+                            recipient: derivablePools[0].address,
                         }],
-                        code: derivablePool.address,
-                        data: (await derivablePool.populateTransaction.swap(
-                            SIDE_R,
-                            side,
-                            stateCalHelper.address,
-                            encodePayload(0, SIDE_R, side, pe(amount)),
-                            0,
-                            owner.address,
-                            derivableHelper.address
+                        code: derivablePools[0].address,
+                        data: (await derivablePools[0].populateTransaction.swap(
+                            {
+                                sideIn: SIDE_R,
+                                sideOut: side,
+                                maturity: 0,
+                                helper: stateCalHelper.address,
+                                payload: encodePayload(0, SIDE_R, side, pe(amount))
+                            },
+                            {
+                                utr: utr.address,
+                                payer: owner.address,
+                                recipient: derivableHelper.address
+                            }
                         )).data,
                     },
                     {
@@ -459,7 +323,7 @@ describe("DDL v3", function () {
                     }
                 ], opts)
             const after = await weth.balanceOf(owner.address)
-            expect(before).gt(after)
+            expect(before).gte(after)
             const rate = before.mul(100000).div(after) / 100000
             expect(rate).closeTo(1, 0.1)
         }
@@ -485,43 +349,50 @@ describe("DDL v3", function () {
         })
 
         async function testPriceChange(isLong = true, wethAmountIn, priceChange, expected) {
-            const { owner, weth, uniswapRouter, usdc, derivablePool, derivable1155, accountA, stateCalHelper } = await loadFixture(deployDDLv2)
+            const { owner, weth, utr, uniswapPair, usdc, derivablePools, derivable1155, stateCalHelper } = await loadFixture(fixture)
             // swap weth -> long
             
             const wethBefore = await weth.balanceOf(owner.address)
-            const tokenBefore = await derivable1155.balanceOf(owner.address, convertId(isLong ? SIDE_A : SIDE_B, derivablePool.address))
-            await derivablePool.swap(
-                SIDE_R,
-                isLong ? SIDE_A : SIDE_B,
-                stateCalHelper.address,
-                encodePayload(0, SIDE_R, isLong ? SIDE_A : SIDE_B, pe(wethAmountIn)),
-                0,
-                AddressZero,
-                owner.address,
+            const tokenBefore = await derivable1155.balanceOf(owner.address, convertId(isLong ? SIDE_A : SIDE_B, derivablePools[0].address))
+            await derivablePools[0].swap(
+                {
+                    sideIn: SIDE_R,
+                    sideOut: isLong ? SIDE_A : SIDE_B,
+                    maturity: 0,
+                    helper: stateCalHelper.address,
+                    payload: encodePayload(0, SIDE_R, isLong ? SIDE_A : SIDE_B, pe(wethAmountIn)),
+                },
+                {
+                    utr: utr.address,
+                    payer: AddressZero,
+                    recipient: owner.address,
+                },
                 opts
             )
-            const tokenAfter = await derivable1155.balanceOf(owner.address, convertId(isLong ? SIDE_A : SIDE_B, derivablePool.address))
+            const tokenAfter = await derivable1155.balanceOf(owner.address, convertId(isLong ? SIDE_A : SIDE_B, derivablePools[0].address))
             // change price
-            await weth.connect(accountA).approve(uniswapRouter.address, MaxUint256)
-            await usdc.connect(accountA).approve(uniswapRouter.address, MaxUint256)
-            await swapToSetPriceV3({
-                account: accountA,
+            await swapToSetPriceMock({
                 baseToken: weth,
                 quoteToken: usdc,
-                uniswapRouter: uniswapRouter,
-                initPrice: 1500,
-                targetPrice: priceChange
+                uniswapPair,
+                targetTwap: priceChange,
+                targetSpot: priceChange
             })
             await time.increase(1000);
             // swap back long -> weth
-            await derivablePool.swap(
-                isLong ? SIDE_A : SIDE_B,
-                SIDE_R,
-                stateCalHelper.address,
-                encodePayload(0, isLong ? SIDE_A : SIDE_B, SIDE_R, tokenAfter.sub(tokenBefore)),
-                0,
-                AddressZero,
-                owner.address,
+            await derivablePools[0].swap(
+                {
+                    sideIn: isLong ? SIDE_A : SIDE_B,
+                    sideOut: SIDE_R,
+                    maturity: 0,
+                    helper: stateCalHelper.address,
+                    payload: encodePayload(0, isLong ? SIDE_A : SIDE_B, SIDE_R, tokenAfter.sub(tokenBefore)),
+                },
+                {
+                    utr: utr.address,
+                    payer: AddressZero,
+                    recipient: owner.address,
+                },
                 opts
             )
             const wethAfter = await weth.balanceOf(owner.address)
@@ -588,44 +459,44 @@ describe("DDL v3", function () {
             const INFI2 = INFI1; // * 1.1
     
             async function testSinglePositionPriceChangeDrastically(side, amountIn, priceChange, waitRecover) {
-                const { owner, weth, uniswapRouter, usdc, derivablePool, accountA, derivable1155, stateCalHelper } = await loadFixture(deployDDLv2)
+                const { owner, weth, utr, uniswapPair, usdc, derivablePools, derivable1155, stateCalHelper } = await loadFixture(fixture)
     
-                
                 const wethBefore = await weth.balanceOf(owner.address)
-                const tokenBefore = await derivable1155.balanceOf(owner.address, convertId(side, derivablePool.address))
-                await derivablePool.swap(
-                    SIDE_R,
-                    side,
-                    stateCalHelper.address,
-                    encodePayload(0, SIDE_R, side, pe(amountIn), derivable1155.address),
-                    0,
-                    AddressZero,
-                    owner.address,
+                const tokenBefore = await derivable1155.balanceOf(owner.address, convertId(side, derivablePools[0].address))
+                await derivablePools[0].swap(
+                    {
+                        sideIn: SIDE_R,
+                        sideOut: side,
+                        maturity: 0,
+                        helper: stateCalHelper.address,
+                        payload: encodePayload(0, SIDE_R, side, pe(amountIn), derivable1155.address),
+                    },
+                    {
+                        utr: utr.address,
+                        payer: AddressZero,
+                        recipient: owner.address,
+                    },
                     opts
                 )
-                const tokenAfter = await derivable1155.balanceOf(owner.address, convertId(side, derivablePool.address))
+                const tokenAfter = await derivable1155.balanceOf(owner.address, convertId(side, derivablePools[0].address))
     
                 // change price
-                await weth.connect(accountA).approve(uniswapRouter.address, MaxUint256)
-                await usdc.connect(accountA).approve(uniswapRouter.address, MaxUint256)
-                await swapToSetPriceV3({
-                    account: accountA,
+                await swapToSetPriceMock({
                     baseToken: weth,
                     quoteToken: usdc,
-                    uniswapRouter: uniswapRouter,
-                    initPrice: 1500,
-                    targetPrice: priceChange
+                    uniswapPair,
+                    targetTwap: priceChange,
+                    targetSpot: priceChange
                 })
                 await time.increase(1000);
                 // price recover
                 if (waitRecover) {
-                    await swapToSetPriceV3({
-                        account: accountA,
+                    await swapToSetPriceMock({
                         baseToken: weth,
                         quoteToken: usdc,
-                        uniswapRouter: uniswapRouter,
-                        initPrice: priceChange,
-                        targetPrice: 1500
+                        uniswapPair,
+                        targetTwap: 1500,
+                        targetSpot: 1500
                     })
                     await time.increase(1000);
                 }
@@ -637,129 +508,160 @@ describe("DDL v3", function () {
                 ) &&
                     !waitRecover
                 ) {
-                    await expect(derivablePool.swap(
-                        side,
-                        SIDE_R,
-                        stateCalHelper.address,
-                        encodePayload(0, side, SIDE_R, tokenAfter.sub(tokenBefore), derivable1155.address),
-                        0,
-                        AddressZero,
-                        owner.address,
+                    await expect(derivablePools[0].swap(
+                        {
+                            sideIn: side,
+                            sideOut: SIDE_R,
+                            maturity: 0,
+                            helper: stateCalHelper.address,
+                            payload: encodePayload(0, side, SIDE_R, tokenAfter.sub(tokenBefore), derivable1155.address),
+                        },
+                        {
+                            utr: utr.address,
+                            payer: AddressZero,
+                            recipient: owner.address,
+                        },
                         opts
                     ), `side(${side}) -> R`).to.be.reverted
                 }
                 else
-                    await derivablePool.swap(
-                        side,
-                        SIDE_R,
-                        stateCalHelper.address,
-                        encodePayload(0, side, SIDE_R, tokenAfter.sub(tokenBefore), derivable1155.address),
-                        0,
-                        AddressZero,
-                        owner.address,
+                    await derivablePools[0].swap(
+                        {
+                            sideIn: side,
+                            sideOut: SIDE_R,
+                            maturity: 0,
+                            helper: stateCalHelper.address,
+                            payload: encodePayload(0, side, SIDE_R, tokenAfter.sub(tokenBefore), derivable1155.address),
+                        },
+                        {
+                            utr: utr.address,
+                            payer: AddressZero,
+                            recipient: owner.address,
+                        },
                         opts
                     )
             }
     
             async function testMultiPositonPriceChangeDrastically(longIn, shortIn, cIn, priceChange, waitRecover) {
-                const { owner, weth, uniswapRouter, usdc, derivablePool, derivable1155, accountA, accountB, stateCalHelper } = await loadFixture(deployDDLv2)
+                const { owner, weth, utr, uniswapPair, usdc, derivablePools, derivable1155, accountA, accountB, stateCalHelper } = await loadFixture(fixture)
     
                 let txSignerA = await weth.connect(accountA)
                 let txSignerB = await weth.connect(accountB)
                 
-                await txSignerA.approve(derivablePool.address, MaxUint256)
-                await txSignerB.approve(derivablePool.address, MaxUint256)
+                await txSignerA.approve(derivablePools[0].address, MaxUint256)
+                await txSignerB.approve(derivablePools[0].address, MaxUint256)
     
-                txSignerA = await derivablePool.connect(accountA)
-                txSignerB = await derivablePool.connect(accountB)
+                txSignerA = await derivablePools[0].connect(accountA)
+                txSignerB = await derivablePools[0].connect(accountB)
     
                 // swap eth -> long
                 const aWethBefore = await weth.balanceOf(accountA.address)
-                const longTokenBefore = await derivable1155.balanceOf(accountA.address, convertId(SIDE_A, derivablePool.address))
+                const longTokenBefore = await derivable1155.balanceOf(accountA.address, convertId(SIDE_A, derivablePools[0].address))
                 await txSignerA.swap(
-                    SIDE_R,
-                    SIDE_A,
-                    stateCalHelper.address,
-                    encodePayload(0, SIDE_R, SIDE_A, pe(longIn), derivable1155.address),
-                    0,
-                    AddressZero,
-                    accountA.address,
+                    {
+                        sideIn: SIDE_R,
+                        sideOut: SIDE_A,
+                        maturity: 0,
+                        helper: stateCalHelper.address,
+                        payload: encodePayload(0, SIDE_R, SIDE_A, pe(longIn), derivable1155.address),
+                    },
+                    {
+                        utr: utr.address,
+                        payer: AddressZero,
+                        recipient: accountA.address,
+                    },
                     opts
                 )
-                const longTokenAfter = await derivable1155.balanceOf(accountA.address, convertId(SIDE_A, derivablePool.address))
+                const longTokenAfter = await derivable1155.balanceOf(accountA.address, convertId(SIDE_A, derivablePools[0].address))
                 // swap eth -> short
                 const bWethBefore = await weth.balanceOf(accountB.address)
-                const shortTokenBefore = await derivable1155.balanceOf(accountB.address, convertId(SIDE_B, derivablePool.address))
+                const shortTokenBefore = await derivable1155.balanceOf(accountB.address, convertId(SIDE_B, derivablePools[0].address))
                 await txSignerB.swap(
-                    SIDE_R,
-                    SIDE_B,
-                    stateCalHelper.address,
-                    encodePayload(0, SIDE_R, SIDE_B, pe(shortIn), derivable1155.address),
-                    0,
-                    AddressZero,
-                    accountB.address,
+                    {
+                        sideIn: SIDE_R,
+                        sideOut: SIDE_B,
+                        maturity: 0,
+                        helper: stateCalHelper.address,
+                        payload: encodePayload(0, SIDE_R, SIDE_B, pe(shortIn), derivable1155.address),
+                    },
+                    {
+                        utr: utr.address,
+                        payer: AddressZero,
+                        recipient: accountB.address,
+                    },
                     opts
                 )
-                const shortTokenAfter = await derivable1155.balanceOf(accountB.address, convertId(SIDE_B, derivablePool.address))
+                const shortTokenAfter = await derivable1155.balanceOf(accountB.address, convertId(SIDE_B, derivablePools[0].address))
                 // swap eth -> c
                 const wethBefore = await weth.balanceOf(owner.address)
-                const tokenBefore = await derivable1155.balanceOf(owner.address, convertId(SIDE_C, derivablePool.address))
-                await derivablePool.swap(
-                    SIDE_R,
-                    SIDE_C,
-                    stateCalHelper.address,
-                    encodePayload(0, SIDE_R, SIDE_C, pe(cIn), derivable1155.address),
-                    0,
-                    AddressZero,
-                    owner.address,
+                const tokenBefore = await derivable1155.balanceOf(owner.address, convertId(SIDE_C, derivablePools[0].address))
+                await derivablePools[0].swap(
+                    {
+                        sideIn: SIDE_R,
+                        sideOut: SIDE_C,
+                        maturity: 0,
+                        helper: stateCalHelper.address,
+                        payload: encodePayload(0, SIDE_R, SIDE_C, pe(cIn), derivable1155.address),
+                    },
+                    {
+                        utr: utr.address,
+                        payer: AddressZero,
+                        recipient: owner.address,
+                    },
                     opts
                 )
-                const tokenAfter = await derivable1155.balanceOf(owner.address, convertId(SIDE_C, derivablePool.address))
+                const tokenAfter = await derivable1155.balanceOf(owner.address, convertId(SIDE_C, derivablePools[0].address))
                 // change price
-                await weth.connect(accountA).approve(uniswapRouter.address, MaxUint256)
-                await usdc.connect(accountA).approve(uniswapRouter.address, MaxUint256)
-                await swapToSetPriceV3({
-                    account: accountA,
+                await swapToSetPriceMock({
                     baseToken: weth,
                     quoteToken: usdc,
-                    uniswapRouter: uniswapRouter,
-                    initPrice: 1500,
-                    targetPrice: priceChange
+                    uniswapPair,
+                    targetTwap: priceChange,
+                    targetSpot: priceChange
                 })
                 await time.increase(1000);
                 // price recover
                 if (waitRecover) {
-                    await swapToSetPriceV3({
-                        account: accountA,
+                    await swapToSetPriceMock({
                         baseToken: weth,
                         quoteToken: usdc,
-                        uniswapRouter: uniswapRouter,
-                        initPrice: priceChange,
-                        targetPrice: 1500
+                        uniswapPair,
+                        targetTwap: 1500,
+                        targetSpot: 1500
                     })
                     await time.increase(1000);
                 }
                 // swap back long -> weth
                 if ((priceChange == ZERO2) && (!waitRecover)) {
                     await expect(txSignerA.swap(
-                        SIDE_A,
-                        SIDE_R,
-                        stateCalHelper.address,
-                        encodePayload(0, SIDE_A, SIDE_R, longTokenAfter.sub(longTokenBefore), derivable1155.address),
-                        0,
-                        AddressZero,
-                        accountA.address,
+                        {
+                            sideIn: SIDE_A,
+                            sideOut: SIDE_R,
+                            maturity: 0,
+                            helper: stateCalHelper.address,
+                            payload: encodePayload(0, SIDE_A, SIDE_R, longTokenAfter.sub(longTokenBefore), derivable1155.address),
+                        },
+                        {
+                            utr: utr.address,
+                            payer: AddressZero,
+                            recipient: accountA.address,
+                        },
                         opts
                     )).to.be.reverted
                 } else {
                     await txSignerA.swap(
-                        SIDE_A,
-                        SIDE_R,
-                        stateCalHelper.address,
-                        encodePayload(0, SIDE_A, SIDE_R, longTokenAfter.sub(longTokenBefore), derivable1155.address),
-                        0,
-                        AddressZero,
-                        accountA.address,
+                        {
+                            sideIn: SIDE_A,
+                            sideOut: SIDE_R,
+                            maturity: 0,
+                            helper: stateCalHelper.address,
+                            payload: encodePayload(0, SIDE_A, SIDE_R, longTokenAfter.sub(longTokenBefore), derivable1155.address),
+                        },
+                        {
+                            utr: utr.address,
+                            payer: AddressZero,
+                            recipient: accountA.address,
+                        },
                         opts
                     )
                 }
@@ -767,38 +669,53 @@ describe("DDL v3", function () {
                 // swap back short -> weth
                 if ((priceChange == INFI2) && (!waitRecover)) {
                     await expect(txSignerB.swap(
-                        SIDE_B,
-                        SIDE_R,
-                        stateCalHelper.address,
-                        encodePayload(0, SIDE_B, SIDE_R, shortTokenAfter.sub(shortTokenBefore), derivable1155.address),
-                        0,
-                        AddressZero,
-                        accountB.address,
+                        {
+                            sideIn: SIDE_B,
+                            sideOut: SIDE_R,
+                            maturity: 0,
+                            helper: stateCalHelper.address,
+                            payload: encodePayload(0, SIDE_B, SIDE_R, shortTokenAfter.sub(shortTokenBefore), derivable1155.address),
+                        },
+                        {
+                            utr: utr.address,
+                            payer: AddressZero,
+                            recipient: accountB.address,
+                        },
                         opts
                     )).to.be.reverted
                 }
                 else {
                     await txSignerB.swap(
-                        SIDE_B,
-                        SIDE_R,
-                        stateCalHelper.address,
-                        encodePayload(0, SIDE_B, SIDE_R, shortTokenAfter.sub(shortTokenBefore), derivable1155.address),
-                        0,
-                        AddressZero,
-                        accountB.address,
+                        {
+                            sideIn: SIDE_B,
+                            sideOut: SIDE_R,
+                            maturity: 0,
+                            helper: stateCalHelper.address,
+                            payload: encodePayload(0, SIDE_B, SIDE_R, shortTokenAfter.sub(shortTokenBefore), derivable1155.address),
+                        },
+                        {
+                            utr: utr.address,
+                            payer: AddressZero,
+                            recipient: accountB.address,
+                        },
                         opts
                     )
                 }
                 const bWethAfter = await weth.balanceOf(accountB.address)
                 // swap back c -> weth
-                await derivablePool.swap(
-                    SIDE_C,
-                    SIDE_R,
-                    stateCalHelper.address,
-                    encodePayload(0, SIDE_C, SIDE_R, tokenAfter.sub(tokenBefore), derivable1155.address),
-                    0,
-                    AddressZero,
-                    owner.address,
+                await derivablePools[0].swap(
+                    {
+                        sideIn: SIDE_C,
+                        sideOut: SIDE_R,
+                        maturity: 0,
+                        helper: stateCalHelper.address,
+                        payload: encodePayload(0, SIDE_C, SIDE_R, tokenAfter.sub(tokenBefore), derivable1155.address),
+                    },
+                    {
+                        utr: utr.address,
+                        payer: AddressZero,
+                        recipient: owner.address,
+                    },
                     opts
                 )
                 

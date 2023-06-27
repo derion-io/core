@@ -170,19 +170,25 @@ function encodePayload(swapType, sideIn, sideOut, amount) {
     )
 }
 
-async function attemptSwap(signer, swapType, sideIn, sideOut, amount, helper, payer, recipient, timelock = 0) {
+async function attemptSwap(signer, swapType, sideIn, sideOut, amount, maturity, helper, utr, payer, recipient) {
     const payload = abiCoder.encode(
         ["uint", "uint", "uint", "uint"],
         [swapType, sideIn, sideOut, amount]
     )
     return await signer.swap(
-        sideIn,
-        sideOut,
-        helper,
-        payload,
-        timelock,
-        payer,
-        recipient
+        {
+            sideIn,
+            sideOut,
+            maturity,
+            helper,
+            payload
+        },
+        {
+            utr,
+            payer,
+            recipient
+        }
+        
     )
 }
 

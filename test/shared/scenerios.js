@@ -656,7 +656,6 @@ function loadFixtureFromParams (arrParams, options={}) {
     const returnParams = []
     const pools = await Promise.all(arrParams.map(async params => {
       let realParams = {
-        utr: utr.address,
         token: derivable1155.address,
         oracle,
         reserveToken: weth.address,
