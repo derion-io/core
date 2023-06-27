@@ -31,6 +31,17 @@ abstract contract Pool is IPool, ERC1155Holder, Storage, Constants {
     uint internal immutable DISCOUNT_RATE;
     uint internal immutable OPEN_RATE;
 
+    event Swap(
+        address indexed payer,
+        address indexed recipient,
+        uint    indexed sideMax,
+        uint sideIn,
+        uint sideOut,
+        uint maturity,
+        uint amountIn,
+        uint amountOut
+    );
+
     constructor() {
         FEE_TO = IPoolFactory(msg.sender).FEE_TO();
 
@@ -120,6 +131,21 @@ abstract contract Pool is IPool, ERC1155Holder, Storage, Constants {
             uint idOut = _packID(address(this), param.sideOut);
             IERC1155Supply(TOKEN).mintLock(payment.recipient, idOut, amountOut, uint32(param.maturity), "");
         }
+
+        emit Swap(
+            payment.payer,
+            payment.recipient,
+            _max(param.sideIn, param.sideOut),
+            param.sideIn,
+            param.sideOut,
+            param.maturity,
+            amountIn,
+            amountOut
+        );
+    }
+
+    function _max(uint a, uint b) internal pure returns (uint) {
+        return a > b ? a : b;
     }
 
     function _swap(SwapParam memory param) internal virtual returns(uint amountIn, uint amountOut);
