@@ -26,4 +26,5 @@ interface IPoolFactory {
     function createPool(Params memory params) external returns (address pool);
     function computePoolAddress(Params memory params) external view returns (address pool);
     function FEE_TO() external view returns (address);
+    function FEE_RATE() external view returns (uint);
 }

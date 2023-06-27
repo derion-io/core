@@ -9,12 +9,17 @@ contract PoolFactory is IPoolFactory {
     bytes32 constant public BYTECODE_HASH = keccak256(type(AsymptoticPerpetual).creationCode);
 
     address immutable public FEE_TO;
+    uint immutable public FEE_RATE;
 
     // transient storage
     Params t_params;
 
-    constructor(address feeTo) {
+    constructor(
+        address feeTo,
+        uint feeRate
+    ) {
         FEE_TO = feeTo;
+        FEE_RATE = feeRate;
     }
 
     function getParams() external view override returns (Params memory) {

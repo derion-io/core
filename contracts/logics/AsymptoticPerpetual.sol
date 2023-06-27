@@ -152,7 +152,7 @@ contract AsymptoticPerpetual is Pool {
         // [PROTOCOL FEE]
         {
             // TODO: combine with other fee, and return to Pool to transfer
-            uint feeRateX64 = _decayRate(block.timestamp - s_f, HALF_LIFE * 5);
+            uint feeRateX64 = _decayRate(block.timestamp - s_f, HALF_LIFE * FEE_RATE);
             State memory stateF = State(
                 state.R,
                 FullMath.mulDiv(state.a, Q64, feeRateX64),
