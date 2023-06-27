@@ -105,7 +105,7 @@ contract AsymptoticPerpetual is Pool {
         uint sideIn,
         uint sideOut
     ) internal view returns (Market memory market, uint rA, uint rB) {
-        uint decayRateX64 = _decayRate(block.timestamp - INIT_TIME, HALF_LIFE);
+        uint decayRateX64 = Q64;
         (uint min, uint max) = _fetch();
         if (min > max) {
             (min, max) = (max, min);
@@ -136,6 +136,17 @@ contract AsymptoticPerpetual is Pool {
         require(sideIn != sideOut, 'SS');
         // [PRICE SELECTION]
         State memory state = State(_reserve(), s_a, s_b);
+        // [INTEREST DECAY]
+        {
+            uint decayRateX64 = _decayRate(block.timestamp - s_i, HALF_LIFE);
+            uint a = FullMath.mulDiv(state.a, Q64, decayRateX64);
+            uint b = FullMath.mulDiv(state.b, Q64, decayRateX64);
+            if (a != state.a || b != state.b) {
+                state.a = a;
+                state.b = b;
+                s_i = block.timestamp;
+            }
+        }
         (Market memory market, uint rA, uint rB) = _selectPrice(state, sideIn, sideOut);
         // [CALCULATION]
         State memory state1 = IHelper(param.helper).swapToState(market, state, rA, rB, param.payload);

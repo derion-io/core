@@ -2,6 +2,7 @@
 pragma solidity ^0.8.0;
 
 contract Storage {
+    uint internal s_i; // TODO: storag optimization
     uint internal s_a;
     uint internal s_b;
 }
