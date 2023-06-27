@@ -128,7 +128,6 @@ contract AsymptoticPerpetual is Pool {
         SwapParam memory param
     ) internal override returns(uint amountIn, uint amountOut) {
         require(sideIn != sideOut, 'SS');
-        // [PRICE SELECTION]
         State memory state = State(_reserve(), s_a, s_b);
         // [INTEREST DECAY]
         {
@@ -142,24 +141,19 @@ contract AsymptoticPerpetual is Pool {
                 s_i = uint32(block.timestamp);
             }
         }
+        // [PRICE SELECTION]
         (uint xk, uint rA, uint rB) = _selectPrice(state, sideIn, sideOut);
         // [PROTOCOL FEE]
         {
             // TODO: combine with other fee, and return to Pool to transfer
             uint feeRateX64 = _decayRate(block.timestamp - s_f, HALF_LIFE * FEE_RATE);
-            State memory stateF = State(
-                state.R,
-                FullMath.mulDiv(state.a, Q64, feeRateX64),
-                FullMath.mulDiv(state.b, Q64, feeRateX64)
-            );
-            if (stateF.a != state.a || stateF.b != state.b) {
-                (uint rAF, uint rBF) = _evaluate(xk, stateF);
-                rAF += rBF;
-                if (rAF < rA + rB) {
-                    TransferHelper.safeTransfer(TOKEN_R, FEE_TO, rA + rB - rAF);
-                    (state.a, state.b) = (stateF.a, stateF.b);
-                    s_f = uint32(block.timestamp);
-                }
+            uint rAF = FullMath.mulDiv(rA, Q64, feeRateX64);
+            uint rBF = FullMath.mulDiv(rB, Q64, feeRateX64);
+            if (rAF < rA || rBF < rB) {
+                uint fee = rA - rAF + rB - rBF;
+                TransferHelper.safeTransfer(TOKEN_R, FEE_TO, fee);
+                (rA, rB) = (rAF, rBF);
+                state.R -= fee;
             }
         }
         // [CALCULATION]
@@ -211,6 +205,7 @@ contract AsymptoticPerpetual is Pool {
                         sideOut = FullMath.mulDiv(sideOut, amountOut, Q64);
                     }
                     if (sideOut != Q128) {
+                        // TODO: state.a should be smaller after the fee is charged
                         state1.a = state.a + FullMath.mulDiv(state1.a - state.a, sideOut, Q128);
                         rA1 = _r(xk, state1.a, state1.R);
                     }
@@ -229,6 +224,7 @@ contract AsymptoticPerpetual is Pool {
                         sideOut = FullMath.mulDiv(sideOut, amountOut, Q64);
                     }
                     if (sideOut != Q128) {
+                        // TODO: state.b should be smaller after the fee is charged
                         state1.b = state.b + FullMath.mulDiv(state1.b - state.b, sideOut, Q128);
                         rB1 = _r(Q256M/xk, state1.b, state1.R);
                     }
