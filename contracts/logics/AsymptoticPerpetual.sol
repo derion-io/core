@@ -144,7 +144,7 @@ contract AsymptoticPerpetual is Pool {
             if (a != state.a || b != state.b) {
                 state.a = a;
                 state.b = b;
-                s_i = block.timestamp;
+                s_i = uint32(block.timestamp);
             }
         }
         (Market memory market, uint rA, uint rB) = _selectPrice(state, sideIn, sideOut);
@@ -223,10 +223,12 @@ contract AsymptoticPerpetual is Pool {
             }
         }
         if (state1.a != state.a) {
-            s_a = state1.a;
+            require(state1.a <= type(uint224).max, "OA");
+            s_a = uint224(state1.a);
         }
         if (state1.b != state.b) {
-            s_b = state1.b;
+            require(state1.b <= type(uint224).max, "OB");
+            s_b = uint224(state1.b);
         }
     }
 }
