@@ -1,7 +1,7 @@
 const { loadFixture, time } = require("@nomicfoundation/hardhat-network-helpers")
 const { baseParams } = require("./shared/baseParams")
 const { loadFixtureFromParams } = require("./shared/scenerios")
-const { attemptSwap, numberToWei, paramToConfig, bn, swapToSetPriceMock } = require("./shared/utilities")
+const { attemptSwap, numberToWei, paramToConfig, bn, swapToSetPriceMock, weiToNumber } = require("./shared/utilities")
 const { SIDE_R, SIDE_A } = require("./shared/constant")
 const { AddressZero, MaxUint256 } = require("@ethersproject/constants");
 const { _selectPrice, _evaluate } = require("./shared/AsymptoticPerpetual")
@@ -50,6 +50,7 @@ describe('Input', function () {
         expect(eval.rA.mul(2)).to.be.gt(state.R) // Check rA > R/2
 
         const wethBefore = await weth.balanceOf(owner.address)
+        console.log('11111111111111111111111')
         await attemptSwap(
             pool,
             0,
@@ -60,7 +61,8 @@ describe('Input', function () {
             AddressZero,
             owner.address
         )
+        console.log('11111111111111111111111')
         const wethAfter = await weth.balanceOf(owner.address)
-        expect(wethBefore.sub(wethAfter)).to.be.eq(numberToWei(1))
+        expect(Number(weiToNumber(wethBefore.sub(wethAfter)))).to.be.eq(1)
     })
 })

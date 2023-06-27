@@ -14,6 +14,8 @@ import "./interfaces/IPool.sol";
 import "./interfaces/IPoolFactory.sol";
 import "./interfaces/IWeth.sol";
 
+import "hardhat/console.sol";
+
 contract Helper is Constants, IHelper {
     uint internal constant SIDE_NATIVE = 0x000000000000000000000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee;
     uint constant MAX_IN = 0;
@@ -224,23 +226,6 @@ contract Helper is Constants, IHelper {
         while (amount == aIn) {
             state1.R = __.R;
             (rA1, rB1) = (__.rA, __.rB);
-            if (sideIn == SIDE_R) {
-                state1.R += amount;
-            } else {
-                uint s = _supply(sideIn);
-                if (sideIn == SIDE_A) {
-                    amount = FullMath.mulDiv(amount, __.rA, s);
-                    rA1 -= amount;
-                } else if (sideIn == SIDE_B) {
-                    amount = FullMath.mulDiv(amount, __.rB, s);
-                    rB1 -= amount;
-                } else /*if (sideIn == SIDE_C)*/ {
-                    --amount; // SIDE_C sacrifices number rounding for A and B
-                    uint rC = __.R - __.rA - __.rB;
-                    amount = FullMath.mulDiv(amount, rC, s);
-                }
-            }
-
             if (sideOut == SIDE_R) {
                 state1.R -= amount;
                 break;
@@ -250,6 +235,7 @@ contract Helper is Constants, IHelper {
                     uint imbaRate = FullMath.mulDiv(Q128, rA1 - rB1, state1.R - rA1 - rB1);
                     if (imbaRate > premiumRate) {
                         amount = _solve(__, amount, premiumRate); // x = ...
+                        console.log(amount);
                         continue; // try again with reduced amount
                     }
                     else {
@@ -262,8 +248,27 @@ contract Helper is Constants, IHelper {
                 rB1 += amount;
                 break;
             }
-
         }
+
+        if (sideIn == SIDE_R) {
+            console.log('R before', state1.R, amount);
+            state1.R += amount;
+            console.log('R after', state1.R);
+        } else {
+            uint s = _supply(sideIn);
+            if (sideIn == SIDE_A) {
+                amount = FullMath.mulDiv(amount, __.rA, s);
+                rA1 -= amount;
+            } else if (sideIn == SIDE_B) {
+                amount = FullMath.mulDiv(amount, __.rB, s);
+                rB1 -= amount;
+            } else /*if (sideIn == SIDE_C)*/ {
+                --amount; // SIDE_C sacrifices number rounding for A and B
+                uint rC = __.R - __.rA - __.rB;
+                amount = FullMath.mulDiv(amount, rC, s);
+            }
+        }
+
         
         state1.a = _v(__.xk, rA1, state1.R);
         state1.b = _v(Q256M/__.xk, rB1, state1.R);
