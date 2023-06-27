@@ -212,6 +212,7 @@ contract BadHelper is Constants, IHelper {
     }
 
     function swapToState(
+        uint premiumRate,
         Slippable calldata __,
         bytes calldata payload
     ) external view override returns (State memory state1) {

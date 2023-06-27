@@ -586,7 +586,7 @@ function getOpenFeeScenerios(fee) {
   }
 }
 
-function loadFixtureFromParams (arrParams, options) {
+function loadFixtureFromParams (arrParams, options={}) {
   async function fixture () {
     const [owner, accountA, accountB] = await ethers.getSigners();
     const signer = owner;
@@ -605,7 +605,8 @@ function loadFixtureFromParams (arrParams, options) {
     // deploy pool factory
     const PoolFactory = await ethers.getContractFactory("PoolFactory");
     const poolFactory = await PoolFactory.deploy(
-      owner.address
+      owner.address,
+      options.feeRate || 0
     );
   
     // deploy descriptor
@@ -652,6 +653,7 @@ function loadFixtureFromParams (arrParams, options) {
       bn(quoteTokenIndex).shl(255).add(bn(300).shl(256 - 64)).add(uniswapPair.address).toHexString(),
       32,
     )
+    const returnParams = []
     const pools = await Promise.all(arrParams.map(async params => {
       let realParams = {
         utr: utr.address,
@@ -662,6 +664,7 @@ function loadFixtureFromParams (arrParams, options) {
         ...params
       }
       realParams = await _init(oracleLibrary, numberToWei(options.initReserved || "5"), realParams)
+      returnParams.push(realParams)
       const poolAddress = await poolFactory.computePoolAddress(realParams)
       await weth.transfer(poolAddress, numberToWei(options.initReserved || "5"))
       await poolFactory.createPool(realParams)
@@ -695,7 +698,9 @@ function loadFixtureFromParams (arrParams, options) {
       derivablePools: pools,
       derivable1155,
       stateCalHelper,
-      uniswapPair
+      uniswapPair,
+      oracleLibrary,
+      params: returnParams
     }
 
     if (options.callback) {

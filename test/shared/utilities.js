@@ -224,8 +224,28 @@ async function swapToSetPriceV3({ account, quoteToken, baseToken, uniswapRouter,
     await tx.wait(1)
 }
 
+async function swapToSetPriceMock({ quoteToken, baseToken, uniswapPair, targetTwap, targetSpot }) {
+    const quoteTokenIndex = baseToken.address.toLowerCase() < quoteToken.address.toLowerCase() ? 1 : 0
+    const priceTwapX96 = encodeSqrtX96(quoteTokenIndex ? targetTwap : 1, quoteTokenIndex ? 1 : targetTwap)
+    const priceSpotX96 = encodeSqrtX96(quoteTokenIndex ? targetSpot : 1, quoteTokenIndex ? 1 : targetSpot)
+    await uniswapPair.setPrice(priceSpotX96, priceTwapX96)
+}
+
 function feeToOpenRate(fee) {
     return bn(((1-fee)*10000).toFixed(0)).mul(Q128).div(10000)
+}
+
+function paramToConfig(param) {
+    return {
+        TOKEN: param.token,
+        TOKEN_R: param.reserveToken,
+        ORACLE: param.oracle,
+        K: param.k,
+        MARK: param.mark,
+        INIT_TIME: param.initTime,
+        HALF_LIFE: bn(param.halfLife),
+        PREMIUM_RATE: bn(param.premiumRate)
+    }
 }
 
 
@@ -245,5 +265,7 @@ module.exports = {
     attemptStaticSwap,
     decodeDataURI,
     swapToSetPriceV3,
-    feeToOpenRate
+    feeToOpenRate,
+    paramToConfig,
+    swapToSetPriceMock
 }

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BSL-1.1
 pragma solidity ^0.8.0;
 
+import "@openzeppelin/contracts/utils/math/Math.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 import "@uniswap/lib/contracts/libraries/TransferHelper.sol";
@@ -205,6 +206,7 @@ contract Helper is Constants, IHelper {
     }
 
     function swapToState(
+        uint premiumRate,
         Slippable calldata __,
         bytes calldata payload
     ) external view override returns (State memory state1) {
@@ -215,35 +217,62 @@ contract Helper is Constants, IHelper {
         uint amount
         ) = abi.decode(payload, (uint, uint, uint, uint));
         require(swapType == MAX_IN, 'Helper: UNSUPPORTED_SWAP_TYPE');
-        state1.R = __.R;
-        (uint rA1, uint rB1) = (__.rA, __.rB);
-
-        if (sideIn == SIDE_R) {
-            state1.R += amount;
-        } else {
-            uint s = _supply(sideIn);
-            if (sideIn == SIDE_A) {
-                amount = FullMath.mulDiv(amount, __.rA, s);
-                rA1 -= amount;
-            } else if (sideIn == SIDE_B) {
-                amount = FullMath.mulDiv(amount, __.rB, s);
-                rB1 -= amount;
-            } else /*if (sideIn == SIDE_C)*/ {
-                --amount; // SIDE_C sacrifices number rounding for A and B
-                uint rC = __.R - __.rA - __.rB;
-                amount = FullMath.mulDiv(amount, rC, s);
+        
+        uint aIn = amount;
+        uint rA1 = 0;
+        uint rB1 = 0;
+        while (amount == aIn) {
+            state1.R = __.R;
+            (rA1, rB1) = (__.rA, __.rB);
+            if (sideIn == SIDE_R) {
+                state1.R += amount;
+            } else {
+                uint s = _supply(sideIn);
+                if (sideIn == SIDE_A) {
+                    amount = FullMath.mulDiv(amount, __.rA, s);
+                    rA1 -= amount;
+                } else if (sideIn == SIDE_B) {
+                    amount = FullMath.mulDiv(amount, __.rB, s);
+                    rB1 -= amount;
+                } else /*if (sideIn == SIDE_C)*/ {
+                    --amount; // SIDE_C sacrifices number rounding for A and B
+                    uint rC = __.R - __.rA - __.rB;
+                    amount = FullMath.mulDiv(amount, rC, s);
+                }
             }
-        }
 
-        if (sideOut == SIDE_R) {
-            state1.R -= amount;
-        } else if (sideOut == SIDE_A) {
-            rA1 += amount;
-        } else if (sideOut == SIDE_B) {
-            rB1 += amount;
-        }
+            if (sideOut == SIDE_R) {
+                state1.R -= amount;
+                break;
+            } else if (sideOut == SIDE_A) {
+                rA1 += amount;
+                if (premiumRate > 0 && rA1 > rB1) {
+                    uint imbaRate = FullMath.mulDiv(Q128, rA1 - rB1, state1.R - rA1 - rB1);
+                    if (imbaRate > premiumRate) {
+                        amount = _solve(__, amount, premiumRate); // x = ...
+                        continue; // try again with reduced amount
+                    }
+                    else {
+                        break;
+                    }
+                } else {
+                    break;
+                }
+            } else if (sideOut == SIDE_B) {
+                rB1 += amount;
+                break;
+            }
 
+        }
+        
         state1.a = _v(__.xk, rA1, state1.R);
         state1.b = _v(Q256M/__.xk, rB1, state1.R);
+    }
+
+    function _solve(Slippable calldata __, uint amount, uint premiumRate) internal pure returns (uint) {
+        uint b = __.rA - __.rB;
+        uint ac = FullMath.mulDiv(amount*(__.R- __.rA - __.rB), premiumRate, Q128);
+        uint delta = b * b + 4 * ac;
+        return (Math.sqrt(delta) - b) / 2;
     }
 }
