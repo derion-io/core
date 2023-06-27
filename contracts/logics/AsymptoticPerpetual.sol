@@ -154,6 +154,7 @@ contract AsymptoticPerpetual is Pool {
                 TransferHelper.safeTransfer(TOKEN_R, FEE_TO, fee);
                 (rA, rB) = (rAF, rBF);
                 state.R -= fee;
+                s_f = uint32(block.timestamp);
             }
         }
         // [CALCULATION]
