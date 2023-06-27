@@ -8,17 +8,13 @@ import "./logics/AsymptoticPerpetual.sol";
 contract PoolFactory is IPoolFactory {
     bytes32 constant public BYTECODE_HASH = keccak256(type(AsymptoticPerpetual).creationCode);
 
-    // storage
-    address internal s_feeTo;
-    address internal s_feeToSetter;
+    address immutable public FEE_TO;
 
     // transient storage
     Params t_params;
 
-    constructor(
-        address feeToSetter
-    ) {
-        s_feeToSetter = feeToSetter;
+    constructor(address feeTo) {
+        FEE_TO = feeTo;
     }
 
     function getParams() external view override returns (Params memory) {
@@ -53,23 +49,5 @@ contract PoolFactory is IPoolFactory {
         Params memory params
     ) external view returns (address pool) {
         return Create2.computeAddress(_salt(params), BYTECODE_HASH, address(this));
-    }
-
-    function getFeeTo() external view returns (address) {
-        return s_feeTo;
-    }
-
-    function setFeeTo(address feeTo) external {
-        require(msg.sender == s_feeToSetter, 'UNA');
-        s_feeTo = feeTo;
-    }
-
-    function getFeeToSetter() external view returns (address) {
-        return s_feeToSetter;
-    }
-
-    function setFeeToSetter(address feeToSetter) external {
-        require(msg.sender == s_feeToSetter, 'UNA');
-        s_feeToSetter = feeToSetter;
     }
 }

@@ -151,6 +151,7 @@ contract AsymptoticPerpetual is Pool {
         (Market memory market, uint rA, uint rB) = _selectPrice(state, sideIn, sideOut);
         // [PROTOCOL FEE]
         {
+            // TODO: combine with other fee, and return to Pool to transfer
             uint feeRateX64 = _decayRate(block.timestamp - s_f, HALF_LIFE * 5);
             State memory stateF = State(
                 state.R,
@@ -161,8 +162,7 @@ contract AsymptoticPerpetual is Pool {
                 (uint rAF, uint rBF) = _evaluate(market, stateF);
                 rAF += rBF;
                 if (rAF < rA + rB) {
-                    // TODO: config a FEE_RECIPIENT here instead of msg.sender
-                    TransferHelper.safeTransfer(TOKEN_R, msg.sender, rA + rB - rAF);
+                    TransferHelper.safeTransfer(TOKEN_R, FEE_TO, rA + rB - rAF);
                     (state.a, state.b) = (stateF.a, stateF.b);
                     s_f = uint32(block.timestamp);
                 }

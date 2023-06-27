@@ -30,7 +30,10 @@ abstract contract Pool is IPool, Storage, Events, Constants {
     uint internal immutable DISCOUNT_RATE;
     uint internal immutable OPEN_RATE;
 
+    address internal immutable FEE_TO;
+
     constructor() {
+        FEE_TO = IPoolFactory(msg.sender).FEE_TO();
         Params memory params = IPoolFactory(msg.sender).getParams();
         UTR = params.utr;
         TOKEN = params.token;
