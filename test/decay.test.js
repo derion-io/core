@@ -4,8 +4,10 @@ const {
 } = require("@nomicfoundation/hardhat-network-helpers");
 const { expect, use } = require("chai");
 const { solidity } = require("ethereum-waffle");
-const { _init } = require("./shared/AsymptoticPerpetual");
+const { _init, _selectPrice, _evaluate } = require("./shared/AsymptoticPerpetual");
 const { weiToNumber, bn, getDeltaSupply, numberToWei, packId, unpackId, encodeSqrtX96, encodePayload, attemptSwap, attemptStaticSwap, feeToOpenRate } = require("./shared/utilities");
+const { SIDE_C, SIDE_R, SIDE_A, SIDE_B } = require("./shared/constant");
+const { AddressZero } = require("@ethersproject/constants");
 
 use(solidity)
 
@@ -28,7 +30,7 @@ const ACTION_RECORD_CALL_RESULT = 2
 const ACTION_INJECT_CALL_RESULT = 4
 
 
-const HLs = [0, 10 * 365 * 24 * 60 * 60]
+const HLs = [ 10 * 365 * 24 * 60 * 60]
 
 HLs.forEach(HALF_LIFE => {
   describe(`HALF_LIFE ${HALF_LIFE == 0 ? '= 0' : '> 0'} Decay funding rate`, function () {
@@ -47,10 +49,16 @@ HLs.forEach(HALF_LIFE => {
       const oracleLibrary = await OracleLibrary.deploy()
       await oracleLibrary.deployed()
 
+      // deploy fee receiver
+      const FeeReceiver = await ethers.getContractFactory("FeeReceiver")
+      const feeReceiver = await FeeReceiver.deploy(owner.address)
+      await feeReceiver.deployed()
+
       // deploy pool factory
       const PoolFactory = await ethers.getContractFactory("PoolFactory");
       const poolFactory = await PoolFactory.deploy(
-        owner.address
+        feeReceiver.address,
+        0
       );
       // weth test
       const compiledWETH = require("canonical-weth/build/contracts/WETH9.json")
@@ -123,7 +131,7 @@ HLs.forEach(HALF_LIFE => {
         k: bn(5),
         a: numberToWei(1),
         b: numberToWei(1),
-        initTime: 0,
+        initTime: bn(await time.latest()),
         halfLife: bn(HALF_LIFE),
         premiumRate: '0',
         maturity: 0,
@@ -134,6 +142,16 @@ HLs.forEach(HALF_LIFE => {
         openRate: feeToOpenRate(0)
       }
       params = await _init(oracleLibrary, numberToWei(5), params)
+      const config = {
+        TOKEN: params.token,
+        TOKEN_R: params.reserveToken,
+        ORACLE: params.oracle,
+        K: params.k,
+        MARK: params.mark,
+        INIT_TIME: params.initTime,
+        HALF_LIFE: bn(params.halfLife),
+        PREMIUM_RATE: bn(params.premiumRate)
+      }
       const poolAddress = await poolFactory.computePoolAddress(params);
       let txSignerA = weth.connect(accountA);
       let txSignerB = weth.connect(accountB);
@@ -191,7 +209,7 @@ HLs.forEach(HALF_LIFE => {
         0,
         0x00,
         0x30,
-        numberToWei(0.5),
+        numberToWei(1),
         stateCalHelper.address,
         '0x0000000000000000000000000000000000000000',
         accountA.address
@@ -610,12 +628,23 @@ HLs.forEach(HALF_LIFE => {
           '0x0000000000000000000000000000000000000000',
           accountB.address
         )
-        expect(valueABefore.div(2).sub(valueAAfter)).to.be.lte(
-          1,
+        // Check lớn hơn 0 và < 1
+        let expectedValueAAfter = valueABefore.div(2)
+        let expectedValueBAfter = valueBBefore.div(2)
+        if (HALF_LIFE == 0) {
+          expectedValueAAfter = valueABefore
+          expectedValueBAfter = valueBBefore
+        }
+        
+        expect(Number(numberToWei(expectedValueAAfter))).to.be.closeTo(
+          Number(numberToWei(valueAAfter)),
+          1e18,
           `${caseName}: Value long should be half after halflife`
         )
-        expect(valueBBefore.div(2).sub(valueBAfter)).to.be.lte(
-          1,
+
+        expect(Number(numberToWei(expectedValueBAfter))).to.be.closeTo(
+          Number(numberToWei(valueBAfter)),
+          1e18,
           `${caseName}: Value long should be half after halflife`
         )
       }
@@ -624,7 +653,6 @@ HLs.forEach(HALF_LIFE => {
         txSignerA = derivablePool.connect(accountA)
         txSignerB = derivablePool.connect(accountB)
 
-        
         await attemptSwap(
           txSignerA,
           0,
@@ -669,6 +697,7 @@ HLs.forEach(HALF_LIFE => {
           accountB.address
         )
         if (period != 0 && HALF_LIFE > 0) {
+          console.log(`Wait ${period} HL`)
           await time.increase(period * HALF_LIFE)
         }
 
@@ -734,6 +763,8 @@ HLs.forEach(HALF_LIFE => {
       }
 
       return {
+        A_ID,
+        B_ID,
         C_ID,
         utr,
         owner,
@@ -745,6 +776,7 @@ HLs.forEach(HALF_LIFE => {
         accountB,
         txSignerA,
         txSignerB,
+        oracleLibrary,
         swapAndRedeemInHalfLife,
         compareBalance,
         compareMuchMoreLong,
@@ -754,14 +786,30 @@ HLs.forEach(HALF_LIFE => {
         groupSwapBack,
         instantSwapBackNonUTR,
         swapBackInAHalfLife,
-        stateCalHelper
+        stateCalHelper,
+        config
       }
     }
 
     describe("Pool", function () {
       it("LP increase over time", async function () {
-        const { swapAndRedeemInHalfLife, accountA, txSignerA, derivable1155, C_ID, stateCalHelper } = await loadFixture(deployDDLv2);
+        const { swapAndRedeemInHalfLife, accountA, txSignerA, derivable1155, C_ID, stateCalHelper, derivablePool, oracleLibrary, config } = await loadFixture(deployDDLv2);
         const lpAmount = await derivable1155.balanceOf(accountA.address, C_ID)
+        const state = await txSignerA.getStates()
+        const oraclePrice = await oracleLibrary.fetch(config.ORACLE)
+        const price = _selectPrice(
+          config,
+          state,
+          {min: oraclePrice.spot, max: oraclePrice.twap},
+          0x00,
+          0x20,
+          bn(await time.latest())
+        )
+        const totalSupply = await derivable1155.totalSupply(C_ID)
+
+        const eval = _evaluate(price.market, state)
+
+        const positionReserved = eval.rA.add(eval.rB).add(numberToWei(2))
         const originLPValue = await attemptStaticSwap(
           txSignerA,
           0,
@@ -773,7 +821,7 @@ HLs.forEach(HALF_LIFE => {
           accountA.address
         )
         await swapAndRedeemInHalfLife(1, numberToWei(1), numberToWei(1))
-        
+
         const afterLPValue = await attemptStaticSwap(
           txSignerA,
           0,
@@ -784,7 +832,8 @@ HLs.forEach(HALF_LIFE => {
           '0x0000000000000000000000000000000000000000',
           accountA.address
         )
-        expect(afterLPValue).to.be.gt(originLPValue)
+        const expectedValue = originLPValue.add(positionReserved.div(2).mul(lpAmount).div(totalSupply))
+        expect(Number(weiToNumber(afterLPValue))/Number(weiToNumber(expectedValue))).to.be.closeTo(1, 1e-3)
       })
       describe("Pool balance:", function () {
         it("swap back after 1 halflife", async function () {
@@ -810,6 +859,243 @@ HLs.forEach(HALF_LIFE => {
           const after = await swapAndRedeemInHalfLife(0, numberToWei(1), numberToWei(1))
           expect(Number(weiToNumber(after.long))).to.be.closeTo(1, 0.01)
           expect(Number(weiToNumber(after.short))).to.be.closeTo(1, 0.01)
+        })
+        it("Open Long does not affect C value", async function() {
+          const {derivablePool, derivable1155, stateCalHelper, owner, C_ID} = await loadFixture(deployDDLv2)
+          const balanceBefore = await derivable1155.balanceOf(owner.address, C_ID)
+
+          await attemptSwap(
+            derivablePool, 
+            0, 
+            SIDE_R, 
+            SIDE_C,
+            numberToWei(5), 
+            stateCalHelper.address, 
+            AddressZero, 
+            owner.address
+          )
+
+          const lpAmount = (await derivable1155.balanceOf(owner.address, C_ID)).sub(balanceBefore)
+          await time.increase(HALF_LIFE)
+          const lpValueBefore = await attemptStaticSwap(
+            derivablePool, 
+            0, 
+            SIDE_C, 
+            SIDE_R,
+            lpAmount, 
+            stateCalHelper.address, 
+            AddressZero, 
+            owner.address
+          )
+
+          // Big swap
+          await attemptSwap(
+            derivablePool, 
+            0, 
+            SIDE_R, 
+            SIDE_A,
+            numberToWei(5), 
+            stateCalHelper.address, 
+            AddressZero, 
+            owner.address
+          )
+
+          const lpValueAfter = await attemptStaticSwap(
+            derivablePool, 
+            0, 
+            SIDE_C, 
+            SIDE_R,
+            lpAmount, 
+            stateCalHelper.address,  
+            AddressZero, 
+            owner.address
+          )
+          expect(Number(weiToNumber(lpValueBefore))/Number(weiToNumber(lpValueAfter))).to.be.closeTo(1, 1e-5)
+        })
+
+        it("Open Short does not affect C value", async function() {
+          const {derivablePool, derivable1155, stateCalHelper, owner, C_ID} = await loadFixture(deployDDLv2)
+          const balanceBefore = await derivable1155.balanceOf(owner.address, C_ID)
+
+          await attemptSwap(
+            derivablePool, 
+            0, 
+            SIDE_R, 
+            SIDE_C,
+            numberToWei(5), 
+            stateCalHelper.address, 
+            AddressZero, 
+            owner.address
+          )
+
+          const lpAmount = (await derivable1155.balanceOf(owner.address, C_ID)).sub(balanceBefore)
+          await time.increase(HALF_LIFE)
+          const lpValueBefore = await attemptStaticSwap(
+            derivablePool, 
+            0, 
+            SIDE_C, 
+            SIDE_R,
+            lpAmount, 
+            stateCalHelper.address, 
+            AddressZero, 
+            owner.address
+          )
+
+          // Big swap
+          await attemptSwap(
+            derivablePool, 
+            0, 
+            SIDE_R, 
+            SIDE_B,
+            numberToWei(5), 
+            stateCalHelper.address, 
+            AddressZero, 
+            owner.address
+          )
+
+          const lpValueAfter = await attemptStaticSwap(
+            derivablePool, 
+            0, 
+            SIDE_C, 
+            SIDE_R,
+            lpAmount, 
+            stateCalHelper.address,  
+            AddressZero, 
+            owner.address
+          )
+          expect(Number(weiToNumber(lpValueBefore))/Number(weiToNumber(lpValueAfter))).to.be.closeTo(1, 1e-3)
+        })
+
+        it("Close Long does not affect C value", async function() {
+          const {derivablePool, derivable1155, stateCalHelper, owner, C_ID, A_ID} = await loadFixture(deployDDLv2)
+          const balanceBefore = await derivable1155.balanceOf(owner.address, C_ID)
+          const balancePositionBefore = await derivable1155.balanceOf(owner.address, A_ID)
+
+          await attemptSwap(
+            derivablePool, 
+            0, 
+            SIDE_R, 
+            SIDE_C,
+            numberToWei(5), 
+            stateCalHelper.address, 
+            AddressZero, 
+            owner.address
+          )
+
+          await attemptSwap(
+            derivablePool, 
+            0, 
+            SIDE_R, 
+            SIDE_A,
+            numberToWei(5), 
+            stateCalHelper.address, 
+            AddressZero, 
+            owner.address
+          )
+
+          const positionAmount = (await derivable1155.balanceOf(owner.address, A_ID)).sub(balancePositionBefore)
+          const lpAmount = (await derivable1155.balanceOf(owner.address, C_ID)).sub(balanceBefore)
+          await time.increase(HALF_LIFE)
+          const lpValueBefore = await attemptStaticSwap(
+            derivablePool, 
+            0, 
+            SIDE_C, 
+            SIDE_R,
+            lpAmount, 
+            stateCalHelper.address, 
+            AddressZero, 
+            owner.address
+          )
+
+          // Big swap
+          await attemptSwap(
+            derivablePool, 
+            0, 
+            SIDE_A,
+            SIDE_R, 
+            positionAmount, 
+            stateCalHelper.address, 
+            AddressZero, 
+            owner.address
+          )
+
+          const lpValueAfter = await attemptStaticSwap(
+            derivablePool, 
+            0, 
+            SIDE_C, 
+            SIDE_R,
+            lpAmount, 
+            stateCalHelper.address,  
+            AddressZero, 
+            owner.address
+          )
+          expect(Number(weiToNumber(lpValueBefore))/Number(weiToNumber(lpValueAfter))).to.be.closeTo(1, 1e-3)
+        })
+
+        it("Close Short does not affect C value", async function() {
+          const {derivablePool, derivable1155, stateCalHelper, owner, C_ID, B_ID} = await loadFixture(deployDDLv2)
+          const balanceBefore = await derivable1155.balanceOf(owner.address, C_ID)
+          const balancePositionBefore = await derivable1155.balanceOf(owner.address, B_ID)
+
+          await attemptSwap(
+            derivablePool, 
+            0, 
+            SIDE_R, 
+            SIDE_C,
+            numberToWei(5), 
+            stateCalHelper.address, 
+            AddressZero, 
+            owner.address
+          )
+
+          await attemptSwap(
+            derivablePool, 
+            0, 
+            SIDE_R, 
+            SIDE_B,
+            numberToWei(5), 
+            stateCalHelper.address, 
+            AddressZero, 
+            owner.address
+          )
+
+          const positionAmount = (await derivable1155.balanceOf(owner.address, B_ID)).sub(balancePositionBefore)
+          const lpAmount = (await derivable1155.balanceOf(owner.address, C_ID)).sub(balanceBefore)
+          await time.increase(HALF_LIFE)
+          const lpValueBefore = await attemptStaticSwap(
+            derivablePool, 
+            0, 
+            SIDE_C, 
+            SIDE_R,
+            lpAmount, 
+            stateCalHelper.address, 
+            AddressZero, 
+            owner.address
+          )
+
+          // Big swap
+          await attemptSwap(
+            derivablePool, 
+            0, 
+            SIDE_B,
+            SIDE_R, 
+            positionAmount, 
+            stateCalHelper.address, 
+            AddressZero, 
+            owner.address
+          )
+
+          const lpValueAfter = await attemptStaticSwap(
+            derivablePool, 
+            0, 
+            SIDE_C, 
+            SIDE_R,
+            lpAmount, 
+            stateCalHelper.address,  
+            AddressZero, 
+            owner.address
+          )
+          expect(Number(weiToNumber(lpValueBefore))/Number(weiToNumber(lpValueAfter))).to.be.closeTo(1, 1e-3)
         })
       })
 

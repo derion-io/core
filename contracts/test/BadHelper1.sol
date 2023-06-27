@@ -55,7 +55,7 @@ contract BadHelper1 is Constants, IHelper {
     }
 
     // v(r)
-    function _v(uint xk, uint r, uint R) internal view returns (uint v) {
+    function _v(uint xk, uint r, uint R) internal pure returns (uint v) {
         if (r <= R >> 1) {
             return FullMath.mulDivRoundingUp(r, Q128, xk);
         }
@@ -212,8 +212,8 @@ contract BadHelper1 is Constants, IHelper {
     }
 
     function swapToState(
-        Market calldata market,
-        State calldata state,
+        uint xk,
+        uint R,
         uint rA,
         uint rB,
         bytes calldata payload
@@ -225,7 +225,7 @@ contract BadHelper1 is Constants, IHelper {
             uint amount
         ) = abi.decode(payload, (uint, uint, uint, uint));
         require(swapType == MAX_IN, 'Helper: UNSUPPORTED_SWAP_TYPE');
-        state1 = State(state.R, state.a, state.b);
+        state1.R = R;
         (uint rA1, uint rB1) = (rA, rB);
         if (sideIn == SIDE_R) {
             uint s = _supply(SIDE_C);
@@ -237,7 +237,7 @@ contract BadHelper1 is Constants, IHelper {
                 rB1 -= amount;
             } else if (sideOut == SIDE_C) {
                 --amount; // SIDE_C sacrifices number rounding for A and B
-                uint rC = state.R - rA - rB;
+                uint rC = R - rA - rB;
                 amount = FullMath.mulDiv(amount, rC, s);
             }
             state1.R += amount;
@@ -252,7 +252,7 @@ contract BadHelper1 is Constants, IHelper {
             }
         }
         
-        state1.a = _v(market.xkA, rA1, state1.R);
-        state1.b = _v(market.xkB, rB1, state1.R);
+        state1.a = _v(xk, rA1, state1.R);
+        state1.b = _v(Q256M/xk, rB1, state1.R);
     }
 }

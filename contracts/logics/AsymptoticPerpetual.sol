@@ -58,18 +58,9 @@ contract AsymptoticPerpetual is Pool {
         return IERC20(TOKEN_R).balanceOf(address(this));
     }
 
-    function _evaluate(Market memory market, State memory state) internal pure returns (uint rA, uint rB) {
-        rA = _r(market.xkA, state.a, state.R);
-        rB = _r(market.xkB, state.b, state.R);
-    }
-
-    function _market(
-        uint decayRateX64,
-        uint price
-    ) internal view returns (Market memory market) {
-        market.xkA = _powu(FullMath.mulDiv(price, Q128, MARK), K);
-        market.xkB = uint(FullMath.mulDiv(Q256M/market.xkA, Q64, decayRateX64));
-        market.xkA = uint(FullMath.mulDiv(market.xkA, Q64, decayRateX64));
+    function _evaluate(uint xk, State memory state) internal pure returns (uint rA, uint rB) {
+        rA = _r(xk, state.a, state.R);
+        rB = _r(Q256M/xk, state.b, state.R);
     }
 
     function _maturityPayoff(uint maturity, uint amountOut) internal view override returns (uint) {
@@ -98,32 +89,35 @@ contract AsymptoticPerpetual is Pool {
         }
         int128 rate = ABDKMath64x64.exp_2(int128(int((elapsed << 64) / halfLife)));
         return uint(int(rate));
-    } 
+    }
+
+    function _xk(uint price) internal view returns (uint xk) {
+        xk = _powu(FullMath.mulDiv(Q128, price, MARK), K);
+    }
 
     function _selectPrice(
         State memory state,
         uint sideIn,
         uint sideOut
-    ) internal view returns (Market memory market, uint rA, uint rB) {
-        uint decayRateX64 = _decayRate(block.timestamp - INIT_TIME, HALF_LIFE);
+    ) internal view returns (uint xk, uint rA, uint rB) {
         (uint min, uint max) = _fetch();
         if (min > max) {
             (min, max) = (max, min);
         }
         if (sideOut == SIDE_A || sideIn == SIDE_B) {
-            market = _market(decayRateX64, max);
-            (rA, rB) = _evaluate(market, state);
+            xk = _xk(max);
+            (rA, rB) = _evaluate(xk, state);
         } else if (sideOut == SIDE_B || sideIn == SIDE_A) {
-            market = _market(decayRateX64, min);
-            (rA, rB) = _evaluate(market, state);
+            xk = _xk(min);
+            (rA, rB) = _evaluate(xk, state);
         } else {
             // TODO: assisting flag for min/max
-            market = _market(decayRateX64, min);
-            (rA, rB) = _evaluate(market, state);
+            xk = _xk(min);
+            (rA, rB) = _evaluate(xk, state);
             if ((sideIn == SIDE_R) == rB > rA) {
                 // TODO: unit test for this case
-                market = _market(decayRateX64, max);
-                (rA, rB) = _evaluate(market, state);
+                xk = _xk(max);
+                (rA, rB) = _evaluate(xk, state);
             }
         }
     }
@@ -134,13 +128,38 @@ contract AsymptoticPerpetual is Pool {
         SwapParam memory param
     ) internal override returns(uint amountIn, uint amountOut) {
         require(sideIn != sideOut, 'SS');
-        // [PRICE SELECTION]
         State memory state = State(_reserve(), s_a, s_b);
-        (Market memory market, uint rA, uint rB) = _selectPrice(state, sideIn, sideOut);
+        // [INTEREST DECAY]
+        {
+            uint decayRateX64 = _decayRate(block.timestamp - s_i, HALF_LIFE);
+            // TODO: transaction frequency effect
+            uint a = FullMath.mulDiv(state.a, Q64, decayRateX64);
+            uint b = FullMath.mulDiv(state.b, Q64, decayRateX64);
+            if (a != state.a || b != state.b) {
+                state.a = a;
+                state.b = b;
+                s_i = uint32(block.timestamp);
+            }
+        }
+        // [PRICE SELECTION]
+        (uint xk, uint rA, uint rB) = _selectPrice(state, sideIn, sideOut);
+        // [PROTOCOL FEE]
+        {
+            // TODO: combine with other fee, and return to Pool to transfer
+            uint feeRateX64 = _decayRate(block.timestamp - s_f, HALF_LIFE * FEE_RATE);
+            uint rAF = FullMath.mulDiv(rA, Q64, feeRateX64);
+            uint rBF = FullMath.mulDiv(rB, Q64, feeRateX64);
+            if (rAF < rA || rBF < rB) {
+                uint fee = rA - rAF + rB - rBF;
+                TransferHelper.safeTransfer(TOKEN_R, FEE_TO, fee);
+                (rA, rB) = (rAF, rBF);
+                state.R -= fee;
+            }
+        }
         // [CALCULATION]
-        State memory state1 = IHelper(param.helper).swapToState(market, state, rA, rB, param.payload);
+        State memory state1 = IHelper(param.helper).swapToState(xk, state.R, rA, rB, param.payload);
         // [TRANSITION]
-        (uint rA1, uint rB1) = _evaluate(market, state1);
+        (uint rA1, uint rB1) = _evaluate(xk, state1);
         if (sideIn == SIDE_R) {
             require(rA1 >= rA && rB1 >= rB, "MI:R");
             amountIn = state1.R - state.R;
@@ -186,8 +205,9 @@ contract AsymptoticPerpetual is Pool {
                         sideOut = FullMath.mulDiv(sideOut, amountOut, Q64);
                     }
                     if (sideOut != Q128) {
+                        // premium charges extra with uncollected fee
                         state1.a = state.a + FullMath.mulDiv(state1.a - state.a, sideOut, Q128);
-                        rA1 = _r(market.xkA, state1.a, state1.R);
+                        rA1 = _r(xk, state1.a, state1.R);
                     }
                     amountOut = FullMath.mulDiv(s, rA1 - rA, rA);
                 } else if (sideOut == SIDE_B) {
@@ -204,18 +224,17 @@ contract AsymptoticPerpetual is Pool {
                         sideOut = FullMath.mulDiv(sideOut, amountOut, Q64);
                     }
                     if (sideOut != Q128) {
+                        // premium charges extra with uncollected fee
                         state1.b = state.b + FullMath.mulDiv(state1.b - state.b, sideOut, Q128);
-                        rB1 = _r(market.xkB, state1.b, state1.R);
+                        rB1 = _r(Q256M/xk, state1.b, state1.R);
                     }
                     amountOut = FullMath.mulDiv(s, rB1 - rB, rB);
                 }
             }
         }
-        if (state1.a != state.a) {
-            s_a = state1.a;
-        }
-        if (state1.b != state.b) {
-            s_b = state1.b;
-        }
+        require(state1.a <= type(uint224).max, "OA");
+        s_a = uint224(state1.a);
+        require(state1.b <= type(uint224).max, "OB");
+        s_b = uint224(state1.b);
     }
 }

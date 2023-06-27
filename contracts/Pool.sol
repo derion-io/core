@@ -13,7 +13,10 @@ import "./logics/Storage.sol";
 import "./logics/Events.sol";
 
 abstract contract Pool is IPool, Storage, Events, Constants {
-    /// Immutables
+    /// immutables
+    address internal immutable FEE_TO;
+    uint internal immutable FEE_RATE;
+
     address internal immutable UTR;
     bytes32 public immutable ORACLE; // QTI(1) reserve(32) WINDOW(32) PAIR(160)
     uint public immutable K;
@@ -31,6 +34,9 @@ abstract contract Pool is IPool, Storage, Events, Constants {
     uint internal immutable OPEN_RATE;
 
     constructor() {
+        FEE_TO = IPoolFactory(msg.sender).FEE_TO();
+        FEE_RATE = IPoolFactory(msg.sender).FEE_RATE();
+
         Params memory params = IPoolFactory(msg.sender).getParams();
         UTR = params.utr;
         TOKEN = params.token;
@@ -51,8 +57,10 @@ abstract contract Pool is IPool, Storage, Events, Constants {
         uint R = IERC20(TOKEN_R).balanceOf(address(this));
         require(params.a <= R >> 1 && params.b <= R >> 1, "IP");
 
-        s_a = params.a;
-        s_b = params.b;
+        s_i = uint32(block.timestamp);
+        s_f = uint32(block.timestamp);
+        s_a = uint224(params.a);
+        s_b = uint224(params.b);
 
         uint idA = _packID(address(this), SIDE_A);
         uint idB = _packID(address(this), SIDE_B);

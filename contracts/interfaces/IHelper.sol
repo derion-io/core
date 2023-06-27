@@ -5,8 +5,8 @@ import "./IPool.sol";
 
 interface IHelper {
     function swapToState(
-        Market calldata market,
-        State calldata state,
+        uint xk,
+        uint R,
         uint rA,
         uint rB,
         bytes calldata payload

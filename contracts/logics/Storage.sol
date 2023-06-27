@@ -2,6 +2,8 @@
 pragma solidity ^0.8.0;
 
 contract Storage {
-    uint internal s_a;
-    uint internal s_b;
+    uint32  internal s_i;
+    uint224 internal s_a;
+    uint32  internal s_f;
+    uint224 internal s_b;
 }
