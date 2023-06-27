@@ -16,7 +16,6 @@ abstract contract Pool is IPool, ERC1155Holder, Storage, Constants {
     /// immutables
     address internal immutable FEE_TO;
 
-    address internal immutable UTR;
     bytes32 public immutable ORACLE; // QTI(1) reserve(32) WINDOW(32) PAIR(160)
     uint public immutable K;
     address internal immutable TOKEN;
@@ -36,7 +35,6 @@ abstract contract Pool is IPool, ERC1155Holder, Storage, Constants {
         FEE_TO = IPoolFactory(msg.sender).FEE_TO();
 
         Params memory params = IPoolFactory(msg.sender).getParams();
-        UTR = params.utr;
         TOKEN = params.token;
         ORACLE = params.oracle;
         TOKEN_R = params.reserveToken;
@@ -89,6 +87,7 @@ abstract contract Pool is IPool, ERC1155Holder, Storage, Constants {
         address helper,
         bytes calldata payload,
         uint32 maturity,
+        address utr,
         address payer,
         address recipient
     ) external override returns(uint amountIn, uint amountOut) {
@@ -108,17 +107,17 @@ abstract contract Pool is IPool, ERC1155Holder, Storage, Constants {
         }
         (amountIn, amountOut) = _swap(sideIn, sideOut, param);
         if (sideIn == SIDE_R) {
-            if (payer != address(0)) {
+            if (utr != address(0)) {
                 uint expected = amountIn + IERC20(TOKEN_R).balanceOf(address(this));
-                IUniversalTokenRouter(UTR).pay(payer, address(this), 20, TOKEN_R, 0, amountIn);
+                IUniversalTokenRouter(utr).pay(payer, address(this), 20, TOKEN_R, 0, amountIn);
                 require(expected <= IERC20(TOKEN_R).balanceOf(address(this)), "BP");
             } else {
                 TransferHelper.safeTransferFrom(TOKEN_R, msg.sender, address(this), amountIn);
             }
         } else {
             uint idIn = _packID(address(this), sideIn);
-            if (payer != address(0)) {
-                IUniversalTokenRouter(UTR).pay(payer, address(this), 1155, TOKEN, idIn, amountIn);
+            if (utr != address(0)) {
+                IUniversalTokenRouter(utr).pay(payer, address(this), 1155, TOKEN, idIn, amountIn);
                 IERC1155Supply(TOKEN).burn(address(this), idIn, amountIn);
             } else {
                 IERC1155Supply(TOKEN).burn(msg.sender, idIn, amountIn);

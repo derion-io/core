@@ -2,7 +2,6 @@
 pragma solidity ^0.8.0;
 
 struct Params {
-    address utr;
     address token;
     bytes32 oracle; // 1bit QTI, 31bit reserve, 32bit WINDOW, ... PAIR ADDRESS
     address reserveToken;
