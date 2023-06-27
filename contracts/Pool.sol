@@ -8,7 +8,7 @@ import "@uniswap/lib/contracts/libraries/TransferHelper.sol";
 
 import "./interfaces/IPoolFactory.sol";
 import "./logics/Constants.sol";
-import "./interfaces/IERC1155Supply.sol";
+import "./interfaces/IToken.sol";
 import "./interfaces/IPool.sol";
 import "./logics/Storage.sol";
 
@@ -75,9 +75,9 @@ abstract contract Pool is IPool, ERC1155Holder, Storage, Constants {
         // mint tokens to recipient
         uint R3 = R/3;
         uint32 maturity = uint32(block.timestamp) + MATURITY;
-        IERC1155Supply(TOKEN).mintLock(params.recipient, idA, R3, maturity, "");
-        IERC1155Supply(TOKEN).mintLock(params.recipient, idB, R3, maturity, "");
-        IERC1155Supply(TOKEN).mintLock(params.recipient, idC, R - (R3<<1), maturity, "");
+        IToken(TOKEN).mintLock(params.recipient, idA, R3, maturity, "");
+        IToken(TOKEN).mintLock(params.recipient, idB, R3, maturity, "");
+        IToken(TOKEN).mintLock(params.recipient, idC, R - (R3<<1), maturity, "");
     }
 
     function _packID(address pool, uint side) internal pure returns (uint id) {
@@ -119,19 +119,19 @@ abstract contract Pool is IPool, ERC1155Holder, Storage, Constants {
             uint idIn = _packID(address(this), param.sideIn);
             if (payment.payer != address(0)) {
                 IUniversalTokenRouter(payment.utr).pay(payment.payer, address(this), 1155, TOKEN, idIn, amountIn);
-                IERC1155Supply(TOKEN).burn(address(this), idIn, amountIn);
+                IToken(TOKEN).burn(address(this), idIn, amountIn);
             } else {
-                IERC1155Supply(TOKEN).burn(msg.sender, idIn, amountIn);
+                IToken(TOKEN).burn(msg.sender, idIn, amountIn);
                 payment.payer = msg.sender;
             }
-            uint inputMaturity = IERC1155Supply(TOKEN).locktimeOf(payment.payer, idIn);
+            uint inputMaturity = IToken(TOKEN).maturityOf(payment.payer, idIn);
             amountOut = _maturityPayoff(inputMaturity, amountOut);
         }
         if (param.sideOut == SIDE_R) {
             TransferHelper.safeTransfer(TOKEN_R, payment.recipient, amountOut);
         } else {
             uint idOut = _packID(address(this), param.sideOut);
-            IERC1155Supply(TOKEN).mintLock(payment.recipient, idOut, amountOut, uint32(param.maturity), "");
+            IToken(TOKEN).mintLock(payment.recipient, idOut, amountOut, uint32(param.maturity), "");
         }
 
         emit Swap(
