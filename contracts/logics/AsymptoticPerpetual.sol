@@ -139,6 +139,7 @@ contract AsymptoticPerpetual is Pool {
         // [INTEREST DECAY]
         {
             uint decayRateX64 = _decayRate(block.timestamp - s_i, HALF_LIFE);
+            // TODO: transaction frequency effect
             uint a = FullMath.mulDiv(state.a, Q64, decayRateX64);
             uint b = FullMath.mulDiv(state.b, Q64, decayRateX64);
             if (a != state.a || b != state.b) {
