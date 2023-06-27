@@ -660,6 +660,7 @@ function loadFixtureFromParams (arrParams, options={}) {
         oracle,
         reserveToken: weth.address,
         recipient: owner.address,
+        initTime: await time.latest(),
         ...params
       }
       realParams = await _init(oracleLibrary, numberToWei(options.initReserved || "5"), realParams)

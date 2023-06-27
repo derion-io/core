@@ -14,7 +14,6 @@ import "./interfaces/IPool.sol";
 import "./interfaces/IPoolFactory.sol";
 import "./interfaces/IWeth.sol";
 
-import "hardhat/console.sol";
 
 contract Helper is Constants, IHelper {
     uint internal constant SIDE_NATIVE = 0x000000000000000000000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee;
@@ -224,23 +223,30 @@ contract Helper is Constants, IHelper {
 
     // TODO: premiumRate is passed from client to payload
     function swapToState(
-        uint premiumRate,
         Slippable calldata __,
         bytes calldata payload
     ) external view override returns (State memory state1) {
         (
-        uint swapType,
-        uint sideIn,
-        uint sideOut,
-        uint amount
-        ) = abi.decode(payload, (uint, uint, uint, uint));
+            uint openRate,
+            uint premiumRate,
+            uint swapType,
+            uint sideIn,
+            uint sideOut,
+            uint amount
+        ) = abi.decode(payload, (uint, uint, uint, uint, uint, uint));
         require(swapType == MAX_IN, 'Helper: UNSUPPORTED_SWAP_TYPE');
 
         // TODO: handle SIDE_B, and unsupported premium swap
-        if (premiumRate > 0 && sideIn == SIDE_R && sideOut == SIDE_A) {
-            uint a = _solve(__, amount, premiumRate);
-            if (a < amount) {
-                amount = a;
+        if (
+            sideIn == SIDE_R && 
+            (sideOut == SIDE_A || sideOut == SIDE_B)
+        ) {
+            amount = FullMath.mulDiv(amount, openRate, Q128);
+            if (premiumRate > 0) {
+                uint a = _solve(__, sideOut, amount, premiumRate);
+                if (a < amount) {
+                    amount = a;
+                }
             }
         }
 
@@ -277,9 +283,29 @@ contract Helper is Constants, IHelper {
     }
 
     // TODO: handle overflow: returns amount to disable premium calculation
-    function _solve(Slippable calldata __, uint amount, uint premiumRate) internal pure returns (uint) {
-        uint b = __.rA - __.rB;
-        uint c = __.R- __.rA - __.rB;
+    function _solve(
+        Slippable calldata __, 
+        uint sideOut,
+        uint amount, 
+        uint premiumRate
+    ) internal pure returns (uint) {
+        uint b;
+        uint rC1 = __.R - __.rB - __.rA;
+        uint rOut = sideOut == SIDE_A ? __.rA + amount : __.rB + amount;
+        uint rCounter = sideOut == SIDE_A ? __.rB : __.rA;
+        if (rOut <= rCounter) {
+            return amount;
+        }
+        uint imbaRate = FullMath.mulDiv(Q128, rOut - rCounter, rC1);
+        if (imbaRate <= premiumRate) {
+            return amount;
+        }
+        if (sideOut == SIDE_A) {
+            b = __.rA - __.rB;
+        } else if (sideOut == SIDE_B) {
+            b = __.rB - __.rA;
+        }
+        uint c = __.R - __.rA - __.rB;
         uint ac = FullMath.mulDiv(amount*c, premiumRate, Q128);
         uint delta = b * b + 4 * ac;
         return (Math.sqrt(delta) - b) / 2;

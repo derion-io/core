@@ -5,7 +5,6 @@ import "./IPool.sol";
 
 interface IHelper {
     function swapToState(
-        uint premiumRate,
         Slippable calldata,
         bytes calldata payload
     ) external view returns(State memory state1);

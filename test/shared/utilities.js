@@ -171,9 +171,10 @@ function encodePayload(swapType, sideIn, sideOut, amount) {
 }
 
 async function attemptSwap(signer, swapType, sideIn, sideOut, amount, maturity, helper, utr, payer, recipient) {
+    const [openRate, premiumRate] = await Promise.all([signer.OPEN_RATE(), signer.PREMIUM_RATE()])
     const payload = abiCoder.encode(
-        ["uint", "uint", "uint", "uint"],
-        [swapType, sideIn, sideOut, amount]
+        ["uint", "uint", "uint", "uint", "uint", "uint"],
+        [openRate, premiumRate, swapType, sideIn, sideOut, amount]
     )
     return await signer.swap(
         {
@@ -188,23 +189,28 @@ async function attemptSwap(signer, swapType, sideIn, sideOut, amount, maturity, 
             payer,
             recipient
         }
-        
     )
 }
 
-async function attemptStaticSwap(signer, swapType, sideIn, sideOut, amount, helper, payer, recipient, timelock = 0) {
+async function attemptStaticSwap(signer, swapType, sideIn, sideOut, amount, helper, utr, payer, recipient, timelock = 0) {
+    const [openRate, premiumRate] = await Promise.all([signer.OPEN_RATE(), signer.PREMIUM_RATE()])
     const payload = abiCoder.encode(
-        ["uint", "uint", "uint", "uint"],
-        [swapType, sideIn, sideOut, amount]
+        ["uint", "uint", "uint", "uint", "uint", "uint"],
+        [openRate, premiumRate, swapType, sideIn, sideOut, amount]
     )
     return (await signer.callStatic.swap(
-        sideIn,
-        sideOut,
-        helper,
-        payload,
-        timelock,
-        payer,
-        recipient,
+        {
+            sideIn,
+            sideOut,
+            maturity,
+            helper,
+            payload
+        },
+        {
+            utr,
+            payer,
+            recipient
+        }
     )).amountOut
 }
 
@@ -273,5 +279,5 @@ module.exports = {
     swapToSetPriceV3,
     feeToOpenRate,
     paramToConfig,
-    swapToSetPriceMock
+    swapToSetPriceMock,
 }

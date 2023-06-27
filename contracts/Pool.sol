@@ -24,12 +24,12 @@ abstract contract Pool is IPool, ERC1155Holder, Storage, Constants {
     uint internal immutable HL_INTEREST;
     uint internal immutable HL_FEE;
 
-    uint internal immutable PREMIUM_RATE;
+    uint public immutable PREMIUM_RATE;
     uint32 internal immutable MATURITY;
     uint32 internal immutable MATURITY_VEST;
     uint internal immutable MATURITY_RATE;
     uint internal immutable DISCOUNT_RATE;
-    uint internal immutable OPEN_RATE;
+    uint public immutable OPEN_RATE;
 
     event Swap(
         address indexed payer,

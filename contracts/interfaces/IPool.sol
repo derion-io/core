@@ -32,6 +32,8 @@ interface IPool {
     function ORACLE() external view returns (bytes32);
     function TOKEN_R() external view returns (address);
     function K() external view returns (uint);
+    function PREMIUM_RATE() external view returns (uint);
+    function OPEN_RATE() external view returns (uint);
     function swap(
         SwapParam memory param,
         SwapPayment memory payment

@@ -227,16 +227,17 @@ contract BadHelper is Constants, IHelper {
     }
 
     function swapToState(
-        uint premiumRate,
         Slippable calldata __,
         bytes calldata payload
     ) external view override returns (State memory state1) {
         (
+            uint openRate,
+            uint premiumRate,
             uint swapType,
             uint sideIn,
             uint sideOut,
             uint amount
-        ) = abi.decode(payload, (uint, uint, uint, uint));
+        ) = abi.decode(payload, (uint, uint, uint, uint, uint, uint));
         require(swapType == MAX_IN, 'Helper: UNSUPPORTED_SWAP_TYPE');
         state1.R = __.R;
         (uint rA1, uint rB1) = (__.rA, __.rB);
