@@ -205,7 +205,7 @@ contract AsymptoticPerpetual is Pool {
                         sideOut = FullMath.mulDiv(sideOut, amountOut, Q64);
                     }
                     if (sideOut != Q128) {
-                        // TODO: state.a should be smaller after the fee is charged
+                        // premium charges extra with uncollected fee
                         state1.a = state.a + FullMath.mulDiv(state1.a - state.a, sideOut, Q128);
                         rA1 = _r(xk, state1.a, state1.R);
                     }
@@ -224,7 +224,7 @@ contract AsymptoticPerpetual is Pool {
                         sideOut = FullMath.mulDiv(sideOut, amountOut, Q64);
                     }
                     if (sideOut != Q128) {
-                        // TODO: state.b should be smaller after the fee is charged
+                        // premium charges extra with uncollected fee
                         state1.b = state.b + FullMath.mulDiv(state1.b - state.b, sideOut, Q128);
                         rB1 = _r(Q256M/xk, state1.b, state1.R);
                     }
