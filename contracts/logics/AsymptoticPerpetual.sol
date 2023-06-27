@@ -162,7 +162,7 @@ contract AsymptoticPerpetual is Pool {
                 rAF += rBF;
                 if (rAF < rA + rB) {
                     // TODO: config a FEE_RECIPIENT here instead of msg.sender
-                    TransferHelper.safeTransfer(TOKEN, msg.sender, rA + rB - rAF);
+                    TransferHelper.safeTransfer(TOKEN_R, msg.sender, rA + rB - rAF);
                     (state.a, state.b) = (stateF.a, stateF.b);
                     s_f = uint32(block.timestamp);
                 }
@@ -242,13 +242,9 @@ contract AsymptoticPerpetual is Pool {
                 }
             }
         }
-        if (state1.a != state.a) {
-            require(state1.a <= type(uint224).max, "OA");
-            s_a = uint224(state1.a);
-        }
-        if (state1.b != state.b) {
-            require(state1.b <= type(uint224).max, "OB");
-            s_b = uint224(state1.b);
-        }
+        require(state1.a <= type(uint224).max, "OA");
+        s_a = uint224(state1.a);
+        require(state1.b <= type(uint224).max, "OB");
+        s_b = uint224(state1.b);
     }
 }
