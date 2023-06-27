@@ -131,7 +131,7 @@ contract AsymptoticPerpetual is Pool {
         State memory state = State(_reserve(), s_a, s_b);
         // [INTEREST DECAY]
         {
-            uint decayRateX64 = _decayRate(block.timestamp - s_i, HALF_LIFE);
+            uint decayRateX64 = _decayRate(block.timestamp - s_i, HL_INTEREST);
             // TODO: transaction frequency effect
             uint a = FullMath.mulDivRoundingUp(state.a, Q64, decayRateX64);
             uint b = FullMath.mulDivRoundingUp(state.b, Q64, decayRateX64);
@@ -205,7 +205,7 @@ contract AsymptoticPerpetual is Pool {
                         }
                     }
                     if (param.zeroInterestTime > 0) {
-                        amountOut = _decayRate(param.zeroInterestTime, HALF_LIFE);
+                        amountOut = _decayRate(param.zeroInterestTime, HL_INTEREST);
                         sideOut = FullMath.mulDiv(sideOut, amountOut, Q64);
                     }
                     if (sideOut != Q128) {
@@ -222,7 +222,7 @@ contract AsymptoticPerpetual is Pool {
                         }
                     }
                     if (param.zeroInterestTime > 0) {
-                        amountOut = _decayRate(param.zeroInterestTime, HALF_LIFE);
+                        amountOut = _decayRate(param.zeroInterestTime, HL_INTEREST);
                         sideOut = FullMath.mulDiv(sideOut, amountOut, Q64);
                     }
                     if (sideOut != Q128) {

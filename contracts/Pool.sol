@@ -10,12 +10,10 @@ import "./logics/Constants.sol";
 import "./interfaces/IERC1155Supply.sol";
 import "./interfaces/IPool.sol";
 import "./logics/Storage.sol";
-import "./logics/Events.sol";
 
-abstract contract Pool is IPool, Storage, Events, Constants {
+abstract contract Pool is IPool, Storage, Constants {
     /// immutables
     address internal immutable FEE_TO;
-    uint internal immutable HL_FEE;
 
     address internal immutable UTR;
     bytes32 public immutable ORACLE; // QTI(1) reserve(32) WINDOW(32) PAIR(160)
@@ -23,8 +21,8 @@ abstract contract Pool is IPool, Storage, Events, Constants {
     address internal immutable TOKEN;
     address public immutable TOKEN_R;
     uint internal immutable MARK;
-    uint internal immutable INIT_TIME;
-    uint internal immutable HALF_LIFE;
+    uint internal immutable HL_INTEREST;
+    uint internal immutable HL_FEE;
 
     uint internal immutable PREMIUM_RATE;
     uint32 internal immutable MATURITY;
@@ -43,23 +41,21 @@ abstract contract Pool is IPool, Storage, Events, Constants {
         TOKEN_R = params.reserveToken;
         K = params.k;
         MARK = params.mark;
-        HALF_LIFE = params.halfLife;
+        HL_INTEREST = params.halfLife;
+        HL_FEE = HL_INTEREST * IPoolFactory(msg.sender).FEE_RATE();
         MATURITY = params.maturity;
         MATURITY_VEST = params.maturityVest;
         MATURITY_RATE = params.maturityRate;
         DISCOUNT_RATE = params.discountRate;
         PREMIUM_RATE = params.premiumRate;
-        INIT_TIME = params.initTime > 0 ? params.initTime : block.timestamp;
         OPEN_RATE = params.openRate;
-        HL_FEE = HALF_LIFE * IPoolFactory(msg.sender).FEE_RATE();
-        require(block.timestamp >= INIT_TIME, "PIT");
 
         uint R = IERC20(TOKEN_R).balanceOf(address(this));
         require(params.a <= R >> 1 && params.b <= R >> 1, "IP");
 
         s_i = uint32(block.timestamp);
-        s_f = uint32(block.timestamp);
         s_a = uint224(params.a);
+        s_f = uint32(block.timestamp);
         s_b = uint224(params.b);
 
         uint idA = _packID(address(this), SIDE_A);
@@ -68,35 +64,21 @@ abstract contract Pool is IPool, Storage, Events, Constants {
 
         // mint tokens to recipient
         uint R3 = R/3;
-        IERC1155Supply(TOKEN).mintLock(params.recipient, idA, R3, MATURITY, "");
-        IERC1155Supply(TOKEN).mintLock(params.recipient, idB, R3, MATURITY, "");
-        IERC1155Supply(TOKEN).mintLock(params.recipient, idC, R - (R3<<1), MATURITY, "");
-
-        emit Derivable(
-            'PoolCreated',                 // topic1: eventName
-            _addressToBytes32(msg.sender), // topic2: factory
-            bytes32(bytes20(TOKEN_R)),     // topic3: reserve token
-            abi.encode(PoolCreated(
-                UTR,
-                TOKEN,
-                ORACLE,
-                TOKEN_R,
-                MARK,
-                INIT_TIME,
-                HALF_LIFE,
-                PREMIUM_RATE,
-                K
-            ))
-        );
+        uint32 maturity = uint32(block.timestamp) + MATURITY;
+        IERC1155Supply(TOKEN).mintLock(params.recipient, idA, R3, maturity, "");
+        IERC1155Supply(TOKEN).mintLock(params.recipient, idB, R3, maturity, "");
+        IERC1155Supply(TOKEN).mintLock(params.recipient, idC, R - (R3<<1), maturity, "");
     }
 
     function _packID(address pool, uint side) internal pure returns (uint id) {
         id = (side << 160) + uint160(pool);
     }
 
-    function getStates() external view returns (uint R, uint a, uint b) {
+    function getStates() external view returns (uint R, uint a, uint b, uint32 i, uint32 f) {
         R = IERC20(TOKEN_R).balanceOf(address(this));
+        i = s_i;
         a = s_a;
+        f = s_f;
         b = s_b;
     }
 

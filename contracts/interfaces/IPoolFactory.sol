@@ -10,7 +10,6 @@ struct Params {
     uint    mark;
     uint    halfLife;
     uint    premiumRate;
-    uint32  initTime;
     uint32  maturity;
     uint32  maturityVest;
     uint    maturityRate;   // x128
