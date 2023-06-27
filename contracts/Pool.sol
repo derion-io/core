@@ -97,11 +97,12 @@ abstract contract Pool is IPool, ERC1155Holder, Storage, Constants {
         SwapPayment memory payment
     ) external override returns(uint amountIn, uint amountOut) {
         if (param.sideOut != SIDE_R) {
+            uint maturityMin = uint32(block.timestamp) + MATURITY;
             if (param.maturity == 0) {
-                param.maturity = uint32(block.timestamp) + MATURITY;
+                param.maturity = maturityMin;
             } else {
                 require(param.maturity <= type(uint32).max, "MO");
-                require(param.maturity - block.timestamp >= MATURITY, "IE");
+                require(param.maturity >= maturityMin, "MM");
             }
         }
         (amountIn, amountOut) = _swap(param);
