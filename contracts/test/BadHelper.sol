@@ -55,7 +55,7 @@ contract BadHelper is Constants, IHelper {
     }
 
     // v(r)
-    function _v(uint xk, uint r, uint R) internal view returns (uint v) {
+    function _v(uint xk, uint r, uint R) internal pure returns (uint v) {
         if (r <= R >> 1) {
             return FullMath.mulDivRoundingUp(r, Q128, xk);
         }
