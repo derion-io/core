@@ -78,7 +78,7 @@
 
 "@derivable/shadow-token@git+ssh://git@github.com:derivable-labs/shadow-token.git":
   version "1.0.0"
-  resolved "git+ssh://git@github.com:derivable-labs/shadow-token.git#16a62ae1f2c1dd97a797d7e678ee9bb65c1858be"
+  resolved "git+ssh://git@github.com:derivable-labs/shadow-token.git#4aa14b76610519c6e6c02575e4047ec3a0a62e78"
   dependencies:
     "@derivable/erc1155-timelock" "git+ssh://git@github.com:derivable-labs/erc1155-timelock.git"
 
