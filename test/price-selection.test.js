@@ -117,8 +117,9 @@ describe("Price selection", function () {
       initTime: 0,
       halfLife: bn(HALF_LIFE),
       premiumRate: bn(1).shl(128).div(2),
-      minExpirationD: 0,
-      minExpirationC: 0,
+      maturity: 0,
+      maturityVest: 0,
+      maturityRate: 0,
       discountRate: 0,
       feeHalfLife: 0,
       openRate: feeToOpenRate(0)

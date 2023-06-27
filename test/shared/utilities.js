@@ -170,7 +170,7 @@ function encodePayload(swapType, sideIn, sideOut, amount) {
     )
 }
 
-async function attemptSwap(signer, swapType, sideIn, sideOut, amount, helper, payer, recipient) {
+async function attemptSwap(signer, swapType, sideIn, sideOut, amount, helper, payer, recipient, timelock = 0) {
     const payload = abiCoder.encode(
         ["uint", "uint", "uint", "uint"],
         [swapType, sideIn, sideOut, amount]
@@ -180,13 +180,13 @@ async function attemptSwap(signer, swapType, sideIn, sideOut, amount, helper, pa
         sideOut,
         helper,
         payload,
-        0,
+        timelock,
         payer,
         recipient
     )
 }
 
-async function attemptStaticSwap(signer, swapType, sideIn, sideOut, amount, helper, payer, recipient) {
+async function attemptStaticSwap(signer, swapType, sideIn, sideOut, amount, helper, payer, recipient, timelock = 0) {
     const payload = abiCoder.encode(
         ["uint", "uint", "uint", "uint"],
         [swapType, sideIn, sideOut, amount]
@@ -196,9 +196,9 @@ async function attemptStaticSwap(signer, swapType, sideIn, sideOut, amount, help
         sideOut,
         helper,
         payload,
-        0,
+        timelock,
         payer,
-        recipient
+        recipient,
     )).amountOut
 }
 
@@ -227,6 +227,7 @@ async function swapToSetPriceV3({ account, quoteToken, baseToken, uniswapRouter,
 function feeToOpenRate(fee) {
     return bn(((1-fee)*10000).toFixed(0)).mul(Q128).div(10000)
 }
+
 
 module.exports = {
     stringToBytes32,

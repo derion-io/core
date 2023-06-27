@@ -123,8 +123,9 @@ describe("Premium and Future", function () {
       initTime: 0,
       halfLife: bn(toHalfLife(0.006)), // ten years
       premiumRate: '0',
-      minExpirationD: MIN_EXPIRE,
-      minExpirationC: MIN_EXPIRE,
+      maturity: MIN_EXPIRE,
+      maturityVest: 0,
+      maturityRate: 0,
       discountRate: bn(DC).shl(128).div(100),
       feeHalfLife: 0,
       openRate: feeToOpenRate(0)
@@ -223,7 +224,7 @@ describe("Premium and Future", function () {
       0x10,
       stateCalHelper.address,
       payload,
-      365 * SECONDS_PER_DAY,
+      await time.latest() + 365 * SECONDS_PER_DAY,
       '0x0000000000000000000000000000000000000000',
       accountA.address
     )
@@ -241,7 +242,7 @@ describe("Premium and Future", function () {
       0x20,
       stateCalHelper.address,
       payload,
-      365 * SECONDS_PER_DAY,
+      await time.latest() + 365 * SECONDS_PER_DAY,
       '0x0000000000000000000000000000000000000000',
       accountA.address
     )

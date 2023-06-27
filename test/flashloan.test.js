@@ -140,8 +140,9 @@ describe("DDL v3", function () {
       initTime: 0,
       halfLife: bn(0),
       premiumRate: 0,
-      minExpirationD: 0,
-      minExpirationC: 0,
+      maturity: 0,
+      maturityVest: 0,
+      maturityRate: 0,
       discountRate: 0,
       feeHalfLife: 0,
       openRate: feeToOpenRate(0)

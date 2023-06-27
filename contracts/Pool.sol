@@ -24,8 +24,9 @@ abstract contract Pool is IPool, Storage, Events, Constants {
     uint internal immutable HALF_LIFE;
 
     uint internal immutable PREMIUM_RATE;
-    uint32 internal immutable MIN_EXPIRATION_D;
-    uint32 internal immutable MIN_EXPIRATION_C;
+    uint32 internal immutable MATURITY;
+    uint32 internal immutable MATURITY_VEST;
+    uint internal immutable MATURITY_RATE;
     uint internal immutable DISCOUNT_RATE;
     uint internal immutable OPEN_RATE;
 
@@ -38,8 +39,9 @@ abstract contract Pool is IPool, Storage, Events, Constants {
         K = params.k;
         MARK = params.mark;
         HALF_LIFE = params.halfLife;
-        MIN_EXPIRATION_D = params.minExpirationD;
-        MIN_EXPIRATION_C = params.minExpirationC;
+        MATURITY = params.maturity;
+        MATURITY_VEST = params.maturityVest;
+        MATURITY_RATE = params.maturityRate;
         DISCOUNT_RATE = params.discountRate;
         PREMIUM_RATE = params.premiumRate;
         INIT_TIME = params.initTime > 0 ? params.initTime : block.timestamp;
@@ -58,9 +60,9 @@ abstract contract Pool is IPool, Storage, Events, Constants {
 
         // mint tokens to recipient
         uint R3 = R/3;
-        IERC1155Supply(TOKEN).mintLock(params.recipient, idA, R3, MIN_EXPIRATION_D, "");
-        IERC1155Supply(TOKEN).mintLock(params.recipient, idB, R3, MIN_EXPIRATION_D, "");
-        IERC1155Supply(TOKEN).mintLock(params.recipient, idC, R - (R3<<1), MIN_EXPIRATION_C, "");
+        IERC1155Supply(TOKEN).mintLock(params.recipient, idA, R3, MATURITY, "");
+        IERC1155Supply(TOKEN).mintLock(params.recipient, idB, R3, MATURITY, "");
+        IERC1155Supply(TOKEN).mintLock(params.recipient, idC, R - (R3<<1), MATURITY, "");
 
         emit Derivable(
             'PoolCreated',                 // topic1: eventName
@@ -95,17 +97,22 @@ abstract contract Pool is IPool, Storage, Events, Constants {
         uint sideOut,
         address helper,
         bytes calldata payload,
-        uint32 expiration,
+        uint32 maturity,
         address payer,
         address recipient
     ) external override returns(uint amountIn, uint amountOut) {
         SwapParam memory param = SwapParam(0, helper, payload);
-        if (sideOut == SIDE_C) {
-            require(expiration >= MIN_EXPIRATION_C, "IEC");
-        } else if (sideOut == SIDE_A || sideOut == SIDE_B) {
-            require(expiration >= MIN_EXPIRATION_D, "IED");
+        if (sideOut != SIDE_R) {
+            if (maturity == 0) {
+                maturity = uint32(block.timestamp) + MATURITY;
+            } else {
+                require(maturity - block.timestamp >= MATURITY, "IE");
+            }
+        }
+        if (sideOut == SIDE_A || sideOut == SIDE_B) {
             if (DISCOUNT_RATE > 0) {
-                param.zeroInterestTime = (expiration - MIN_EXPIRATION_D) * DISCOUNT_RATE / Q128;
+                // TODO: maturity
+                param.zeroInterestTime = (maturity - block.timestamp - MATURITY) * DISCOUNT_RATE / Q128;
             }
         }
         (amountIn, amountOut) = _swap(sideIn, sideOut, param);
@@ -122,12 +129,15 @@ abstract contract Pool is IPool, Storage, Events, Constants {
                 IERC1155Supply(TOKEN).burn(payer, idIn, amountIn);
             } else {
                 IERC1155Supply(TOKEN).burn(msg.sender, idIn, amountIn);
+                payer = msg.sender;
             }
+            uint maturityOut = IERC1155Supply(TOKEN).locktimeOf(payer, idIn);
+            amountOut = _maturityPayoff(maturityOut, amountOut);
         }
         if (sideOut == SIDE_R) {
             TransferHelper.safeTransfer(TOKEN_R, recipient, amountOut);
         } else {
-            IERC1155Supply(TOKEN).mintLock(recipient, _packID(address(this), sideOut), amountOut, expiration, "");
+            IERC1155Supply(TOKEN).mintLock(recipient, _packID(address(this), sideOut), amountOut, maturity, "");
         }
     }
 
@@ -136,4 +146,6 @@ abstract contract Pool is IPool, Storage, Events, Constants {
         uint sideOut,
         SwapParam memory param
     ) internal virtual returns(uint amountIn, uint amountOut);
+
+    function _maturityPayoff(uint maturity, uint amountOut) internal view virtual returns (uint);
 }

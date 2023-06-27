@@ -38,7 +38,7 @@ interface IPool {
         uint sideOut,
         address helper,
         bytes calldata payload,
-        uint32 expiration,
+        uint32 maturity,
         address payer,
         address recipient
     ) external returns(uint amountIn, uint amountOut);

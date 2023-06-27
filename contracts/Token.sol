@@ -53,10 +53,10 @@ contract Token is ERC1155SupplyVirtual {
         address to,
         uint256 id,
         uint256 amount,
-        uint32 expiration,
+        uint32 maturity,
         bytes memory data
     ) external virtual onlyItsPool(id) {
-        super._mint(to, id, amount, block.timestamp + expiration, data);
+        super._mint(to, id, amount, maturity, data);
     }
 
     function burn(

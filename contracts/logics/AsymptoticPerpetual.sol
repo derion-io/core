@@ -72,6 +72,23 @@ contract AsymptoticPerpetual is Pool {
         market.xkA = uint(FullMath.mulDiv(market.xkA, Q64, decayRateX64));
     }
 
+    function _maturityPayoff(uint maturity, uint amountOut) internal view override returns (uint) {
+        unchecked {
+            if (maturity <= block.timestamp) {
+                return amountOut;
+            }
+            uint remain = maturity - block.timestamp;
+            if (MATURITY <= remain) {
+                return 0;
+            }
+            uint elapsed = MATURITY - remain;
+            if (elapsed < MATURITY_VEST) {
+                amountOut = amountOut * elapsed / MATURITY_VEST;
+            }
+            return FullMath.mulDiv(amountOut, MATURITY_RATE, Q128);
+        }
+    }
+
     function _decayRate (
         uint elapsed,
         uint halfLife
