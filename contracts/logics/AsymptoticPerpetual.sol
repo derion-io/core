@@ -148,6 +148,25 @@ contract AsymptoticPerpetual is Pool {
             }
         }
         (Market memory market, uint rA, uint rB) = _selectPrice(state, sideIn, sideOut);
+        // [PROTOCOL FEE]
+        {
+            uint feeRateX64 = _decayRate(block.timestamp - s_f, HALF_LIFE * 5);
+            State memory stateF = State(
+                state.R,
+                FullMath.mulDiv(state.a, Q64, feeRateX64),
+                FullMath.mulDiv(state.b, Q64, feeRateX64)
+            );
+            if (stateF.a != state.a || stateF.b != state.b) {
+                (uint rAF, uint rBF) = _evaluate(market, stateF);
+                rAF += rBF;
+                if (rAF < rA + rB) {
+                    // TODO: config a FEE_RECIPIENT here instead of msg.sender
+                    TransferHelper.safeTransfer(TOKEN, msg.sender, rA + rB - rAF);
+                    (state.a, state.b) = (stateF.a, stateF.b);
+                    s_f = uint32(block.timestamp);
+                }
+            }
+        }
         // [CALCULATION]
         State memory state1 = IHelper(param.helper).swapToState(market, state, rA, rB, param.payload);
         // [TRANSITION]

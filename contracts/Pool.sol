@@ -51,7 +51,8 @@ abstract contract Pool is IPool, Storage, Events, Constants {
         uint R = IERC20(TOKEN_R).balanceOf(address(this));
         require(params.a <= R >> 1 && params.b <= R >> 1, "IP");
 
-        s_i = uint32(INIT_TIME);
+        s_i = uint32(block.timestamp);
+        s_f = uint32(block.timestamp);
         s_a = uint224(params.a);
         s_b = uint224(params.b);
 
