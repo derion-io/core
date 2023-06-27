@@ -19,62 +19,50 @@ describe('Input', function () {
         const pool = derivablePools[0]
         const balanceBefore = (sideIn == SIDE_R) 
             ? await weth.balanceOf(owner.address)
-            : await derivable1155.balanceOf(owner.address, packId(sideIn, pool.address))
-        
-        await attemptSwap(
-            pool,
-            0,
+            : await derivable1155.balanceOf(owner.address, packId(sideIn, pool.contract.address))
+
+        await pool.swap(
             sideIn,
             sideOut,
             numberToWei(amount),
-            0,
-            stateCalHelper.address,
-            utr.address,
-            AddressZero,
-            owner.address
+            0
         )
 
         const balanceAfter = (sideIn == SIDE_R) 
             ? await weth.balanceOf(owner.address)
-            : await derivable1155.balanceOf(owner.address, packId(sideIn, pool.address))
+            : await derivable1155.balanceOf(owner.address, packId(sideIn, pool.contract.address))
 
         expect(Number(weiToNumber(balanceBefore.sub(balanceAfter)))).to.be.closeTo(amount, 1e-10)
     }
 
-    it('R -> A', async function() {
+    it('R -> A (No Premium)', async function() {
         await swapExpectInput(SIDE_R, SIDE_A, 0.1)
     })
-    it('R -> B', async function() {
+    it('R -> B (No Premium)', async function() {
         await swapExpectInput(SIDE_R, SIDE_B, 0.1)
     })
-    it('R -> C', async function() {
+    it('R -> C (No Premium)', async function() {
         await swapExpectInput(SIDE_R, SIDE_C, 0.1)
     })
-    it('A -> R', async function() {
+    it('A -> R (No Premium)', async function() {
         await swapExpectInput(SIDE_A, SIDE_R, 0.01)
     })
-    it('B -> R', async function() {
+    it('B -> R (No Premium)', async function() {
         await swapExpectInput(SIDE_B, SIDE_R, 0.01)
     })
-    it('C -> R', async function() {
+    it('C -> R (No Premium)', async function() {
         await swapExpectInput(SIDE_C, SIDE_R, 0.01)
     })
-    it('rA > 50%, open 1e Long, expect wallet loses 1e', async function () {
-        const { utr, derivablePools, stateCalHelper, owner, params, oracleLibrary, usdc, weth, uniswapPair } = await loadFixture(fixture)
+    it('R -> A, rA > 50%, expect wallet loses 1e', async function () {
+        const { derivablePools, owner, params, oracleLibrary, usdc, weth, uniswapPair } = await loadFixture(fixture)
         const pool = derivablePools[0]
         const config = paramToConfig(params[0])
 
-        await attemptSwap(
-            pool,
-            0,
+        await pool.swap(
             SIDE_R,
             SIDE_A,
             numberToWei(1),
-            0,
-            stateCalHelper.address,
-            utr.address,
-            AddressZero,
-            owner.address
+            0
         )
 
         await swapToSetPriceMock({
@@ -84,7 +72,7 @@ describe('Input', function () {
             targetTwap: 2000,
             targetSpot: 2000
         })
-        const state = await pool.getStates()
+        const state = await pool.contract.getStates()
         const oraclePrice = await oracleLibrary.fetch(config.ORACLE)
         const price = _selectPrice(
             config,
@@ -99,38 +87,28 @@ describe('Input', function () {
         expect(eval.rA.mul(2)).to.be.gt(state.R) // Check rA > R/2
 
         const wethBefore = await weth.balanceOf(owner.address)
-        await attemptSwap(
-            pool,
-            0,
+
+        await pool.swap(
             SIDE_R,
             SIDE_A,
             numberToWei(1),
-            0,
-            stateCalHelper.address,
-            utr.address,
-            AddressZero,
-            owner.address
+            0
         )
+
         const wethAfter = await weth.balanceOf(owner.address)
         expect(Number(weiToNumber(wethBefore.sub(wethAfter)))).to.be.eq(1)
     })
 
-    it('rB > 50%, open 1e Short, expect wallet loses 1e', async function () {
-        const { utr, derivablePools, stateCalHelper, owner, params, oracleLibrary, usdc, weth, uniswapPair } = await loadFixture(fixture)
+    it('R -> B, rB > 50%, expect wallet loses 1e', async function () {
+        const { derivablePools, owner, params, oracleLibrary, usdc, weth, uniswapPair } = await loadFixture(fixture)
         const pool = derivablePools[0]
         const config = paramToConfig(params[0])
 
-        await attemptSwap(
-            pool,
-            0,
+        await pool.swap(
             SIDE_R,
             SIDE_B,
             numberToWei(1),
-            0,
-            stateCalHelper.address,
-            utr.address,
-            AddressZero,
-            owner.address
+            0
         )
 
         await swapToSetPriceMock({
@@ -140,7 +118,7 @@ describe('Input', function () {
             targetTwap: 1000,
             targetSpot: 1000
         })
-        const state = await pool.getStates()
+        const state = await pool.contract.getStates()
         const oraclePrice = await oracleLibrary.fetch(config.ORACLE)
         const price = _selectPrice(
             config,
@@ -156,17 +134,11 @@ describe('Input', function () {
         expect(eval.rB.mul(2)).to.be.gt(state.R) // Check rB > R/2
 
         const wethBefore = await weth.balanceOf(owner.address)
-        await attemptSwap(
-            pool,
-            0,
+        await pool.swap(
             SIDE_R,
             SIDE_B,
             numberToWei(1),
-            0,
-            stateCalHelper.address,
-            utr.address,
-            AddressZero,
-            owner.address
+            0
         )
         const wethAfter = await weth.balanceOf(owner.address)
         expect(Number(weiToNumber(wethBefore.sub(wethAfter)))).to.be.eq(1)

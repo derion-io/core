@@ -5,6 +5,7 @@ const {
 const { expect, use } = require("chai");
 const { solidity } = require("ethereum-waffle");
 const { _init } = require("./AsymptoticPerpetual");
+const Pool = require("./Pool");
 const { bn, numberToWei, packId, encodeSqrtX96, encodePayload, feeToOpenRate } = require("./utilities");
 
 use(solidity)
@@ -648,6 +649,14 @@ function loadFixtureFromParams (arrParams, options={}) {
     )
     await uniswapPair.deployed()
 
+    // deploy helper
+    const StateCalHelper = await ethers.getContractFactory("contracts/Helper.sol:Helper")
+    const stateCalHelper = await StateCalHelper.deploy(
+      derivable1155.address,
+      weth.address
+    )
+    await stateCalHelper.deployed()
+
     // deploy ddl pool
     const oracle = ethers.utils.hexZeroPad(
       bn(quoteTokenIndex).shl(255).add(bn(300).shl(256 - 64)).add(uniswapPair.address).toHexString(),
@@ -677,16 +686,15 @@ function loadFixtureFromParams (arrParams, options={}) {
       await derivable1155.connect(accountA).setApprovalForAll(poolAddress, true)
       await derivable1155.connect(accountB).setApprovalForAll(poolAddress, true)
 
-      return await ethers.getContractAt("AsymptoticPerpetual", poolAddress)
+      return new Pool(
+        await ethers.getContractAt("AsymptoticPerpetual", poolAddress),
+        realParams,
+        {
+          utr,
+          helper: stateCalHelper
+        }
+      )
     }))
-
-    // deploy helper
-    const StateCalHelper = await ethers.getContractFactory("contracts/Helper.sol:Helper")
-    const stateCalHelper = await StateCalHelper.deploy(
-      derivable1155.address,
-      weth.address
-    )
-    await stateCalHelper.deployed()
 
     let returns = {
       owner,

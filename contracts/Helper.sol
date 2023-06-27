@@ -7,6 +7,7 @@ import "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 import "@uniswap/lib/contracts/libraries/TransferHelper.sol";
 import "@derivable/shadow-token/contracts/interfaces/IERC1155Supply.sol";
 
+import "./libs/abdk-consulting/abdk-libraries-solidity/ABDKMath64x64.sol";
 import "./libs/FullMath.sol";
 import "./logics/Constants.sol";
 import "./interfaces/IHelper.sol";
@@ -35,6 +36,13 @@ contract Helper is Constants, IHelper {
         uint32 maturity;
         address payer;
         address recipient;
+    }
+
+    struct PoolConfig {
+        uint premiumRate;
+        uint discountRate;
+        uint maturity;
+        uint hlInterest;
     }
 
     event Swap(
@@ -67,6 +75,17 @@ contract Helper is Constants, IHelper {
 
     function _supply(uint side) internal view returns (uint s) {
         return IERC1155Supply(TOKEN).totalSupply(_packID(msg.sender, side));
+    }
+
+    function _decayRate (
+        uint elapsed,
+        uint halfLife
+    ) internal pure returns (uint rateX64) {
+        if (halfLife == 0) {
+            return Q64;
+        }
+        int128 rate = ABDKMath64x64.exp_2(int128(int((elapsed << 64) / halfLife)));
+        return uint(int(rate));
     }
 
     function createPool(Params memory params, address factory) external payable returns (address pool) {
@@ -231,11 +250,12 @@ contract Helper is Constants, IHelper {
             uint sideIn,
             uint sideOut,
             uint amount,
-            uint premiumRate
-        ) = abi.decode(payload, (uint, uint, uint, uint, uint));
+            uint maturity,
+            PoolConfig memory config
+        ) = abi.decode(payload, (uint, uint, uint, uint, uint, PoolConfig));
         require(swapType == MAX_IN, 'Helper: UNSUPPORTED_SWAP_TYPE');
 
-        if (premiumRate > 0 && (sideOut == SIDE_A || sideOut == SIDE_B)) {
+        if (config.premiumRate > 0 && (sideOut == SIDE_A || sideOut == SIDE_B)) {
             require(sideIn == SIDE_R, 'Helper: UNSUPPORTED_SIDEIN_WITH_PREMIUM');
             uint a = _solve(
                 __.R,
@@ -243,11 +263,17 @@ contract Helper is Constants, IHelper {
                 __.rB,
                 sideOut,
                 amount,
-                premiumRate
+                config.premiumRate
             );
             if (a < amount) {
                 amount = a;
             }
+        }
+
+        if (config.discountRate > 0) {
+            uint zeroInterestTime = (maturity - block.timestamp - config.maturity) * config.discountRate / Q128;
+            uint decayRate = _decayRate(zeroInterestTime, config.hlInterest);
+            amount = FullMath.mulDiv(amount, Q64, decayRate);
         }
 
         state1.R = __.R;
