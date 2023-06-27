@@ -2,9 +2,17 @@
 pragma solidity ^0.8.0;
 
 struct SwapParam {
-    uint zeroInterestTime;
+    uint sideIn;
+    uint sideOut;
+    uint maturity;
     address helper;
     bytes payload;
+}
+
+struct SwapPayment {
+    address utr;
+    address payer;
+    address recipient;
 }
 
 struct State {
@@ -25,13 +33,7 @@ interface IPool {
     function TOKEN_R() external view returns (address);
     function K() external view returns (uint);
     function swap(
-        uint sideIn,
-        uint sideOut,
-        address helper,
-        bytes calldata payload,
-        uint32 maturity,
-        address utr,
-        address payer,
-        address recipient
+        SwapParam memory param,
+        SwapPayment memory payment
     ) external returns(uint amountIn, uint amountOut);
 }

@@ -82,62 +82,46 @@ abstract contract Pool is IPool, ERC1155Holder, Storage, Constants {
     }
 
     function swap(
-        uint sideIn,
-        uint sideOut,
-        address helper,
-        bytes calldata payload,
-        uint32 maturity,
-        address utr,
-        address payer,
-        address recipient
+        SwapParam memory param,
+        SwapPayment memory payment
     ) external override returns(uint amountIn, uint amountOut) {
-        SwapParam memory param = SwapParam(0, helper, payload);
-        if (sideOut != SIDE_R) {
-            if (maturity == 0) {
-                maturity = uint32(block.timestamp) + MATURITY;
+        if (param.sideOut != SIDE_R) {
+            if (param.maturity == 0) {
+                param.maturity = uint32(block.timestamp) + MATURITY;
             } else {
-                require(maturity - block.timestamp >= MATURITY, "IE");
+                require(param.maturity <= type(uint32).max, "MO");
+                require(param.maturity - block.timestamp >= MATURITY, "IE");
             }
         }
-        if (sideOut == SIDE_A || sideOut == SIDE_B) {
-            if (DISCOUNT_RATE > 0) {
-                // TODO: maturity
-                param.zeroInterestTime = (maturity - block.timestamp - MATURITY) * DISCOUNT_RATE / Q128;
-            }
-        }
-        (amountIn, amountOut) = _swap(sideIn, sideOut, param);
-        if (sideIn == SIDE_R) {
-            if (utr != address(0)) {
+        (amountIn, amountOut) = _swap(param);
+        if (param.sideIn == SIDE_R) {
+            if (payment.payer != address(0)) {
                 uint expected = amountIn + IERC20(TOKEN_R).balanceOf(address(this));
-                IUniversalTokenRouter(utr).pay(payer, address(this), 20, TOKEN_R, 0, amountIn);
+                IUniversalTokenRouter(payment.utr).pay(payment.payer, address(this), 20, TOKEN_R, 0, amountIn);
                 require(expected <= IERC20(TOKEN_R).balanceOf(address(this)), "BP");
             } else {
                 TransferHelper.safeTransferFrom(TOKEN_R, msg.sender, address(this), amountIn);
             }
         } else {
-            uint idIn = _packID(address(this), sideIn);
-            if (utr != address(0)) {
-                IUniversalTokenRouter(utr).pay(payer, address(this), 1155, TOKEN, idIn, amountIn);
+            uint idIn = _packID(address(this), param.sideIn);
+            if (payment.payer != address(0)) {
+                IUniversalTokenRouter(payment.utr).pay(payment.payer, address(this), 1155, TOKEN, idIn, amountIn);
                 IERC1155Supply(TOKEN).burn(address(this), idIn, amountIn);
             } else {
                 IERC1155Supply(TOKEN).burn(msg.sender, idIn, amountIn);
-                payer = msg.sender;
+                payment.payer = msg.sender;
             }
-            uint maturityOut = IERC1155Supply(TOKEN).locktimeOf(payer, idIn);
+            uint maturityOut = IERC1155Supply(TOKEN).locktimeOf(payment.payer, idIn);
             amountOut = _maturityPayoff(maturityOut, amountOut);
         }
-        if (sideOut == SIDE_R) {
-            TransferHelper.safeTransfer(TOKEN_R, recipient, amountOut);
+        if (param.sideOut == SIDE_R) {
+            TransferHelper.safeTransfer(TOKEN_R, payment.recipient, amountOut);
         } else {
-            IERC1155Supply(TOKEN).mintLock(recipient, _packID(address(this), sideOut), amountOut, maturity, "");
+            uint idOut = _packID(address(this), param.sideOut);
+            IERC1155Supply(TOKEN).mintLock(payment.recipient, idOut, amountOut, uint32(param.maturity), "");
         }
     }
 
-    function _swap(
-        uint sideIn,
-        uint sideOut,
-        SwapParam memory param
-    ) internal virtual returns(uint amountIn, uint amountOut);
-
+    function _swap(SwapParam memory param) internal virtual returns(uint amountIn, uint amountOut);
     function _maturityPayoff(uint maturity, uint amountOut) internal view virtual returns (uint);
 }

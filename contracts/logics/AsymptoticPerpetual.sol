@@ -123,10 +123,10 @@ contract AsymptoticPerpetual is Pool {
     }
 
     function _swap(
-        uint sideIn,
-        uint sideOut,
         SwapParam memory param
     ) internal override returns(uint amountIn, uint amountOut) {
+        uint sideIn = param.sideIn;
+        uint sideOut = param.sideOut;
         require(sideIn != sideOut, 'SS');
         State memory state = State(_reserve(), s_a, s_b);
         // [INTEREST DECAY]
@@ -162,6 +162,8 @@ contract AsymptoticPerpetual is Pool {
             Slippable(xk, state.R, rA, rB),
             param.payload
         );
+        require(state1.a <= type(uint224).max, "OA");
+        require(state1.b <= type(uint224).max, "OB");
         // [TRANSITION]
         (uint rA1, uint rB1) = _evaluate(xk, state1);
         if (sideIn == SIDE_R) {
@@ -194,47 +196,41 @@ contract AsymptoticPerpetual is Pool {
                 uint rC1 = state1.R - rA1 - rB1;
                 amountOut = FullMath.mulDiv(s, rC1 - rC, rC);
             } else {
-                amountOut = PREMIUM_RATE;
+                uint inputRate = Q128;
                 if (sideOut == SIDE_A) {
-                    sideOut = OPEN_RATE;
-                    if (amountOut > 0 && rA1 > rB1) {
-                        uint rC1 = state1.R - rA1 - rB1;
-                        uint imbaRate = FullMath.mulDiv(Q128, rA1 - rB1, rC1);
-                        if (imbaRate > amountOut) {
-                            sideOut = FullMath.mulDiv(sideOut, amountOut, imbaRate);
-                        }
-                    }
-                    if (param.zeroInterestTime > 0) {
-                        amountOut = _decayRate(param.zeroInterestTime, HL_INTEREST);
-                        sideOut = FullMath.mulDiv(sideOut, amountOut, Q64);
-                    }
-                    if (sideOut != Q128) {
-                        amountIn = FullMath.mulDiv(amountIn, Q128, sideOut);
-                    }
                     amountOut = FullMath.mulDiv(s, rA1 - rA, rA);
+                    inputRate = _inputRate(state1, param, rA1, rB1);
                 } else if (sideOut == SIDE_B) {
-                    sideOut = OPEN_RATE;
-                    if (amountOut > 0 && rB1 > rA1) {
-                        uint rC1 = state1.R - rA1 - rB1;
-                        uint imbaRate = FullMath.mulDiv(Q128, rB1 - rA1, rC1);
-                        if (imbaRate > amountOut) {
-                            sideOut = FullMath.mulDiv(sideOut, amountOut, imbaRate);
-                        }
-                    }
-                    if (param.zeroInterestTime > 0) {
-                        amountOut = _decayRate(param.zeroInterestTime, HL_INTEREST);
-                        sideOut = FullMath.mulDiv(sideOut, amountOut, Q64);
-                    }
-                    if (sideOut != Q128) {
-                        amountIn = FullMath.mulDiv(amountIn, Q128, sideOut);
-                    }
                     amountOut = FullMath.mulDiv(s, rB1 - rB, rB);
+                    inputRate = _inputRate(state1, param, rB1, rA1);
+                }
+                if (inputRate != Q128) {
+                    amountIn = FullMath.mulDiv(amountIn, Q128, inputRate);
                 }
             }
         }
-        require(state1.a <= type(uint224).max, "OA");
         s_a = uint224(state1.a);
-        require(state1.b <= type(uint224).max, "OB");
         s_b = uint224(state1.b);
+    }
+
+    function _inputRate(
+        State memory state,
+        SwapParam memory param,
+        uint rOut,
+        uint rCounter
+    ) internal view returns (uint rate) {
+        rate = OPEN_RATE;
+        if (PREMIUM_RATE > 0 && rOut > rCounter) {
+            uint rC1 = state.R - rOut - rCounter;
+            uint imbaRate = FullMath.mulDiv(Q128, rOut - rCounter, rC1);
+            if (imbaRate > PREMIUM_RATE) {
+                rate = FullMath.mulDiv(rate, PREMIUM_RATE, imbaRate);
+            }
+        }
+        if (DISCOUNT_RATE > 0) {
+            uint zeroInterestTime = (param.maturity - block.timestamp - MATURITY) * DISCOUNT_RATE / Q128;
+            uint decayRate = _decayRate(zeroInterestTime, HL_INTEREST);
+            rate = FullMath.mulDiv(rate, decayRate, Q64);
+        }
     }
 }

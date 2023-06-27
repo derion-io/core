@@ -89,13 +89,18 @@ contract Helper is Constants, IHelper {
         );
 
         (, amountOut) = IPool(params.poolIn).swap(
-            params.sideIn,
-            SIDE_R,
-            address(this),
-            payload,
-            0,  // R has no expiration
-            params.payer,
-            address(this)
+            SwapParam(
+                params.sideIn,
+                SIDE_R,
+                0,  // R has no expiration
+                address(this),
+                payload
+            ),
+            SwapPayment(
+                msg.sender, // UTR
+                params.payer,
+                address(this)
+            )
         );
 
         // TOKEN_R approve poolOut
@@ -109,13 +114,18 @@ contract Helper is Constants, IHelper {
             amountOut
         );
         (, amountOut) = IPool(params.poolOut).swap(
-            SIDE_R,
-            params.sideOut,
-            address(this),
-            payload,
-            params.maturity,
-            address(0),
-            params.recipient
+            SwapParam(
+                SIDE_R,
+                params.sideOut,
+                params.maturity,
+                address(this),
+                payload
+            ),
+            SwapPayment(
+                msg.sender, // UTR
+                address(0),
+                params.recipient
+            )
         );
 
         // check leftOver
@@ -178,13 +188,18 @@ contract Helper is Constants, IHelper {
         );
 
         (, amountOut) = IPool(params.poolIn).swap(
-            params.sideIn,
-            params.sideOut,
-            address(this),
-            payload,
-            0,
-            params.payer,
-            params.recipient
+            SwapParam(
+                params.sideIn,
+                params.sideOut,
+                0,
+                address(this),
+                payload
+            ),
+            SwapPayment(
+                msg.sender, // UTR
+                params.payer,
+                params.recipient
+            )
         );
 
         if (_params.sideOut == SIDE_NATIVE) {

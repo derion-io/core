@@ -30,7 +30,10 @@ contract FlashloanAttack {
     IERC20(params.tokenIn).approve(ROUTER, type(uint).max);
     IERC1155(deriToken).setApprovalForAll(POOL, true);
     ISwapRouter(ROUTER).exactInputSingle(params);
-    IPool(POOL).swap(sideIn, sideOut, helper, payload, maturity, payer, recipient);
+    IPool(POOL).swap(
+      SwapParam(sideIn, sideOut, maturity, helper, payload),
+      SwapPayment(msg.sender, payer, recipient)
+    );
   }
 
    function onERC1155Received(

@@ -56,13 +56,18 @@ contract TestHelper {
             IERC1155(TOKEN).balanceOf(address(this), _packID(POOL, sideIn))
         );
         return IPool(POOL).swap(
-            sideIn,
-            sideOut,
-            HELPER,
-            payload,
-            maturity,
-            payer,
-            recipient
+            SwapParam(
+                sideIn,
+                sideOut,
+                maturity,
+                HELPER,
+                payload
+            ),
+            SwapPayment(
+                msg.sender, // UTR
+                payer,
+                recipient
+            )
         );
     }
 }
