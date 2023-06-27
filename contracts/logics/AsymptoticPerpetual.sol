@@ -58,18 +58,9 @@ contract AsymptoticPerpetual is Pool {
         return IERC20(TOKEN_R).balanceOf(address(this));
     }
 
-    function _evaluate(Market memory market, State memory state) internal pure returns (uint rA, uint rB) {
-        rA = _r(market.xkA, state.a, state.R);
-        rB = _r(market.xkB, state.b, state.R);
-    }
-
-    function _market(
-        uint decayRateX64,
-        uint price
-    ) internal view returns (Market memory market) {
-        market.xkA = _powu(FullMath.mulDiv(price, Q128, MARK), K);
-        market.xkB = uint(FullMath.mulDiv(Q256M/market.xkA, Q64, decayRateX64));
-        market.xkA = uint(FullMath.mulDiv(market.xkA, Q64, decayRateX64));
+    function _evaluate(uint xk, State memory state) internal pure returns (uint rA, uint rB) {
+        rA = _r(xk, state.a, state.R);
+        rB = _r(Q256M/xk, state.b, state.R);
     }
 
     function _maturityPayoff(uint maturity, uint amountOut) internal view override returns (uint) {
@@ -98,32 +89,35 @@ contract AsymptoticPerpetual is Pool {
         }
         int128 rate = ABDKMath64x64.exp_2(int128(int((elapsed << 64) / halfLife)));
         return uint(int(rate));
-    } 
+    }
+
+    function _xk(uint price) internal view returns (uint xk) {
+        xk = _powu(FullMath.mulDiv(Q128, price, MARK), K);
+    }
 
     function _selectPrice(
         State memory state,
         uint sideIn,
         uint sideOut
-    ) internal view returns (Market memory market, uint rA, uint rB) {
-        uint decayRateX64 = Q64;
+    ) internal view returns (uint xk, uint rA, uint rB) {
         (uint min, uint max) = _fetch();
         if (min > max) {
             (min, max) = (max, min);
         }
         if (sideOut == SIDE_A || sideIn == SIDE_B) {
-            market = _market(decayRateX64, max);
-            (rA, rB) = _evaluate(market, state);
+            xk = _xk(max);
+            (rA, rB) = _evaluate(xk, state);
         } else if (sideOut == SIDE_B || sideIn == SIDE_A) {
-            market = _market(decayRateX64, min);
-            (rA, rB) = _evaluate(market, state);
+            xk = _xk(min);
+            (rA, rB) = _evaluate(xk, state);
         } else {
             // TODO: assisting flag for min/max
-            market = _market(decayRateX64, min);
-            (rA, rB) = _evaluate(market, state);
+            xk = _xk(min);
+            (rA, rB) = _evaluate(xk, state);
             if ((sideIn == SIDE_R) == rB > rA) {
                 // TODO: unit test for this case
-                market = _market(decayRateX64, max);
-                (rA, rB) = _evaluate(market, state);
+                xk = _xk(max);
+                (rA, rB) = _evaluate(xk, state);
             }
         }
     }
@@ -148,7 +142,7 @@ contract AsymptoticPerpetual is Pool {
                 s_i = uint32(block.timestamp);
             }
         }
-        (Market memory market, uint rA, uint rB) = _selectPrice(state, sideIn, sideOut);
+        (uint xk, uint rA, uint rB) = _selectPrice(state, sideIn, sideOut);
         // [PROTOCOL FEE]
         {
             // TODO: combine with other fee, and return to Pool to transfer
@@ -159,7 +153,7 @@ contract AsymptoticPerpetual is Pool {
                 FullMath.mulDiv(state.b, Q64, feeRateX64)
             );
             if (stateF.a != state.a || stateF.b != state.b) {
-                (uint rAF, uint rBF) = _evaluate(market, stateF);
+                (uint rAF, uint rBF) = _evaluate(xk, stateF);
                 rAF += rBF;
                 if (rAF < rA + rB) {
                     TransferHelper.safeTransfer(TOKEN_R, FEE_TO, rA + rB - rAF);
@@ -169,9 +163,9 @@ contract AsymptoticPerpetual is Pool {
             }
         }
         // [CALCULATION]
-        State memory state1 = IHelper(param.helper).swapToState(market, state, rA, rB, param.payload);
+        State memory state1 = IHelper(param.helper).swapToState(xk, state, rA, rB, param.payload);
         // [TRANSITION]
-        (uint rA1, uint rB1) = _evaluate(market, state1);
+        (uint rA1, uint rB1) = _evaluate(xk, state1);
         if (sideIn == SIDE_R) {
             require(rA1 >= rA && rB1 >= rB, "MI:R");
             amountIn = state1.R - state.R;
@@ -218,7 +212,7 @@ contract AsymptoticPerpetual is Pool {
                     }
                     if (sideOut != Q128) {
                         state1.a = state.a + FullMath.mulDiv(state1.a - state.a, sideOut, Q128);
-                        rA1 = _r(market.xkA, state1.a, state1.R);
+                        rA1 = _r(xk, state1.a, state1.R);
                     }
                     amountOut = FullMath.mulDiv(s, rA1 - rA, rA);
                 } else if (sideOut == SIDE_B) {
@@ -236,7 +230,7 @@ contract AsymptoticPerpetual is Pool {
                     }
                     if (sideOut != Q128) {
                         state1.b = state.b + FullMath.mulDiv(state1.b - state.b, sideOut, Q128);
-                        rB1 = _r(market.xkB, state1.b, state1.R);
+                        rB1 = _r(Q256M/xk, state1.b, state1.R);
                     }
                     amountOut = FullMath.mulDiv(s, rB1 - rB, rB);
                 }

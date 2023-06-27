@@ -18,11 +18,6 @@ struct SwapParam {
     bytes payload;
 }
 
-struct Market {
-    uint xkA;
-    uint xkB;
-}
-
 struct State {
     uint R;
     uint a;

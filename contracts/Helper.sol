@@ -205,7 +205,7 @@ contract Helper is Constants, IHelper {
     }
 
     function swapToState(
-        Market calldata market,
+        uint xk,
         State calldata state,
         uint rA,
         uint rB,
@@ -246,7 +246,7 @@ contract Helper is Constants, IHelper {
             rB1 += amount;
         }
 
-        state1.a = _v(market.xkA, rA1, state1.R);
-        state1.b = _v(market.xkB, rB1, state1.R);
+        state1.a = _v(xk, rA1, state1.R);
+        state1.b = _v(Q256M/xk, rB1, state1.R);
     }
 }
