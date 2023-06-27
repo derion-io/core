@@ -1,6 +1,6 @@
 const ethers = require('ethers')
 const bnjs = require('bignumber.js')
-const { Q128 } = require('./constant')
+const { Q128, SIDE_A, SIDE_B } = require('./constant')
 bnjs.config({ EXPONENTIAL_AT: 999999, DECIMAL_PLACES: 40 })
 
 const abiCoder = new ethers.utils.AbiCoder()
@@ -172,9 +172,12 @@ function encodePayload(swapType, sideIn, sideOut, amount) {
 
 async function attemptSwap(signer, swapType, sideIn, sideOut, amount, maturity, helper, utr, payer, recipient) {
     const [openRate, premiumRate] = await Promise.all([signer.OPEN_RATE(), signer.PREMIUM_RATE()])
+    if (sideOut == SIDE_A || sideOut == SIDE_B) {
+        amount = amount.mul(openRate).div(Q128) // apply open rate
+    }
     const payload = abiCoder.encode(
-        ["uint", "uint", "uint", "uint", "uint", "uint"],
-        [openRate, premiumRate, swapType, sideIn, sideOut, amount]
+        ["uint", "uint", "uint", "uint", "uint"],
+        [swapType, sideIn, sideOut, amount, premiumRate]
     )
     return await signer.swap(
         {

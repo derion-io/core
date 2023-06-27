@@ -227,23 +227,27 @@ contract Helper is Constants, IHelper {
         bytes calldata payload
     ) external view override returns (State memory state1) {
         (
-            uint openRate,
-            uint premiumRate,
             uint swapType,
             uint sideIn,
             uint sideOut,
-            uint amount
-        ) = abi.decode(payload, (uint, uint, uint, uint, uint, uint));
+            uint amount,
+            uint premiumRate
+        ) = abi.decode(payload, (uint, uint, uint, uint, uint));
         require(swapType == MAX_IN, 'Helper: UNSUPPORTED_SWAP_TYPE');
 
-        // TODO: handle SIDE_B, and unsupported premium swap
-        if (
-            sideIn == SIDE_R && 
-            (sideOut == SIDE_A || sideOut == SIDE_B)
-        ) {
-            amount = FullMath.mulDiv(amount, openRate, Q128);
-            if (premiumRate > 0) {
-                uint a = _solve(__, sideOut, amount, premiumRate);
+        if (premiumRate > 0) {
+            if (
+                sideIn == SIDE_R && 
+                (sideOut == SIDE_A || sideOut == SIDE_B)
+            ) {
+                uint a = _solve(
+                    __.R,
+                    __.rA,
+                    __.rB,
+                    sideOut,
+                    amount,
+                    premiumRate
+                );
                 if (a < amount) {
                     amount = a;
                 }
@@ -284,28 +288,24 @@ contract Helper is Constants, IHelper {
 
     // TODO: handle overflow: returns amount to disable premium calculation
     function _solve(
-        Slippable calldata __, 
+        uint R,
+        uint rA,
+        uint rB,
         uint sideOut,
         uint amount, 
         uint premiumRate
     ) internal pure returns (uint) {
-        uint b;
-        uint rC1 = __.R - __.rB - __.rA;
-        uint rOut = sideOut == SIDE_A ? __.rA + amount : __.rB + amount;
-        uint rCounter = sideOut == SIDE_A ? __.rB : __.rA;
-        if (rOut <= rCounter) {
+        uint rC = R - rB - rA;
+        (uint rOut, uint rTou) = sideOut == SIDE_A ? (rA, rB) : (rB, rA);
+        if (amount + rOut <= rTou) {
             return amount;
         }
-        uint imbaRate = FullMath.mulDiv(Q128, rOut - rCounter, rC1);
+        uint imbaRate = FullMath.mulDiv(Q128, amount + rOut - rTou, rC);
         if (imbaRate <= premiumRate) {
             return amount;
         }
-        if (sideOut == SIDE_A) {
-            b = __.rA - __.rB;
-        } else if (sideOut == SIDE_B) {
-            b = __.rB - __.rA;
-        }
-        uint c = __.R - __.rA - __.rB;
+        uint b = rOut - rTou;
+        uint c = R - rA - rB;
         uint ac = FullMath.mulDiv(amount*c, premiumRate, Q128);
         uint delta = b * b + 4 * ac;
         return (Math.sqrt(delta) - b) / 2;
