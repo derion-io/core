@@ -235,22 +235,18 @@ contract Helper is Constants, IHelper {
         ) = abi.decode(payload, (uint, uint, uint, uint, uint));
         require(swapType == MAX_IN, 'Helper: UNSUPPORTED_SWAP_TYPE');
 
-        if (premiumRate > 0) {
-            if (
-                sideIn == SIDE_R && 
-                (sideOut == SIDE_A || sideOut == SIDE_B)
-            ) {
-                uint a = _solve(
-                    __.R,
-                    __.rA,
-                    __.rB,
-                    sideOut,
-                    amount,
-                    premiumRate
-                );
-                if (a < amount) {
-                    amount = a;
-                }
+        if (premiumRate > 0 && (sideOut == SIDE_A || sideOut == SIDE_B)) {
+            require(sideIn == SIDE_R, 'Helper: UNSUPPORTED_SIDEIN_WITH_PREMIUM');
+            uint a = _solve(
+                __.R,
+                __.rA,
+                __.rB,
+                sideOut,
+                amount,
+                premiumRate
+            );
+            if (a < amount) {
+                amount = a;
             }
         }
 
