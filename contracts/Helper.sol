@@ -205,10 +205,7 @@ contract Helper is Constants, IHelper {
     }
 
     function swapToState(
-        uint xk,
-        uint R,
-        uint rA,
-        uint rB,
+        Slippable calldata __,
         bytes calldata payload
     ) external view override returns (State memory state1) {
         (
@@ -218,22 +215,22 @@ contract Helper is Constants, IHelper {
         uint amount
         ) = abi.decode(payload, (uint, uint, uint, uint));
         require(swapType == MAX_IN, 'Helper: UNSUPPORTED_SWAP_TYPE');
-        state1.R = R;
-        (uint rA1, uint rB1) = (rA, rB);
+        state1.R = __.R;
+        (uint rA1, uint rB1) = (__.rA, __.rB);
 
         if (sideIn == SIDE_R) {
             state1.R += amount;
         } else {
             uint s = _supply(sideIn);
             if (sideIn == SIDE_A) {
-                amount = FullMath.mulDiv(amount, rA, s);
+                amount = FullMath.mulDiv(amount, __.rA, s);
                 rA1 -= amount;
             } else if (sideIn == SIDE_B) {
-                amount = FullMath.mulDiv(amount, rB, s);
+                amount = FullMath.mulDiv(amount, __.rB, s);
                 rB1 -= amount;
             } else /*if (sideIn == SIDE_C)*/ {
                 --amount; // SIDE_C sacrifices number rounding for A and B
-                uint rC = R - rA - rB;
+                uint rC = __.R - __.rA - __.rB;
                 amount = FullMath.mulDiv(amount, rC, s);
             }
         }
@@ -246,7 +243,7 @@ contract Helper is Constants, IHelper {
             rB1 += amount;
         }
 
-        state1.a = _v(xk, rA1, state1.R);
-        state1.b = _v(Q256M/xk, rB1, state1.R);
+        state1.a = _v(__.xk, rA1, state1.R);
+        state1.b = _v(Q256M/__.xk, rB1, state1.R);
     }
 }

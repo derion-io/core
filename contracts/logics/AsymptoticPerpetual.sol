@@ -157,7 +157,10 @@ contract AsymptoticPerpetual is Pool {
             }
         }
         // [CALCULATION]
-        State memory state1 = IHelper(param.helper).swapToState(xk, state.R, rA, rB, param.payload);
+        State memory state1 = IHelper(param.helper).swapToState(
+            Slippable(xk, state.R, rA, rB),
+            param.payload
+        );
         // [TRANSITION]
         (uint rA1, uint rB1) = _evaluate(xk, state1);
         if (sideIn == SIDE_R) {

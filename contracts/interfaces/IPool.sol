@@ -24,6 +24,13 @@ struct State {
     uint b;
 }
 
+struct Slippable {
+    uint xk;
+    uint R;
+    uint rA;
+    uint rB;
+}
+
 interface IPool {
     function ORACLE() external view returns (bytes32);
     function TOKEN_R() external view returns (address);
