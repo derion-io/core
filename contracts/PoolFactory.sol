@@ -36,7 +36,7 @@ contract PoolFactory is IPoolFactory {
     }
 
     function _pack(Params memory params) internal pure returns (bytes memory) {
-        return abi.encodePacked(
+        return abi.encode(
             params.token,
             params.oracle,
             params.mark,
@@ -64,7 +64,7 @@ contract PoolFactory is IPoolFactory {
             'PoolCreated',                          // topic1: event name
             params.oracle & ORACLE_MASK,            // topic2: price index
             bytes32(bytes20(params.reserveToken)),  // topic3: reserve token
-            abi.encodePacked(
+            abi.encode(
                 _pack(params),
                 pool
             )
