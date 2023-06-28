@@ -10,27 +10,6 @@ const { bn, numberToWei, packId, encodeSqrtX96, encodePayload, feeToOpenRate } =
 
 use(solidity)
 
-const opts = {
-  gasLimit: 30000000
-}
-
-const TRANSFER_FROM_SENDER = 0
-const TRANSFER_FROM_ROUTER = 1
-const TRANSFER_CALL_VALUE = 2
-const IN_TX_PAYMENT = 4
-const ALLOWANCE_BRIDGE = 8
-const AMOUNT_EXACT = 0
-const AMOUNT_ALL = 1
-const EIP_ETH = 0
-const ERC_721_BALANCE = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("UniversalTokenRouter.ERC_721_BALANCE"))
-const ACTION_IGNORE_ERROR = 1
-const ACTION_RECORD_CALL_RESULT = 2
-const ACTION_INJECT_CALL_RESULT = 4
-
-const HALF_LIFE = 10 * 365 * 24 * 60 * 60
-
-// const HALF_LIFE = 0
-
 function getOpenFeeScenerios(fee) {
   return async function scenerioBase() {
     const [owner, accountA, accountB] = await ethers.getSigners();
@@ -237,18 +216,6 @@ function loadFixtureFromParams (arrParams, options={}) {
     const utr = await UniversalRouter.deploy()
     await utr.deployed()
 
-    // deploy oracle library
-    const OracleLibrary = await ethers.getContractFactory("TestOracleHelper")
-    const oracleLibrary = await OracleLibrary.deploy()
-    await oracleLibrary.deployed()
-
-    // deploy pool factory
-    const PoolFactory = await ethers.getContractFactory("PoolFactory");
-    const poolFactory = await PoolFactory.deploy(
-      owner.address,
-      options.feeRate || 0
-    );
-  
     // deploy descriptor
     const TokenDescriptor = await ethers.getContractFactory("TokenDescriptor")
     const tokenDescriptor = await TokenDescriptor.deploy()
@@ -262,6 +229,19 @@ function loadFixtureFromParams (arrParams, options={}) {
       tokenDescriptor.address
     )
     await derivable1155.deployed()
+
+    // deploy oracle library
+    const OracleLibrary = await ethers.getContractFactory("TestOracleHelper")
+    const oracleLibrary = await OracleLibrary.deploy()
+    await oracleLibrary.deployed()
+
+    // deploy pool factory
+    const PoolFactory = await ethers.getContractFactory("PoolFactory");
+    const poolFactory = await PoolFactory.deploy(
+      derivable1155.address,
+      owner.address,
+      options.feeRate || 0,
+    );
 
     // USDC
     const compiledERC20 = require("@uniswap/v2-core/build/ERC20.json");

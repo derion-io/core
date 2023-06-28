@@ -43,10 +43,10 @@ abstract contract Pool is IPool, ERC1155Holder, Storage, Constants {
     );
 
     constructor() {
+        TOKEN = IPoolFactory(msg.sender).TOKEN();
         FEE_TO = IPoolFactory(msg.sender).FEE_TO();
 
         Params memory params = IPoolFactory(msg.sender).getParams();
-        TOKEN = params.token;
         ORACLE = params.oracle;
         TOKEN_R = params.reserveToken;
         K = params.k;
