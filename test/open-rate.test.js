@@ -6,13 +6,11 @@ const {
 const { expect, use } = require("chai");
 const { solidity } = require("ethereum-waffle");
 const { SIDE_A, SIDE_R, SIDE_B, SIDE_C } = require("./shared/constant");
-const { scenerioBase, getOpenFeeScenerios, loadFixtureFromParams } = require("./shared/scenerios");
-const {_swap, _selectPrice} = require("./shared/AsymptoticPerpetual");
-const { encodePayload, numberToWei, bn, weiToNumber, feeToOpenRate } = require("./shared/utilities");
+const { loadFixtureFromParams } = require("./shared/scenerios");
+const { numberToWei, bn, weiToNumber, feeToOpenRate } = require("./shared/utilities");
 const { baseParams } = require("./shared/baseParams");
 
 use(solidity)
-const { AddressZero, MaxUint256 } = ethers.constants
 
 const opts = {
   gasLimit: 30000000

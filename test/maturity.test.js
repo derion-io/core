@@ -1,9 +1,8 @@
 const { loadFixture, time } = require("@nomicfoundation/hardhat-network-helpers")
 const { baseParams } = require("./shared/baseParams")
 const { loadFixtureFromParams } = require("./shared/scenerios")
-const { attemptSwap, weiToNumber, numberToWei, attemptStaticSwap, bn } = require("./shared/utilities")
-const { SIDE_R, SIDE_A, SIDE_B, Q64, SIDE_C } = require("./shared/constant")
-const { AddressZero } = require("@ethersproject/constants")
+const { weiToNumber, numberToWei, bn } = require("./shared/utilities")
+const { SIDE_R, SIDE_A, SIDE_B, SIDE_C } = require("./shared/constant")
 const { expect } = require("chai")
 
 const configs = [
@@ -56,17 +55,6 @@ configs.forEach(config => describe(`Maturity - EXP = ${config.exp}, COEF ${confi
                 recipient: accountA.address
             }
         )
-        // await attemptSwap(
-        //     derivablePool,
-        //     0,
-        //     SIDE_R,
-        //     SIDE_A,
-        //     numberToWei(1),
-        //     stateCalHelper.address,
-        //     AddressZero,
-        //     accountA.address,
-        //     await time.latest() + 120
-        // )
 
         await pool.swap(
             SIDE_R,
@@ -77,17 +65,6 @@ configs.forEach(config => describe(`Maturity - EXP = ${config.exp}, COEF ${confi
                 recipient: accountA.address
             }
         )
-        // await attemptSwap(
-        //     derivablePool,
-        //     0,
-        //     SIDE_R,
-        //     SIDE_B,
-        //     numberToWei(1),
-        //     stateCalHelper.address,
-        //     AddressZero,
-        //     accountA.address,
-        //     await time.latest() + 120
-        // )
 
         await pool.swap(
             SIDE_R,
@@ -98,17 +75,6 @@ configs.forEach(config => describe(`Maturity - EXP = ${config.exp}, COEF ${confi
                 recipient: accountA.address
             }
         )
-        // await attemptSwap(
-        //     derivablePool,
-        //     0,
-        //     SIDE_R,
-        //     SIDE_C,
-        //     numberToWei(1),
-        //     stateCalHelper.address,
-        //     AddressZero,
-        //     accountA.address,
-        //     await time.latest() + 120
-        // )
 
         const valuesBefore = await Promise.all(sides.map(async side => {
             return await pool.swap(
@@ -118,17 +84,6 @@ configs.forEach(config => describe(`Maturity - EXP = ${config.exp}, COEF ${confi
                 0,
                 { static: true }
             )
-            //  attemptStaticSwap(
-            //     derivablePool,
-            //     0,
-            //     side,
-            //     SIDE_R,
-            //     numberToWei(0.1),
-            //     stateCalHelper.address,
-            //     AddressZero,
-            //     owner.address,
-            //     0
-            // )
         }))
 
         const toSideValueBefore = await pool.swap(
@@ -142,40 +97,15 @@ configs.forEach(config => describe(`Maturity - EXP = ${config.exp}, COEF ${confi
             }
         )
 
-        // const toSideValueBefore = await attemptStaticSwap(
-        //     derivablePool,
-        //     0,
-        //     toSide,
-        //     SIDE_R,
-        //     numberToWei(0.1),
-        //     stateCalHelper.address,
-        //     AddressZero,
-        //     accountB.address,
-        //     0
-        // )
-
         await pool.connect(accountA).swap(
             fromSide,
             toSide,
             numberToWei(0.1),
             0,
             { 
-                static: true,
                 recipient: accountB.address
             }
         )
-
-        // await attemptSwap(
-        //     derivablePool.connect(accountA),
-        //     0,
-        //     fromSide,
-        //     toSide,
-        //     numberToWei(0.1),
-        //     stateCalHelper.address,
-        //     AddressZero,
-        //     accountB.address,
-        //     0
-        // )
 
         const valuesAfter = await Promise.all(sides.map(async side => {
             return await pool.swap(
@@ -185,19 +115,6 @@ configs.forEach(config => describe(`Maturity - EXP = ${config.exp}, COEF ${confi
                 0,
                 { static: true }
             )
-
-               
-            // return await attemptStaticSwap(
-            //     derivablePool,
-            //     0,
-            //     side,
-            //     SIDE_R,
-            //     numberToWei(0.1),
-            //     stateCalHelper.address,
-            //     AddressZero,
-            //     owner.address,
-            //     0
-            // )
         }))
 
         const toSideValueAfter = await pool.swap(
@@ -207,18 +124,6 @@ configs.forEach(config => describe(`Maturity - EXP = ${config.exp}, COEF ${confi
             await time.latest() + 120,
             { static: true }
         )
-
-        // const toSideValueAfter = await attemptStaticSwap(
-        //     derivablePool,
-        //     0,
-        //     toSide,
-        //     SIDE_R,
-        //     numberToWei(0.1),
-        //     stateCalHelper.address,
-        //     AddressZero,
-        //     owner.address,
-        //     await time.latest() + 120
-        // )
 
         sides.forEach((side, index) => {
             expect(Number(weiToNumber(valuesBefore[index]))/Number(weiToNumber(valuesAfter[index]))).to.be.closeTo(1, 1e17)
@@ -241,17 +146,6 @@ configs.forEach(config => describe(`Maturity - EXP = ${config.exp}, COEF ${confi
                 recipient: accountA.address
             }
         )
-        // await attemptSwap(
-        //     derivablePool,
-        //     0,
-        //     SIDE_R,
-        //     side,
-        //     numberToWei(1),
-        //     stateCalHelper.address,
-        //     AddressZero,
-        //     accountA.address,
-        //     curTime + 120
-        // )
 
         await poolNoMaturity.swap(
             SIDE_R,
@@ -262,17 +156,6 @@ configs.forEach(config => describe(`Maturity - EXP = ${config.exp}, COEF ${confi
                 recipient: accountA.address
             }
         )
-        // await attemptSwap(
-        //     poolNoMaturity,
-        //     0,
-        //     SIDE_R,
-        //     side,
-        //     numberToWei(1),
-        //     stateCalHelper.address,
-        //     AddressZero,
-        //     accountA.address,
-        //     0
-        // )
         await time.increaseTo(curTime + 120 - t)
 
         const amountOutNoMaturity = await poolNoMaturity.connect(accountA).swap(
@@ -285,19 +168,7 @@ configs.forEach(config => describe(`Maturity - EXP = ${config.exp}, COEF ${confi
             }
         )
 
-        // const amountOutNoMaturity = await attemptStaticSwap(
-        //     poolNoMaturity.connect(accountA),
-        //     0,
-        //     side,
-        //     SIDE_R,
-        //     numberToWei(1),
-        //     stateCalHelper.address,
-        //     AddressZero,
-        //     accountA.address,
-        //     0
-        // )
-
-        const amountOut = await poolNoMaturity.connect(accountA).swap(
+        const amountOut = await derivablePool.connect(accountA).swap(
             side,
             SIDE_R,
             numberToWei(1),
@@ -306,18 +177,6 @@ configs.forEach(config => describe(`Maturity - EXP = ${config.exp}, COEF ${confi
                 static: true
             }
         )
-
-        // const amountOut = await attemptStaticSwap(
-        //     derivablePool.connect(accountA),
-        //     0,
-        //     side,
-        //     SIDE_R,
-        //     numberToWei(1),
-        //     stateCalHelper.address,
-        //     AddressZero,
-        //     accountA.address,
-        //     0
-        // )
 
         if (t <= 0) {
             expect(amountOut).to.be.eq(amountOutNoMaturity)
