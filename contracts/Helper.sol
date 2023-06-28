@@ -254,6 +254,15 @@ contract Helper is Constants, IHelper {
         ) = abi.decode(payload, (uint, uint, uint, uint, uint, PoolConfig));
         require(swapType == MAX_IN, 'Helper: UNSUPPORTED_SWAP_TYPE');
 
+        if (config.DISCOUNT_RATE > 0 && (sideOut == SIDE_A || sideOut == SIDE_B)) {
+            uint minMaturity = block.timestamp + config.MATURITY;
+            if (maturity > minMaturity) {
+                uint zeroInterestTime = (maturity - minMaturity) * config.DISCOUNT_RATE / Q128;
+                uint decayRate = _decayRate(zeroInterestTime, config.HL_INTEREST);
+                amount = FullMath.mulDiv(amount, decayRate, Q64);
+            }
+        }
+
         if (config.PREMIUM_RATE > 0 && (sideOut == SIDE_A || sideOut == SIDE_B)) {
             require(sideIn == SIDE_R, 'Helper: UNSUPPORTED_SIDEIN_WITH_PREMIUM');
             uint a = _solve(
@@ -267,13 +276,6 @@ contract Helper is Constants, IHelper {
             if (a < amount) {
                 amount = a;
             }
-        }
-
-        uint minMaturity = block.timestamp + config.MATURITY;
-        if (config.DISCOUNT_RATE > 0 && maturity > minMaturity) {
-            uint zeroInterestTime = (maturity - minMaturity) * config.DISCOUNT_RATE / Q128;
-            uint decayRate = _decayRate(zeroInterestTime, config.HL_INTEREST);
-            amount = FullMath.mulDiv(amount, Q64, decayRate);
         }
 
         state1.R = __.R;

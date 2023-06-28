@@ -229,6 +229,7 @@ contract AsymptoticPerpetual is Pool {
         if (DISCOUNT_RATE > 0) {
             uint zeroInterestTime = (param.maturity - block.timestamp - MATURITY) * DISCOUNT_RATE / Q128;
             uint decayRate = _decayRate(zeroInterestTime, HL_INTEREST);
+            // TODO: if (decayRate > Q64) require(param.sideIn != SIDE_A != SIDE_B)
             rate = FullMath.mulDiv(rate, decayRate, Q64);
         }
     }
