@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: CC0-1.0
-pragma solidity >=0.7.6;
+pragma solidity ^0.8.0;
 
-contract MetaProxyFactory {
+library MetaProxyFactory {
   /// @dev Creates a new proxy for `targetContract` with metadata from calldata.
   /// Copies everything from calldata except the first 4 bytes.
   /// @return addr A non-zero address if successful.
-  function _metaProxyFromCalldata (address targetContract) internal returns (address addr) {
+  function metaProxyFromCalldata (address targetContract) internal returns (address addr) {
     // the following assembly code (init code + contract code) constructs a metaproxy.
     assembly {
       // load free memory pointer as per solidity convention
@@ -37,23 +37,23 @@ contract MetaProxyFactory {
       ptr := add(ptr, 32)
 
       // The size is deploy code + contract code + calldatasize - 4 + 32.
-      addr := create(0, start, sub(ptr, start))
+      addr := create2(0, start, sub(ptr, start), 0)
     }
   }
 
   /// @dev Creates a proxy for `targetContract` with metadata from `metadata`.
   /// @return A non-zero address if successful.
-  function _metaProxyFromBytes (address targetContract, bytes memory metadata) internal returns (address) {
+  function metaProxyFromBytes (address targetContract, bytes memory metadata) internal returns (address) {
     uint256 ptr;
     assembly {
       ptr := add(metadata, 32)
     }
-    return _metaProxyFromMemory(targetContract, ptr, metadata.length);
+    return metaProxyFromMemory(targetContract, ptr, metadata.length);
   }
 
   /// @dev Creates a new proxy for `targetContract` with metadata from memory starting at `offset` and `length` bytes.
   /// @return addr A non-zero address if successful.
-  function _metaProxyFromMemory (address targetContract, uint256 offset, uint256 length) internal returns (address addr) {
+  function metaProxyFromMemory (address targetContract, uint256 offset, uint256 length) internal returns (address addr) {
     // the following assembly code (init code + contract code) constructs a metaproxy.
     assembly {
       // load free memory pointer as per solidity convention
@@ -86,7 +86,7 @@ contract MetaProxyFactory {
       ptr := add(ptr, 32)
 
       // The size is deploy code + contract code + calldatasize - 4 + 32.
-      addr := create(0, start, sub(ptr, start))
+      addr := create2(0, start, sub(ptr, start), 0)
     }
   }
 }

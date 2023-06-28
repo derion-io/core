@@ -54,7 +54,7 @@ contract TestHelper {
             sideIn,
             sideOut,
             IERC1155(TOKEN).balanceOf(address(this), _packID(POOL, sideIn)),
-            IPool(POOL).PREMIUM_RATE()
+            IPool(POOL).loadConfig().PREMIUM_RATE
         );
         return IPool(POOL).swap(
             SwapParam(
