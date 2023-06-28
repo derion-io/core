@@ -5,26 +5,37 @@ const {
 const { expect, use } = require("chai");
 const { solidity } = require("ethereum-waffle");
 const { weiToNumber, bn, getDeltaSupply, numberToWei, packId, unpackId, encodeSqrtX96, encodePayload } = require("./shared/utilities");
-const { scenerio01, scenerio02 } = require("./shared/scenerios");
+const { scenerio01, scenerio02, loadFixtureFromParams } = require("./shared/scenerios");
+const { baseParams } = require("./shared/baseParams");
+const { SIDE_R, SIDE_C, SIDE_A, SIDE_B } = require("./shared/constant");
 
 use(solidity)
 
+const HALF_LIFE = 10 * 365 * 24 * 60 * 60
 const scenerios = [
   {
     desc: "Mark 25",
-    scenerio: scenerio01
+    scenerio: loadFixtureFromParams([{
+      ...baseParams,
+      mark: bn(40).shl(128),
+      premiumRate: bn(1).shl(128).div(2),
+      halfLife: bn(HALF_LIFE)
+    }])
   },
   {
     desc: "Mark 50",
-    scenerio: scenerio02
+    scenerio: loadFixtureFromParams([{
+      ...baseParams,
+      mark: bn(35).shl(128),
+      premiumRate: bn(1).shl(128).div(2),
+      halfLife: bn(HALF_LIFE)
+    }])
   }
 ]
 
 const opts = {
   gasLimit: 30000000
 }
-
-const HALF_LIFE = 10 * 365 * 24 * 60 * 60
 
 // const HALF_LIFE = 0
 
@@ -33,36 +44,34 @@ describe("Decay funding rate", function () {
   scenerios.forEach(scene => {
     describe(`Pool ${scene.desc}`, function () {
       async function amountInMustGteAmountInDesired(longAmount, rateLongSwapback, shortAmount, rateShortSwapback, period, prefix = '( )') {
-        const { accountB, accountA, txSignerA, txSignerB, weth, derivable1155, A_ID, B_ID, stateCalHelper } = await loadFixture(scene.scenerio);
-        await txSignerA.swap(
-          0x00,
-          0x30,
-          stateCalHelper.address,
-          encodePayload(0, 0x00, 0x30, numberToWei(1)),
-          0,
-          '0x0000000000000000000000000000000000000000',
-          accountA.address
-        );
+        const { derivablePools, accountB, accountA, weth, derivable1155 } = await loadFixture(scene.scenerio);
+        const poolA = derivablePools[0].connect(accountA)
+        const poolB = derivablePools[0].connect(accountB)
+        const A_ID = packId(SIDE_A, poolA.contract.address)
+        const B_ID = packId(SIDE_B, poolA.contract.address)
+
+        await poolA.swap(
+          SIDE_R,
+          SIDE_C,
+          numberToWei(1),
+          0
+        )
+        
         const wethABegin = await weth.balanceOf(accountA.address)
         const wethBBegin = await weth.balanceOf(accountB.address)
-        await txSignerA.swap(
-          0x00,
-          0x10,
-          stateCalHelper.address,
-          encodePayload(0, 0x00, 0x10, longAmount),
-          0,
-          '0x0000000000000000000000000000000000000000',
-          accountA.address
-        );
-        await txSignerB.swap(
-          0x00,
-          0x20,
-          stateCalHelper.address,
-          encodePayload(0, 0x00, 0x20, shortAmount),
-          0,
-          '0x0000000000000000000000000000000000000000',
-          accountB.address
-        );
+        await poolA.swap(
+          SIDE_R,
+          SIDE_A,
+          longAmount,
+          0
+        )
+        await poolB.swap(
+          SIDE_R,
+          SIDE_B,
+          shortAmount,
+          0
+        )
+        
         const wethAAfter = await weth.balanceOf(accountA.address)
         const wethBAfter = await weth.balanceOf(accountB.address)
         if (period > 0) {
@@ -76,24 +85,19 @@ describe("Decay funding rate", function () {
 
         const amountAIn = tokenAAmountBefore.mul(rateLongSwapback).div(100)
         const amountBIn = tokenBAmountBefore.mul(rateShortSwapback).div(100)
-        await txSignerA.swap(
-          0x10,
-          0x00,
-          stateCalHelper.address,
-          encodePayload(0, 0x10, 0x00, amountAIn),
-          0,
-          '0x0000000000000000000000000000000000000000',
-          accountA.address
-        );
-        await txSignerB.swap(
-          0x20,
-          0x00,
-          stateCalHelper.address,
-          encodePayload(0, 0x20, 0x00, amountBIn),
-          0,
-          '0x0000000000000000000000000000000000000000',
-          accountB.address
-        );
+        await poolA.swap(
+          SIDE_A,
+          SIDE_R,
+          amountAIn,
+          0
+        )
+        await poolB.swap(
+          SIDE_B,
+          SIDE_R,
+          amountBIn,
+          0
+        )
+        
         const tokenAAmountAfter = await derivable1155.balanceOf(accountA.address, A_ID)
         const tokenBAmountAfter = await derivable1155.balanceOf(accountB.address, B_ID)
         expect(tokenAAmountBefore.sub(tokenAAmountAfter), `${prefix}: amountInA`).lte(amountAIn)

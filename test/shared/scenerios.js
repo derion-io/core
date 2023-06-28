@@ -636,6 +636,12 @@ function loadFixtureFromParams (arrParams, options={}) {
     await weth.deposit({
       value: numberToWei("10000000000000000000")
     })
+    await weth.connect(accountA).deposit({
+      value: numberToWei("10000000000000000000")
+    })
+    await weth.connect(accountB).deposit({
+      value: numberToWei("10000000000000000000")
+    })
     
     // INIT PAIRRRRR 
     const quoteTokenIndex = weth.address.toLowerCase() < usdc.address.toLowerCase() ? 1 : 0

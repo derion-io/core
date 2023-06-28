@@ -27,11 +27,7 @@ module.exports = class Pool {
     sideOut,
     amount,
     maturity,
-    options = {
-      swapType: 0,
-      payer: AddressZero,
-      recipient: this.contract.signer.address
-    }
+    options = {}
   ) {
     if (sideOut == SIDE_A || sideOut == SIDE_B) {
       amount = amount.mul(this.config.openRate).div(Q128) // apply open rate
@@ -39,7 +35,7 @@ module.exports = class Pool {
     const payload = abiCoder.encode(
       ["uint", "uint", "uint", "uint", "uint", "tuple(uint, uint, uint, uint)"],
       [
-        options.swapType, 
+        options.swapType || 0, 
         sideIn, 
         sideOut, 
         amount, 
@@ -57,8 +53,8 @@ module.exports = class Pool {
       },
       {
         utr: this.utilContracts.utr.address,
-        payer: options.payer,
-        recipient: options.recipient
+        payer: options.payer || AddressZero,
+        recipient: options.recipient || this.contract.signer.address
       }
     )
   }
