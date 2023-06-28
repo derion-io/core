@@ -1,8 +1,7 @@
 const {
   time,
-  loadFixture,
 } = require("@nomicfoundation/hardhat-network-helpers");
-const { expect, use } = require("chai");
+const { use } = require("chai");
 const { solidity } = require("ethereum-waffle");
 const { _init } = require("./AsymptoticPerpetual");
 const Pool = require("./Pool");
@@ -205,6 +204,12 @@ function getOpenFeeScenerios(fee) {
   }
 }
 
+/** 
+ * @param options
+ * @param options.feeRate
+ * @param options.initReserved
+ * @param options.callback
+*/
 function loadFixtureFromParams (arrParams, options={}) {
   async function fixture () {
     const [owner, accountA, accountB] = await ethers.getSigners();
@@ -244,8 +249,7 @@ function loadFixtureFromParams (arrParams, options={}) {
     );
 
     // USDC
-    const compiledERC20 = require("@uniswap/v2-core/build/ERC20.json");
-    const erc20Factory = new ethers.ContractFactory(compiledERC20.abi, compiledERC20.bytecode, signer);
+    const erc20Factory = await ethers.getContractFactory('USDC')
     const usdc = await erc20Factory.deploy(numberToWei('100000000000000000000'));
 
     // WETH

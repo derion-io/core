@@ -4,8 +4,8 @@ const {
 } = require("@nomicfoundation/hardhat-network-helpers");
 const { expect, use } = require("chai");
 const { solidity } = require("ethereum-waffle");
-const { weiToNumber, bn, getDeltaSupply, numberToWei, packId, unpackId, encodeSqrtX96, encodePayload } = require("./shared/utilities");
-const { scenerio01, scenerio02, loadFixtureFromParams } = require("./shared/scenerios");
+const { bn, numberToWei, packId } = require("./shared/utilities");
+const { loadFixtureFromParams } = require("./shared/scenerios");
 const { baseParams } = require("./shared/baseParams");
 const { SIDE_R, SIDE_C, SIDE_A, SIDE_B } = require("./shared/constant");
 
@@ -32,12 +32,6 @@ const scenerios = [
     }])
   }
 ]
-
-const opts = {
-  gasLimit: 30000000
-}
-
-// const HALF_LIFE = 0
 
 describe("Decay funding rate", function () {
 
