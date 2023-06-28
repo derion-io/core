@@ -39,10 +39,10 @@ contract Helper is Constants, IHelper {
     }
 
     struct PoolConfig {
-        uint premiumRate;
-        uint discountRate;
-        uint maturity;
-        uint hlInterest;
+        uint PREMIUM_RATE;
+        uint DISCOUNT_RATE;
+        uint MATURITY;
+        uint HL_INTEREST;
     }
 
     event Swap(
@@ -254,7 +254,7 @@ contract Helper is Constants, IHelper {
         ) = abi.decode(payload, (uint, uint, uint, uint, uint, PoolConfig));
         require(swapType == MAX_IN, 'Helper: UNSUPPORTED_SWAP_TYPE');
 
-        if (config.premiumRate > 0 && (sideOut == SIDE_A || sideOut == SIDE_B)) {
+        if (config.PREMIUM_RATE > 0 && (sideOut == SIDE_A || sideOut == SIDE_B)) {
             require(sideIn == SIDE_R, 'Helper: UNSUPPORTED_SIDEIN_WITH_PREMIUM');
             uint a = _solve(
                 __.R,
@@ -262,16 +262,17 @@ contract Helper is Constants, IHelper {
                 __.rB,
                 sideOut,
                 amount,
-                config.premiumRate
+                config.PREMIUM_RATE
             );
             if (a < amount) {
                 amount = a;
             }
         }
 
-        if (config.discountRate > 0) {
-            uint zeroInterestTime = (maturity - block.timestamp - config.maturity) * config.discountRate / Q128;
-            uint decayRate = _decayRate(zeroInterestTime, config.hlInterest);
+        uint minMaturity = block.timestamp + config.MATURITY;
+        if (config.DISCOUNT_RATE > 0 && maturity > minMaturity) {
+            uint zeroInterestTime = (maturity - minMaturity) * config.DISCOUNT_RATE / Q128;
+            uint decayRate = _decayRate(zeroInterestTime, config.HL_INTEREST);
             amount = FullMath.mulDiv(amount, Q64, decayRate);
         }
 
