@@ -317,19 +317,15 @@ contract Helper is Constants, IHelper {
         uint amount, 
         uint premiumRate
     ) internal pure returns (uint) {
-        uint rC = R - rB - rA;
-        (uint rOut, uint rTou) = sideOut == SIDE_A ? (rA, rB) : (rB, rA);
-        if (amount + rOut <= rTou) {
-            return amount;
-        }
-        uint imbaRate = FullMath.mulDiv(Q128, amount + rOut - rTou, rC);
-        if (imbaRate <= premiumRate) {
-            return amount;
-        }
-        uint b = rOut - rTou;
-        uint c = R - rA - rB;
+        (uint rOut, uint rTuo) = sideOut == SIDE_A ? (rA, rB) : (rB, rA);
+        uint b = rOut > rTuo ? rOut - rTuo : rTuo - rOut;
+        uint c = R - rB - rA;
         uint ac = FullMath.mulDiv(amount*c, premiumRate, Q128);
         uint delta = b * b + 4 * ac;
-        return (Math.sqrt(delta) - b) / 2;
+        delta = Math.sqrt(delta);
+        if (delta + rTuo <= rOut) {
+            return amount;
+        }
+        return (delta + rTuo - rOut) / 2;
     }
 }
