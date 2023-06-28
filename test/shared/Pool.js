@@ -63,6 +63,8 @@ module.exports = class Pool {
     }
     if (options.static)
       return (await this.contract.callStatic.swap(swapParams, paymentParams)).amountOut
+    if (options.populateTransaction)
+      return await this.contract.populateTransaction.swap(swapParams, paymentParams)
     return await this.contract.swap(swapParams, paymentParams)
   }
 }
