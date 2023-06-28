@@ -61,6 +61,7 @@ abstract contract Pool is IPool, ERC1155Holder, Storage, Constants {
         OPEN_RATE = params.openRate;
 
         uint R = IERC20(TOKEN_R).balanceOf(address(this));
+        require(params.a > 0 && params.b > 0 && R > 0, "ZP");
         require(params.a <= R >> 1 && params.b <= R >> 1, "IP");
 
         s_i = uint32(block.timestamp);
