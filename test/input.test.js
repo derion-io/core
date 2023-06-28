@@ -53,7 +53,7 @@ describe('Input', function () {
     it('C -> R (No Premium)', async function() {
         await swapExpectInput(SIDE_C, SIDE_R, 0.01)
     })
-    it('R -> A, rA > 50%, expect wallet loses 1e', async function () {
+    it('R -> A (With Premium)', async function () {
         const { derivablePools, owner, params, oracleLibrary, usdc, weth, uniswapPair } = await loadFixture(fixture)
         const pool = derivablePools[0]
         const config = paramToConfig(params[0])
@@ -86,20 +86,22 @@ describe('Input', function () {
 
         expect(eval.rA.mul(2)).to.be.gt(state.R) // Check rA > R/2
 
+        const amount = numberToWei(1)
         const wethBefore = await weth.balanceOf(owner.address)
 
         await pool.swap(
             SIDE_R,
             SIDE_A,
-            numberToWei(1),
+            amount,
             0
         )
 
         const wethAfter = await weth.balanceOf(owner.address)
-        expect(Number(weiToNumber(wethBefore.sub(wethAfter)))).to.be.eq(1)
+        const wethSpent = wethBefore.sub(wethAfter)
+        expect(wethSpent).lte(amount).gt(amount.sub(10))
     })
 
-    it('R -> B, rB > 50%, expect wallet loses 1e', async function () {
+    it('R -> B (With Premium)', async function () {
         const { derivablePools, owner, params, oracleLibrary, usdc, weth, uniswapPair } = await loadFixture(fixture)
         const pool = derivablePools[0]
         const config = paramToConfig(params[0])
@@ -133,14 +135,16 @@ describe('Input', function () {
         // console.log(eval, state.R)
         expect(eval.rB.mul(2)).to.be.gt(state.R) // Check rB > R/2
 
+        const amount = numberToWei(1)
         const wethBefore = await weth.balanceOf(owner.address)
         await pool.swap(
             SIDE_R,
             SIDE_B,
-            numberToWei(1),
+            amount,
             0
         )
         const wethAfter = await weth.balanceOf(owner.address)
-        expect(Number(weiToNumber(wethBefore.sub(wethAfter)))).to.be.eq(1)
+        const wethSpent = wethBefore.sub(wethAfter)
+        expect(wethSpent).lte(amount).gt(amount.sub(10))
     })
 })
