@@ -22,6 +22,13 @@ module.exports = class Pool {
     )
   }
 
+  /**
+  * @param options swap options.
+  * @param options.swapType Default 0.
+  * @param options.payer Default AddressZero.
+  * @param options.recipient Default sender.
+  * @param options.static If static = true, the function will return the amountOut when callStatic pool swap.
+  */
   async swap(
     sideIn,
     sideOut,
@@ -43,20 +50,21 @@ module.exports = class Pool {
         [ this.config.premiumRate, this.config.discountRate, this.config.maturity, this.config.halfLife]
       ]
     )
-    return await this.contract.swap(
-      {
-        sideIn,
-        sideOut,
-        maturity,
-        helper: this.utilContracts.helper.address,
-        payload
-      },
-      {
-        utr: this.utilContracts.utr.address,
-        payer: options.payer || AddressZero,
-        recipient: options.recipient || this.contract.signer.address
-      }
-    )
+    const swapParams = {
+      sideIn,
+      sideOut,
+      maturity,
+      helper: this.utilContracts.helper.address,
+      payload
+    }
+    const paymentParams = {
+      utr: this.utilContracts.utr.address,
+      payer: options.payer || AddressZero,
+      recipient: options.recipient || this.contract.signer.address
+    }
+    if (options.static)
+      return (await this.contract.callStatic.swap(swapParams, paymentParams)).amountOut
+    return await this.contract.swap(swapParams, paymentParams)
   }
 }
 
