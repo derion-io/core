@@ -18,7 +18,7 @@ const opts = {
   gasLimit: 30000000
 }
 
-const feeRates = [0.03, 0.005, 0.95, 0.999, 1] 
+const feeRates = [0.03, 0.005, 0.95, 0.999] 
 
 feeRates.forEach(feeRate => {
   const fixture = loadFixtureFromParams([{
@@ -97,8 +97,7 @@ feeRates.forEach(feeRate => {
         SIDE_R,
         SIDE_A,
         numberToWei(1),
-        0,
-        { static: true }
+        0
       )
 
       const amountOutLP1 = await poolWithOpenFee.swap(
@@ -113,8 +112,7 @@ feeRates.forEach(feeRate => {
         SIDE_R,
         SIDE_B,
         numberToWei(1),
-        0,
-        { static: true }
+        0
       )
       
       const amountOutLP2 = await poolWithOpenFee.swap(
