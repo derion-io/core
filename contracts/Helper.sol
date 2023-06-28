@@ -17,7 +17,7 @@ import "./interfaces/IWeth.sol";
 
 
 contract Helper is Constants, IHelper {
-    uint internal constant SIDE_NATIVE = 0x000000000000000000000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee;
+    uint internal constant SIDE_NATIVE = 0x01;
     uint constant MAX_IN = 0;
     address internal immutable TOKEN;
     address internal immutable WETH;

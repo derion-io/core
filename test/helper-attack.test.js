@@ -28,7 +28,7 @@ const SIDE_R = 0x00
 const SIDE_A = 0x10
 const SIDE_B = 0x20
 const SIDE_C = 0x30
-const SIDE_NATIVE = '0x000000000000000000000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee'
+const SIDE_NATIVE = 0x01
 
 const PAYMENT = 0;
 const CALL_VALUE = 2;
