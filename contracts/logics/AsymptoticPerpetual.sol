@@ -198,10 +198,10 @@ contract AsymptoticPerpetual is Pool {
                 uint inputRate = Q128;
                 if (sideOut == SIDE_A) {
                     amountOut = FullMath.mulDiv(s, rA1 - rA, rA);
-                    inputRate = _inputRate(state1, param, rA1, rB1);
+                    inputRate = _inputRate(state1, rA1, rB1);
                 } else if (sideOut == SIDE_B) {
                     amountOut = FullMath.mulDiv(s, rB1 - rB, rB);
-                    inputRate = _inputRate(state1, param, rB1, rA1);
+                    inputRate = _inputRate(state1, rB1, rA1);
                 }
                 if (inputRate != Q128) {
                     amountIn = FullMath.mulDiv(amountIn, Q128, inputRate);
@@ -214,7 +214,6 @@ contract AsymptoticPerpetual is Pool {
 
     function _inputRate(
         State memory state,
-        SwapParam memory param,
         uint rOut,
         uint rCounter
     ) internal view returns (uint rate) {
@@ -225,12 +224,6 @@ contract AsymptoticPerpetual is Pool {
             if (imbaRate > PREMIUM_RATE) {
                 rate = FullMath.mulDiv(rate, PREMIUM_RATE, imbaRate);
             }
-        }
-        if (DISCOUNT_RATE > 0) {
-            uint zeroInterestTime = (param.maturity - block.timestamp - MATURITY) * DISCOUNT_RATE / Q128;
-            uint decayRate = _decayRate(zeroInterestTime, HL_INTEREST);
-            // TODO: if (decayRate > Q64) require(param.sideIn != SIDE_A != SIDE_B)
-            rate = FullMath.mulDiv(rate, decayRate, Q64);
         }
     }
 }

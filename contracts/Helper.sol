@@ -38,13 +38,6 @@ contract Helper is Constants, IHelper {
         address recipient;
     }
 
-    struct PoolConfig {
-        uint PREMIUM_RATE;
-        uint DISCOUNT_RATE;
-        uint MATURITY;
-        uint HL_INTEREST;
-    }
-
     event Swap(
         address indexed payer,
         address indexed poolIn,
@@ -249,21 +242,11 @@ contract Helper is Constants, IHelper {
             uint sideIn,
             uint sideOut,
             uint amount,
-            uint maturity,
-            PoolConfig memory config
-        ) = abi.decode(payload, (uint, uint, uint, uint, uint, PoolConfig));
+            uint PREMIUM_RATE
+        ) = abi.decode(payload, (uint, uint, uint, uint, uint));
         require(swapType == MAX_IN, 'Helper: UNSUPPORTED_SWAP_TYPE');
 
-        if (config.DISCOUNT_RATE > 0 && (sideOut == SIDE_A || sideOut == SIDE_B)) {
-            uint minMaturity = block.timestamp + config.MATURITY;
-            if (maturity > minMaturity) {
-                uint zeroInterestTime = (maturity - minMaturity) * config.DISCOUNT_RATE / Q128;
-                uint decayRate = _decayRate(zeroInterestTime, config.HL_INTEREST);
-                amount = FullMath.mulDiv(amount, decayRate, Q64);
-            }
-        }
-
-        if (config.PREMIUM_RATE > 0 && (sideOut == SIDE_A || sideOut == SIDE_B)) {
+        if (PREMIUM_RATE > 0 && (sideOut == SIDE_A || sideOut == SIDE_B)) {
             require(sideIn == SIDE_R, 'Helper: UNSUPPORTED_SIDEIN_WITH_PREMIUM');
             uint a = _solve(
                 __.R,
@@ -271,7 +254,7 @@ contract Helper is Constants, IHelper {
                 __.rB,
                 sideOut,
                 amount,
-                config.PREMIUM_RATE
+                PREMIUM_RATE
             );
             if (a < amount) {
                 amount = a;

@@ -107,7 +107,6 @@ function getOpenFeeScenerios(fee) {
       maturity: 0,
       maturityVest: 0,
       maturityRate: 0,
-      discountRate: 0,
       feeHalfLife: 0,
       openRate: feeToOpenRate(0)
     }

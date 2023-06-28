@@ -49,7 +49,6 @@ contract PoolFactory is IPoolFactory {
             params.maturity,
             params.maturityVest,
             params.maturityRate,
-            params.discountRate,
             params.openRate
         ));
     }
@@ -72,7 +71,6 @@ contract PoolFactory is IPoolFactory {
                 params.maturity,
                 params.maturityVest,
                 params.maturityRate,
-                params.discountRate,
                 params.openRate,
                 uint(uint160(pool))
             )

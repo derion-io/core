@@ -28,7 +28,6 @@ abstract contract Pool is IPool, ERC1155Holder, Storage, Constants {
     uint32 internal immutable MATURITY;
     uint32 internal immutable MATURITY_VEST;
     uint internal immutable MATURITY_RATE;
-    uint internal immutable DISCOUNT_RATE;
     uint public immutable OPEN_RATE;
 
     event Swap(
@@ -56,7 +55,6 @@ abstract contract Pool is IPool, ERC1155Holder, Storage, Constants {
         MATURITY = params.maturity;
         MATURITY_VEST = params.maturityVest;
         MATURITY_RATE = params.maturityRate;
-        DISCOUNT_RATE = params.discountRate;
         PREMIUM_RATE = params.premiumRate;
         OPEN_RATE = params.openRate;
 
