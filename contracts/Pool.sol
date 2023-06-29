@@ -105,7 +105,8 @@ abstract contract Pool is IPool, ERC1155Holder, Storage, Constants {
      * @dev against read-only reentrancy
      */
     function ensureStateIntegrity() public view {
-        require(s_f & 1 == 0, 'SI');
+        uint f = s_f;
+        require(f & 1 == 0 && f > 0, 'SI');
     }
 
     /**
