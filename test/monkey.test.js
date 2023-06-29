@@ -60,14 +60,14 @@ HLs.forEach(HALF_LIFE => {
           const isBuy = Math.random() < 0.5
           // Choose side
           const sideRand = Math.random()
-          let amount = 3 * Math.random()
+          let amount = 0.1 + 3 * Math.random()
           let side = SIDE_A
           if (sideRand < 4/9) {
             side = SIDE_B
           } else if (sideRand < 5/9) {
             side = SIDE_C
           } 
-          console.log(`${i} - ${isBuy ? 'Buy' : 'Sell'} - ${side} - ${amount}`)
+          // console.log(`${i} - ${isBuy ? 'Buy' : 'Sell'} - ${side} - ${amount}`)
           if (isBuy) {
             await pool.swap(
               SIDE_R,
@@ -96,7 +96,7 @@ HLs.forEach(HALF_LIFE => {
           
         } else { //change price
           const targetPrice = 1500 + 50 - 100 * Math.random()
-          console.log(`${i} - change price - from ${currentPrice} - to ${targetPrice}`)
+          // console.log(`${i} - change price - from ${currentPrice} - to ${targetPrice}`)
           swapToSetPriceMock({
             quoteToken: usdc,
             baseToken: weth,
