@@ -78,7 +78,7 @@ abstract contract Pool is IPool, ERC1155Holder, Storage, Constants {
 
         // mint tokens to recipient
         uint R3 = R / 3;
-        uint32 maturity = uint32(block.timestamp) + config.MATURITY;
+        uint32 maturity = uint32(block.timestamp + config.MATURITY);
         IToken(TOKEN).mintLock(payment.recipient, idA, R3, maturity, "");
         IToken(TOKEN).mintLock(payment.recipient, idB, R3, maturity, "");
         IToken(TOKEN).mintLock(payment.recipient, idC, R - (R3 << 1), maturity, "");

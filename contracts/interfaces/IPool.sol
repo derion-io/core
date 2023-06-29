@@ -8,8 +8,8 @@ struct Config {
     uint    MARK;
     uint    HL_INTEREST;
     uint    PREMIUM_RATE;
-    uint32  MATURITY;
-    uint32  MATURITY_VEST;
+    uint    MATURITY;
+    uint    MATURITY_VEST;
     uint    MATURITY_RATE;   // x128
     uint    OPEN_RATE;
 }
