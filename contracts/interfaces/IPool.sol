@@ -14,7 +14,7 @@ struct Config {
     uint    OPEN_RATE;
 }
 
-struct SwapParam {
+struct Param {
     uint sideIn;
     uint sideOut;
     uint maturity;
@@ -45,7 +45,7 @@ interface IPool {
     function loadConfig() view external returns (Config memory);
     function init(State memory state, Payment memory payment) external;
     function swap(
-        SwapParam memory param,
+        Param memory param,
         Payment memory payment
     ) external returns(uint amountIn, uint amountOut);
 }

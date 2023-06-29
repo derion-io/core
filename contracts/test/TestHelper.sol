@@ -57,7 +57,7 @@ contract TestHelper {
             IPool(POOL).loadConfig().PREMIUM_RATE
         );
         return IPool(POOL).swap(
-            SwapParam(
+            Param(
                 sideIn,
                 sideOut,
                 maturity,

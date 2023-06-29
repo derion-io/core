@@ -125,7 +125,7 @@ abstract contract PoolBase is IPool, ERC1155Holder, Storage, Constants {
     }
 
     function swap(
-        SwapParam memory param,
+        Param memory param,
         Payment memory payment
     ) external override nonReentrant returns (uint amountIn, uint amountOut) {
         Config memory config = loadConfig();
@@ -183,6 +183,6 @@ abstract contract PoolBase is IPool, ERC1155Holder, Storage, Constants {
         return a > b ? a : b;
     }
 
-    function _swap(Config memory config, SwapParam memory param) internal virtual returns (uint amountIn, uint amountOut);
+    function _swap(Config memory config, Param memory param) internal virtual returns (uint amountIn, uint amountOut);
     function _maturityPayoff(Config memory config, uint maturity, uint amountOut) internal view virtual returns (uint);
 }

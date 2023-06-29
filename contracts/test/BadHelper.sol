@@ -88,7 +88,7 @@ contract BadHelper is Constants, IHelper {
         );
 
         (, amountOut) = IPool(params.poolIn).swap(
-            SwapParam(
+            Param(
                 params.sideIn,
                 SIDE_R,
                 0,  // R has no expiration
@@ -114,7 +114,7 @@ contract BadHelper is Constants, IHelper {
             IPool(params.poolIn).loadConfig().PREMIUM_RATE
         );
         (, amountOut) = IPool(params.poolOut).swap(
-            SwapParam(
+            Param(
                 SIDE_R,
                 params.sideOut,
                 params.maturity,
@@ -189,7 +189,7 @@ contract BadHelper is Constants, IHelper {
         );
 
         (, amountOut) = IPool(params.poolIn).swap(
-            SwapParam(
+            Param(
                 params.sideIn,
                 params.sideOut,
                 0,

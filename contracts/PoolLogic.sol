@@ -136,7 +136,7 @@ contract PoolLogic is PoolBase {
 
     function _swap(
         Config memory config,
-        SwapParam memory param
+        Param memory param
     ) internal override returns(uint amountIn, uint amountOut) {
         uint sideIn = param.sideIn;
         uint sideOut = param.sideOut;

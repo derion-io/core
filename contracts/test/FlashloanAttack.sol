@@ -20,7 +20,7 @@ contract FlashloanAttack {
     uint160 twapPrice,
     uint160 spotPrice,
     address deriToken,
-    SwapParam calldata swapParam,
+    Param calldata swapParam,
     address payer,
     address recipient
   ) public {
