@@ -131,15 +131,16 @@ HLs.forEach(HALF_LIFE => {
         0
       )
 
-      const supplyA = await derivable1155.totalSupply(A_ID)
-      const supplyB = await derivable1155.totalSupply(B_ID)
-      const supplyC =  await derivable1155.totalSupply(C_ID)
-      const reserved = await weth.balanceOf(pool.contract.address)
+      const sA = await derivable1155.totalSupply(A_ID)
+      const sB = await derivable1155.totalSupply(B_ID)
+      const sC =  await derivable1155.totalSupply(C_ID)
+      const R = await weth.balanceOf(pool.contract.address)
 
-      expect(Number(weiToNumber(supplyA))).to.be.closeTo(0, 1e17)
-      expect(Number(weiToNumber(supplyB))).to.be.closeTo(0, 1e17)
-      expect(Number(weiToNumber(supplyC))).to.be.closeTo(0, 1e17)
-      expect(Number(weiToNumber(reserved))).to.be.closeTo(0, 1e17)
+
+      expect(sA, 'sA').lte(1)
+      expect(sB, 'sB').lte(1)
+      expect(sC, 'sC').lte(1)
+      expect(R, 'R').lte(3000)
     })
   })
 })
