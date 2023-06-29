@@ -182,6 +182,10 @@ function _market(K, MARK, decayRateX64, price) {
   return {xkA, xkB}
 }
 
+function _xk(price, K, MARK) {
+  return _powu(price.mul(Q128).div(MARK), K)
+}
+
 function _r(xk, v, R) {
   let r = v.mul(xk).div(Q128)
   if (r.gt(R.shr(1))) {
@@ -242,9 +246,17 @@ async function _init(oracleLibrary, R, params) {
   const state = {a: params.a, b: params.b, R}
   const market = _market(params.k, params.mark, decayRateX64, twap)
   // TODO: find (a,b) so rA = rB = R/3
+  // const a = _v(market.xkA, R.div(3), R)
+  // const b = _v(market.xkB, R.div(3), R)
+  return params
+}
+
+async function calculateInitParams(config, oracleLibrary, R) {
+  const { twap } = await oracleLibrary.fetch(config.ORACLE)
+  const market = _market(config.K, config.MARK, Q64, twap)
   const a = _v(market.xkA, R.div(3), R)
   const b = _v(market.xkB, R.div(3), R)
-  return params
+  return {R, a, b}
 }
 
 async function _swap(
@@ -301,5 +313,8 @@ module.exports = {
   _selectPrice,
   _evaluate,
   _init,
-  _swap
+  _swap,
+  calculateInitParams,
+  _xk,
+  _r
 }

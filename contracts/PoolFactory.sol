@@ -2,57 +2,47 @@
 pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/utils/Create2.sol";
+import "./libs/MetaProxyFactory.sol";
 import "./interfaces/IPoolFactory.sol";
-import "./logics/AsymptoticPerpetual.sol";
 
 contract PoolFactory is IPoolFactory {
-    bytes32 constant public BYTECODE_HASH = keccak256(type(AsymptoticPerpetual).creationCode);
+    bytes32 constant internal ORACLE_MASK = bytes32((1 << 255) | type(uint160).max);
 
-    address immutable public FEE_TO;
-    uint immutable public FEE_RATE;
+    address immutable public LOGIC;
 
-    // transient storage
-    Params t_params;
+    // events
+    event Derivable(
+        bytes32 indexed topic1,
+        bytes32 indexed topic2,
+        bytes32 indexed topic3,
+        bytes data
+    );
 
-    constructor(
-        address feeTo,
-        uint feeRate
-    ) {
-        FEE_TO = feeTo;
-        FEE_RATE = feeRate;
+    constructor(address logic) {
+        LOGIC = logic;
     }
 
-    function getParams() external view override returns (Params memory) {
-        return t_params;
-    }
-
-    function _salt(Params memory params) internal pure returns (bytes32) {
-        return keccak256(
-            abi.encodePacked(
-                params.token,
-                params.oracle,
-                params.reserveToken,
-                params.mark,
-                params.k,
-                params.halfLife,
-                params.premiumRate,
-                params.maturity,
-                params.maturityVest,
-                params.discountRate,
-                params.openRate
+    function createPool(
+        Config memory config
+    ) external returns (address pool) {
+        bytes memory input = abi.encode(config);
+        pool = MetaProxyFactory.metaProxyFromBytes(LOGIC, input);
+        emit Derivable(
+            'PoolCreated',                          // topic1: event name
+            config.ORACLE & ORACLE_MASK,            // topic2: price index
+            bytes32(uint(uint160(config.TOKEN_R))), // topic3: reserve token
+            abi.encode(
+                config.ORACLE,
+                config.K,
+                config.MARK,
+                config.HL_INTEREST,
+                config.PREMIUM_RATE,
+                config.MATURITY,
+                config.MATURITY_VEST,
+                config.MATURITY_RATE,
+                config.OPEN_RATE,
+                uint(uint160(pool))
             )
         );
-    }
-
-    function createPool(Params memory params) external returns (address pool) {
-        t_params = params;
-        pool = Create2.deploy(0, _salt(params), type(AsymptoticPerpetual).creationCode);
-        delete t_params;
-    }
-
-    function computePoolAddress(
-        Params memory params
-    ) external view returns (address pool) {
-        return Create2.computeAddress(_salt(params), BYTECODE_HASH, address(this));
     }
 }

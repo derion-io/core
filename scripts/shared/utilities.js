@@ -1,4 +1,5 @@
 const ethers = require('ethers')
+const {Q128} = require("../../test/shared/constant");
 
 const stringToBytes32 = (text) => {
     let result = hre.ethers.utils.hexlify(hre.ethers.utils.toUtf8Bytes(text))
@@ -148,6 +149,10 @@ const delay = (delayInms) => {
     return new Promise(resolve => setTimeout(resolve, delayInms));
 }
 
+function feeToOpenRate(fee) {
+    return bn(((1-fee)*10000).toFixed(0)).mul(Q128).div(10000)
+}
+
 module.exports = {
     stringToBytes32,
     calculateSwapToPrice,
@@ -158,5 +163,6 @@ module.exports = {
     packId,
     unpackId,
     encodeSqrtX96,
-    delay
+    delay,
+    feeToOpenRate
 }

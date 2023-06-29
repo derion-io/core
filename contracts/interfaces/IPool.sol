@@ -2,20 +2,30 @@
 pragma solidity ^0.8.0;
 
 struct Config {
-    address TOKEN;
+    bytes32 ORACLE; // 1bit QTI, 31bit reserve, 32bit WINDOW, ... PAIR ADDRESS
     address TOKEN_R;
-    bytes32 ORACLE;
-    uint K;
-    uint MARK;
-    uint INIT_TIME; // TODO: change to uint32
-    uint HALF_LIFE; // TODO: change to uint32
-    uint PREMIUM_RATE;
+    uint    K;
+    uint    MARK;
+    uint    HL_INTEREST;
+    uint    PREMIUM_RATE;
+    uint    MATURITY;
+    uint    MATURITY_VEST;
+    uint    MATURITY_RATE;   // x128
+    uint    OPEN_RATE;
 }
 
-struct SwapParam {
-    uint zeroInterestTime;
+struct Param {
+    uint sideIn;
+    uint sideOut;
+    uint maturity;
     address helper;
     bytes payload;
+}
+
+struct Payment {
+    address utr;
+    address payer;
+    address recipient;
 }
 
 struct State {
@@ -24,17 +34,18 @@ struct State {
     uint b;
 }
 
+struct Slippable {
+    uint xk;
+    uint R;
+    uint rA;
+    uint rB;
+}
+
 interface IPool {
-    function ORACLE() external view returns (bytes32);
-    function TOKEN_R() external view returns (address);
-    function K() external view returns (uint);
+    function loadConfig() view external returns (Config memory);
+    function init(State memory state, Payment memory payment) external;
     function swap(
-        uint sideIn,
-        uint sideOut,
-        address helper,
-        bytes calldata payload,
-        uint32 maturity,
-        address payer,
-        address recipient
+        Param memory param,
+        Payment memory payment
     ) external returns(uint amountIn, uint amountOut);
 }

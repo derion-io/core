@@ -53,16 +53,22 @@ contract TestHelper {
             MAX_IN,
             sideIn,
             sideOut,
-            IERC1155(TOKEN).balanceOf(address(this), _packID(POOL, sideIn))
+            IERC1155(TOKEN).balanceOf(address(this), _packID(POOL, sideIn)),
+            IPool(POOL).loadConfig().PREMIUM_RATE
         );
         return IPool(POOL).swap(
-            sideIn,
-            sideOut,
-            HELPER,
-            payload,
-            maturity,
-            payer,
-            recipient
+            Param(
+                sideIn,
+                sideOut,
+                maturity,
+                HELPER,
+                payload
+            ),
+            Payment(
+                msg.sender, // UTR
+                payer,
+                recipient
+            )
         );
     }
 }

@@ -4,10 +4,12 @@ const {
 } = require("@nomicfoundation/hardhat-network-helpers");
 const { expect, use } = require("chai");
 const { solidity } = require("ethereum-waffle");
-const { _init, _selectPrice, _evaluate } = require("./shared/AsymptoticPerpetual");
-const { weiToNumber, bn, getDeltaSupply, numberToWei, packId, unpackId, encodeSqrtX96, encodePayload, attemptSwap, attemptStaticSwap, feeToOpenRate } = require("./shared/utilities");
+const { baseParams } = require("./shared/baseParams")
+const { loadFixtureFromParams } = require("./shared/scenerios")
+const { _selectPrice, _evaluate } = require("./shared/AsymptoticPerpetual");
+const { weiToNumber, paramToConfig, bn, numberToWei, packId, encodePayload } = require("./shared/utilities");
 const { SIDE_C, SIDE_R, SIDE_A, SIDE_B } = require("./shared/constant");
-const { AddressZero } = require("@ethersproject/constants");
+const { ethers } = require("hardhat");
 
 use(solidity)
 
@@ -15,787 +17,573 @@ const opts = {
   gasLimit: 30000000
 }
 
-const FROM_ROUTER   = 10;
 const PAYMENT       = 0;
-const TRANSFER      = 1;
-const ALLOWANCE     = 2;
-const CALL_VALUE    = 3;
-
-const AMOUNT_EXACT = 0
-const AMOUNT_ALL = 1
-const EIP_ETH = 0
-const ERC_721_BALANCE = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("UniversalTokenRouter.ERC_721_BALANCE"))
-const ACTION_IGNORE_ERROR = 1
-const ACTION_RECORD_CALL_RESULT = 2
-const ACTION_INJECT_CALL_RESULT = 4
-
-
 const HLs = [ 10 * 365 * 24 * 60 * 60]
 
 HLs.forEach(HALF_LIFE => {
   describe(`HALF_LIFE ${HALF_LIFE == 0 ? '= 0' : '> 0'} Decay funding rate`, function () {
-    async function deployDDLv2() {
-      const [owner, accountA, accountB] = await ethers.getSigners();
-      const signer = owner;
-      // deploy token1155
+    const fixture = loadFixtureFromParams([{
+      ...baseParams,
+      halfLife: bn(HALF_LIFE)
+    }], {
+      callback: async ({weth, utr, derivable1155, stateCalHelper, owner, derivablePools, accountA, accountB}) => {
+        const pool = derivablePools[0]
+        let txSignerA = weth.connect(accountA);
+        let txSignerB = weth.connect(accountB);
 
-      const UTR = require("@derivable/utr/build/UniversalTokenRouter.json")
-      const UniversalRouter = new ethers.ContractFactory(UTR.abi, UTR.bytecode, owner)
-      const utr = await UniversalRouter.deploy()
-      await utr.deployed()
+        await txSignerA.deposit({
+          value: '100000000000000000000000000000'
+        })
+        await txSignerB.deposit({
+          value: '100000000000000000000000000000'
+        })
+        await weth.deposit({
+          value: '100000000000000000000000000000'
+        })
 
-      // deploy oracle library
-      const OracleLibrary = await ethers.getContractFactory("TestOracleHelper")
-      const oracleLibrary = await OracleLibrary.deploy()
-      await oracleLibrary.deployed()
-
-      // deploy fee receiver
-      const FeeReceiver = await ethers.getContractFactory("FeeReceiver")
-      const feeReceiver = await FeeReceiver.deploy(owner.address)
-      await feeReceiver.deployed()
-
-      // deploy pool factory
-      const PoolFactory = await ethers.getContractFactory("PoolFactory");
-      const poolFactory = await PoolFactory.deploy(
-        feeReceiver.address,
-        0
-      );
-      // weth test
-      const compiledWETH = require("canonical-weth/build/contracts/WETH9.json")
-      const WETH = await new ethers.ContractFactory(compiledWETH.abi, compiledWETH.bytecode, signer);
-      // uniswap factory
-      const compiledUniswapFactory = require("./compiled/UniswapV3Factory.json");
-      const UniswapFactory = await new ethers.ContractFactory(compiledUniswapFactory.abi, compiledUniswapFactory.bytecode, signer);
-      // uniswap router
-
-      const compiledUniswapv3Router = require("./compiled/SwapRouter.json");
-      const UniswapRouter = new ethers.ContractFactory(compiledUniswapv3Router.abi, compiledUniswapv3Router.bytecode, signer);
-      // uniswap PM
-
-      const compiledUniswapv3PositionManager = require("./compiled/NonfungiblePositionManager.json");
-      const UniswapPositionManager = new ethers.ContractFactory(compiledUniswapv3PositionManager.abi, compiledUniswapv3PositionManager.bytecode, signer);
-      // erc20 factory
-
-      const compiledERC20 = require("@uniswap/v2-core/build/ERC20.json");
-      const erc20Factory = new ethers.ContractFactory(compiledERC20.abi, compiledERC20.bytecode, signer);
-      // setup uniswap
-
-      const usdc = await erc20Factory.deploy(numberToWei(100000000000));
-      const weth = await WETH.deploy();
-      const uniswapFactory = await UniswapFactory.deploy();
-      const uniswapRouter = await UniswapRouter.deploy(uniswapFactory.address, weth.address);
-      const uniswapPositionManager = await UniswapPositionManager.deploy(uniswapFactory.address, weth.address, '0x0000000000000000000000000000000000000000')
-
-      await uniswapFactory.createPool(usdc.address, weth.address, 500)
-
-      const compiledUniswapPool = require("./compiled/UniswapV3Pool.json");
-      const pairAddress = await uniswapFactory.getPool(usdc.address, weth.address, 500)
-      const uniswapPair = new ethers.Contract(pairAddress, compiledUniswapPool.abi, signer);
-
-      await usdc.approve(uniswapRouter.address, ethers.constants.MaxUint256);
-      await weth.approve(uniswapRouter.address, ethers.constants.MaxUint256);
-
-      const quoteTokenIndex = weth.address.toLowerCase() < usdc.address.toLowerCase() ? 1 : 0
-      const initPriceX96 = encodeSqrtX96(quoteTokenIndex ? 1500 : 1, quoteTokenIndex ? 1 : 1500)
-      const a = await uniswapPair.initialize(initPriceX96)
-      a.wait(1);
-
-      await time.increase(1000);
-
-      // deploy descriptor
-      const TokenDescriptor = await ethers.getContractFactory("TokenDescriptor")
-      const tokenDescriptor = await TokenDescriptor.deploy()
-      await tokenDescriptor.deployed()
-
-      // deploy token1155
-      const Token = await ethers.getContractFactory("Token")
-      const derivable1155 = await Token.deploy(
-        utr.address,
-        owner.address,
-        tokenDescriptor.address
-      )
-      await derivable1155.deployed()
-
-      // deploy ddl pool
-      const oracle = ethers.utils.hexZeroPad(
-        bn(quoteTokenIndex).shl(255).add(bn(300).shl(256 - 64)).add(uniswapPair.address).toHexString(),
-        32,
-      )
-      let params = {
-        utr: utr.address,
-        token: derivable1155.address,
-        oracle,
-        reserveToken: weth.address,
-        recipient: owner.address,
-        mark: bn(38).shl(128),
-        k: bn(5),
-        a: numberToWei(1),
-        b: numberToWei(1),
-        initTime: bn(await time.latest()),
-        halfLife: bn(HALF_LIFE),
-        premiumRate: '0',
-        maturity: 0,
-        maturityVest: 0,
-        maturityRate: 0,
-        discountRate: 0,
-        feeHalfLife: 0,
-        openRate: feeToOpenRate(0)
-      }
-      params = await _init(oracleLibrary, numberToWei(5), params)
-      const config = {
-        TOKEN: params.token,
-        TOKEN_R: params.reserveToken,
-        ORACLE: params.oracle,
-        K: params.k,
-        MARK: params.mark,
-        INIT_TIME: params.initTime,
-        HALF_LIFE: bn(params.halfLife),
-        PREMIUM_RATE: bn(params.premiumRate)
-      }
-      const poolAddress = await poolFactory.computePoolAddress(params);
-      let txSignerA = weth.connect(accountA);
-      let txSignerB = weth.connect(accountB);
-
-      await txSignerA.deposit({
-        value: '100000000000000000000000000000'
-      })
-      await txSignerB.deposit({
-        value: '100000000000000000000000000000'
-      })
-      await weth.deposit({
-        value: '100000000000000000000000000000'
-      })
-      await weth.transfer(poolAddress, numberToWei(5));
-      await poolFactory.createPool(params);
-      const derivablePool = await ethers.getContractAt("AsymptoticPerpetual", await poolFactory.computePoolAddress(params));
-
-      await weth.approve(derivablePool.address, '100000000000000000000000000');
-
-      await time.increase(100);
-      // deploy helper
-      const StateCalHelper = await ethers.getContractFactory("contracts/Helper.sol:Helper")
-      const stateCalHelper = await StateCalHelper.deploy(
-        derivable1155.address,
-        weth.address
-      )
-      await stateCalHelper.deployed()
-
-      const DerivableHelper = await ethers.getContractFactory("contracts/test/TestHelper.sol:TestHelper")
-      const derivableHelper = await DerivableHelper.deploy(
-        derivablePool.address,
-        derivable1155.address,
-        stateCalHelper.address
-      )
-      await derivableHelper.deployed()
-
-      const A_ID = packId(0x10, derivablePool.address);
-      const B_ID = packId(0x20, derivablePool.address);
-      const R_ID = packId(0x00, derivablePool.address);
-      const C_ID = packId(0x30, derivablePool.address);
-
-      txSignerA = weth.connect(accountA);
-      txSignerB = weth.connect(accountB);
-      await txSignerA.approve(derivablePool.address, '100000000000000000000000000');
-      await txSignerB.approve(derivablePool.address, '100000000000000000000000000');
-      txSignerA = derivable1155.connect(accountA);
-      await txSignerA.setApprovalForAll(derivablePool.address, true);
-      txSignerB = derivable1155.connect(accountB);
-      await txSignerB.setApprovalForAll(derivablePool.address, true);
-      txSignerA = derivablePool.connect(accountA);
-      txSignerB = derivablePool.connect(accountB);
-
-      await attemptSwap(
-        txSignerA,
-        0,
-        0x00,
-        0x30,
-        numberToWei(1),
-        stateCalHelper.address,
-        '0x0000000000000000000000000000000000000000',
-        accountA.address
-      )
-
-      async function swapAndWait(period, waitingTime, amountA, amountB) {
-        await attemptSwap(
-          txSignerA,
-          0,
-          0x00,
-          0x10,
-          amountA,
-          stateCalHelper.address,
-          '0x0000000000000000000000000000000000000000',
-          accountA.address
+        const DerivableHelper = await ethers.getContractFactory("contracts/test/TestHelper.sol:TestHelper")
+        const derivableHelper = await DerivableHelper.deploy(
+          pool.contract.address,
+          derivable1155.address,
+          stateCalHelper.address
         )
-        await attemptSwap(
-          txSignerB,
-          0,
-          0x00,
-          0x20,
-          amountB,
-          stateCalHelper.address,
-          '0x0000000000000000000000000000000000000000',
-          accountB.address
-        )
-        const aTokenAmount = await derivable1155.balanceOf(accountA.address, A_ID)
-        const bTokenAmount = await derivable1155.balanceOf(accountB.address, B_ID)
+        await derivableHelper.deployed()
 
-        const aFirstBefore = await attemptStaticSwap(
-          txSignerA,
-          0,
-          0x10,
-          0x00,
-          aTokenAmount,
-          stateCalHelper.address,
-          '0x0000000000000000000000000000000000000000',
-          accountA.address
-        )
-        
-        const bFirstBefore = await attemptStaticSwap(
-          txSignerB,
-          0,
-          0x20,
-          0x00,
-          bTokenAmount,
-          stateCalHelper.address,
-          '0x0000000000000000000000000000000000000000',
-          accountB.address
-        )
-        if (period > 0)
-          await time.increase(period)
-          
-        const aFirstAfter = await attemptStaticSwap(
-          txSignerA,
-          0,
-          0x10,
-          0x00,
-          aTokenAmount,
-          stateCalHelper.address,
-          '0x0000000000000000000000000000000000000000',
-          accountA.address
-        )
-        
-        const bFirstAfter = await attemptStaticSwap(
-          txSignerB,
-          0,
-          0x20,
-          0x00,
-          bTokenAmount,
-          stateCalHelper.address,
-          '0x0000000000000000000000000000000000000000',
-          accountB.address
-        )
-        if (waitingTime > 0)
-          await time.increase(waitingTime)
-        const aSecondBefore = await attemptStaticSwap(
-          txSignerA,
-          0,
-          0x10,
-          0x00,
-          aTokenAmount,
-          stateCalHelper.address,
-          '0x0000000000000000000000000000000000000000',
-          accountA.address
-        )
-        const bSecondBefore = await attemptStaticSwap(
-          txSignerB,
-          0,
-          0x20,
-          0x00,
-          bTokenAmount,
-          stateCalHelper.address,
-          '0x0000000000000000000000000000000000000000',
-          accountB.address
-        )
-        if (period > 0)
-          await time.increase(period)
-        const aSecondAfter = await attemptStaticSwap(
-          txSignerA,
-          0,
-          0x10,
-          0x00,
-          aTokenAmount,
-          stateCalHelper.address,
-          '0x0000000000000000000000000000000000000000',
-          accountA.address
-        )
-        const bSecondAfter = await attemptStaticSwap(
-          txSignerB,
-          0,
-          0x20,
-          0x00,
-          bTokenAmount,
-          stateCalHelper.address,
-          '0x0000000000000000000000000000000000000000',
-          accountB.address
-        )
+        const A_ID = packId(0x10, pool.contract.address);
+        const B_ID = packId(0x20, pool.contract.address);
+        const R_ID = packId(0x00, pool.contract.address);
+        const C_ID = packId(0x30, pool.contract.address);
 
-        const secondLongRate = Number(weiToNumber(aSecondAfter)) / Number(weiToNumber(aSecondBefore))
-        const firstLongRate = Number(weiToNumber(aFirstAfter)) / Number(weiToNumber(aFirstBefore))
-
-        const secondShortRate = Number(weiToNumber(bSecondAfter)) / Number(weiToNumber(bSecondBefore))
-        const firstShortRate = Number(weiToNumber(bFirstAfter)) / Number(weiToNumber(bFirstBefore))
-        if (amountA.gt(amountB) & HALF_LIFE > 0) {
-          expect(aFirstBefore.sub(aFirstAfter)).gt(aSecondBefore.sub(aSecondAfter)).gt(0)
-          expect(secondShortRate).to.be.closeTo(firstShortRate, 0.000001)
-        } else if (amountA.lt(amountB) & HALF_LIFE > 0) {
-          expect(secondLongRate).to.be.closeTo(firstLongRate, 0.000001)
-          expect(bFirstBefore.sub(bFirstAfter)).gt(bSecondBefore.sub(bSecondAfter)).gt(0)
-        } else {
-          expect(secondLongRate).to.be.closeTo(firstLongRate, 0.000001)
-          expect(secondShortRate).to.be.closeTo(firstShortRate, 0.000001)
-        }
-      }
-
-      async function instantSwapBackUTR(amountA, amountB) {
-        // Acc A
         txSignerA = weth.connect(accountA);
-        const beforeA = await weth.balanceOf(accountA.address)
-        await txSignerA.approve(utr.address, ethers.constants.MaxUint256)
-        txSignerA = utr.connect(accountA);
-        await txSignerA.exec([],
-          [
-            {
-              inputs: [{
-                mode: PAYMENT,
-                eip: 20,
-                token: weth.address,
-                id: 0,
-                amountIn: amountA,
-                recipient: derivablePool.address,
-              }],
-              code: derivablePool.address,
-              data: (await derivablePool.populateTransaction.swap(
-                0x00,
-                0x10,
-                stateCalHelper.address,
-                encodePayload(0, 0x00, 0x10, amountA),
-                0,
-                accountA.address,
-                derivableHelper.address
-              )).data,
-            },
-            {
-              inputs: [],
-              code: derivableHelper.address,
-              data: (await derivableHelper.populateTransaction.swapInAll(
-                0x10,
-                0x00,
-                0,
-                ethers.constants.AddressZero,
-                accountA.address
-              )).data,
-            }
-          ], opts)
-        const afterA = await weth.balanceOf(accountA.address)
-        expect(beforeA.gte(afterA)).to.be.true
-        // Acc B
         txSignerB = weth.connect(accountB);
-        const beforeB = await weth.balanceOf(accountB.address)
-        await txSignerB.approve(utr.address, ethers.constants.MaxUint256)
-        txSignerB = utr.connect(accountB);
-        await txSignerB.exec([],
-          [
-            {
-              inputs: [{
-                mode: PAYMENT,
-                eip: 20,
-                token: weth.address,
-                id: 0,
-                amountIn: amountB,
-                recipient: derivablePool.address,
-              }],
-              code: derivablePool.address,
-              data: (await derivablePool.populateTransaction.swap(
-                0x00,
-                0x20,
-                stateCalHelper.address,
-                encodePayload(0, 0x00, 0x20, amountB),
-                0,
-                accountB.address,
-                derivableHelper.address
-              )).data,
-            },
-            {
-              inputs: [],
-              code: derivableHelper.address,
-              data: (await derivableHelper.populateTransaction.swapInAll(
-                0x20,
-                0x00,
-                0,
-                ethers.constants.AddressZero,
-                accountB.address
-              )).data,
-            }
-          ], opts)
-        const afterB = await weth.balanceOf(accountB.address)
-        expect(beforeB.gte(afterB)).to.be.true
-      }
-
-      async function groupSwapBack(amountA, amountB) {
-        txSignerA = weth.connect(accountA);
-        const beforeA = await weth.balanceOf(accountA.address)
-        const beforeB = await weth.balanceOf(accountB.address)
-        await txSignerA.approve(utr.address, ethers.constants.MaxUint256)
-        txSignerA = utr.connect(accountA);
-        await txSignerA.exec([],
-          [
-            {
-              inputs: [{
-                mode: PAYMENT,
-                eip: 20,
-                token: weth.address,
-                id: 0,
-                amountIn: amountB,
-                recipient: derivablePool.address,
-              }],
-              code: derivablePool.address,
-              data: (await derivablePool.populateTransaction.swap(
-                0x00,
-                0x20,
-                stateCalHelper.address,
-                encodePayload(0, 0x00, 0x20, amountB),
-                0,
-                accountA.address,
-                derivableHelper.address
-              )).data,
-            },
-            {
-              inputs: [{
-                mode: PAYMENT,
-                eip: 20,
-                token: weth.address,
-                id: 0,
-                amountIn: amountA,
-                recipient: derivablePool.address,
-              }],
-              code: derivablePool.address,
-              data: (await derivablePool.populateTransaction.swap(
-                0x00,
-                0x10,
-                stateCalHelper.address,
-                encodePayload(0, 0x00, 0x10, amountA),
-                0,
-                accountA.address,
-                derivableHelper.address
-              )).data,
-            },
-            {
-              inputs: [],
-              code: derivableHelper.address,
-              data: (await derivableHelper.populateTransaction.swapInAll(
-                0x10,
-                0x00,
-                0,
-                ethers.constants.AddressZero,
-                accountA.address
-              )).data,
-            },
-            {
-              inputs: [],
-              code: derivableHelper.address,
-              data: (await derivableHelper.populateTransaction.swapInAll(
-                0x20,
-                0x00,
-                0,
-                ethers.constants.AddressZero,
-                accountB.address
-              )).data,
-            }
-          ], opts)
-        const afterA = await weth.balanceOf(accountA.address)
-        const afterB = await weth.balanceOf(accountB.address)
-        // const changeOfA = beforeA.sub(amountB).sub(afterA)
-        // const changeOfB = afterB.sub(beforeB)
-        // console.log(changeOfA)
-        // console.log(changeOfB)
-        // expect(amountB.gte(changeOfB)).to.be.true
-      }
-
-      async function instantSwapBackNonUTR(amountA, amountB) {
-        txSignerA = derivablePool.connect(accountA)
-        await attemptSwap(
-          txSignerA,
-          0,
-          0x00,
-          0x10,
-          amountA,
-          stateCalHelper.address,
-          '0x0000000000000000000000000000000000000000',
-          accountA.address
-        )
-        const aTokenAmount = await derivable1155.balanceOf(accountA.address, A_ID)
-        const valueA = await attemptStaticSwap(
-          txSignerA,
-          0,
-          0x10,
-          0x00,
-          aTokenAmount,
-          stateCalHelper.address,
-          '0x0000000000000000000000000000000000000000',
-          accountA.address
-        )
-        txSignerB = derivablePool.connect(accountB)
-        await attemptSwap(
-          txSignerB,
-          0,
-          0x00,
-          0x20,
-          amountB,
-          stateCalHelper.address,
-          '0x0000000000000000000000000000000000000000',
-          accountB.address
-        )
-        const bTokenAmount = await derivable1155.balanceOf(accountB.address, B_ID)
-        const valueB = await attemptStaticSwap(
-          txSignerB,
-          0,
-          0x20,
-          0x00,
-          bTokenAmount,
-          stateCalHelper.address,
-          '0x0000000000000000000000000000000000000000',
-          accountB.address
-        )
-        expect(amountA.gte(valueA)).to.be.true
-        expect(amountB.gte(valueB)).to.be.true
-      }
-
-      async function swapBackInAHalfLife(amountA, amountB, caseName) {
-        txSignerA = derivablePool.connect(accountA)
-        await attemptSwap(
-          txSignerA,
-          0,
-          0x00,
-          0x10,
-          amountA,
-          stateCalHelper.address,
-          '0x0000000000000000000000000000000000000000',
-          accountA.address
-        )
-        txSignerB = derivablePool.connect(accountB)
-        await attemptSwap(
-          txSignerB,
-          0,
-          0x00,
-          0x20,
-          amountB,
-          stateCalHelper.address,
-          '0x0000000000000000000000000000000000000000',
-          accountB.address
-        )
-
-        const aTokenAmount = await derivable1155.balanceOf(accountA.address, A_ID)
-        const bTokenAmount = await derivable1155.balanceOf(accountB.address, B_ID)
-        const valueABefore = await attemptStaticSwap(
-          txSignerA,
-          0,
-          0x10,
-          0x00,
-          aTokenAmount,
-          stateCalHelper.address,
-          '0x0000000000000000000000000000000000000000',
-          accountA.address
-        )
-        const valueBBefore = await attemptStaticSwap(
-          txSignerB,
-          0,
-          0x20,
-          0x00,
-          bTokenAmount,
-          stateCalHelper.address,
-          '0x0000000000000000000000000000000000000000',
-          accountB.address
-        )
-        if (HALF_LIFE > 0)
-          await time.increase(HALF_LIFE)
-        const valueAAfter = await attemptStaticSwap(
-          txSignerA,
-          0,
-          0x10,
-          0x00,
-          aTokenAmount,
-          stateCalHelper.address,
-          '0x0000000000000000000000000000000000000000',
-          accountA.address
-        )
-        const valueBAfter = await attemptStaticSwap(
-          txSignerB,
-          0,
-          0x20,
-          0x00,
-          bTokenAmount,
-          stateCalHelper.address,
-          '0x0000000000000000000000000000000000000000',
-          accountB.address
-        )
-        // Check lớn hơn 0 và < 1
-        let expectedValueAAfter = valueABefore.div(2)
-        let expectedValueBAfter = valueBBefore.div(2)
-        if (HALF_LIFE == 0) {
-          expectedValueAAfter = valueABefore
-          expectedValueBAfter = valueBBefore
-        }
+        await txSignerA.approve(pool.contract.address, '100000000000000000000000000');
+        await txSignerB.approve(pool.contract.address, '100000000000000000000000000');
+        txSignerA = derivable1155.connect(accountA);
+        await txSignerA.setApprovalForAll(pool.contract.address, true);
+        txSignerB = derivable1155.connect(accountB);
+        await txSignerB.setApprovalForAll(pool.contract.address, true);
+        txSignerA = pool.connect(accountA);
+        txSignerB = pool.connect(accountB);
         
-        expect(Number(numberToWei(expectedValueAAfter))).to.be.closeTo(
-          Number(numberToWei(valueAAfter)),
-          1e18,
-          `${caseName}: Value long should be half after halflife`
+        await txSignerA.swap(
+          0x00,
+          0x30,
+          numberToWei(1),
+          0,
+          {
+              recipient: accountA.address
+          }
         )
 
-        expect(Number(numberToWei(expectedValueBAfter))).to.be.closeTo(
-          Number(numberToWei(valueBAfter)),
-          1e18,
-          `${caseName}: Value long should be half after halflife`
-        )
-      }
+        async function swapAndWait(period, waitingTime, amountA, amountB) {
+          await txSignerA.swap(
+            0x00,
+            0x10,
+            amountA,
+            0,
+            {
+                recipient: accountA.address
+            }
+          )
+          await txSignerB.swap(
+            0x00,
+            0x20,
+            amountB,
+            0,
+            {
+                recipient: accountB.address
+            }
+          )
+          const aTokenAmount = await derivable1155.balanceOf(accountA.address, A_ID)
+          const bTokenAmount = await derivable1155.balanceOf(accountB.address, B_ID)
+          const aFirstBefore = await txSignerA.swap(
+            0x10,
+            0x00,
+            aTokenAmount,
+            0,
+            { static: true, recipient: accountA.address }
+          )
+          const bFirstBefore = await txSignerB.swap(
+            0x20,
+            0x00,
+            bTokenAmount,
+            0,
+            { static: true, recipient: accountB.address }
+          )
+          if (period > 0)
+            await time.increase(period)
+          
+          const aFirstAfter = await txSignerA.swap(
+            0x10,
+            0x00,
+            aTokenAmount,
+            0,
+            { static: true, recipient: accountA.address }
+          )
+          const bFirstAfter = await txSignerB.swap(
+            0x20,
+            0x00,
+            bTokenAmount,
+            0,
+            { static: true, recipient: accountB.address }
+          )
 
-      async function swapAndRedeemInHalfLife(period, amountA, amountB) {
-        txSignerA = derivablePool.connect(accountA)
-        txSignerB = derivablePool.connect(accountB)
+          if (waitingTime > 0)
+            await time.increase(waitingTime)
+          const aSecondBefore = await txSignerA.swap(
+            0x10,
+            0x00,
+            aTokenAmount,
+            0,
+            { static: true, recipient: accountA.address }
+          )
+          const bSecondBefore = await txSignerB.swap(
+            0x20,
+            0x00,
+            bTokenAmount,
+            0,
+            { static: true, recipient: accountB.address }
+          )
+          if (period > 0)
+            await time.increase(period)
+          const aSecondAfter = await txSignerA.swap(
+            0x10,
+            0x00,
+            aTokenAmount,
+            0,
+            { static: true, recipient: accountA.address }
+          )
+          const bSecondAfter = await txSignerB.swap(
+            0x20,
+            0x00,
+            bTokenAmount,
+            0,
+            { static: true, recipient: accountB.address }
+          )
 
-        await attemptSwap(
-          txSignerA,
-          0,
-          0x00,
-          0x10,
-          amountA,
-          stateCalHelper.address,
-          '0x0000000000000000000000000000000000000000',
-          accountA.address
-        )
-        await attemptSwap(
-          txSignerB,
-          0,
-          0x00,
-          0x20,
-          amountB,
-          stateCalHelper.address,
-          '0x0000000000000000000000000000000000000000',
-          accountB.address
-        )
-        const aTokenAmount = await derivable1155.balanceOf(accountA.address, A_ID)
-        const bTokenAmount = await derivable1155.balanceOf(accountB.address, B_ID)
-        
-        const valueABefore = await attemptStaticSwap(
-          txSignerA,
-          0,
-          0x10,
-          0x00,
-          aTokenAmount,
-          stateCalHelper.address,
-          '0x0000000000000000000000000000000000000000',
-          accountA.address
-        )
-        const valueBBefore = await attemptStaticSwap(
-          txSignerB,
-          0,
-          0x20,
-          0x00,
-          bTokenAmount,
-          stateCalHelper.address,
-          '0x0000000000000000000000000000000000000000',
-          accountB.address
-        )
-        if (period != 0 && HALF_LIFE > 0) {
-          console.log(`Wait ${period} HL`)
-          await time.increase(period * HALF_LIFE)
+          const secondLongRate = Number(weiToNumber(aSecondAfter)) / Number(weiToNumber(aSecondBefore))
+          const firstLongRate = Number(weiToNumber(aFirstAfter)) / Number(weiToNumber(aFirstBefore))
+
+          const secondShortRate = Number(weiToNumber(bSecondAfter)) / Number(weiToNumber(bSecondBefore))
+          const firstShortRate = Number(weiToNumber(bFirstAfter)) / Number(weiToNumber(bFirstBefore))
+          if (amountA.gt(amountB) & HALF_LIFE > 0) {
+            expect(aFirstBefore.sub(aFirstAfter)).gt(aSecondBefore.sub(aSecondAfter)).gt(0)
+            expect(secondShortRate).to.be.closeTo(firstShortRate, 0.000001)
+          } else if (amountA.lt(amountB) & HALF_LIFE > 0) {
+            expect(secondLongRate).to.be.closeTo(firstLongRate, 0.000001)
+            expect(bFirstBefore.sub(bFirstAfter)).gt(bSecondBefore.sub(bSecondAfter)).gt(0)
+          } else {
+            expect(secondLongRate).to.be.closeTo(firstLongRate, 0.000001)
+            expect(secondShortRate).to.be.closeTo(firstShortRate, 0.000001)
+          }
         }
 
-        const aBefore = await weth.balanceOf(accountA.address)
-        const bBefore = await weth.balanceOf(accountB.address)
+        async function instantSwapBackUTR(amountA, amountB) {
+          // Acc A
+          txSignerA = weth.connect(accountA);
+          const beforeA = await weth.balanceOf(accountA.address)
+          await txSignerA.approve(utr.address, ethers.constants.MaxUint256)
+          txSignerA = utr.connect(accountA);
+          const pTxA = await pool.connect(accountA).swap(
+            0x00,
+            0x10,
+            amountA,
+            0,
+            {
+              populateTransaction: true,
+              recipient: derivableHelper.address,
+              payer: accountA.address
+            }
+          )
+          await txSignerA.exec([],
+            [
+              {
+                inputs: [{
+                  mode: PAYMENT,
+                  eip: 20,
+                  token: weth.address,
+                  id: 0,
+                  amountIn: amountA,
+                  recipient: pool.contract.address,
+                }],
+                code: pool.contract.address,
+                data: pTxA.data,
+              },
+              {
+                inputs: [],
+                code: derivableHelper.address,
+                data: (await derivableHelper.populateTransaction.swapInAll(
+                  0x10,
+                  0x00,
+                  0,
+                  ethers.constants.AddressZero,
+                  accountA.address
+                )).data,
+              }
+            ], opts)
+          const afterA = await weth.balanceOf(accountA.address)
+          expect(beforeA.gte(afterA)).to.be.true
+          // Acc B
+          txSignerB = weth.connect(accountB);
+          const beforeB = await weth.balanceOf(accountB.address)
+          await txSignerB.approve(utr.address, ethers.constants.MaxUint256)
+          txSignerB = utr.connect(accountB);
+          const pTxB = await pool.connect(accountB).swap(
+            0x00,
+            0x20,
+            amountB,
+            0,
+            {
+              populateTransaction: true,
+              recipient: derivableHelper.address,
+              payer: accountB.address
+            }
+          )
+          await txSignerB.exec([],
+            [
+              {
+                inputs: [{
+                  mode: PAYMENT,
+                  eip: 20,
+                  token: weth.address,
+                  id: 0,
+                  amountIn: amountB,
+                  recipient: pool.contract.address,
+                }],
+                code: pool.contract.address,
+                data: pTxB.data,
+              },
+              {
+                inputs: [],
+                code: derivableHelper.address,
+                data: (await derivableHelper.populateTransaction.swapInAll(
+                  0x20,
+                  0x00,
+                  0,
+                  ethers.constants.AddressZero,
+                  accountB.address
+                )).data,
+              }
+            ], opts)
+          const afterB = await weth.balanceOf(accountB.address)
+          expect(beforeB.gte(afterB)).to.be.true
+        }
 
-        await attemptSwap(
-          txSignerA,
-          0,
-          0x10,
-          0x00,
-          aTokenAmount,
-          stateCalHelper.address,
-          '0x0000000000000000000000000000000000000000',
-          accountA.address
-        )
-        await attemptSwap(
-          txSignerB,
-          0,
-          0x20,
-          0x00,
-          bTokenAmount,
-          stateCalHelper.address,
-          '0x0000000000000000000000000000000000000000',
-          accountB.address
-        )
+        async function groupSwapBack(amountA, amountB) {
+          txSignerA = weth.connect(accountA);
+          const beforeA = await weth.balanceOf(accountA.address)
+          const beforeB = await weth.balanceOf(accountB.address)
+          await txSignerA.approve(utr.address, ethers.constants.MaxUint256)
+          txSignerA = utr.connect(accountA);
+          const ptxAmountB = await pool.connect(accountA).swap(
+            0x00,
+            0x20,
+            amountB,
+            0,
+            {
+              populateTransaction: true,
+              recipient: derivableHelper.address,
+              payer: accountA.address
+            }
+          )
+          const ptxAmountA = await pool.connect(accountA).swap(
+            0x00,
+            0x10,
+            amountA,
+            0,
+            {
+              populateTransaction: true,
+              recipient: derivableHelper.address,
+              payer: accountA.address
+            }
+          )
+          await txSignerA.exec([],
+            [
+              {
+                inputs: [{
+                  mode: PAYMENT,
+                  eip: 20,
+                  token: weth.address,
+                  id: 0,
+                  amountIn: amountB,
+                  recipient: pool.contract.address,
+                }],
+                code: pool.contract.address,
+                data: ptxAmountB.data,
+              },
+              {
+                inputs: [{
+                  mode: PAYMENT,
+                  eip: 20,
+                  token: weth.address,
+                  id: 0,
+                  amountIn: amountA,
+                  recipient: pool.contract.address,
+                }],
+                code: pool.contract.address,
+                data: ptxAmountA.data,
+              },
+              {
+                inputs: [],
+                code: derivableHelper.address,
+                data: (await derivableHelper.populateTransaction.swapInAll(
+                  0x10,
+                  0x00,
+                  0,
+                  ethers.constants.AddressZero,
+                  accountA.address
+                )).data,
+              },
+              {
+                inputs: [],
+                code: derivableHelper.address,
+                data: (await derivableHelper.populateTransaction.swapInAll(
+                  0x20,
+                  0x00,
+                  0,
+                  ethers.constants.AddressZero,
+                  accountB.address
+                )).data,
+              }
+            ], opts)
+          const afterA = await weth.balanceOf(accountA.address)
+          const afterB = await weth.balanceOf(accountB.address)
+          // const changeOfA = beforeA.sub(amountB).sub(afterA)
+          // const changeOfB = afterB.sub(beforeB)
+          // console.log(changeOfA)
+          // console.log(changeOfB)
+          // expect(amountB.gte(changeOfB)).to.be.true
+        }
 
-        const aAfter = await weth.balanceOf(accountA.address)
-        const bAfter = await weth.balanceOf(accountB.address)
+        async function instantSwapBackNonUTR(amountA, amountB) {
+          txSignerA = pool.connect(accountA)
+          await txSignerA.swap(
+            0x00,
+            0x10,
+            amountA,
+            0
+          )
+          const aTokenAmount = await derivable1155.balanceOf(accountA.address, A_ID)
+          const valueA = await txSignerA.swap(
+            0x10,
+            0x00,
+            aTokenAmount,
+            0,
+            { static: true }
+          )
+          txSignerB = pool.connect(accountB)
+          await txSignerB.swap(
+            0x00,
+            0x20,
+            amountB,
+            0
+          )
+          const bTokenAmount = await derivable1155.balanceOf(accountB.address, B_ID)
+          const valueB = await txSignerB.swap(
+            0x20,
+            0x00,
+            bTokenAmount,
+            0,
+            { static: true }
+          )
+          expect(amountA.gte(valueA)).to.be.true
+          expect(amountB.gte(valueB)).to.be.true
+        }
+
+        async function swapBackInAHalfLife(amountA, amountB, caseName) {
+          txSignerA = pool.connect(accountA)
+          await txSignerA.swap(
+            0x00,
+            0x10,
+            amountA,
+            0,
+            { recipient: accountA.address }
+          )
+          txSignerB = pool.connect(accountB)
+          await txSignerB.swap(
+            0x00,
+            0x20,
+            amountB,
+            0,
+            { recipient: accountB.address }
+          )
+
+          const aTokenAmount = await derivable1155.balanceOf(accountA.address, A_ID)
+          const bTokenAmount = await derivable1155.balanceOf(accountB.address, B_ID)
+          const valueABefore = await txSignerA.swap(
+            0x10,
+            0x00,
+            aTokenAmount,
+            0,
+            { static: true, recipient: accountA.address }
+          )
+          const valueBBefore = await txSignerB.swap(
+            0x20,
+            0x00,
+            bTokenAmount,
+            0,
+            { static: true, recipient: accountB.address }
+          )
+          if (HALF_LIFE > 0)
+            await time.increase(HALF_LIFE)
+          const valueAAfter = await txSignerA.swap(
+            0x10,
+            0x00,
+            aTokenAmount,
+            0,
+            { static: true, recipient: accountA.address }
+          )
+          const valueBAfter = await txSignerB.swap(
+            0x20,
+            0x00,
+            bTokenAmount,
+            0,
+            { static: true, recipient: accountB.address }
+          )
+          // Check lớn hơn 0 và < 1
+          let expectedValueAAfter = valueABefore.div(2)
+          let expectedValueBAfter = valueBBefore.div(2)
+          if (HALF_LIFE == 0) {
+            expectedValueAAfter = valueABefore
+            expectedValueBAfter = valueBBefore
+          }
+          
+          expect(Number(numberToWei(expectedValueAAfter))).to.be.closeTo(
+            Number(numberToWei(valueAAfter)),
+            1e18,
+            `${caseName}: Value long should be half after halflife`
+          )
+
+          expect(Number(numberToWei(expectedValueBAfter))).to.be.closeTo(
+            Number(numberToWei(valueBAfter)),
+            1e18,
+            `${caseName}: Value long should be half after halflife`
+          )
+        }
+
+        async function swapAndRedeemInHalfLife(period, amountA, amountB) {
+          txSignerA = pool.connect(accountA)
+          txSignerB = pool.connect(accountB)
+
+          await txSignerA.swap(
+            0x00,
+            0x10,
+            amountA,
+            0,
+            { recipient: accountA.address }
+          )
+          await txSignerB.swap(
+            0x00,
+            0x20,
+            amountB,
+            0,
+            { recipient: accountB.address }
+          )
+
+          const aTokenAmount = await derivable1155.balanceOf(accountA.address, A_ID)
+          const bTokenAmount = await derivable1155.balanceOf(accountB.address, B_ID)
+          
+          const valueABefore = await txSignerA.swap(
+            0x10,
+            0x00,
+            aTokenAmount,
+            0,
+            { static: true, recipient: accountA.address }
+          )
+          const valueBBefore = await txSignerB.swap(
+            0x20,
+            0x00,
+            aTokenAmount,
+            0,
+            { static: true, recipient: accountB.address }
+          )
+          if (period != 0 && HALF_LIFE > 0) {
+            console.log(`Wait ${period} HL`)
+            await time.increase(period * HALF_LIFE)
+          }
+
+          const aBefore = await weth.balanceOf(accountA.address)
+          const bBefore = await weth.balanceOf(accountB.address)
+
+          await txSignerA.swap(
+            0x10,
+            0x00,
+            aTokenAmount,
+            0,
+            { recipient: accountA.address }
+          )
+          await txSignerB.swap(
+            0x20,
+            0x00,
+            bTokenAmount,
+            0,
+            { recipient: accountB.address }
+          )
+
+          const aAfter = await weth.balanceOf(accountA.address)
+          const bAfter = await weth.balanceOf(accountB.address)
+          return {
+            long: aAfter.sub(aBefore),
+            short: bAfter.sub(bBefore),
+            longFee: valueABefore.sub(aAfter.sub(aBefore)),
+            shortFee: valueBBefore.sub(bAfter.sub(bBefore))
+          }
+        }
+
+        async function compareBalance(period) {
+          const origin = await swapAndRedeemInHalfLife(1, numberToWei(0.5), numberToWei(0.5))
+          const after = await swapAndRedeemInHalfLife(period, numberToWei(0.5), numberToWei(0.5))
+          const expectRatio = (1 - 0.5) / (1 - 0.5 ** period)
+
+          expect(Number(weiToNumber(origin.longFee) / Number(weiToNumber(after.longFee)))).to.be.closeTo(expectRatio, 0.000001)
+          expect(Number(weiToNumber(origin.shortFee) / Number(weiToNumber(after.shortFee)))).to.be.closeTo(expectRatio, 0.000001)
+        }
+
+        async function compareMuchMoreLong(period) {
+          const origin = await swapAndRedeemInHalfLife(1, numberToWei(2.5), numberToWei(0.5))
+          const after = await swapAndRedeemInHalfLife(period, numberToWei(2.5), numberToWei(0.5))
+          const expectRatio = (1 - 0.5) / (1 - 0.5 ** period)
+
+          expect(Number(weiToNumber(origin.longFee) / Number(weiToNumber(after.longFee)))).to.be.closeTo(expectRatio, 0.000001)
+          expect(Number(weiToNumber(origin.shortFee) / Number(weiToNumber(after.shortFee)))).to.be.closeTo(expectRatio, 0.000001)
+        }
+
+        async function compareMuchMoreShort(period) {
+          const origin = await swapAndRedeemInHalfLife(1, numberToWei(0.5), numberToWei(2.5))
+          const after = await swapAndRedeemInHalfLife(period, numberToWei(0.5), numberToWei(2.5))
+          const expectRatio = (1 - 0.5) / (1 - 0.5 ** period)
+
+          expect(Number(weiToNumber(origin.longFee) / Number(weiToNumber(after.longFee)))).to.be.closeTo(expectRatio, 0.000001)
+          expect(Number(weiToNumber(origin.shortFee) / Number(weiToNumber(after.shortFee)))).to.be.closeTo(expectRatio, 0.000001)
+        }
+
         return {
-          long: aAfter.sub(aBefore),
-          short: bAfter.sub(bBefore),
-          longFee: valueABefore.sub(aAfter.sub(aBefore)),
-          shortFee: valueBBefore.sub(bAfter.sub(bBefore))
+          A_ID,
+          B_ID,
+          C_ID,
+          derivableHelper,
+          txSignerA,
+          txSignerB,
+          pool,
+          swapAndRedeemInHalfLife,
+          compareBalance,
+          compareMuchMoreLong,
+          compareMuchMoreShort,
+          swapAndWait,
+          instantSwapBackUTR,
+          groupSwapBack,
+          instantSwapBackNonUTR,
+          swapBackInAHalfLife
         }
       }
-
-      async function compareBalance(period) {
-        const origin = await swapAndRedeemInHalfLife(1, numberToWei(0.5), numberToWei(0.5))
-        const after = await swapAndRedeemInHalfLife(period, numberToWei(0.5), numberToWei(0.5))
-        const expectRatio = (1 - 0.5) / (1 - 0.5 ** period)
-
-        expect(Number(weiToNumber(origin.longFee) / Number(weiToNumber(after.longFee)))).to.be.closeTo(expectRatio, 0.000001)
-        expect(Number(weiToNumber(origin.shortFee) / Number(weiToNumber(after.shortFee)))).to.be.closeTo(expectRatio, 0.000001)
-      }
-
-      async function compareMuchMoreLong(period) {
-        const origin = await swapAndRedeemInHalfLife(1, numberToWei(2.5), numberToWei(0.5))
-        const after = await swapAndRedeemInHalfLife(period, numberToWei(2.5), numberToWei(0.5))
-        const expectRatio = (1 - 0.5) / (1 - 0.5 ** period)
-
-        expect(Number(weiToNumber(origin.longFee) / Number(weiToNumber(after.longFee)))).to.be.closeTo(expectRatio, 0.000001)
-        expect(Number(weiToNumber(origin.shortFee) / Number(weiToNumber(after.shortFee)))).to.be.closeTo(expectRatio, 0.000001)
-      }
-
-      async function compareMuchMoreShort(period) {
-        const origin = await swapAndRedeemInHalfLife(1, numberToWei(0.5), numberToWei(2.5))
-        const after = await swapAndRedeemInHalfLife(period, numberToWei(0.5), numberToWei(2.5))
-        const expectRatio = (1 - 0.5) / (1 - 0.5 ** period)
-
-        expect(Number(weiToNumber(origin.longFee) / Number(weiToNumber(after.longFee)))).to.be.closeTo(expectRatio, 0.000001)
-        expect(Number(weiToNumber(origin.shortFee) / Number(weiToNumber(after.shortFee)))).to.be.closeTo(expectRatio, 0.000001)
-      }
-
-      return {
-        A_ID,
-        B_ID,
-        C_ID,
-        utr,
-        owner,
-        weth,
-        derivablePool,
-        derivable1155,
-        derivableHelper,
-        accountA,
-        accountB,
-        txSignerA,
-        txSignerB,
-        oracleLibrary,
-        swapAndRedeemInHalfLife,
-        compareBalance,
-        compareMuchMoreLong,
-        compareMuchMoreShort,
-        swapAndWait,
-        instantSwapBackUTR,
-        groupSwapBack,
-        instantSwapBackNonUTR,
-        swapBackInAHalfLife,
-        stateCalHelper,
-        config
-      }
-    }
+    })
 
     describe("Pool", function () {
       it("LP increase over time", async function () {
-        const { swapAndRedeemInHalfLife, accountA, txSignerA, derivable1155, C_ID, stateCalHelper, derivablePool, oracleLibrary, config } = await loadFixture(deployDDLv2);
+        const { swapAndRedeemInHalfLife, accountA, txSignerA, derivable1155, C_ID, pool, oracleLibrary, params } = await loadFixture(fixture);
         const lpAmount = await derivable1155.balanceOf(accountA.address, C_ID)
-        const state = await txSignerA.getStates()
+        const state = await pool.contract.getStates()
+        const config = paramToConfig(params[0])
         const oraclePrice = await oracleLibrary.fetch(config.ORACLE)
         const price = _selectPrice(
           config,
@@ -810,290 +598,222 @@ HLs.forEach(HALF_LIFE => {
         const eval = _evaluate(price.market, state)
 
         const positionReserved = eval.rA.add(eval.rB).add(numberToWei(2))
-        const originLPValue = await attemptStaticSwap(
-          txSignerA,
-          0,
+        const originLPValue = await txSignerA.swap(
           0x30,
           0x00,
           lpAmount,
-          stateCalHelper.address,
-          '0x0000000000000000000000000000000000000000',
-          accountA.address
+          0,
+          {
+            static: true,
+            recipient: accountA.address
+          }
         )
         await swapAndRedeemInHalfLife(1, numberToWei(1), numberToWei(1))
-
-        const afterLPValue = await attemptStaticSwap(
-          txSignerA,
-          0,
+        const afterLPValue = await txSignerA.swap(
           0x30,
           0x00,
           lpAmount,
-          stateCalHelper.address,
-          '0x0000000000000000000000000000000000000000',
-          accountA.address
+          0,
+          { static: true, recipient: accountA.address }
         )
         const expectedValue = originLPValue.add(positionReserved.div(2).mul(lpAmount).div(totalSupply))
         expect(Number(weiToNumber(afterLPValue))/Number(weiToNumber(expectedValue))).to.be.closeTo(1, 1e-3)
       })
       describe("Pool balance:", function () {
         it("swap back after 1 halflife", async function () {
-          const { swapBackInAHalfLife } = await loadFixture(deployDDLv2)
+          const { swapBackInAHalfLife } = await loadFixture(fixture)
           await swapBackInAHalfLife(numberToWei(0.5), numberToWei(0.5), "Pool balance")
         })
         it("1 day - wait 1 halflife", async function () {
-          const { swapAndWait } = await loadFixture(deployDDLv2);
+          const { swapAndWait } = await loadFixture(fixture);
           await swapAndWait(86400, HALF_LIFE, numberToWei(0.5), numberToWei(0.5))
         })
         it("1 month - wait 1 halflife", async function () {
-          const { swapAndWait } = await loadFixture(deployDDLv2);
+          const { swapAndWait } = await loadFixture(fixture);
           await swapAndWait(30 * 86400, HALF_LIFE, numberToWei(0.5), numberToWei(0.5))
         })
         it("1 day - wait 10 halflife", async function () {
-          const { swapAndWait } = await loadFixture(deployDDLv2);
+          const { swapAndWait } = await loadFixture(fixture);
           await swapAndWait(86400, 3.14 * HALF_LIFE, numberToWei(0.5), numberToWei(0.5))
         })
         it("wait, after", async function () {
           // TODO: Zergity
-          const { swapAndRedeemInHalfLife } = await loadFixture(deployDDLv2);
+          const { swapAndRedeemInHalfLife } = await loadFixture(fixture);
           // await time.increase(3.14 * HALF_LIFE)
           const after = await swapAndRedeemInHalfLife(0, numberToWei(1), numberToWei(1))
           expect(Number(weiToNumber(after.long))).to.be.closeTo(1, 0.01)
           expect(Number(weiToNumber(after.short))).to.be.closeTo(1, 0.01)
         })
         it("Open Long does not affect C value", async function() {
-          const {derivablePool, derivable1155, stateCalHelper, owner, C_ID} = await loadFixture(deployDDLv2)
+          const {pool, derivable1155, owner, C_ID} = await loadFixture(fixture)
           const balanceBefore = await derivable1155.balanceOf(owner.address, C_ID)
 
-          await attemptSwap(
-            derivablePool, 
-            0, 
+          await pool.swap(
             SIDE_R, 
             SIDE_C,
-            numberToWei(5), 
-            stateCalHelper.address, 
-            AddressZero, 
-            owner.address
+            numberToWei(5),
+            0
           )
 
           const lpAmount = (await derivable1155.balanceOf(owner.address, C_ID)).sub(balanceBefore)
           await time.increase(HALF_LIFE)
-          const lpValueBefore = await attemptStaticSwap(
-            derivablePool, 
-            0, 
+          const lpValueBefore = await pool.swap(
             SIDE_C, 
             SIDE_R,
-            lpAmount, 
-            stateCalHelper.address, 
-            AddressZero, 
-            owner.address
+            lpAmount,
+            0,
+            { static: true }
           )
 
           // Big swap
-          await attemptSwap(
-            derivablePool, 
-            0, 
+          await pool.swap(
             SIDE_R, 
             SIDE_A,
             numberToWei(5), 
-            stateCalHelper.address, 
-            AddressZero, 
-            owner.address
+            0
           )
-
-          const lpValueAfter = await attemptStaticSwap(
-            derivablePool, 
-            0, 
+          
+          const lpValueAfter = await pool.swap(
             SIDE_C, 
             SIDE_R,
-            lpAmount, 
-            stateCalHelper.address,  
-            AddressZero, 
-            owner.address
+            lpAmount,
+            0,
+            { static: true }
           )
           expect(Number(weiToNumber(lpValueBefore))/Number(weiToNumber(lpValueAfter))).to.be.closeTo(1, 1e-5)
         })
 
         it("Open Short does not affect C value", async function() {
-          const {derivablePool, derivable1155, stateCalHelper, owner, C_ID} = await loadFixture(deployDDLv2)
+          const {pool, derivable1155, owner, C_ID} = await loadFixture(fixture)
           const balanceBefore = await derivable1155.balanceOf(owner.address, C_ID)
 
-          await attemptSwap(
-            derivablePool, 
-            0, 
+          await pool.swap(
             SIDE_R, 
             SIDE_C,
-            numberToWei(5), 
-            stateCalHelper.address, 
-            AddressZero, 
-            owner.address
+            numberToWei(5),
+            0
           )
 
           const lpAmount = (await derivable1155.balanceOf(owner.address, C_ID)).sub(balanceBefore)
           await time.increase(HALF_LIFE)
-          const lpValueBefore = await attemptStaticSwap(
-            derivablePool, 
-            0, 
+          const lpValueBefore = await pool.swap(
             SIDE_C, 
             SIDE_R,
-            lpAmount, 
-            stateCalHelper.address, 
-            AddressZero, 
-            owner.address
+            lpAmount,
+            0,
+            { static: true }
           )
 
           // Big swap
-          await attemptSwap(
-            derivablePool, 
-            0, 
+          await pool.swap(
             SIDE_R, 
             SIDE_B,
             numberToWei(5), 
-            stateCalHelper.address, 
-            AddressZero, 
-            owner.address
+            0
           )
-
-          const lpValueAfter = await attemptStaticSwap(
-            derivablePool, 
-            0, 
+          
+          const lpValueAfter = await pool.swap(
             SIDE_C, 
             SIDE_R,
-            lpAmount, 
-            stateCalHelper.address,  
-            AddressZero, 
-            owner.address
+            lpAmount,
+            0,
+            { static: true }
           )
           expect(Number(weiToNumber(lpValueBefore))/Number(weiToNumber(lpValueAfter))).to.be.closeTo(1, 1e-3)
         })
 
         it("Close Long does not affect C value", async function() {
-          const {derivablePool, derivable1155, stateCalHelper, owner, C_ID, A_ID} = await loadFixture(deployDDLv2)
+          const {pool, derivable1155, owner, C_ID, A_ID} = await loadFixture(fixture)
           const balanceBefore = await derivable1155.balanceOf(owner.address, C_ID)
           const balancePositionBefore = await derivable1155.balanceOf(owner.address, A_ID)
 
-          await attemptSwap(
-            derivablePool, 
-            0, 
+          await pool.swap(
             SIDE_R, 
             SIDE_C,
-            numberToWei(5), 
-            stateCalHelper.address, 
-            AddressZero, 
-            owner.address
+            numberToWei(5),
+            0
           )
 
-          await attemptSwap(
-            derivablePool, 
-            0, 
+          await pool.swap(
             SIDE_R, 
             SIDE_A,
             numberToWei(5), 
-            stateCalHelper.address, 
-            AddressZero, 
-            owner.address
+            0
           )
 
           const positionAmount = (await derivable1155.balanceOf(owner.address, A_ID)).sub(balancePositionBefore)
           const lpAmount = (await derivable1155.balanceOf(owner.address, C_ID)).sub(balanceBefore)
           await time.increase(HALF_LIFE)
-          const lpValueBefore = await attemptStaticSwap(
-            derivablePool, 
-            0, 
+          const lpValueBefore = await pool.swap(
             SIDE_C, 
             SIDE_R,
-            lpAmount, 
-            stateCalHelper.address, 
-            AddressZero, 
-            owner.address
+            lpAmount,
+            0,
+            { static: true }
           )
 
           // Big swap
-          await attemptSwap(
-            derivablePool, 
-            0, 
+          await pool.swap(
             SIDE_A,
             SIDE_R, 
-            positionAmount, 
-            stateCalHelper.address, 
-            AddressZero, 
-            owner.address
+            positionAmount,
+            0
           )
-
-          const lpValueAfter = await attemptStaticSwap(
-            derivablePool, 
-            0, 
+          
+          const lpValueAfter = await pool.swap(
             SIDE_C, 
             SIDE_R,
-            lpAmount, 
-            stateCalHelper.address,  
-            AddressZero, 
-            owner.address
+            lpAmount,
+            0,
+            { static: true }
           )
           expect(Number(weiToNumber(lpValueBefore))/Number(weiToNumber(lpValueAfter))).to.be.closeTo(1, 1e-3)
         })
 
         it("Close Short does not affect C value", async function() {
-          const {derivablePool, derivable1155, stateCalHelper, owner, C_ID, B_ID} = await loadFixture(deployDDLv2)
+          const {pool, derivable1155, owner, C_ID, B_ID} = await loadFixture(fixture)
           const balanceBefore = await derivable1155.balanceOf(owner.address, C_ID)
           const balancePositionBefore = await derivable1155.balanceOf(owner.address, B_ID)
 
-          await attemptSwap(
-            derivablePool, 
-            0, 
+          await pool.swap(
             SIDE_R, 
             SIDE_C,
-            numberToWei(5), 
-            stateCalHelper.address, 
-            AddressZero, 
-            owner.address
+            numberToWei(5),
+            0
           )
 
-          await attemptSwap(
-            derivablePool, 
-            0, 
+          await pool.swap(
             SIDE_R, 
             SIDE_B,
-            numberToWei(5), 
-            stateCalHelper.address, 
-            AddressZero, 
-            owner.address
+            numberToWei(5),
+            0
           )
 
           const positionAmount = (await derivable1155.balanceOf(owner.address, B_ID)).sub(balancePositionBefore)
           const lpAmount = (await derivable1155.balanceOf(owner.address, C_ID)).sub(balanceBefore)
           await time.increase(HALF_LIFE)
-          const lpValueBefore = await attemptStaticSwap(
-            derivablePool, 
-            0, 
+          const lpValueBefore = await pool.swap(
             SIDE_C, 
             SIDE_R,
-            lpAmount, 
-            stateCalHelper.address, 
-            AddressZero, 
-            owner.address
+            lpAmount,
+            0,
+            { static: true }
           )
 
           // Big swap
-          await attemptSwap(
-            derivablePool, 
-            0, 
+          await pool.swap(
             SIDE_B,
             SIDE_R, 
             positionAmount, 
-            stateCalHelper.address, 
-            AddressZero, 
-            owner.address
+            0
           )
-
-          const lpValueAfter = await attemptStaticSwap(
-            derivablePool, 
-            0, 
+          
+          const lpValueAfter = await pool.swap(
             SIDE_C, 
             SIDE_R,
-            lpAmount, 
-            stateCalHelper.address,  
-            AddressZero, 
-            owner.address
+            lpAmount,
+            0,
+            { static: true }
           )
           expect(Number(weiToNumber(lpValueBefore))/Number(weiToNumber(lpValueAfter))).to.be.closeTo(1, 1e-3)
         })
@@ -1101,55 +821,55 @@ HLs.forEach(HALF_LIFE => {
 
       describe("Pool long > R/2:", function () {
         it("swap back after 1 halflife", async function () {
-          const { swapBackInAHalfLife } = await loadFixture(deployDDLv2)
+          const { swapBackInAHalfLife } = await loadFixture(fixture)
           await swapBackInAHalfLife(numberToWei(2.5), numberToWei(0.5), "Pool long > R/2")
         })
         it("1 day - wait 1 halflife", async function () {
-          const { swapAndWait } = await loadFixture(deployDDLv2);
+          const { swapAndWait } = await loadFixture(fixture);
           await swapAndWait(86400, HALF_LIFE, numberToWei(2.5), numberToWei(0.5))
         })
         it("1 month - wait 1 halflife", async function () {
-          const { swapAndWait } = await loadFixture(deployDDLv2);
+          const { swapAndWait } = await loadFixture(fixture);
           await swapAndWait(30 * 86400, HALF_LIFE, numberToWei(2.5), numberToWei(0.5))
         })
         it("1 day - wait 10 halflife", async function () {
-          const { swapAndWait } = await loadFixture(deployDDLv2);
+          const { swapAndWait } = await loadFixture(fixture);
           await swapAndWait(86400, 3.14 * HALF_LIFE, numberToWei(2.5), numberToWei(0.5))
         })
         it("Instant swap back", async function () {
-          const { instantSwapBackUTR } = await loadFixture(deployDDLv2)
+          const { instantSwapBackUTR } = await loadFixture(fixture)
           await instantSwapBackUTR(numberToWei(2.5), numberToWei(0.5))
         })
       })
 
       describe("Pool short > R/2:", function () {
         it("swap back after 1 halflife", async function () {
-          const { swapBackInAHalfLife } = await loadFixture(deployDDLv2)
+          const { swapBackInAHalfLife } = await loadFixture(fixture)
           await swapBackInAHalfLife(numberToWei(0.5), numberToWei(2.5), "Pool short > R/2")
         })
         it("1 day - wait 1 halflife", async function () {
-          const { swapAndWait } = await loadFixture(deployDDLv2);
+          const { swapAndWait } = await loadFixture(fixture);
           await swapAndWait(86400, HALF_LIFE, numberToWei(0.5), numberToWei(2.5))
         })
         it("1 month - wait 1 halflife", async function () {
-          const { swapAndWait } = await loadFixture(deployDDLv2);
+          const { swapAndWait } = await loadFixture(fixture);
           await swapAndWait(30 * 86400, HALF_LIFE, numberToWei(0.5), numberToWei(2.5))
         })
         it("1 day - wait 10 halflife", async function () {
-          const { swapAndWait } = await loadFixture(deployDDLv2);
+          const { swapAndWait } = await loadFixture(fixture);
           await swapAndWait(86400, 3.14 * HALF_LIFE, numberToWei(0.5), numberToWei(2.5))
         })
         it("Instant swap back", async function () {
-          const { instantSwapBackUTR } = await loadFixture(deployDDLv2)
+          const { instantSwapBackUTR } = await loadFixture(fixture)
           await instantSwapBackUTR(numberToWei(0.5), numberToWei(2.5))
         })
         // TODO: Zergity verify this
         it("Group swap back", async function () {
-          const { groupSwapBack } = await loadFixture(deployDDLv2)
+          const { groupSwapBack } = await loadFixture(fixture)
           await groupSwapBack(numberToWei(2.5), numberToWei(2.5))
         })
         it("Instant swap back", async function () {
-          const { instantSwapBackNonUTR } = await loadFixture(deployDDLv2)
+          const { instantSwapBackNonUTR } = await loadFixture(fixture)
           await instantSwapBackNonUTR(numberToWei(2.5), numberToWei(0.5))
         })
       })

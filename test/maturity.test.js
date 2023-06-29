@@ -1,9 +1,8 @@
 const { loadFixture, time } = require("@nomicfoundation/hardhat-network-helpers")
 const { baseParams } = require("./shared/baseParams")
 const { loadFixtureFromParams } = require("./shared/scenerios")
-const { attemptSwap, weiToNumber, numberToWei, attemptStaticSwap, bn } = require("./shared/utilities")
-const { SIDE_R, SIDE_A, SIDE_B, Q64, SIDE_C } = require("./shared/constant")
-const { AddressZero } = require("@ethersproject/constants")
+const { weiToNumber, numberToWei, bn } = require("./shared/utilities")
+const { SIDE_R, SIDE_A, SIDE_B, SIDE_C } = require("./shared/constant")
 const { expect } = require("chai")
 
 const configs = [
@@ -42,109 +41,88 @@ configs.forEach(config => describe(`Maturity - EXP = ${config.exp}, COEF ${confi
         const {accountA, accountB, derivablePools, stateCalHelper, owner} = await loadFixture(fixture)
         const sides = [SIDE_A, SIDE_B, SIDE_C]
         const index = sides.indexOf(toSide)
-        const derivablePool = derivablePools[0]
+        const pool = derivablePools[0]
         sides.splice(index, 1)
 
         await time.increase(60)
 
-        await attemptSwap(
-            derivablePool,
-            0,
+        await pool.swap(
             SIDE_R,
             SIDE_A,
             numberToWei(1),
-            stateCalHelper.address,
-            AddressZero,
-            accountA.address,
-            await time.latest() + 120
+            await time.latest() + 120,
+            {
+                recipient: accountA.address
+            }
         )
 
-        await attemptSwap(
-            derivablePool,
-            0,
+        await pool.swap(
             SIDE_R,
             SIDE_B,
             numberToWei(1),
-            stateCalHelper.address,
-            AddressZero,
-            accountA.address,
-            await time.latest() + 120
+            await time.latest() + 120,
+            {
+                recipient: accountA.address
+            }
         )
 
-        await attemptSwap(
-            derivablePool,
-            0,
+        await pool.swap(
             SIDE_R,
             SIDE_C,
             numberToWei(1),
-            stateCalHelper.address,
-            AddressZero,
-            accountA.address,
-            await time.latest() + 120
+            await time.latest() + 120,
+            {
+                recipient: accountA.address
+            }
         )
 
         const valuesBefore = await Promise.all(sides.map(async side => {
-            return await attemptStaticSwap(
-                derivablePool,
-                0,
+            return await pool.swap(
                 side,
                 SIDE_R,
                 numberToWei(0.1),
-                stateCalHelper.address,
-                AddressZero,
-                owner.address,
-                0
+                0,
+                { static: true }
             )
         }))
 
-        const toSideValueBefore = await attemptStaticSwap(
-            derivablePool,
-            0,
+        const toSideValueBefore = await pool.swap(
             toSide,
             SIDE_R,
             numberToWei(0.1),
-            stateCalHelper.address,
-            AddressZero,
-            accountB.address,
-            0
+            0,
+            { 
+                static: true,
+                recipient: accountB.address
+            }
         )
 
-        await attemptSwap(
-            derivablePool.connect(accountA),
-            0,
+        await pool.connect(accountA).swap(
             fromSide,
             toSide,
             numberToWei(0.1),
-            stateCalHelper.address,
-            AddressZero,
-            accountB.address,
-            0
+            0,
+            { 
+                recipient: accountB.address
+            }
         )
 
         const valuesAfter = await Promise.all(sides.map(async side => {
-            return await attemptStaticSwap(
-                derivablePool,
-                0,
+            return await pool.swap(
                 side,
                 SIDE_R,
                 numberToWei(0.1),
-                stateCalHelper.address,
-                AddressZero,
-                owner.address,
-                0
+                0,
+                { static: true }
             )
         }))
 
-        const toSideValueAfter = await attemptStaticSwap(
-            derivablePool,
-            0,
+        const toSideValueAfter = await pool.swap(
             toSide,
             SIDE_R,
             numberToWei(0.1),
-            stateCalHelper.address,
-            AddressZero,
-            owner.address,
-            await time.latest() + 120
+            await time.latest() + 120,
+            { static: true }
         )
 
         sides.forEach((side, index) => {
@@ -159,53 +137,45 @@ configs.forEach(config => describe(`Maturity - EXP = ${config.exp}, COEF ${confi
         const poolNoMaturity = derivablePools[1]
 
         const curTime = await time.latest()
-        await attemptSwap(
-            derivablePool,
-            0,
+        await derivablePool.swap(
             SIDE_R,
             side,
             numberToWei(1),
-            stateCalHelper.address,
-            AddressZero,
-            accountA.address,
-            curTime + 120
+            curTime + 120,
+            { 
+                recipient: accountA.address
+            }
         )
 
-        await attemptSwap(
-            poolNoMaturity,
-            0,
+        await poolNoMaturity.swap(
             SIDE_R,
             side,
             numberToWei(1),
-            stateCalHelper.address,
-            AddressZero,
-            accountA.address,
-            0
+            0,
+            { 
+                recipient: accountA.address
+            }
         )
         await time.increaseTo(curTime + 120 - t)
 
-        const amountOutNoMaturity = await attemptStaticSwap(
-            poolNoMaturity.connect(accountA),
-            0,
+        const amountOutNoMaturity = await poolNoMaturity.connect(accountA).swap(
             side,
             SIDE_R,
             numberToWei(1),
-            stateCalHelper.address,
-            AddressZero,
-            accountA.address,
-            0
+            0,
+            { 
+                static: true
+            }
         )
 
-        const amountOut = await attemptStaticSwap(
-            derivablePool.connect(accountA),
-            0,
+        const amountOut = await derivablePool.connect(accountA).swap(
             side,
             SIDE_R,
             numberToWei(1),
-            stateCalHelper.address,
-            AddressZero,
-            accountA.address,
-            0
+            0,
+            { 
+                static: true
+            }
         )
 
         if (t <= 0) {
@@ -226,34 +196,31 @@ configs.forEach(config => describe(`Maturity - EXP = ${config.exp}, COEF ${confi
     }
 
     it('User should get amountOut = 0 if t < maturity', async function () {
-        const {accountA, derivablePools, stateCalHelper} = await loadFixture(fixture)
+        const {accountA, derivablePools} = await loadFixture(fixture)
         const derivablePool = derivablePools[0]
 
-        await attemptSwap(
-            derivablePool,
-            0,
+        await derivablePool.swap(
             SIDE_R,
             SIDE_A,
             numberToWei(1),
-            stateCalHelper.address,
-            AddressZero,
-            accountA.address,
-            await time.latest() + 120
+            await time.latest() + 120,
+            {
+                recipient: accountA.address
+            }
         )
 
         await time.increase(45)
 
-        const amountOut = await attemptStaticSwap(
-            derivablePool.connect(accountA),
-            0,
+        const amountOut = await derivablePool.connect(accountA).swap(
             SIDE_A,
             SIDE_R,
             numberToWei(1),
-            stateCalHelper.address,
-            AddressZero,
-            accountA.address,
-            0
+            0,
+            {
+                static: true
+            }
         )
+
         expect(amountOut).to.be.eq(0)
     })
 

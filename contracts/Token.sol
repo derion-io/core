@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: BSL-1.1
 pragma solidity ^0.8.0;
 
-import "./tokens/ERC1155SupplyVirtual.sol";
+import "@derivable/shadow-token/contracts/ShadowFactory.sol";
 import "./interfaces/IPool.sol";
 import "./interfaces/ITokenDescriptor.sol";
 
-contract Token is ERC1155SupplyVirtual {
+contract Token is ShadowFactory {
     // Immutables
     address internal immutable UTR;
     // Storages
@@ -16,7 +16,7 @@ contract Token is ERC1155SupplyVirtual {
         address utr,
         address descriptorSetter,
         address descriptor
-    ) ERC1155Timelock("") {
+    ) ShadowFactory("") {
         UTR = utr;
         s_descriptor = descriptor;
         s_descriptorSetter = descriptorSetter;
@@ -37,7 +37,7 @@ contract Token is ERC1155SupplyVirtual {
     /**
      * @dev See {IERC1155-isApprovedForAll}.
      */
-     function isApprovedForAll(address account, address operator) public view virtual override returns (bool) {
+     function isApprovedForAll(address account, address operator) public view virtual override(ERC1155Maturity, IERC1155) returns (bool) {
         return operator == UTR || super.isApprovedForAll(account, operator);
     }
 

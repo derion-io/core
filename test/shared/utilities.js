@@ -1,6 +1,6 @@
 const ethers = require('ethers')
 const bnjs = require('bignumber.js')
-const { Q128 } = require('./constant')
+const { Q128, SIDE_A, SIDE_B } = require('./constant')
 bnjs.config({ EXPONENTIAL_AT: 999999, DECIMAL_PLACES: 40 })
 
 const abiCoder = new ethers.utils.AbiCoder()
@@ -170,35 +170,50 @@ function encodePayload(swapType, sideIn, sideOut, amount) {
     )
 }
 
-async function attemptSwap(signer, swapType, sideIn, sideOut, amount, helper, payer, recipient, timelock = 0) {
+async function attemptSwap(signer, swapType, sideIn, sideOut, amount, maturity, helper, utr, payer, recipient) {
+    const [openRate, premiumRate] = await Promise.all([signer.OPEN_RATE(), signer.PREMIUM_RATE()])
+    if (sideOut == SIDE_A || sideOut == SIDE_B) {
+        amount = amount.mul(openRate).div(Q128) // apply open rate
+    }
     const payload = abiCoder.encode(
-        ["uint", "uint", "uint", "uint"],
-        [swapType, sideIn, sideOut, amount]
+        ["uint", "uint", "uint", "uint", "uint"],
+        [swapType, sideIn, sideOut, amount, premiumRate]
     )
     return await signer.swap(
-        sideIn,
-        sideOut,
-        helper,
-        payload,
-        timelock,
-        payer,
-        recipient
+        {
+            sideIn,
+            sideOut,
+            maturity,
+            helper,
+            payload
+        },
+        {
+            utr,
+            payer,
+            recipient
+        }
     )
 }
 
-async function attemptStaticSwap(signer, swapType, sideIn, sideOut, amount, helper, payer, recipient, timelock = 0) {
+async function attemptStaticSwap(signer, swapType, sideIn, sideOut, amount, helper, utr, payer, recipient, timelock = 0) {
+    const [openRate, premiumRate] = await Promise.all([signer.OPEN_RATE(), signer.PREMIUM_RATE()])
     const payload = abiCoder.encode(
-        ["uint", "uint", "uint", "uint"],
-        [swapType, sideIn, sideOut, amount]
+        ["uint", "uint", "uint", "uint", "uint", "uint"],
+        [openRate, premiumRate, swapType, sideIn, sideOut, amount]
     )
     return (await signer.callStatic.swap(
-        sideIn,
-        sideOut,
-        helper,
-        payload,
-        timelock,
-        payer,
-        recipient,
+        {
+            sideIn,
+            sideOut,
+            maturity,
+            helper,
+            payload
+        },
+        {
+            utr,
+            payer,
+            recipient
+        }
     )).amountOut
 }
 
@@ -224,8 +239,32 @@ async function swapToSetPriceV3({ account, quoteToken, baseToken, uniswapRouter,
     await tx.wait(1)
 }
 
+async function swapToSetPriceMock({ quoteToken, baseToken, uniswapPair, targetTwap, targetSpot }) {
+    const priceTwapX96 = getSqrtPriceFromPrice(quoteToken, baseToken, targetTwap)
+    const priceSpotX96 = getSqrtPriceFromPrice(quoteToken, baseToken, targetSpot)
+    await uniswapPair.setPrice(priceSpotX96, priceTwapX96)
+}
+
+function getSqrtPriceFromPrice(quoteToken, baseToken, price) {
+    const quoteTokenIndex = baseToken.address.toLowerCase() < quoteToken.address.toLowerCase() ? 1 : 0
+    return encodeSqrtX96(quoteTokenIndex ? price : 1, quoteTokenIndex ? 1 : price)
+}
+
 function feeToOpenRate(fee) {
     return bn(((1-fee)*10000).toFixed(0)).mul(Q128).div(10000)
+}
+
+function paramToConfig(param) {
+    return {
+        TOKEN: param.token,
+        TOKEN_R: param.reserveToken,
+        ORACLE: param.oracle,
+        K: param.k,
+        MARK: param.mark,
+        INIT_TIME: param.initTime,
+        HALF_LIFE: bn(param.halfLife),
+        PREMIUM_RATE: bn(param.premiumRate)
+    }
 }
 
 
@@ -245,5 +284,8 @@ module.exports = {
     attemptStaticSwap,
     decodeDataURI,
     swapToSetPriceV3,
-    feeToOpenRate
+    feeToOpenRate,
+    paramToConfig,
+    swapToSetPriceMock,
+    getSqrtPriceFromPrice
 }
