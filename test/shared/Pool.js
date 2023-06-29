@@ -67,7 +67,7 @@ module.exports = class Pool {
       sideIn,
       sideOut,
       maturity,
-      helper: this.utilContracts.helper.address,
+      helper: options.helper || this.utilContracts.helper.address,
       payload
     }
   }
