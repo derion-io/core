@@ -2,11 +2,11 @@
 pragma solidity ^0.8.0;
 import "@openzeppelin/contracts/utils/Strings.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
-import "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 import "@openzeppelin/contracts/utils/Base64.sol";
+import "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 
-import "./interfaces/IPool.sol";
-import "./interfaces/ITokenDescriptor.sol";
+import "../interfaces/IPool.sol";
+import "../interfaces/ITokenDescriptor.sol";
 
 contract TokenDescriptor is ITokenDescriptor {
     uint internal constant SIDE_A = 0x10;

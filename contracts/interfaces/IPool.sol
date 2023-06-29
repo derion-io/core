@@ -28,7 +28,7 @@ struct SwapParam {
     bytes payload;
 }
 
-struct SwapPayment {
+struct Payment {
     address utr;
     address payer;
     address recipient;
@@ -49,9 +49,9 @@ struct Slippable {
 
 interface IPool {
     function loadConfig() view external returns (Config memory);
-    function init(Params memory params, SwapPayment memory payment) external;
+    function init(Params memory params, Payment memory payment) external;
     function swap(
         SwapParam memory param,
-        SwapPayment memory payment
+        Payment memory payment
     ) external returns(uint amountIn, uint amountOut);
 }

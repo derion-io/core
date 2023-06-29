@@ -2,12 +2,12 @@
 pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/token/ERC1155/extensions/ERC1155Supply.sol";
-import "./logics/Constants.sol";
-import "./logics/Storage.sol";
-import "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
-import "./libs/OracleLibrary.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "./libs/abdk-consulting/abdk-libraries-solidity/ABDKMath64x64.sol";
+import "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
+import "../libs/OracleLibrary.sol";
+import "../libs/abdk-consulting/abdk-libraries-solidity/ABDKMath64x64.sol";
+import "../subs/Constants.sol";
+import "../subs/Storage.sol";
 
 interface IERC1155Supply {
     /**

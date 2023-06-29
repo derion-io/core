@@ -5,15 +5,16 @@ import "@openzeppelin/contracts/utils/math/Math.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 import "@uniswap/lib/contracts/libraries/TransferHelper.sol";
+
 import "@derivable/shadow-token/contracts/interfaces/IERC1155Supply.sol";
 
-import "./libs/abdk-consulting/abdk-libraries-solidity/ABDKMath64x64.sol";
-import "./libs/FullMath.sol";
-import "./logics/Constants.sol";
-import "./interfaces/IHelper.sol";
-import "./interfaces/IPool.sol";
-import "./interfaces/IPoolFactory.sol";
-import "./interfaces/IWeth.sol";
+import "../libs/abdk-consulting/abdk-libraries-solidity/ABDKMath64x64.sol";
+import "../libs/FullMath.sol";
+import "../subs/Constants.sol";
+import "../interfaces/IHelper.sol";
+import "../interfaces/IPool.sol";
+import "../interfaces/IPoolFactory.sol";
+import "../interfaces/IWeth.sol";
 
 
 contract Helper is Constants, IHelper {
@@ -86,7 +87,7 @@ contract Helper is Constants, IHelper {
         IWeth(WETH).deposit{value : msg.value}();
         uint amount = IWeth(WETH).balanceOf(address(this));
         IERC20(WETH).approve(pool, amount);
-        IPool(pool).init(params, SwapPayment(address(0), address(0), msg.sender));
+        IPool(pool).init(params, Payment(address(0), address(0), msg.sender));
     }
 
     function _swapMultiPool(SwapParams memory params, address TOKEN_R) internal returns (uint amountOut) {
@@ -106,7 +107,7 @@ contract Helper is Constants, IHelper {
                 address(this),
                 payload
             ),
-            SwapPayment(
+            Payment(
                 msg.sender, // UTR
                 params.payer,
                 address(this)
@@ -131,7 +132,7 @@ contract Helper is Constants, IHelper {
                 address(this),
                 payload
             ),
-            SwapPayment(
+            Payment(
                 msg.sender, // UTR
                 address(0),
                 params.recipient
@@ -207,7 +208,7 @@ contract Helper is Constants, IHelper {
                 address(this),
                 payload
             ),
-            SwapPayment(
+            Payment(
                 msg.sender, // UTR
                 params.payer,
                 params.recipient

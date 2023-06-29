@@ -63,7 +63,7 @@ function loadFixtureFromParams (arrParams, options={}) {
     await derivable1155.deployed()
 
     // logic
-    const Logic = await ethers.getContractFactory("AsymptoticPerpetual")
+    const Logic = await ethers.getContractFactory("PoolLogic")
     const logic = await Logic.deploy(
       derivable1155.address,
       owner.address,
@@ -108,7 +108,7 @@ function loadFixtureFromParams (arrParams, options={}) {
     await uniswapPair.deployed()
 
     // deploy helper
-    const StateCalHelper = await ethers.getContractFactory("contracts/Helper.sol:Helper")
+    const StateCalHelper = await ethers.getContractFactory("contracts/support/Helper.sol:Helper")
     const stateCalHelper = await StateCalHelper.deploy(
       derivable1155.address,
       weth.address
@@ -150,7 +150,7 @@ function loadFixtureFromParams (arrParams, options={}) {
       await derivable1155.connect(accountB).setApprovalForAll(poolAddress, true)
 
       const pool = new Pool(
-        await ethers.getContractAt("AsymptoticPerpetual", poolAddress),
+        await ethers.getContractAt("PoolLogic", poolAddress),
         realParams,
         {
           utr,

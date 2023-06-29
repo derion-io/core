@@ -7,7 +7,7 @@ import "@uniswap/lib/contracts/libraries/TransferHelper.sol";
 import "@derivable/shadow-token/contracts/interfaces/IERC1155Supply.sol";
 
 import "../libs/FullMath.sol";
-import "../logics/Constants.sol";
+import "../subs/Constants.sol";
 import "../interfaces/IHelper.sol";
 import "../interfaces/IPool.sol";
 import "../interfaces/IPoolFactory.sol";
@@ -73,7 +73,7 @@ contract BadHelper1 is Constants, IHelper {
         IWeth(WETH).deposit{value : msg.value}();
         uint amount = IWeth(WETH).balanceOf(address(this));
         IERC20(WETH).approve(pool, amount);
-        IPool(pool).init(params, SwapPayment(address(0), address(0), msg.sender));
+        IPool(pool).init(params, Payment(address(0), address(0), msg.sender));
     }
 
     function _swapMultiPool(SwapParams memory params, address TOKEN_R) internal returns (uint amountOut) {
@@ -93,7 +93,7 @@ contract BadHelper1 is Constants, IHelper {
                 address(this),
                 payload
             ),
-            SwapPayment(
+            Payment(
                 msg.sender, // UTR
                 params.payer,
                 address(this)
@@ -118,7 +118,7 @@ contract BadHelper1 is Constants, IHelper {
                 address(this),
                 payload
             ),
-            SwapPayment(
+            Payment(
                 msg.sender, // UTR
                 address(0),
                 params.recipient
@@ -192,7 +192,7 @@ contract BadHelper1 is Constants, IHelper {
                 address(this),
                 payload
             ),
-            SwapPayment(
+            Payment(
                 msg.sender, // UTR
                 params.payer,
                 params.recipient
@@ -230,13 +230,11 @@ contract BadHelper1 is Constants, IHelper {
         bytes calldata payload
     ) external view override returns (State memory state1) {
         (
-            uint openRate,
-            uint premiumRate,
             uint swapType,
             uint sideIn,
             uint sideOut,
             uint amount
-        ) = abi.decode(payload, (uint, uint, uint, uint, uint, uint));
+        ) = abi.decode(payload, (uint, uint, uint, uint));
         require(swapType == MAX_IN, 'Helper: UNSUPPORTED_SWAP_TYPE');
         state1.R = __.R;
         (uint rA1, uint rB1) = (__.rA, __.rB);

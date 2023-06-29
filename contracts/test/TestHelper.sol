@@ -64,7 +64,7 @@ contract TestHelper {
                 HELPER,
                 payload
             ),
-            SwapPayment(
+            Payment(
                 msg.sender, // UTR
                 payer,
                 recipient

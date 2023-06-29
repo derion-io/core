@@ -3,16 +3,17 @@ pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
-import "@derivable/utr/contracts/interfaces/IUniversalTokenRouter.sol";
 import "@uniswap/lib/contracts/libraries/TransferHelper.sol";
 
+import "@derivable/utr/contracts/interfaces/IUniversalTokenRouter.sol";
+
 import "./interfaces/IPoolFactory.sol";
-import "./logics/Constants.sol";
 import "./interfaces/IToken.sol";
 import "./interfaces/IPool.sol";
-import "./logics/Storage.sol";
+import "./subs/Constants.sol";
+import "./subs/Storage.sol";
 
-abstract contract Pool is IPool, ERC1155Holder, Storage, Constants {
+abstract contract PoolBase is IPool, ERC1155Holder, Storage, Constants {
     address immutable internal TOKEN;
 
     event Swap(
@@ -49,7 +50,7 @@ abstract contract Pool is IPool, ERC1155Holder, Storage, Constants {
         return abi.decode(data, (Config));
     }
 
-    function init(Params memory params, SwapPayment memory payment) external {
+    function init(Params memory params, Payment memory payment) external {
         require(s_i == 0, "AI");
         uint R = params.R;
         uint a = params.a;
@@ -125,7 +126,7 @@ abstract contract Pool is IPool, ERC1155Holder, Storage, Constants {
 
     function swap(
         SwapParam memory param,
-        SwapPayment memory payment
+        Payment memory payment
     ) external override nonReentrant returns (uint amountIn, uint amountOut) {
         Config memory config = loadConfig();
         if (param.sideOut != SIDE_R) {

@@ -3,13 +3,12 @@ pragma solidity ^0.8.0;
 
 import "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 
-import "../Pool.sol";
-import "../libs/OracleLibrary.sol";
-import "../interfaces/IHelper.sol";
-import "../libs/abdk-consulting/abdk-libraries-solidity/ABDKMath64x64.sol";
+import "./PoolBase.sol";
+import "./libs/abdk-consulting/abdk-libraries-solidity/ABDKMath64x64.sol";
+import "./libs/OracleLibrary.sol";
+import "./interfaces/IHelper.sol";
 
-
-contract AsymptoticPerpetual is Pool {
+contract PoolLogic is PoolBase {
     address immutable internal FEE_TO;
     uint immutable internal FEE_RATE;
 
@@ -17,7 +16,7 @@ contract AsymptoticPerpetual is Pool {
         address token,
         address feeTo,
         uint feeRate
-    ) Pool(token) {
+    ) PoolBase(token) {
         FEE_TO = feeTo;
         FEE_RATE = feeRate;
     }
