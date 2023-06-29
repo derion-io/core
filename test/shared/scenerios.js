@@ -13,9 +13,6 @@ use(solidity)
 
 function toConfig(params) {
   return {
-    TOKEN: params.token,
-    HL_FEE: 0,
-    FEE_TO: AddressZero,
     ORACLE: params.oracle,
     TOKEN_R: params.reserveToken,
     MARK: params.mark,
@@ -51,11 +48,6 @@ function loadFixtureFromParams (arrParams, options={}) {
     const oracleLibrary = await OracleLibrary.deploy()
     await oracleLibrary.deployed()
 
-    // logic
-    const Logic = await ethers.getContractFactory("AsymptoticPerpetual")
-    const logic = await Logic.deploy()
-    await logic.deployed()
-
     // deploy descriptor
     const TokenDescriptor = await ethers.getContractFactory("TokenDescriptor")
     const tokenDescriptor = await TokenDescriptor.deploy()
@@ -70,13 +62,19 @@ function loadFixtureFromParams (arrParams, options={}) {
     )
     await derivable1155.deployed()
 
+    // logic
+    const Logic = await ethers.getContractFactory("AsymptoticPerpetual")
+    const logic = await Logic.deploy(
+      derivable1155.address,
+      owner.address,
+      options.feeRate ?? 0,
+    )
+    await logic.deployed()
+
     // deploy pool factory
     const PoolFactory = await ethers.getContractFactory("PoolFactory");
     const poolFactory = await PoolFactory.deploy(
-      derivable1155.address,
       logic.address,
-      owner.address,
-      options.feeRate || 0,
     );
 
     // USDC

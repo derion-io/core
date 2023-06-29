@@ -10,6 +10,18 @@ import "../libs/abdk-consulting/abdk-libraries-solidity/ABDKMath64x64.sol";
 
 
 contract AsymptoticPerpetual is Pool {
+    address immutable internal FEE_TO;
+    uint immutable internal FEE_RATE;
+
+    constructor(
+        address token,
+        address feeTo,
+        uint feeRate
+    ) Pool(token) {
+        FEE_TO = feeTo;
+        FEE_RATE = feeRate;
+    }
+
     function _powu(uint x, uint y) internal pure returns (uint z) {
         // Calculate the first iteration of the loop in advance.
         z = y & 1 > 0 ? x : Q128;
@@ -147,12 +159,12 @@ contract AsymptoticPerpetual is Pool {
         (uint xk, uint rA, uint rB) = _selectPrice(config, state, sideIn, sideOut);
         // [PROTOCOL FEE]
         {
-            uint feeRateX64 = _decayRate(block.timestamp - s_f, config.HL_FEE);
+            uint feeRateX64 = _decayRate(block.timestamp - s_f, config.HL_INTEREST * FEE_RATE);
             uint rAF = FullMath.mulDivRoundingUp(rA, Q64, feeRateX64);
             uint rBF = FullMath.mulDivRoundingUp(rB, Q64, feeRateX64);
             if (rAF < rA || rBF < rB) {
                 uint fee = rA - rAF + rB - rBF;
-                TransferHelper.safeTransfer(config.TOKEN_R, config.FEE_TO, fee);
+                TransferHelper.safeTransfer(config.TOKEN_R, FEE_TO, fee);
                 (rA, rB) = (rAF, rBF);
                 state.R -= fee;
                 s_f = uint32(block.timestamp);
@@ -172,7 +184,7 @@ contract AsymptoticPerpetual is Pool {
             amountIn = state1.R - state.R;
         } else {
             require(state.R >= state1.R, "MI:NR");
-            uint s = _supply(config.TOKEN, sideIn);
+            uint s = _supply(TOKEN, sideIn);
             if (sideIn == SIDE_A) {
                 require(rB1 >= rB, "MI:A");
                 amountIn = FullMath.mulDivRoundingUp(s, rA - rA1, rA);
@@ -193,14 +205,14 @@ contract AsymptoticPerpetual is Pool {
         } else {
             if (sideOut == SIDE_C) {
                 uint rC = state.R - rA - rB;
-                amountOut = FullMath.mulDiv(_supply(config.TOKEN, sideOut), state1.R - rA1 - rB1 - rC, rC);
+                amountOut = FullMath.mulDiv(_supply(TOKEN, sideOut), state1.R - rA1 - rB1 - rC, rC);
             } else {
                 uint inputRate = Q128;
                 if (sideOut == SIDE_A) {
-                    amountOut = FullMath.mulDiv(_supply(config.TOKEN, sideOut), rA1 - rA, rA);
+                    amountOut = FullMath.mulDiv(_supply(TOKEN, sideOut), rA1 - rA, rA);
                     inputRate = _inputRate(config, state1, rA1, rB1);
                 } else if (sideOut == SIDE_B) {
-                    amountOut = FullMath.mulDiv(_supply(config.TOKEN, sideOut), rB1 - rB, rB);
+                    amountOut = FullMath.mulDiv(_supply(TOKEN, sideOut), rB1 - rB, rB);
                     inputRate = _inputRate(config, state1, rB1, rA1);
                 }
                 if (inputRate != Q128) {

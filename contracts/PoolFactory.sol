@@ -8,10 +8,7 @@ import "./interfaces/IPoolFactory.sol";
 contract PoolFactory is IPoolFactory {
     bytes32 constant internal ORACLE_MASK = bytes32((1 << 255) | type(uint160).max);
 
-    address immutable public TOKEN;
     address immutable public LOGIC;
-    address immutable public FEE_TO;
-    uint immutable public FEE_RATE;
 
     // events
     event Derivable(
@@ -21,24 +18,13 @@ contract PoolFactory is IPoolFactory {
         bytes data
     );
 
-    constructor(
-        address token,
-        address logic,
-        address feeTo,
-        uint feeRate
-    ) {
-        TOKEN = token;
+    constructor(address logic) {
         LOGIC = logic;
-        FEE_TO = feeTo;
-        FEE_RATE = feeRate;
     }
 
     function createPool(
         Config memory config
     ) external returns (address pool) {
-        config.TOKEN = TOKEN;
-        config.FEE_TO = FEE_TO;
-        config.HL_FEE = config.HL_INTEREST * FEE_RATE;
         bytes memory input = abi.encode(config);
         pool = MetaProxyFactory.metaProxyFromBytes(LOGIC, input);
         emit Derivable(

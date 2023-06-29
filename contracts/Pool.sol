@@ -13,6 +13,8 @@ import "./interfaces/IPool.sol";
 import "./logics/Storage.sol";
 
 abstract contract Pool is IPool, ERC1155Holder, Storage, Constants {
+    address immutable internal TOKEN;
+
     event Swap(
         address indexed payer,
         address indexed recipient,
@@ -23,6 +25,10 @@ abstract contract Pool is IPool, ERC1155Holder, Storage, Constants {
         uint amountIn,
         uint amountOut
     );
+
+    constructor(address token) {
+        TOKEN = token;
+    }
 
     /// @notice Returns the metadata of this (MetaProxy) contract.
     /// Only relevant with contracts created via the MetaProxy standard.
@@ -73,9 +79,9 @@ abstract contract Pool is IPool, ERC1155Holder, Storage, Constants {
         // mint tokens to recipient
         uint R3 = R / 3;
         uint32 maturity = uint32(block.timestamp) + config.MATURITY;
-        IToken(config.TOKEN).mintLock(payment.recipient, idA, R3, maturity, "");
-        IToken(config.TOKEN).mintLock(payment.recipient, idB, R3, maturity, "");
-        IToken(config.TOKEN).mintLock(payment.recipient, idC, R - (R3 << 1), maturity, "");
+        IToken(TOKEN).mintLock(payment.recipient, idA, R3, maturity, "");
+        IToken(TOKEN).mintLock(payment.recipient, idB, R3, maturity, "");
+        IToken(TOKEN).mintLock(payment.recipient, idC, R - (R3 << 1), maturity, "");
     }
 
     function _packID(address pool, uint side) internal pure returns (uint id) {
@@ -122,20 +128,20 @@ abstract contract Pool is IPool, ERC1155Holder, Storage, Constants {
         } else {
             uint idIn = _packID(address(this), param.sideIn);
             if (payment.payer != address(0)) {
-                IUniversalTokenRouter(payment.utr).pay(payment.payer, address(this), 1155, config.TOKEN, idIn, amountIn);
-                IToken(config.TOKEN).burn(address(this), idIn, amountIn);
+                IUniversalTokenRouter(payment.utr).pay(payment.payer, address(this), 1155, TOKEN, idIn, amountIn);
+                IToken(TOKEN).burn(address(this), idIn, amountIn);
             } else {
-                IToken(config.TOKEN).burn(msg.sender, idIn, amountIn);
+                IToken(TOKEN).burn(msg.sender, idIn, amountIn);
                 payment.payer = msg.sender;
             }
-            uint inputMaturity = IToken(config.TOKEN).maturityOf(payment.payer, idIn);
+            uint inputMaturity = IToken(TOKEN).maturityOf(payment.payer, idIn);
             amountOut = _maturityPayoff(config, inputMaturity, amountOut);
         }
         if (param.sideOut == SIDE_R) {
             TransferHelper.safeTransfer(config.TOKEN_R, payment.recipient, amountOut);
         } else {
             uint idOut = _packID(address(this), param.sideOut);
-            IToken(config.TOKEN).mintLock(payment.recipient, idOut, amountOut, uint32(param.maturity), "");
+            IToken(TOKEN).mintLock(payment.recipient, idOut, amountOut, uint32(param.maturity), "");
         }
 
         emit Swap(

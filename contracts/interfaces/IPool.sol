@@ -2,9 +2,6 @@
 pragma solidity ^0.8.0;
 
 struct Config {
-    address FEE_TO;
-    uint    HL_FEE;
-    address TOKEN;
     bytes32 ORACLE; // 1bit QTI, 31bit reserve, 32bit WINDOW, ... PAIR ADDRESS
     address TOKEN_R;
     uint    K;
