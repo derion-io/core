@@ -36,6 +36,20 @@ module.exports = class Pool {
     maturity,
     options = {}
   ) {
+    const swapParams = this.getSwapParam(sideIn, sideOut, amount, maturity, options)
+    const paymentParams = {
+      utr: this.utilContracts.utr.address,
+      payer: options.payer || AddressZero,
+      recipient: options.recipient || this.contract.signer.address
+    }
+    if (options.static)
+      return (await this.contract.callStatic.swap(swapParams, paymentParams)).amountOut
+    if (options.populateTransaction)
+      return await this.contract.populateTransaction.swap(swapParams, paymentParams)
+    return await this.contract.swap(swapParams, paymentParams)
+  }
+
+  getSwapParam(sideIn, sideOut, amount, maturity, options={}) {
     if (sideOut == SIDE_A || sideOut == SIDE_B) {
       amount = amount.mul(this.config.openRate).div(Q128) // apply open rate
     }
@@ -49,23 +63,13 @@ module.exports = class Pool {
         this.config.premiumRate,
       ]
     )
-    const swapParams = {
+    return {
       sideIn,
       sideOut,
       maturity,
       helper: this.utilContracts.helper.address,
       payload
     }
-    const paymentParams = {
-      utr: this.utilContracts.utr.address,
-      payer: options.payer || AddressZero,
-      recipient: options.recipient || this.contract.signer.address
-    }
-    if (options.static)
-      return (await this.contract.callStatic.swap(swapParams, paymentParams)).amountOut
-    if (options.populateTransaction)
-      return await this.contract.populateTransaction.swap(swapParams, paymentParams)
-    return await this.contract.swap(swapParams, paymentParams)
   }
 }
 

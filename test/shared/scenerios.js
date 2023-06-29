@@ -62,11 +62,16 @@ function loadFixtureFromParams (arrParams, options={}) {
     )
     await derivable1155.deployed()
 
+    // deploy fee receiver
+    const FeeReceiver = await ethers.getContractFactory("FeeReceiver")
+    const feeReceiver = await FeeReceiver.deploy(owner.address)
+    await feeReceiver.deployed()
+
     // logic
     const Logic = await ethers.getContractFactory("PoolLogic")
     const logic = await Logic.deploy(
       derivable1155.address,
-      owner.address,
+      feeReceiver.address,
       options.feeRate ?? 0,
     )
     await logic.deployed()
@@ -74,7 +79,7 @@ function loadFixtureFromParams (arrParams, options={}) {
     // deploy pool factory
     const PoolFactory = await ethers.getContractFactory("PoolFactory");
     const poolFactory = await PoolFactory.deploy(
-      logic.address,
+      logic.address
     );
 
     // USDC
@@ -182,6 +187,7 @@ function loadFixtureFromParams (arrParams, options={}) {
       utr,
       derivablePools: pools,
       derivable1155,
+      feeReceiver,
       stateCalHelper,
       uniswapPair,
       oracleLibrary,

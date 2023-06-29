@@ -182,6 +182,10 @@ function _market(K, MARK, decayRateX64, price) {
   return {xkA, xkB}
 }
 
+function _xk(price, K, MARK) {
+  return _powu(price.mul(Q128).div(MARK), K)
+}
+
 function _r(xk, v, R) {
   let r = v.mul(xk).div(Q128)
   if (r.gt(R.shr(1))) {
@@ -311,4 +315,6 @@ module.exports = {
   _init,
   _swap,
   calculateInitParams,
+  _xk,
+  _r
 }

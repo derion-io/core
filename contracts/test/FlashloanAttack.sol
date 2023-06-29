@@ -2,7 +2,7 @@
 pragma solidity 0.8.13;
 
 import "../interfaces/IPool.sol";
-import "@uniswap/v3-periphery/contracts/interfaces/ISwapRouter.sol";
+import "./Univ3PoolMock.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
 
@@ -17,21 +17,17 @@ contract FlashloanAttack {
   }
 
   function attack(
-    ISwapRouter.ExactInputSingleParams calldata params,
+    uint160 twapPrice,
+    uint160 spotPrice,
     address deriToken,
-    uint sideIn,
-    uint sideOut,
-    address helper,
-    bytes calldata payload,
-    uint32 maturity,
+    SwapParam calldata swapParam,
     address payer,
     address recipient
   ) public {
-    IERC20(params.tokenIn).approve(ROUTER, type(uint).max);
     IERC1155(deriToken).setApprovalForAll(POOL, true);
-    ISwapRouter(ROUTER).exactInputSingle(params);
+    Univ3PoolMock(ROUTER).setPrice(twapPrice, spotPrice);
     IPool(POOL).swap(
-      SwapParam(sideIn, sideOut, maturity, helper, payload),
+      swapParam,
       Payment(msg.sender, payer, recipient)
     );
   }

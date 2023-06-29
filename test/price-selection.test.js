@@ -5,6 +5,7 @@ const {
 const chai = require("chai")
 const { solidity } = require("ethereum-waffle")
 const { baseParams } = require("./shared/baseParams")
+const { SIDE_R, SIDE_C, SIDE_B, SIDE_A } = require("./shared/constant")
 const { loadFixtureFromParams } = require("./shared/scenerios")
 chai.use(solidity)
 const expect = chai.expect

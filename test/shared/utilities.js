@@ -240,10 +240,14 @@ async function swapToSetPriceV3({ account, quoteToken, baseToken, uniswapRouter,
 }
 
 async function swapToSetPriceMock({ quoteToken, baseToken, uniswapPair, targetTwap, targetSpot }) {
-    const quoteTokenIndex = baseToken.address.toLowerCase() < quoteToken.address.toLowerCase() ? 1 : 0
-    const priceTwapX96 = encodeSqrtX96(quoteTokenIndex ? targetTwap : 1, quoteTokenIndex ? 1 : targetTwap)
-    const priceSpotX96 = encodeSqrtX96(quoteTokenIndex ? targetSpot : 1, quoteTokenIndex ? 1 : targetSpot)
+    const priceTwapX96 = getSqrtPriceFromPrice(quoteToken, baseToken, targetTwap)
+    const priceSpotX96 = getSqrtPriceFromPrice(quoteToken, baseToken, targetSpot)
     await uniswapPair.setPrice(priceSpotX96, priceTwapX96)
+}
+
+function getSqrtPriceFromPrice(quoteToken, baseToken, price) {
+    const quoteTokenIndex = baseToken.address.toLowerCase() < quoteToken.address.toLowerCase() ? 1 : 0
+    return encodeSqrtX96(quoteTokenIndex ? price : 1, quoteTokenIndex ? 1 : price)
 }
 
 function feeToOpenRate(fee) {
@@ -283,4 +287,5 @@ module.exports = {
     feeToOpenRate,
     paramToConfig,
     swapToSetPriceMock,
+    getSqrtPriceFromPrice
 }
