@@ -230,12 +230,12 @@ contract PoolLogic is PoolBase {
         Config memory config,
         State memory state,
         uint rOut,
-        uint rCounter
+        uint rTuo
     ) internal pure returns (uint rate) {
         rate = config.OPEN_RATE;
-        if (config.PREMIUM_RATE > 0 && rOut > rCounter) {
-            uint rC1 = state.R - rOut - rCounter;
-            uint imbaRate = FullMath.mulDiv(Q128, rOut - rCounter, rC1);
+        if (config.PREMIUM_RATE > 0 && rOut > rTuo) {
+            uint rC1 = state.R - rOut - rTuo;
+            uint imbaRate = FullMath.mulDiv(Q128, rOut - rTuo, rC1);
             if (imbaRate > config.PREMIUM_RATE) {
                 rate = FullMath.mulDiv(rate, config.PREMIUM_RATE, imbaRate);
             }
