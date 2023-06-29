@@ -127,7 +127,6 @@ contract PoolLogic is PoolBase {
             xk = _xk(config, min);
             (rA, rB) = _evaluate(xk, state);
             if ((sideIn == SIDE_R) == rB > rA) {
-                // TODO: unit test for this case
                 xk = _xk(config, max);
                 (rA, rB) = _evaluate(xk, state);
             }
