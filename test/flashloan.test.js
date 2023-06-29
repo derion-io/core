@@ -35,7 +35,7 @@ const ACTION_INJECT_CALL_RESULT = 4
 
 const HALF_LIFE = 10 * 365 * 24 * 60 * 60
 
-describe("DDL v3", function () {
+describe("Flashloan spec", function () {
   const fixture = loadFixtureFromParams([baseParams], {
     callback: async function({derivablePools, uniswapPair}) {
       const pool = derivablePools[0]

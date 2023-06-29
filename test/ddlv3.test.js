@@ -9,7 +9,7 @@ const { loadFixtureFromParams } = require("./shared/scenerios")
 chai.use(solidity)
 const expect = chai.expect
 const { AddressZero, MaxUint256 } = ethers.constants
-const { bn, swapToSetPriceMock, packId, encodePayload, attemptSwap } = require("./shared/utilities")
+const { bn, swapToSetPriceMock, packId } = require("./shared/utilities")
 
 const fe = (x) => Number(ethers.utils.formatEther(x))
 const pe = (x) => ethers.utils.parseEther(String(x))
@@ -33,7 +33,7 @@ describe("DDL v3", function () {
         halfLife: bn(HALF_LIFE),
         premiumRate: bn(1).shl(128).div(2)
     }], {
-        callback: async ({weth, usdc, derivable1155, stateCalHelper, utr, owner, derivablePools, accountA, accountB}) => {
+        callback: async ({weth, usdc, derivable1155, stateCalHelper, owner, derivablePools, accountA, accountB}) => {
             const pool = derivablePools[0]
             await pool.swap(
                 SIDE_R,
@@ -247,7 +247,7 @@ describe("DDL v3", function () {
         })
 
         async function testRInROut(side, amount) {
-            const { owner, weth, derivablePools, utr, derivableHelper, derivable1155 } = await loadFixture(fixture)
+            const { owner, weth, derivablePools, utr, derivableHelper } = await loadFixture(fixture)
             const before = await weth.balanceOf(owner.address)
             await weth.approve(utr.address, MaxUint256)
             const pTx = await derivablePools[0].swap(
@@ -413,7 +413,7 @@ describe("DDL v3", function () {
             const INFI2 = INFI1; // * 1.1
     
             async function testSinglePositionPriceChangeDrastically(side, amountIn, priceChange, waitRecover) {
-                const { owner, weth, utr, uniswapPair, usdc, derivablePools, derivable1155, stateCalHelper } = await loadFixture(fixture)
+                const { owner, weth, uniswapPair, usdc, derivablePools, derivable1155, stateCalHelper } = await loadFixture(fixture)
     
                 const wethBefore = await weth.balanceOf(owner.address)
                 const tokenBefore = await derivable1155.balanceOf(owner.address, convertId(side, derivablePools[0].contract.address))
@@ -482,7 +482,7 @@ describe("DDL v3", function () {
             }
     
             async function testMultiPositonPriceChangeDrastically(longIn, shortIn, cIn, priceChange, waitRecover) {
-                const { owner, weth, utr, uniswapPair, usdc, derivablePools, derivable1155, accountA, accountB, stateCalHelper } = await loadFixture(fixture)
+                const { owner, weth, uniswapPair, usdc, derivablePools, derivable1155, accountA, accountB, stateCalHelper } = await loadFixture(fixture)
     
                 let txSignerA = await weth.connect(accountA)
                 let txSignerB = await weth.connect(accountB)

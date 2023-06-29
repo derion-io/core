@@ -12,7 +12,7 @@ const expect = chai.expect
 const { packId, decodeDataURI } = require("./shared/utilities")
 
 
-describe("DDL v3", function () {
+describe("Shadow metadata spec", function () {
     const fixture = loadFixtureFromParams([baseParams])
 
     describe("Token Shadow Metadata", function () {
