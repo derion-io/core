@@ -68,13 +68,12 @@ contract BadHelper is Constants, IHelper {
         return IERC1155Supply(TOKEN).totalSupply(_packID(msg.sender, side));
     }
 
-    function createPool(Params memory params, address factory) external payable returns (address pool) {
+    function createPool(Config memory config, Params memory params, address factory) external payable returns (address pool) {
+        pool = IPoolFactory(factory).createPool(config);
         IWeth(WETH).deposit{value : msg.value}();
         uint amount = IWeth(WETH).balanceOf(address(this));
-        address poolAddress = IPoolFactory(factory).computePoolAddress(params);
-        IWeth(WETH).transfer(poolAddress, amount);
-
-        pool = IPoolFactory(factory).createPool(params);
+        IERC20(WETH).approve(pool, amount);
+        IPool(pool).init(params, SwapPayment(address(0), address(0), msg.sender));
     }
 
     function _swapMultiPool(SwapParams memory params, address TOKEN_R) internal returns (uint amountOut) {
@@ -156,7 +155,7 @@ contract BadHelper is Constants, IHelper {
             params.recipient
         );
 
-        address TOKEN_R = IPool(params.poolIn).TOKEN_R();
+        address TOKEN_R = IPool(params.poolIn).loadConfig().TOKEN_R;
         if (params.poolIn != params.poolOut) {
             amountOut = _swapMultiPool(params, TOKEN_R);
             return amountOut;

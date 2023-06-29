@@ -3,11 +3,28 @@ const {
 } = require("@nomicfoundation/hardhat-network-helpers");
 const { use } = require("chai");
 const { solidity } = require("ethereum-waffle");
-const { _init } = require("./AsymptoticPerpetual");
+const { _init, calculateInitParams } = require("./AsymptoticPerpetual");
 const Pool = require("./Pool");
 const { bn, numberToWei, encodeSqrtX96 } = require("./utilities");
+const { ethers } = require("hardhat");
+const { AddressZero } = ethers.constants;
 
 use(solidity)
+
+function toConfig(params) {
+  return {
+    ORACLE: params.oracle,
+    TOKEN_R: params.reserveToken,
+    MARK: params.mark,
+    K: params.k,
+    HL_INTEREST: params.halfLife,
+    PREMIUM_RATE: params.premiumRate,
+    MATURITY: params.maturity,
+    MATURITY_VEST: params.maturityVest,
+    MATURITY_RATE: params.maturityRate,
+    OPEN_RATE: params.openRate,
+  }
+}
 
 /** 
  * @param options
@@ -26,6 +43,11 @@ function loadFixtureFromParams (arrParams, options={}) {
     const utr = await UniversalRouter.deploy()
     await utr.deployed()
 
+    // deploy oracle library
+    const OracleLibrary = await ethers.getContractFactory("TestOracleHelper")
+    const oracleLibrary = await OracleLibrary.deploy()
+    await oracleLibrary.deployed()
+
     // deploy descriptor
     const TokenDescriptor = await ethers.getContractFactory("TokenDescriptor")
     const tokenDescriptor = await TokenDescriptor.deploy()
@@ -40,17 +62,19 @@ function loadFixtureFromParams (arrParams, options={}) {
     )
     await derivable1155.deployed()
 
-    // deploy oracle library
-    const OracleLibrary = await ethers.getContractFactory("TestOracleHelper")
-    const oracleLibrary = await OracleLibrary.deploy()
-    await oracleLibrary.deployed()
+    // logic
+    const Logic = await ethers.getContractFactory("AsymptoticPerpetual")
+    const logic = await Logic.deploy(
+      derivable1155.address,
+      owner.address,
+      options.feeRate ?? 0,
+    )
+    await logic.deployed()
 
     // deploy pool factory
     const PoolFactory = await ethers.getContractFactory("PoolFactory");
     const poolFactory = await PoolFactory.deploy(
-      derivable1155.address,
-      owner.address,
-      options.feeRate || 0,
+      logic.address,
     );
 
     // USDC
@@ -108,9 +132,14 @@ function loadFixtureFromParams (arrParams, options={}) {
       }
       realParams = await _init(oracleLibrary, numberToWei(options.initReserved || "5"), realParams)
       returnParams.push(realParams)
-      const poolAddress = await poolFactory.computePoolAddress(realParams)
-      await weth.transfer(poolAddress, numberToWei(options.initReserved || "5"))
-      await poolFactory.createPool(realParams)
+
+      const config = toConfig(realParams)
+      const tx = await poolFactory.createPool(config)
+      const receipt = await tx.wait()
+
+      // const poolAddress = await poolFactory.computePoolAddress(realParams)
+      const poolAddress = ethers.utils.getAddress('0x' + receipt.logs[0].data.slice(-40))
+      // await weth.transfer(poolAddress, numberToWei(options.initReserved || "5"))
 
       await weth.approve(poolAddress, ethers.constants.MaxUint256)
       await weth.connect(accountA).approve(poolAddress, ethers.constants.MaxUint256)
@@ -120,7 +149,7 @@ function loadFixtureFromParams (arrParams, options={}) {
       await derivable1155.connect(accountA).setApprovalForAll(poolAddress, true)
       await derivable1155.connect(accountB).setApprovalForAll(poolAddress, true)
 
-      return new Pool(
+      const pool = new Pool(
         await ethers.getContractAt("AsymptoticPerpetual", poolAddress),
         realParams,
         {
@@ -128,6 +157,20 @@ function loadFixtureFromParams (arrParams, options={}) {
           helper: stateCalHelper
         }
       )
+
+      // const initParams = await calculateInitParams(config, oracleLibrary, numberToWei(options.initReserved ?? 5))
+      const initParams = {
+        R: numberToWei(options.initReserved ?? 5),
+        a: realParams.a,
+        b: realParams.b,
+      }
+      const payment = {
+        utr: AddressZero,
+        payer: AddressZero,
+        recipient: owner.address,
+      }
+      await pool.contract.init(initParams, payment)
+      return pool
     }))
 
     let returns = {

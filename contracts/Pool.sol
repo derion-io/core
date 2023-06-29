@@ -13,27 +13,12 @@ import "./interfaces/IPool.sol";
 import "./logics/Storage.sol";
 
 abstract contract Pool is IPool, ERC1155Holder, Storage, Constants {
-    /// immutables
-    address internal immutable FEE_TO;
-
-    bytes32 public immutable ORACLE; // QTI(1) reserve(32) WINDOW(32) PAIR(160)
-    uint public immutable K;
-    address internal immutable TOKEN;
-    address public immutable TOKEN_R;
-    uint internal immutable MARK;
-    uint internal immutable HL_INTEREST;
-    uint internal immutable HL_FEE;
-
-    uint public immutable PREMIUM_RATE;
-    uint32 internal immutable MATURITY;
-    uint32 internal immutable MATURITY_VEST;
-    uint internal immutable MATURITY_RATE;
-    uint public immutable OPEN_RATE;
+    address immutable internal TOKEN;
 
     event Swap(
         address indexed payer,
         address indexed recipient,
-        uint    indexed sideMax,
+        uint indexed sideMax,
         uint sideIn,
         uint sideOut,
         uint maturity,
@@ -41,50 +26,75 @@ abstract contract Pool is IPool, ERC1155Holder, Storage, Constants {
         uint amountOut
     );
 
-    constructor() {
-        TOKEN = IPoolFactory(msg.sender).TOKEN();
-        FEE_TO = IPoolFactory(msg.sender).FEE_TO();
+    constructor(address token) {
+        TOKEN = token;
+    }
 
-        Params memory params = IPoolFactory(msg.sender).getParams();
-        ORACLE = params.oracle;
-        TOKEN_R = params.reserveToken;
-        K = params.k;
-        MARK = params.mark;
-        HL_INTEREST = params.halfLife;
-        HL_FEE = HL_INTEREST * IPoolFactory(msg.sender).FEE_RATE();
-        MATURITY = params.maturity;
-        MATURITY_VEST = params.maturityVest;
-        MATURITY_RATE = params.maturityRate;
-        PREMIUM_RATE = params.premiumRate;
-        OPEN_RATE = params.openRate;
+    /// @notice Returns the metadata of this (MetaProxy) contract.
+    /// Only relevant with contracts created via the MetaProxy standard.
+    /// @dev This function is aimed to be invoked with- & without a call.
+    function loadConfig() public pure returns (Config memory config) {
+        bytes memory data;
+        assembly {
+            let posOfMetadataSize := sub(calldatasize(), 32)
+            let size := calldataload(posOfMetadataSize)
+            let dataPtr := sub(posOfMetadataSize, size)
+            data := mload(64)
+            // increment free memory pointer by metadata size + 32 bytes (length)
+            mstore(64, add(data, add(size, 32)))
+            mstore(data, size)
+            let memPtr := add(data, 32)
+            calldatacopy(memPtr, dataPtr, size)
+        }
+        return abi.decode(data, (Config));
+    }
 
-        uint R = IERC20(TOKEN_R).balanceOf(address(this));
-        require(params.a > 0 && params.b > 0 && R > 0, "ZP");
-        require(params.a <= R >> 1 && params.b <= R >> 1, "IP");
+    function init(Params memory params, SwapPayment memory payment) external {
+        require(s_i == 0, "AI");
+        uint R = params.R;
+        uint a = params.a;
+        uint b = params.b;
+        require(R > 0 && a > 0 && b > 0, "ZP");
+        require(a <= R >> 1 && b <= R >> 1, "IP");
+
+        Config memory config = loadConfig();
+
+        if (payment.payer != address(0)) {
+            uint expected = R + IERC20(config.TOKEN_R).balanceOf(address(this));
+            IUniversalTokenRouter(payment.utr).pay(payment.payer, address(this), 20, config.TOKEN_R, 0, R);
+            require(expected <= IERC20(config.TOKEN_R).balanceOf(address(this)), "BP");
+        } else {
+            TransferHelper.safeTransferFrom(config.TOKEN_R, msg.sender, address(this), R);
+        }
 
         s_i = uint32(block.timestamp);
-        s_a = uint224(params.a);
+        s_a = uint224(a);
         s_f = uint32(block.timestamp);
-        s_b = uint224(params.b);
+        s_b = uint224(b);
 
         uint idA = _packID(address(this), SIDE_A);
         uint idB = _packID(address(this), SIDE_B);
         uint idC = _packID(address(this), SIDE_C);
 
         // mint tokens to recipient
-        uint R3 = R/3;
-        uint32 maturity = uint32(block.timestamp) + MATURITY;
-        IToken(TOKEN).mintLock(params.recipient, idA, R3, maturity, "");
-        IToken(TOKEN).mintLock(params.recipient, idB, R3, maturity, "");
-        IToken(TOKEN).mintLock(params.recipient, idC, R - (R3<<1), maturity, "");
+        uint R3 = R / 3;
+        uint32 maturity = uint32(block.timestamp) + config.MATURITY;
+        IToken(TOKEN).mintLock(payment.recipient, idA, R3, maturity, "");
+        IToken(TOKEN).mintLock(payment.recipient, idB, R3, maturity, "");
+        IToken(TOKEN).mintLock(payment.recipient, idC, R - (R3 << 1), maturity, "");
     }
 
     function _packID(address pool, uint side) internal pure returns (uint id) {
         id = (side << 160) + uint160(pool);
     }
 
-    function getStates() external view returns (uint R, uint a, uint b, uint32 i, uint32 f) {
-        R = IERC20(TOKEN_R).balanceOf(address(this));
+    function getStates()
+        external
+        view
+        returns (uint R, uint a, uint b, uint32 i, uint32 f)
+    {
+        Config memory config = loadConfig();
+        R = IERC20(config.TOKEN_R).balanceOf(address(this));
         i = s_i;
         a = s_a;
         f = s_f;
@@ -94,9 +104,10 @@ abstract contract Pool is IPool, ERC1155Holder, Storage, Constants {
     function swap(
         SwapParam memory param,
         SwapPayment memory payment
-    ) external override returns(uint amountIn, uint amountOut) {
+    ) external override returns (uint amountIn, uint amountOut) {
+        Config memory config = loadConfig();
         if (param.sideOut != SIDE_R) {
-            uint maturityMin = uint32(block.timestamp) + MATURITY;
+            uint maturityMin = uint32(block.timestamp) + config.MATURITY;
             if (param.maturity == 0) {
                 param.maturity = maturityMin;
             } else {
@@ -104,14 +115,14 @@ abstract contract Pool is IPool, ERC1155Holder, Storage, Constants {
                 require(param.maturity >= maturityMin, "MM");
             }
         }
-        (amountIn, amountOut) = _swap(param);
+        (amountIn, amountOut) = _swap(config, param);
         if (param.sideIn == SIDE_R) {
             if (payment.payer != address(0)) {
-                uint expected = amountIn + IERC20(TOKEN_R).balanceOf(address(this));
-                IUniversalTokenRouter(payment.utr).pay(payment.payer, address(this), 20, TOKEN_R, 0, amountIn);
-                require(expected <= IERC20(TOKEN_R).balanceOf(address(this)), "BP");
+                uint expected = amountIn + IERC20(config.TOKEN_R).balanceOf(address(this));
+                IUniversalTokenRouter(payment.utr).pay(payment.payer, address(this), 20, config.TOKEN_R, 0, amountIn);
+                require(expected <= IERC20(config.TOKEN_R).balanceOf(address(this)), "BP");
             } else {
-                TransferHelper.safeTransferFrom(TOKEN_R, msg.sender, address(this), amountIn);
+                TransferHelper.safeTransferFrom(config.TOKEN_R, msg.sender, address(this), amountIn);
                 payment.payer = msg.sender;
             }
         } else {
@@ -124,10 +135,10 @@ abstract contract Pool is IPool, ERC1155Holder, Storage, Constants {
                 payment.payer = msg.sender;
             }
             uint inputMaturity = IToken(TOKEN).maturityOf(payment.payer, idIn);
-            amountOut = _maturityPayoff(inputMaturity, amountOut);
+            amountOut = _maturityPayoff(config, inputMaturity, amountOut);
         }
         if (param.sideOut == SIDE_R) {
-            TransferHelper.safeTransfer(TOKEN_R, payment.recipient, amountOut);
+            TransferHelper.safeTransfer(config.TOKEN_R, payment.recipient, amountOut);
         } else {
             uint idOut = _packID(address(this), param.sideOut);
             IToken(TOKEN).mintLock(payment.recipient, idOut, amountOut, uint32(param.maturity), "");
@@ -149,6 +160,6 @@ abstract contract Pool is IPool, ERC1155Holder, Storage, Constants {
         return a > b ? a : b;
     }
 
-    function _swap(SwapParam memory param) internal virtual returns(uint amountIn, uint amountOut);
-    function _maturityPayoff(uint maturity, uint amountOut) internal view virtual returns (uint);
+    function _swap(Config memory config, SwapParam memory param) internal virtual returns (uint amountIn, uint amountOut);
+    function _maturityPayoff(Config memory config, uint maturity, uint amountOut) internal view virtual returns (uint);
 }

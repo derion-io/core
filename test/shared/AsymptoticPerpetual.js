@@ -247,6 +247,14 @@ async function _init(oracleLibrary, R, params) {
   return params
 }
 
+async function calculateInitParams(config, oracleLibrary, R) {
+  const { twap } = await oracleLibrary.fetch(config.ORACLE)
+  const market = _market(config.K, config.MARK, Q64, twap)
+  const a = _v(market.xkA, R.div(3), R)
+  const b = _v(market.xkB, R.div(3), R)
+  return {R, a, b}
+}
+
 async function _swap(
   sideIn, 
   sideOut,
@@ -301,5 +309,6 @@ module.exports = {
   _selectPrice,
   _evaluate,
   _init,
-  _swap
+  _swap,
+  calculateInitParams,
 }

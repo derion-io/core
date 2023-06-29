@@ -10,6 +10,18 @@ import "../libs/abdk-consulting/abdk-libraries-solidity/ABDKMath64x64.sol";
 
 
 contract AsymptoticPerpetual is Pool {
+    address immutable internal FEE_TO;
+    uint immutable internal FEE_RATE;
+
+    constructor(
+        address token,
+        address feeTo,
+        uint feeRate
+    ) Pool(token) {
+        FEE_TO = feeTo;
+        FEE_RATE = feeRate;
+    }
+
     function _powu(uint x, uint y) internal pure returns (uint z) {
         // Calculate the first iteration of the loop in advance.
         z = y & 1 > 0 ? x : Q128;
@@ -24,17 +36,17 @@ contract AsymptoticPerpetual is Pool {
         // require(z <= type(uint).max, "Pool: upper overflow");
     }
 
-    function _fetch() internal view returns (uint twap, uint spot) {
-        address pool = address(uint160(uint(ORACLE)));
+    function _fetch(uint ORACLE) internal view returns (uint twap, uint spot) {
+        address pool = address(uint160(ORACLE));
         (uint160 sqrtSpotX96,,,,,,) = IUniswapV3Pool(pool).slot0();
 
-        (int24 arithmeticMeanTick,) = OracleLibrary.consult(pool, uint32(uint(ORACLE) >> 192));
+        (int24 arithmeticMeanTick,) = OracleLibrary.consult(pool, uint32(ORACLE >> 192));
         uint sqrtTwapX96 = TickMath.getSqrtRatioAtTick(arithmeticMeanTick);
 
         spot = sqrtSpotX96 << 32;
         twap = sqrtTwapX96 << 32;
 
-        if (uint(ORACLE) & Q255 == 0) {
+        if (ORACLE & Q255 == 0) {
             spot = Q256M / spot;
             twap = Q256M / twap;
         }
@@ -54,7 +66,7 @@ contract AsymptoticPerpetual is Pool {
         return IERC1155Supply(TOKEN).totalSupply(_packID(address(this), side));
     }
 
-    function _reserve() internal view returns (uint R) {
+    function _reserve(address TOKEN_R) internal view returns (uint R) {
         return IERC20(TOKEN_R).balanceOf(address(this));
     }
 
@@ -63,20 +75,20 @@ contract AsymptoticPerpetual is Pool {
         rB = _r(Q256M/xk, state.b, state.R);
     }
 
-    function _maturityPayoff(uint maturity, uint amountOut) internal view override returns (uint) {
+    function _maturityPayoff(Config memory config, uint maturity, uint amountOut) internal view override returns (uint) {
         unchecked {
             if (maturity <= block.timestamp) {
                 return amountOut;
             }
             uint remain = maturity - block.timestamp;
-            if (MATURITY <= remain) {
+            if (config.MATURITY <= remain) {
                 return 0;
             }
-            uint elapsed = MATURITY - remain;
-            if (elapsed < MATURITY_VEST) {
-                amountOut = amountOut * elapsed / MATURITY_VEST;
+            uint elapsed = config.MATURITY - remain;
+            if (elapsed < config.MATURITY_VEST) {
+                amountOut = amountOut * elapsed / config.MATURITY_VEST;
             }
-            return FullMath.mulDiv(amountOut, MATURITY_RATE, Q128);
+            return FullMath.mulDiv(amountOut, config.MATURITY_RATE, Q128);
         }
     }
 
@@ -91,47 +103,49 @@ contract AsymptoticPerpetual is Pool {
         return uint(int(rate));
     }
 
-    function _xk(uint price) internal view returns (uint xk) {
-        xk = _powu(FullMath.mulDiv(Q128, price, MARK), K);
+    function _xk(Config memory config, uint price) internal pure returns (uint xk) {
+        xk = _powu(FullMath.mulDiv(Q128, price, config.MARK), config.K);
     }
 
     function _selectPrice(
+        Config memory config,
         State memory state,
         uint sideIn,
         uint sideOut
     ) internal view returns (uint xk, uint rA, uint rB) {
-        (uint min, uint max) = _fetch();
+        (uint min, uint max) = _fetch(uint(config.ORACLE));
         if (min > max) {
             (min, max) = (max, min);
         }
         if (sideOut == SIDE_A || sideIn == SIDE_B) {
-            xk = _xk(max);
+            xk = _xk(config, max);
             (rA, rB) = _evaluate(xk, state);
         } else if (sideOut == SIDE_B || sideIn == SIDE_A) {
-            xk = _xk(min);
+            xk = _xk(config, min);
             (rA, rB) = _evaluate(xk, state);
         } else {
             // TODO: assisting flag for min/max
-            xk = _xk(min);
+            xk = _xk(config, min);
             (rA, rB) = _evaluate(xk, state);
             if ((sideIn == SIDE_R) == rB > rA) {
                 // TODO: unit test for this case
-                xk = _xk(max);
+                xk = _xk(config, max);
                 (rA, rB) = _evaluate(xk, state);
             }
         }
     }
 
     function _swap(
+        Config memory config,
         SwapParam memory param
     ) internal override returns(uint amountIn, uint amountOut) {
         uint sideIn = param.sideIn;
         uint sideOut = param.sideOut;
         require(sideIn != sideOut, 'SS');
-        State memory state = State(_reserve(), s_a, s_b);
+        State memory state = State(_reserve(config.TOKEN_R), s_a, s_b);
         // [INTEREST DECAY]
         {
-            uint decayRateX64 = _decayRate(block.timestamp - s_i, HL_INTEREST);
+            uint decayRateX64 = _decayRate(block.timestamp - s_i, config.HL_INTEREST);
             // TODO: transaction frequency effect
             uint a = FullMath.mulDivRoundingUp(state.a, Q64, decayRateX64);
             uint b = FullMath.mulDivRoundingUp(state.b, Q64, decayRateX64);
@@ -142,15 +156,15 @@ contract AsymptoticPerpetual is Pool {
             }
         }
         // [PRICE SELECTION]
-        (uint xk, uint rA, uint rB) = _selectPrice(state, sideIn, sideOut);
+        (uint xk, uint rA, uint rB) = _selectPrice(config, state, sideIn, sideOut);
         // [PROTOCOL FEE]
         {
-            uint feeRateX64 = _decayRate(block.timestamp - s_f, HL_FEE);
+            uint feeRateX64 = _decayRate(block.timestamp - s_f, config.HL_INTEREST * FEE_RATE);
             uint rAF = FullMath.mulDivRoundingUp(rA, Q64, feeRateX64);
             uint rBF = FullMath.mulDivRoundingUp(rB, Q64, feeRateX64);
             if (rAF < rA || rBF < rB) {
                 uint fee = rA - rAF + rB - rBF;
-                TransferHelper.safeTransfer(TOKEN_R, FEE_TO, fee);
+                TransferHelper.safeTransfer(config.TOKEN_R, FEE_TO, fee);
                 (rA, rB) = (rAF, rBF);
                 state.R -= fee;
                 s_f = uint32(block.timestamp);
@@ -189,19 +203,17 @@ contract AsymptoticPerpetual is Pool {
         if (sideOut == SIDE_R) {
             amountOut = state.R - state1.R;
         } else {
-            uint s = _supply(TOKEN, sideOut);
             if (sideOut == SIDE_C) {
                 uint rC = state.R - rA - rB;
-                uint rC1 = state1.R - rA1 - rB1;
-                amountOut = FullMath.mulDiv(s, rC1 - rC, rC);
+                amountOut = FullMath.mulDiv(_supply(TOKEN, sideOut), state1.R - rA1 - rB1 - rC, rC);
             } else {
                 uint inputRate = Q128;
                 if (sideOut == SIDE_A) {
-                    amountOut = FullMath.mulDiv(s, rA1 - rA, rA);
-                    inputRate = _inputRate(state1, rA1, rB1);
+                    amountOut = FullMath.mulDiv(_supply(TOKEN, sideOut), rA1 - rA, rA);
+                    inputRate = _inputRate(config, state1, rA1, rB1);
                 } else if (sideOut == SIDE_B) {
-                    amountOut = FullMath.mulDiv(s, rB1 - rB, rB);
-                    inputRate = _inputRate(state1, rB1, rA1);
+                    amountOut = FullMath.mulDiv(_supply(TOKEN, sideOut), rB1 - rB, rB);
+                    inputRate = _inputRate(config, state1, rB1, rA1);
                 }
                 if (inputRate != Q128) {
                     amountIn = FullMath.mulDiv(amountIn, Q128, inputRate);
@@ -213,16 +225,17 @@ contract AsymptoticPerpetual is Pool {
     }
 
     function _inputRate(
+        Config memory config,
         State memory state,
         uint rOut,
         uint rCounter
-    ) internal view returns (uint rate) {
-        rate = OPEN_RATE;
-        if (PREMIUM_RATE > 0 && rOut > rCounter) {
+    ) internal pure returns (uint rate) {
+        rate = config.OPEN_RATE;
+        if (config.PREMIUM_RATE > 0 && rOut > rCounter) {
             uint rC1 = state.R - rOut - rCounter;
             uint imbaRate = FullMath.mulDiv(Q128, rOut - rCounter, rC1);
-            if (imbaRate > PREMIUM_RATE) {
-                rate = FullMath.mulDiv(rate, PREMIUM_RATE, imbaRate);
+            if (imbaRate > config.PREMIUM_RATE) {
+                rate = FullMath.mulDiv(rate, config.PREMIUM_RATE, imbaRate);
             }
         }
     }

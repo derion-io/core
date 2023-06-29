@@ -1,6 +1,25 @@
 // SPDX-License-Identifier: BSL-1.1
 pragma solidity ^0.8.0;
 
+struct Config {
+    bytes32 ORACLE; // 1bit QTI, 31bit reserve, 32bit WINDOW, ... PAIR ADDRESS
+    address TOKEN_R;
+    uint    K;
+    uint    MARK;
+    uint    HL_INTEREST;
+    uint    PREMIUM_RATE;
+    uint32  MATURITY;
+    uint32  MATURITY_VEST;
+    uint    MATURITY_RATE;   // x128
+    uint    OPEN_RATE;
+}
+
+struct Params {
+    uint R;
+    uint a;
+    uint b;
+}
+
 struct SwapParam {
     uint sideIn;
     uint sideOut;
@@ -29,11 +48,8 @@ struct Slippable {
 }
 
 interface IPool {
-    function ORACLE() external view returns (bytes32);
-    function TOKEN_R() external view returns (address);
-    function K() external view returns (uint);
-    function PREMIUM_RATE() external view returns (uint);
-    function OPEN_RATE() external view returns (uint);
+    function loadConfig() view external returns (Config memory);
+    function init(Params memory params, SwapPayment memory payment) external;
     function swap(
         SwapParam memory param,
         SwapPayment memory payment

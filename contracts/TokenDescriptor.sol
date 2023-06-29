@@ -15,7 +15,7 @@ contract TokenDescriptor is ITokenDescriptor {
 
     function getName(uint id) public view virtual override returns (string memory) {
         address pool = address(uint160(id));
-        bytes32 oracle = IPool(pool).ORACLE();
+        bytes32 oracle = IPool(pool).loadConfig().ORACLE;
         (address base, address quote) = _getBaseQuote(oracle);
 
         uint side = id >> 160;
@@ -25,7 +25,7 @@ contract TokenDescriptor is ITokenDescriptor {
 
     function getSymbol(uint id) public view virtual override returns (string memory) {
         address pool = address(uint160(id));
-        bytes32 oracle = IPool(pool).ORACLE();
+        bytes32 oracle = IPool(pool).loadConfig().ORACLE;
         (address base, address quote) = _getBaseQuote(oracle);
 
         uint side = id >> 160;
@@ -35,12 +35,12 @@ contract TokenDescriptor is ITokenDescriptor {
 
     function getDecimals(uint id) public view virtual override returns (uint8) {
         address pool = address(uint160(id));
-        return IERC20Metadata(IPool(pool).TOKEN_R()).decimals();
+        return IERC20Metadata(IPool(pool).loadConfig().TOKEN_R).decimals();
     }
 
     function constructMetadata(uint id) public view virtual override returns (string memory) {
         address pool = address(uint160(id));
-        bytes32 oracle = IPool(pool).ORACLE();
+        bytes32 oracle = IPool(pool).loadConfig().ORACLE;
         (address base, address quote) = _getBaseQuote(oracle);
         uint side = id >> 160;
         string memory image = Base64.encode(bytes(_getImage()));
@@ -67,6 +67,7 @@ contract TokenDescriptor is ITokenDescriptor {
     }
 
     function _getDescription(address base, address quote, address pool, uint side) internal view returns (string memory) {
+        Config memory config = IPool(pool).loadConfig();
         string memory sideStr;
         if (side == SIDE_C) {
             return string(
@@ -74,9 +75,9 @@ contract TokenDescriptor is ITokenDescriptor {
                     "This is a Derivable Liquidity Provider token for the ",
                     IERC20Metadata(base).symbol(), "/",
                     IERC20Metadata(quote).symbol(), " ",
-                    "x", _getPower(IPool(pool).K()), " ",
+                    "x", _getPower(config.K), " ",
                     "pool at ", Strings.toHexString(uint160(pool), 20), " ",
-                    "with ", IERC20Metadata(IPool(pool).TOKEN_R()).symbol(), " as the reserve token."
+                    "with ", IERC20Metadata(config.TOKEN_R).symbol(), " as the reserve token."
                 )
             );
         } else {
@@ -88,18 +89,19 @@ contract TokenDescriptor is ITokenDescriptor {
             return string(
                 abi.encodePacked(
                     "This fungible token represents a Derivable ",
-                    sideStr, " x", _getPower(IPool(pool).K()), " ",
+                    sideStr, " x", _getPower(config.K), " ",
                     "position for the ",
                     IERC20Metadata(base).symbol(), "/",
                     IERC20Metadata(quote).symbol(), " ",
                     "pool at ", Strings.toHexString(uint160(pool), 20), " ",
-                    "with ", IERC20Metadata(IPool(pool).TOKEN_R()).symbol(), " as the reserve token."
+                    "with ", IERC20Metadata(config.TOKEN_R).symbol(), " as the reserve token."
                 )
             );
         }
     }
 
     function _getName(address base, address quote, address pool, uint side) internal view returns (string memory) {
+        Config memory config = IPool(pool).loadConfig();
         string memory sideStr = "LP";
         if (side == SIDE_A) {
             sideStr = "Long";
@@ -109,10 +111,10 @@ contract TokenDescriptor is ITokenDescriptor {
         return string(
             abi.encodePacked(
                 sideStr, " ",
-                _getPower(IPool(pool).K()), "x", " ",
+                _getPower(config.K), "x", " ",
                 IERC20Metadata(base).symbol(), "/",
                 IERC20Metadata(quote).symbol(), " ",
-                "(", IERC20Metadata(IPool(pool).TOKEN_R()).symbol(), ")"
+                "(", IERC20Metadata(config.TOKEN_R).symbol(), ")"
             )
         );
     }
@@ -124,6 +126,7 @@ contract TokenDescriptor is ITokenDescriptor {
     }
 
     function _getSymbol(address base, address quote, address pool, uint side) internal view returns (string memory) {
+        Config memory config = IPool(pool).loadConfig();
         string memory sideStr = "(LP)";
         if (side == SIDE_A) {
             sideStr = "+";
@@ -132,9 +135,9 @@ contract TokenDescriptor is ITokenDescriptor {
         }
         return string(
             abi.encodePacked(
-                IERC20Metadata(IPool(pool).TOKEN_R()).symbol(),
+                IERC20Metadata(config.TOKEN_R).symbol(),
                 sideStr,
-                _getPower(IPool(pool).K()), "x",
+                _getPower(config.K), "x",
                 IERC20Metadata(base).symbol(), "/",
                 IERC20Metadata(quote).symbol()
             )
