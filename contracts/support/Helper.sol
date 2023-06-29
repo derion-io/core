@@ -96,7 +96,8 @@ contract Helper is Constants, IHelper {
             uint(0),
             params.sideIn,
             SIDE_R,
-            params.amountIn
+            params.amountIn,
+            IPool(params.poolIn).loadConfig().PREMIUM_RATE
         );
 
         (, amountOut) = IPool(params.poolIn).swap(
@@ -122,7 +123,8 @@ contract Helper is Constants, IHelper {
             uint(0),
             SIDE_R,
             params.sideOut,
-            amountOut
+            amountOut,
+            IPool(params.poolIn).loadConfig().PREMIUM_RATE
         );
         (, amountOut) = IPool(params.poolOut).swap(
             SwapParam(
@@ -197,7 +199,8 @@ contract Helper is Constants, IHelper {
             uint(0),
             params.sideIn,
             params.sideOut,
-            params.amountIn
+            params.amountIn,
+            IPool(params.poolIn).loadConfig().PREMIUM_RATE
         );
 
         (, amountOut) = IPool(params.poolIn).swap(
