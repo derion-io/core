@@ -69,7 +69,7 @@ abstract contract Pool is IPool, ERC1155Holder, Storage, Constants {
 
         s_i = uint32(block.timestamp);
         s_a = uint224(a);
-        s_f = uint32(block.timestamp);
+        s_f = uint32(block.timestamp >> 1 << 1);
         s_b = uint224(b);
 
         uint idA = _packID(address(this), SIDE_A);
@@ -97,14 +97,35 @@ abstract contract Pool is IPool, ERC1155Holder, Storage, Constants {
         R = IERC20(config.TOKEN_R).balanceOf(address(this));
         i = s_i;
         a = s_a;
-        f = s_f;
+        f = s_f >> 1 << 1;
         b = s_b;
+    }
+
+    /**
+     * @dev against read-only reentrancy
+     */
+    function ensureStateIntegrity() public view {
+        require(s_f & 1 == 0, 'SI');
+    }
+
+    /**
+     * @dev Prevents a contract from calling itself, directly or indirectly.
+     * Calling a `nonReentrant` function from another `nonReentrant`
+     * function is not supported. It is possible to prevent this from happening
+     * by making the `nonReentrant` function external, and making it call a
+     * `private` function that does the actual work.
+     */
+    modifier nonReentrant() {
+        ensureStateIntegrity();
+        ++s_f;
+        _;
+        --s_f;
     }
 
     function swap(
         SwapParam memory param,
         SwapPayment memory payment
-    ) external override returns (uint amountIn, uint amountOut) {
+    ) external override nonReentrant returns (uint amountIn, uint amountOut) {
         Config memory config = loadConfig();
         if (param.sideOut != SIDE_R) {
             uint maturityMin = uint32(block.timestamp) + config.MATURITY;

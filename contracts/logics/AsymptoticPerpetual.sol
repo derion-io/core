@@ -159,15 +159,18 @@ contract AsymptoticPerpetual is Pool {
         (uint xk, uint rA, uint rB) = _selectPrice(config, state, sideIn, sideOut);
         // [PROTOCOL FEE]
         {
-            uint feeRateX64 = _decayRate(block.timestamp - s_f, config.HL_INTEREST * FEE_RATE);
-            uint rAF = FullMath.mulDivRoundingUp(rA, Q64, feeRateX64);
-            uint rBF = FullMath.mulDivRoundingUp(rB, Q64, feeRateX64);
-            if (rAF < rA || rBF < rB) {
-                uint fee = rA - rAF + rB - rBF;
-                TransferHelper.safeTransfer(config.TOKEN_R, FEE_TO, fee);
-                (rA, rB) = (rAF, rBF);
-                state.R -= fee;
-                s_f = uint32(block.timestamp);
+            uint32 elapsed = uint32((block.timestamp >> 1) - (s_f >> 1)) << 1;
+            if (elapsed > 0) {
+                uint feeRateX64 = _decayRate(elapsed, config.HL_INTEREST * FEE_RATE);
+                uint rAF = FullMath.mulDivRoundingUp(rA, Q64, feeRateX64);
+                uint rBF = FullMath.mulDivRoundingUp(rB, Q64, feeRateX64);
+                if (rAF < rA || rBF < rB) {
+                    uint fee = rA - rAF + rB - rBF;
+                    TransferHelper.safeTransfer(config.TOKEN_R, FEE_TO, fee);
+                    (rA, rB) = (rAF, rBF);
+                    state.R -= fee;
+                    s_f += elapsed;
+                }
             }
         }
         // [CALCULATION]
