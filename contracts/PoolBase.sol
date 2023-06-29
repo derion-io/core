@@ -50,11 +50,11 @@ abstract contract PoolBase is IPool, ERC1155Holder, Storage, Constants {
         return abi.decode(data, (Config));
     }
 
-    function init(Params memory params, Payment memory payment) external {
+    function init(State memory state, Payment memory payment) external {
         require(s_i == 0, "AI");
-        uint R = params.R;
-        uint a = params.a;
-        uint b = params.b;
+        uint R = state.R;
+        uint a = state.a;
+        uint b = state.b;
         require(R > 0 && a > 0 && b > 0, "ZP");
         require(a <= R >> 1 && b <= R >> 1, "IP");
 

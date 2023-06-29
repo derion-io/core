@@ -14,12 +14,6 @@ struct Config {
     uint    OPEN_RATE;
 }
 
-struct Params {
-    uint R;
-    uint a;
-    uint b;
-}
-
 struct SwapParam {
     uint sideIn;
     uint sideOut;
@@ -49,7 +43,7 @@ struct Slippable {
 
 interface IPool {
     function loadConfig() view external returns (Config memory);
-    function init(Params memory params, Payment memory payment) external;
+    function init(State memory state, Payment memory payment) external;
     function swap(
         SwapParam memory param,
         Payment memory payment

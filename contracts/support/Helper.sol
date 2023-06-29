@@ -82,12 +82,12 @@ contract Helper is Constants, IHelper {
         return uint(int(rate));
     }
 
-    function createPool(Config memory config, Params memory params, address factory) external payable returns (address pool) {
+    function createPool(Config memory config, State memory state, address factory) external payable returns (address pool) {
         pool = IPoolFactory(factory).createPool(config);
         IWeth(WETH).deposit{value : msg.value}();
         uint amount = IWeth(WETH).balanceOf(address(this));
         IERC20(WETH).approve(pool, amount);
-        IPool(pool).init(params, Payment(address(0), address(0), msg.sender));
+        IPool(pool).init(state, Payment(address(0), address(0), msg.sender));
     }
 
     function _swapMultiPool(SwapParams memory params, address TOKEN_R) internal returns (uint amountOut) {
