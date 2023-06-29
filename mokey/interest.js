@@ -1,10 +1,10 @@
 const { loadFixture, time } = require("@nomicfoundation/hardhat-network-helpers")
 const { expect, use } = require("chai");
 const { solidity } = require("ethereum-waffle");
-const { baseParams } = require("./shared/baseParams")
-const { SIDE_R, SIDE_C, SIDE_A, SIDE_B } = require("./shared/constant")
-const { loadFixtureFromParams } = require("./shared/scenerios")
-const { bn, numberToWei, swapToSetPriceMock, packId, weiToNumber } = require("./shared/utilities")
+const { baseParams } = require("../test/shared/baseParams")
+const { SIDE_R, SIDE_C, SIDE_A, SIDE_B } = require("../test/shared/constant")
+const { loadFixtureFromParams } = require("../test/shared/scenerios")
+const { bn, numberToWei, swapToSetPriceMock, packId, weiToNumber } = require("../test/shared/utilities")
 
 use(solidity)
 
