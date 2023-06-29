@@ -208,7 +208,8 @@ contract AsymptoticPerpetual is Pool {
         } else {
             if (sideOut == SIDE_C) {
                 uint rC = state.R - rA - rB;
-                amountOut = FullMath.mulDiv(_supply(TOKEN, sideOut), state1.R - rA1 - rB1 - rC, rC);
+                uint rC1 = state1.R - rA1 - rB1;
+                amountOut = FullMath.mulDiv(_supply(TOKEN, sideOut), rC1 - rC, rC);
             } else {
                 uint inputRate = Q128;
                 if (sideOut == SIDE_A) {
