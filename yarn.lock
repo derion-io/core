@@ -74,17 +74,17 @@
 
 "@derivable/erc1155-maturity@git+ssh://git@github.com:derivable-labs/erc1155-maturity.git":
   version "4.8.2"
-  resolved "git+ssh://git@github.com:derivable-labs/erc1155-maturity.git#82536b70ea2e2473dac871959409d05941e88fd5"
+  resolved "git+ssh://git@github.com:derivable-labs/erc1155-maturity.git#1640a5c4770718a5c512cb936032c715fef1c9c8"
 
 "@derivable/shadow-token@git+ssh://git@github.com:derivable-labs/shadow-token.git":
   version "1.0.0"
-  resolved "git+ssh://git@github.com:derivable-labs/shadow-token.git#08f23e42ea2d186f5b2e61c88865b88c55428b1e"
+  resolved "git+ssh://git@github.com:derivable-labs/shadow-token.git#789a1f1038c7ea4aaa2b25f715f585c8d4db851a"
   dependencies:
     "@derivable/erc1155-maturity" "git+ssh://git@github.com:derivable-labs/erc1155-maturity.git"
 
 "@derivable/utr@git+ssh://git@github.com:derivable-labs/utr.git":
   version "1.0.0"
-  resolved "git+ssh://git@github.com:derivable-labs/utr.git#6a57c45d524ffcb54ba12706c811a1c1d672df5a"
+  resolved "git+ssh://git@github.com:derivable-labs/utr.git#abad4c5e598bb89edafacb8da57f31d8d8aae331"
   dependencies:
     "@atixlabs/hardhat-time-n-mine" "^0.0.5"
     "@uniswap/lib" "^4.0.1-alpha"
