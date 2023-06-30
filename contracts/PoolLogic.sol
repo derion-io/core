@@ -91,7 +91,7 @@ contract PoolLogic is PoolBase {
         }
     }
 
-    function _decayRate (
+    function _expRate (
         uint elapsed,
         uint halfLife
     ) internal pure returns (uint rateX64) {
@@ -143,10 +143,10 @@ contract PoolLogic is PoolBase {
         State memory state = State(_reserve(config.TOKEN_R), s_a, s_b);
         // [INTEREST DECAY]
         {
-            uint decayRateX64 = _decayRate(block.timestamp - s_i, config.HL_INTEREST);
+            uint interestRateX64 = _expRate(block.timestamp - s_i, config.INTEREST_HL);
             // TODO: transaction frequency effect
-            uint a = FullMath.mulDivRoundingUp(state.a, Q64, decayRateX64);
-            uint b = FullMath.mulDivRoundingUp(state.b, Q64, decayRateX64);
+            uint a = FullMath.mulDivRoundingUp(state.a, Q64, interestRateX64);
+            uint b = FullMath.mulDivRoundingUp(state.b, Q64, interestRateX64);
             if (a < state.a || b < state.b) {
                 state.a = a;
                 state.b = b;
@@ -159,7 +159,7 @@ contract PoolLogic is PoolBase {
         {
             uint32 elapsed = uint32((block.timestamp >> 1) - (s_f >> 1)) << 1;
             if (elapsed > 0) {
-                uint feeRateX64 = _decayRate(elapsed, config.HL_INTEREST * FEE_RATE);
+                uint feeRateX64 = _expRate(elapsed, config.INTEREST_HL * FEE_RATE);
                 uint rAF = FullMath.mulDivRoundingUp(rA, Q64, feeRateX64);
                 uint rBF = FullMath.mulDivRoundingUp(rB, Q64, feeRateX64);
                 if (rAF < rA || rBF < rB) {

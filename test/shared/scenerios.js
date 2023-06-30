@@ -17,7 +17,7 @@ function toConfig(params) {
     TOKEN_R: params.reserveToken,
     MARK: params.mark,
     K: params.k,
-    HL_INTEREST: params.halfLife,
+    INTEREST_HL: params.halfLife,
     PREMIUM_RATE: params.premiumRate,
     MATURITY: params.maturity,
     MATURITY_VEST: params.maturityVest,

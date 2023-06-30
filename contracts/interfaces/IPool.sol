@@ -6,7 +6,7 @@ struct Config {
     address TOKEN_R;
     uint    K;
     uint    MARK;
-    uint    HL_INTEREST;
+    uint    INTEREST_HL;
     uint    PREMIUM_RATE;
     uint    MATURITY;
     uint    MATURITY_VEST;
