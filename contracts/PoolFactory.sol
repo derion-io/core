@@ -27,6 +27,7 @@ contract PoolFactory is IPoolFactory {
     ) external returns (address pool) {
         bytes memory input = abi.encode(config);
         pool = MetaProxyFactory.metaProxyFromBytes(LOGIC, input);
+        require(pool != address(0), "PoolFactory: Failed on deploy");
         emit Derivable(
             'PoolCreated',                          // topic1: event name
             config.ORACLE & ORACLE_MASK,            // topic2: price index
