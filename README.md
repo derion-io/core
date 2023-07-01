@@ -58,26 +58,32 @@ At any time or market state, the pool reserve is split between 3 sides: $r_A$, $
 With $\sqrt{P}$ is the result of the double prices system selection, we have: $x = {\sqrt{P}\over MARK}$
 
 Long payoff:
+
 $$
 r_A=\begin{cases}
-    ax^K                    &\text{for }ax^K<{R\over 2} \\
-    R-\dfrac{R^2}{4ax^K}    &\text{otherwise}
+    ax^K                    &\quad\text{for }ax^K\le{R\over 2} \\
+    R-\dfrac{R^2}{4ax^K}    &\quad\text{otherwise}
 \end{cases}
 $$
 
 Short payoff:
+
 $$
 r_B=\begin{cases}
-    bx^{-K}                 &\text{for }bx^{-K}<{R\over 2} \\
-    R-\dfrac{R^2}{4bx^{-K}} &\text{otherwise}
+    bx^{-K}                 &\quad\text{for }bx^{-K}\le{R\over 2} \\
+    R-\dfrac{R^2}{4bx^{-K}} &\quad\text{otherwise}
 \end{cases}
 $$
 
-LP payoff: $r_C = R - r_A - r_B$
+LP payoff:
+
+$$r_C = R - r_A - r_B$$
 
 Payoff for each position (balance) is calculated based on its total supply, pro-rata.
 
-![Asymptotic Power Curve](https://files.gitbook.com/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FpouuXNBk9RhrfwmGohvR%2Fuploads%2F5cmN7o3XYDdDn70iDtD7%2Fimage.png?alt=media&token=c30553d8-d073-4d40-9fbc-31c100890c30)
+<div align=center>
+<img alt="Asymptotic Power Curves" width=600px src="https://github.com/derivable-labs/derivable-core/assets/37166829/4976af88-eb45-40b7-b041-4ed222f24ada"/>
+</div>
 
 ## Price Oracle and Selection
 The first public version of Derivable protocol supports UniswapV3 oracle as the only price source. Both TWAP and SPOT prices are ultilized using the double price system, which enforces the state transitioner to use the less beneficial price of the two.
@@ -117,7 +123,9 @@ In state transistions, all core calculation is peformed one side (from state to 
 Protocol's decay halflife is not configured by pool creator, but is calculated from Interest's decay halflife and protocol configured `FeeRate`:
 $$FeeHL = InterestHL \times FeeRate$$
 
-![Interest and Fee](https://files.gitbook.com/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FpouuXNBk9RhrfwmGohvR%2Fuploads%2FxePn9C1OhWNeLO6CihhH%2Ffee.gif?alt=media&token=15eb6b9e-7f07-4c33-89f7-1d8666427dd4)
+<div align=center>
+<img alt="Interest and Fee" width=600px src="https://github.com/derivable-labs/derivable-core/assets/37166829/8d4826ef-9a1a-42ec-bd5e-b791b033b369"/>
+</div>
 
 ## Input Rate
 
@@ -130,12 +138,14 @@ Input rates are rate applied to Long and Short opening state transition's input 
 $$RiskFactor = \dfrac{r_{A1} - r_{B1}}{r_{C1}}$$
 
 Input Rate to opening a Long position:
+
 $$InputRate = OpenRate \times min(1, \dfrac{PremiumRate}{RiskFactor})$$
 
 Input Rate to opening a Short position:
+
 $$InputRate = OpenRate \times min(1, \dfrac{PremiumRate}{-RiskFactor})$$
 
-The actual token amount transactor has to pay is: $amountIn / InputRate$
+The actual token amount transactor has to pay is: $$amountIn / InputRate$$
 
 ## Ouput Rate (Maturity)
 
@@ -148,7 +158,9 @@ The Output Rate (payoff) before maturity date is calculated as follow:
 $$Elapsed = max(0, MATURITY + now() - maturity)$$
 $$OutputRate = min(1, {Elapsed\over {MATURITY\_VEST}})\times MATURITY\_RATE$$
 
-![Maturity](https://files.gitbook.com/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FpouuXNBk9RhrfwmGohvR%2Fuploads%2FfVXg9D2OP1YeJlWLSxUX%2Fimage.png?alt=media&token=45059a6c-0fac-4568-892c-3bd8b50a68d2)
+<div align=center>
+<img alt="Maturity" width=600px src="https://github.com/derivable-labs/derivable-core/assets/37166829/9ff13c77-78a1-4947-9774-c78408ea14c6"/>
+</div>
 
 ## Token Payment
 There are two methods to transfer token into Derivable pool for state transistion:
