@@ -90,6 +90,8 @@ contract Helper is Constants, IHelper {
         IPool(pool).init(state, Payment(address(0), address(0), msg.sender));
     }
 
+    // TODO: pass the config in from client instead of contract call
+    // TODO: handle OPEN_RATE
     function _swapMultiPool(SwapParams memory params, address TOKEN_R) internal returns (uint amountOut) {
         // swap poolIn/sideIn to poolIn/R
         bytes memory payload = abi.encode(
@@ -124,7 +126,7 @@ contract Helper is Constants, IHelper {
             SIDE_R,
             params.sideOut,
             amountOut,
-            IPool(params.poolIn).loadConfig().PREMIUM_RATE
+            IPool(params.poolOut).loadConfig().PREMIUM_RATE
         );
         (, amountOut) = IPool(params.poolOut).swap(
             Param(
@@ -200,7 +202,7 @@ contract Helper is Constants, IHelper {
             params.sideIn,
             params.sideOut,
             params.amountIn,
-            IPool(params.poolIn).loadConfig().PREMIUM_RATE
+            config.PREMIUM_RATE
         );
 
         (, amountOut) = IPool(params.poolIn).swap(

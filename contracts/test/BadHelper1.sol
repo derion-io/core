@@ -111,7 +111,7 @@ contract BadHelper1 is Constants, IHelper {
             SIDE_R,
             params.sideOut,
             amountOut,
-            IPool(params.poolIn).loadConfig().PREMIUM_RATE
+            IPool(params.poolOut).loadConfig().PREMIUM_RATE
         );
         (, amountOut) = IPool(params.poolOut).swap(
             Param(
