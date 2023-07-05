@@ -62,7 +62,7 @@ contract PoolLogic is PoolBase {
     }
 
     function _supply(address TOKEN, uint side) internal view returns (uint s) {
-        return IERC1155Supply(TOKEN).totalSupply(_packID(address(this), side));
+        return IERC1155Maturity(TOKEN).totalSupply(_packID(address(this), side));
     }
 
     function _reserve(address TOKEN_R) internal view returns (uint R) {
