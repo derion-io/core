@@ -48,17 +48,12 @@ function loadFixtureFromParams (arrParams, options={}) {
     const oracleLibrary = await OracleLibrary.deploy()
     await oracleLibrary.deployed()
 
-    // deploy descriptor
-    const TokenDescriptor = await ethers.getContractFactory("TokenDescriptor")
-    const tokenDescriptor = await TokenDescriptor.deploy()
-    await tokenDescriptor.deployed()
-
     // deploy token1155
     const Token = await ethers.getContractFactory("Token")
     const derivable1155 = await Token.deploy(
       utr.address,
       owner.address,
-      tokenDescriptor.address
+      AddressZero
     )
     await derivable1155.deployed()
 
@@ -80,7 +75,14 @@ function loadFixtureFromParams (arrParams, options={}) {
     const PoolFactory = await ethers.getContractFactory("PoolFactory");
     const poolFactory = await PoolFactory.deploy(
       logic.address
-    );
+    )
+
+    // deploy descriptor
+    const TokenDescriptor = await ethers.getContractFactory("TokenDescriptor")
+    const tokenDescriptor = await TokenDescriptor.deploy(poolFactory.address)
+    await tokenDescriptor.deployed()
+
+    await derivable1155.setDescriptor(tokenDescriptor.address)
 
     // USDC
     const erc20Factory = await ethers.getContractFactory('USDC')
@@ -185,6 +187,7 @@ function loadFixtureFromParams (arrParams, options={}) {
       weth,
       usdc,
       utr,
+      poolFactory,
       derivablePools: pools,
       derivable1155,
       feeReceiver,

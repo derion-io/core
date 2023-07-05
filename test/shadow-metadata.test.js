@@ -13,13 +13,27 @@ const { packId, decodeDataURI } = require("./shared/utilities")
 
 
 describe("Shadow metadata spec", function () {
-    const fixture = loadFixtureFromParams([baseParams])
+    const fixture = loadFixtureFromParams([baseParams],{
+        callback: async ({derivable1155}) => {
+            // deploy TestHelper
+            const FakePool = await ethers.getContractFactory("contracts/test/FakePool.sol:FakePool")
+            const fakePool = await FakePool.deploy(
+                derivable1155.address
+            )
+            await fakePool.deployed()
+            return {
+                fakePool
+            }
+        }
+    })
 
     describe("Token Shadow Metadata", function () {
         it("Shadow Name", async function () {
             const {
                 derivablePools,
-                derivable1155
+                derivable1155,
+                owner,
+                fakePool
             } = await loadFixture(fixture)
             
             const derivablePool = derivablePools[0].contract
@@ -31,12 +45,19 @@ describe("Shadow metadata spec", function () {
             expect(longName).to.be.equals('Long 2.5x WETH/USDC (WETH)')
             expect(shortName).to.be.equals('Short 2.5x WETH/USDC (WETH)')
             expect(cpName).to.be.equals('LP 2.5x WETH/USDC (WETH)')
+
+            // mint fake token
+            const fakeID = packId(SIDE_A, fakePool.address)
+            await fakePool.mintLock(owner.address, fakeID, 1, 0, '0x00')
+            await expect(derivable1155.getShadowName(fakeID)).to.be.revertedWith('NOT_A_DERIVABLE_TOKEN')
         })
 
         it("Shadow Symbol", async function () {
             const {
                 derivablePools,
-                derivable1155
+                derivable1155,
+                owner,
+                fakePool
             } = await loadFixture(fixture)
             
             const derivablePool = derivablePools[0].contract
@@ -48,12 +69,19 @@ describe("Shadow metadata spec", function () {
             expect(longSymbol).to.be.equals('WETH+2.5xWETH/USDC')
             expect(shortSymbol).to.be.equals('WETH-2.5xWETH/USDC')
             expect(lpSymbol).to.be.equals('WETH(LP)2.5xWETH/USDC')
+
+            // mint fake token
+            const fakeID = packId(SIDE_A, fakePool.address)
+            await fakePool.mintLock(owner.address, fakeID, 1, 0, '0x00')
+            await expect(derivable1155.getShadowSymbol(fakeID)).to.be.revertedWith('NOT_A_DERIVABLE_TOKEN')
         })
 
         it("Shadow Decimals", async function () {
             const {
                 derivablePools,
-                derivable1155
+                derivable1155,
+                owner,
+                fakePool
             } = await loadFixture(fixture)
             
             const derivablePool = derivablePools[0].contract
@@ -65,6 +93,11 @@ describe("Shadow metadata spec", function () {
             expect(longDecimals).to.be.equals(18)
             expect(shortDecimals).to.be.equals(18)
             expect(lpDecimals).to.be.equals(18)
+
+            // mint fake token
+            const fakeID = packId(SIDE_A, fakePool.address)
+            await fakePool.mintLock(owner.address, fakeID, 1, 0, '0x00')
+            await expect(derivable1155.getShadowDecimals(fakeID)).to.be.revertedWith('NOT_A_DERIVABLE_TOKEN')
         })
 
         it("Token name (symbol)", async function () {
@@ -78,7 +111,9 @@ describe("Shadow metadata spec", function () {
         it("Token metadata", async function () {
             const {
                 derivablePools,
-                derivable1155
+                derivable1155,
+                owner,
+                fakePool
             } = await loadFixture(fixture)
             
             const derivablePool = derivablePools[0].contract
@@ -111,6 +146,11 @@ describe("Shadow metadata spec", function () {
             expect(decodeDataURI(lpMetadata).description).to.be.equals('This is a Derivable Liquidity Provider token for the WETH/USDC x2.5 pool at '
                 + derivablePool.address.toLowerCase() + ' with WETH as the reserve token.')
             expect(decodeDataURI(lpMetadata).image.substring(26)).to.be.equals(Buffer.from(logosvg).toString('base64'))
+
+            // mint fake token
+            const fakeID = packId(SIDE_A, fakePool.address)
+            await fakePool.mintLock(owner.address, fakeID, 1, 0, '0x00')
+            await expect(derivable1155.uri(fakeID)).to.be.revertedWith('NOT_A_DERIVABLE_TOKEN')
         })
 
         it("Descriptor can only be set by setter", async function () {

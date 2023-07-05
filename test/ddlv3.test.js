@@ -92,10 +92,10 @@ describe("DDL v3", function () {
             expect(await derivable1155.isApprovedForAll(owner.address, utr.address)).equal(true)
         })
         it("setDescriptorSetter", async function () {
-            const { owner, derivable1155, accountA, accountB, utr } = await loadFixture(fixture)
+            const { derivable1155, accountA, accountB, poolFactory } = await loadFixture(fixture)
             // deploy descriptor
             const TokenDescriptor = await ethers.getContractFactory("TokenDescriptor")
-            const tokenDescriptor = await TokenDescriptor.deploy()
+            const tokenDescriptor = await TokenDescriptor.deploy(poolFactory.address)
             await tokenDescriptor.deployed()
             await expect(derivable1155.connect(accountA).setDescriptorSetter(accountB.address)).to.be.revertedWith("UNAUTHORIZED")
             await expect(derivable1155.connect(accountA).setDescriptor(tokenDescriptor.address)).to.be.revertedWith("UNAUTHORIZED")
