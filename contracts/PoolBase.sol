@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BSL-1.1
 pragma solidity ^0.8.0;
 
+import "@openzeppelin/contracts/utils/math/Math.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
 import "@uniswap/lib/contracts/libraries/TransferHelper.sol";
@@ -170,17 +171,13 @@ abstract contract PoolBase is IPool, ERC1155Holder, Storage, Constants {
         emit Swap(
             payment.payer,
             payment.recipient,
-            _max(param.sideIn, param.sideOut),
+            Math.max(param.sideIn, param.sideOut),
             param.sideIn,
             param.sideOut,
             param.maturity,
             amountIn,
             amountOut
         );
-    }
-
-    function _max(uint a, uint b) internal pure returns (uint) {
-        return a > b ? a : b;
     }
 
     function _swap(Config memory config, Param memory param) internal virtual returns (uint amountIn, uint amountOut);
