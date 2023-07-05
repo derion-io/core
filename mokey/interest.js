@@ -11,6 +11,30 @@ use(solidity)
 const SECONDS_PER_DAY = 86400
 const HLs = [19932680, 1966168] // 0.3%, 3%
 
+var m_w = 123456789;
+var m_z = 987654321;
+var mask = 0xffffffff;
+
+// Takes any integer
+function seed(i) {
+    m_w = (123456789 + i) & mask;
+    m_z = (987654321 - i) & mask;
+}
+
+// Returns number between 0 (inclusive) and 1.0 (exclusive),
+// just like Math.random().
+function random()
+{
+    m_z = (36969 * (m_z & 65535) + (m_z >> 16)) & mask;
+    m_w = (18000 * (m_w & 65535) + (m_w >> 16)) & mask;
+    var result = ((m_z << 16) + (m_w & 65535)) >>> 0;
+    result /= 4294967296;
+    return result;
+}
+
+Math.random = random
+
+seed(0)
 
 function toDailyRate(HALF_LIFE) {
   return HALF_LIFE == 0 ? 0 : 1-2**(-SECONDS_PER_DAY/HALF_LIFE)
@@ -67,7 +91,7 @@ HLs.forEach(HALF_LIFE => {
           } else if (sideRand < 5/9) {
             side = SIDE_C
           } 
-          // console.log(`${i} - ${isBuy ? 'Buy' : 'Sell'} - ${side} - ${amount}`)
+          console.log(`${i} - ${isBuy ? 'Buy' : 'Sell'} - ${side} - ${amount}`)
           if (isBuy) {
             await pool.swap(
               SIDE_R,
@@ -96,7 +120,7 @@ HLs.forEach(HALF_LIFE => {
           
         } else { //change price
           const targetPrice = 1500 + 50 - 100 * Math.random()
-          // console.log(`${i} - change price - from ${currentPrice} - to ${targetPrice}`)
+          console.log(`${i} - change price - from ${currentPrice} - to ${targetPrice}`)
           swapToSetPriceMock({
             quoteToken: usdc,
             baseToken: weth,
