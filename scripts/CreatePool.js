@@ -2,7 +2,7 @@ const { ethers } = require("hardhat")
 const fs = require('fs')
 const path = require('path')
 require('dotenv').config()
-const { bn } = require("../test/shared/utilities")
+const { bn, feeToOpenRate } = require("../test/shared/utilities")
 
 const pe = (x) => ethers.utils.parseEther(String(x))
 const opts = {
@@ -36,8 +36,8 @@ async function main() {
     // mainnet
     // const mark = "0x2D9B0000000000000000000000000"
     // testnet
-    const mark = bn("27293609183235302404845348176478882")
-    const k = 8
+    const mark = bn("3261242127113004532336024318723468369")
+    const k = 7
     const amountInit = pe("0.001")
     const a = pe("0.0004")
     const b = pe("0.0004")
@@ -54,40 +54,35 @@ async function main() {
     const addressList = JSON.parse(fs.readFileSync(addressPath, 'utf8'))
 
     const premiumRate = 0;
-    const minExpirationD = 0;
-    const minExpirationC = 0;
-    const discountRate = 0;
 
-    const params = {
-        utr,
-        token: addressList["token"],
-        oracle,
-        reserveToken: weth,
-        recipient: "0x0af7e6C3dCEd0f86d82229Bd316d403d78F54E07",
-        mark,
-        k,
+    const param = {
+        ORACLE: oracle,
+        TOKEN_R: weth,
+        MARK: mark,
+        K: k,
+        INTEREST_HL: halfLife,
+        PREMIUM_RATE: premiumRate,
+        MATURITY: 0,
+        MATURITY_VEST: 0,
+        MATURITY_RATE: 0,
+        OPEN_RATE: feeToOpenRate(0),
+    }
+    const state = {
+        R: amountInit,
         a,
-        b,
-        initTime,
-        halfLife,
-        premiumRate,
-        minExpirationD,
-        minExpirationC,
-        discountRate
+        b
     }
 
-    console.log(params)
+    console.log(param)
+    console.log(state)
     // Create Pool
-    const stateCalHelper = await ethers.getContractAt("contracts/Helper.sol:Helper", addressList["stateCalHelper"])
-    await stateCalHelper.callStatic.createPool(params, addressList["poolFactory"], {value: amountInit, ...opts})
-    const deployTx = await stateCalHelper.createPool(params, addressList["poolFactory"], {value: amountInit, ...opts})
-    console.log("Tx: ", deployTx.hash)
-    await deployTx.wait(1)
-
-    const poolFactory = await ethers.getContractAt("PoolFactory", addressList["poolFactory"])
-    const poolAddress = await poolFactory.computePoolAddress(params)
+    const poolFactory = await ethers.getContractAt("contracts/PoolFactory.sol:PoolFactory", addressList["poolFactory"])
+    await poolFactory.callStatic.createPool(param)
+    const tx = await poolFactory.createPool(param)
+    const receipt = await tx.wait()
+    const poolAddress = ethers.utils.getAddress('0x' + receipt.logs[0].data.slice(-40))
     console.log(`pool: ${poolAddress}`)
-    addressList["pool^4"] = poolAddress
+    addressList["pool^3.5"] = poolAddress
     exportData(addressList)
 }
 
