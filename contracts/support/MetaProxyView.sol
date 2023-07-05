@@ -1,22 +1,13 @@
 // SPDX-License-Identifier: CC0-1.0
 pragma solidity ^0.8.0;
 
-library MetaProxyFactory {
-  /// @dev Creates a proxy for `targetContract` with metadata from `metadata`.
-  /// @return A non-zero address if successful.
-  function metaProxyFromBytes (address targetContract, bytes memory metadata) internal returns (address) {
-    uint256 ptr;
+library MetaProxyView {
+  function computeBytecodeHash(address targetContract, bytes memory metadata) internal pure returns (bytes32 bytecodeHash) {
+    uint256 offset;
+    uint256 length = metadata.length;
     assembly {
-      ptr := add(metadata, 32)
-    }
-    return metaProxyFromMemory(targetContract, ptr, metadata.length);
-  }
+      offset := add(metadata, 32)
 
-  /// @dev Creates a new proxy for `targetContract` with metadata from memory starting at `offset` and `length` bytes.
-  /// @return addr A non-zero address if successful.
-  function metaProxyFromMemory (address targetContract, uint256 offset, uint256 length) internal returns (address addr) {
-    // the following assembly code (init code + contract code) constructs a metaproxy.
-    assembly {
       // load free memory pointer as per solidity convention
       let start := mload(64)
       // keep a copy
@@ -47,7 +38,7 @@ library MetaProxyFactory {
       ptr := add(ptr, 32)
 
       // The size is deploy code + contract code + calldatasize - 4 + 32.
-      addr := create2(0, start, sub(ptr, start), 0)
+      bytecodeHash := keccak256(start, sub(ptr, start))
     }
   }
 }

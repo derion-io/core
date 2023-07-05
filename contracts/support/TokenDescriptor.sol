@@ -6,7 +6,7 @@ import "@openzeppelin/contracts/utils/Base64.sol";
 import "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 import "@openzeppelin/contracts/utils/Create2.sol";
 
-import "../libs/MetaProxyFactory.sol";
+import "./MetaProxyView.sol";
 import "../interfaces/IPool.sol";
 import "../interfaces/ITokenDescriptor.sol";
 import "../interfaces/IPoolFactory.sol";
@@ -180,7 +180,7 @@ contract TokenDescriptor is ITokenDescriptor {
 
     function _computePoolAddress(Config memory config) private view returns (address pool) {
         bytes memory input = abi.encode(config);
-        bytes32 bytecodeHash = MetaProxyFactory.computeBytecodeHash(IPoolFactory(POOL_FACTORY).LOGIC(), input);
+        bytes32 bytecodeHash = MetaProxyView.computeBytecodeHash(IPoolFactory(POOL_FACTORY).LOGIC(), input);
         return Create2.computeAddress(0, bytecodeHash, POOL_FACTORY);
     }
 }
