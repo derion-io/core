@@ -4,41 +4,52 @@ import "@openzeppelin/contracts/utils/Strings.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import "@openzeppelin/contracts/utils/Base64.sol";
 import "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
+import "@openzeppelin/contracts/utils/Create2.sol";
 
+import "../libs/MetaProxyFactory.sol";
 import "../interfaces/IPool.sol";
 import "../interfaces/ITokenDescriptor.sol";
+import "../interfaces/IPoolFactory.sol";
 
 contract TokenDescriptor is ITokenDescriptor {
     uint internal constant SIDE_A = 0x10;
     uint internal constant SIDE_B = 0x20;
     uint internal constant SIDE_C = 0x30;
 
-    function getName(uint id) public view virtual override returns (string memory) {
+    address internal immutable POOL_FACTORY;
+
+    constructor(address poolFactory) {
+        POOL_FACTORY = poolFactory;
+    }
+
+    modifier onlyDerivableToken(uint id) {
+        address pool = address(uint160(id));
+        require(_computePoolAddress(IPool(pool).loadConfig()) == pool, "NOT_A_DERIVABLE_TOKEN");
+        _;
+    }
+
+    function getName(uint id) public view virtual override onlyDerivableToken(id) returns (string memory) {
         address pool = address(uint160(id));
         bytes32 oracle = IPool(pool).loadConfig().ORACLE;
         (address base, address quote) = _getBaseQuote(oracle);
-
         uint side = id >> 160;
-
         return _getName(base, quote, pool, side);
     }
 
-    function getSymbol(uint id) public view virtual override returns (string memory) {
+    function getSymbol(uint id) public view virtual override onlyDerivableToken(id) returns (string memory) {
         address pool = address(uint160(id));
         bytes32 oracle = IPool(pool).loadConfig().ORACLE;
         (address base, address quote) = _getBaseQuote(oracle);
-
         uint side = id >> 160;
-
         return _getSymbol(base, quote, pool, side);
     }
 
-    function getDecimals(uint id) public view virtual override returns (uint8) {
+    function getDecimals(uint id) public view virtual override onlyDerivableToken(id) returns (uint8) {
         address pool = address(uint160(id));
         return IERC20Metadata(IPool(pool).loadConfig().TOKEN_R).decimals();
     }
 
-    function constructMetadata(uint id) public view virtual override returns (string memory) {
+    function constructMetadata(uint id) public view virtual override onlyDerivableToken(id) returns (string memory) {
         address pool = address(uint160(id));
         bytes32 oracle = IPool(pool).loadConfig().ORACLE;
         (address base, address quote) = _getBaseQuote(oracle);
@@ -165,5 +176,11 @@ contract TokenDescriptor is ITokenDescriptor {
                     '</svg>'
                 )
             );
+    }
+
+    function _computePoolAddress(Config memory config) private view returns (address pool) {
+        bytes memory input = abi.encode(config);
+        bytes32 bytecodeHash = MetaProxyFactory.computeBytecodeHash(IPoolFactory(POOL_FACTORY).LOGIC(), input);
+        return Create2.computeAddress(0, bytecodeHash, POOL_FACTORY);
     }
 }

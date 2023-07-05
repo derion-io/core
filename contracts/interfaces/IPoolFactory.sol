@@ -5,4 +5,5 @@ import "./IPool.sol";
 
 interface IPoolFactory {
     function createPool(Config memory config) external returns (address pool);
+    function LOGIC() external view returns (address);
 }
