@@ -2,17 +2,18 @@ const fs = require('fs')
 const path = require('path')
 
 const opts = {
-    gasLimit: 30000000
+    gasLimit: 20000000
 }
 
 // mainnet arb
-// const weth = '0x82aF49447D8a07e3bd95BD0d56f35241523fBab1'
-// const utr = '0xbc9a257e43f7b3b1a03aEBE909f15e95A4928834'
+const weth = '0x82aF49447D8a07e3bd95BD0d56f35241523fBab1'
+const utr = '0xbc9a257e43f7b3b1a03aEBE909f15e95A4928834'
+const admin = '0xFf6a4D6C03750c0d6449cCF3fF21e1E085c8f26b'
 
 // testnet arb
-const weth = '0xe39Ab88f8A4777030A534146A9Ca3B52bd5D43A3'
-const utr = '0xbc9a257e43f7b3b1a03aEBE909f15e95A4928834'
-const admin = '0x0af7e6C3dCEd0f86d82229Bd316d403d78F54E07'
+// const weth = '0xe39Ab88f8A4777030A534146A9Ca3B52bd5D43A3'
+// const utr = '0xbc9a257e43f7b3b1a03aEBE909f15e95A4928834'
+// const admin = '0x0af7e6C3dCEd0f86d82229Bd316d403d78F54E07'
 
 const singletonFactoryAddress = '0xce0042B868300000d44A59004Da54A005ffdcf9f'
 
@@ -43,16 +44,7 @@ task('deployPoolFactory', 'Use SingletonFatory to deploy PoolFactory contract')
                 ['bytes', 'bytes'],
                 [byteCode, params]
             )
-            try {
-                const deployTx = await contractWithSigner.deploy(initBytecode, saltHex, opts)
-                console.log('Tx: ', deployTx.hash)
-                const res = await deployTx.wait(1)
-                console.log('Result: ', res)
-            } catch (error) {
-                console.log('Error: ', error)
-            }
             // compute address
-        
             const initCodeHash = ethers.utils.keccak256(initBytecode)
             const address = ethers.utils.getCreate2Address(
                 singletonFactoryAddress,
@@ -61,8 +53,21 @@ task('deployPoolFactory', 'Use SingletonFatory to deploy PoolFactory contract')
             )
             console.log(`poolFactory: ${address}`)
             addressList['poolFactory'] = address
-
-            exportData(addressList, taskArgs.addr)
+            const byteCodeOfFinalAddress = await provider.getCode(address)
+            if (byteCodeOfFinalAddress == '0x') {
+                await contractWithSigner.callStatic.deploy(initBytecode, saltHex, opts)
+                try {
+                    const deployTx = await contractWithSigner.deploy(initBytecode, saltHex, opts)
+                    console.log('Tx: ', deployTx.hash)
+                    const res = await deployTx.wait(1)
+                    console.log('Result: ', res)
+                } catch (error) {
+                    console.log('Error: ', error)
+                }
+                exportData(addressList, taskArgs.addr)
+            } else {
+                return
+            }
         }
     )
 
@@ -84,25 +89,16 @@ task('deployLogic', 'Use SingletonFatory to deploy Logic contract')
 
             const addressPath = path.join(__dirname, `./json/${taskArgs.addr}.json`)
             const addressList = JSON.parse(fs.readFileSync(addressPath, 'utf8'))
-            const feeReceiver = admin
-            const feeRate = 12
+            const feeRate = 5
 
             const params = ethers.utils.defaultAbiCoder.encode(
                 ['address', 'address', 'uint256'],
-                [addressList['token'], feeReceiver, feeRate]
+                [addressList['token'], addressList["feeReceiver"], feeRate]
             )
             const initBytecode = ethers.utils.solidityPack(
                 ['bytes', 'bytes'],
                 [byteCode, params]
             )
-            try {
-                const deployTx = await contractWithSigner.deploy(initBytecode, saltHex, opts)
-                console.log('Tx: ', deployTx.hash)
-                const res = await deployTx.wait(1)
-                console.log('Result: ', res)
-            } catch (error) {
-                console.log('Error: ', error)
-            }
             // compute address
             const initCodeHash = ethers.utils.keccak256(initBytecode)
             const address = ethers.utils.getCreate2Address(
@@ -112,8 +108,21 @@ task('deployLogic', 'Use SingletonFatory to deploy Logic contract')
             )
             console.log(`logic: ${address}`)
             addressList['logic'] = address
-
-            exportData(addressList, taskArgs.addr)
+            const byteCodeOfFinalAddress = await provider.getCode(address)
+            if (byteCodeOfFinalAddress == '0x') {
+                await contractWithSigner.callStatic.deploy(initBytecode, saltHex, opts)
+                try {
+                    const deployTx = await contractWithSigner.deploy(initBytecode, saltHex, opts)
+                    console.log('Tx: ', deployTx.hash)
+                    const res = await deployTx.wait(1)
+                    console.log('Result: ', res)
+                } catch (error) {
+                    console.log('Error: ', error)
+                }
+                exportData(addressList, taskArgs.addr)
+            } else {
+                return
+            }
         }
     )
 
@@ -131,15 +140,15 @@ task('deployFeeReceiver', 'Use SingletonFatory to deploy FeeReceiver contract')
             const contract = new ethers.Contract(singletonFactoryAddress, SingletonFactoryABI, provider)
             const wallet = new ethers.Wallet(account, provider)
             const contractWithSigner = contract.connect(wallet)
-            const initBytecode = require('../artifacts/contracts/support/FeeReceiver.sol/FeeReceiver.json').bytecode
-            try {
-                const deployTx = await contractWithSigner.deploy(initBytecode, saltHex, opts)
-                console.log('Tx: ', deployTx.hash)
-                const res = await deployTx.wait(1)
-                console.log('Result: ', res)
-            } catch (error) {
-                console.log('Error: ', error)
-            }
+            const byteCode = require('../artifacts/contracts/support/FeeReceiver.sol/FeeReceiver.json').bytecode
+            const params = ethers.utils.defaultAbiCoder.encode(
+                ['address'],
+                [admin]
+            )
+            const initBytecode = ethers.utils.solidityPack(
+                ['bytes', 'bytes'],
+                [byteCode, params]
+            )
             // compute address
             const addressPath = path.join(__dirname, `./json/${taskArgs.addr}.json`)
             const addressList = JSON.parse(fs.readFileSync(addressPath, 'utf8'))
@@ -151,8 +160,21 @@ task('deployFeeReceiver', 'Use SingletonFatory to deploy FeeReceiver contract')
             )
             console.log(`feeReceiver: ${address}`)
             addressList['feeReceiver'] = address
-
-            exportData(addressList, taskArgs.addr)
+            const byteCodeOfFinalAddress = await provider.getCode(address)
+            if (byteCodeOfFinalAddress == '0x') {
+                await contractWithSigner.callStatic.deploy(initBytecode, saltHex, opts)
+                try {
+                    const deployTx = await contractWithSigner.deploy(initBytecode, saltHex, opts)
+                    console.log('Tx: ', deployTx.hash)
+                    const res = await deployTx.wait(1)
+                    console.log('Result: ', res)
+                } catch (error) {
+                    console.log('Error: ', error)
+                }
+                exportData(addressList, taskArgs.addr)
+            } else {
+                return
+            }
         }
     )
 
@@ -171,14 +193,6 @@ task('deployTokenDescriptor', 'Use SingletonFatory to deploy TokenDescriptor con
             const wallet = new ethers.Wallet(account, provider)
             const contractWithSigner = contract.connect(wallet)
             const initBytecode = require('../artifacts/contracts/support/TokenDescriptor.sol/TokenDescriptor.json').bytecode
-            try {
-                const deployTx = await contractWithSigner.deploy(initBytecode, saltHex, opts)
-                console.log('Tx: ', deployTx.hash)
-                const res = await deployTx.wait(1)
-                console.log('Result: ', res)
-            } catch (error) {
-                console.log('Error: ', error)
-            }
             // compute address
             const addressPath = path.join(__dirname, `./json/${taskArgs.addr}.json`)
             const addressList = JSON.parse(fs.readFileSync(addressPath, 'utf8'))
@@ -190,8 +204,21 @@ task('deployTokenDescriptor', 'Use SingletonFatory to deploy TokenDescriptor con
             )
             console.log(`tokenDescriptor: ${address}`)
             addressList['tokenDescriptor'] = address
-
-            exportData(addressList, taskArgs.addr)
+            const byteCodeOfFinalAddress = await provider.getCode(address)
+            if (byteCodeOfFinalAddress == '0x') {
+                await contractWithSigner.callStatic.deploy(initBytecode, saltHex, opts)
+                try {
+                    const deployTx = await contractWithSigner.deploy(initBytecode, saltHex, opts)
+                    console.log('Tx: ', deployTx.hash)
+                    const res = await deployTx.wait(1)
+                    console.log('Result: ', res)
+                } catch (error) {
+                    console.log('Error: ', error)
+                }
+                exportData(addressList, taskArgs.addr)
+            } else {
+                return
+            }
         }
     )
 
@@ -222,14 +249,6 @@ task('deployToken', 'Use SingletonFatory to deploy Token contract')
                 ['bytes', 'bytes'],
                 [byteCode, params]
             )
-            try {
-                const deployTx = await contractWithSigner.deploy(initBytecode, saltHex, opts)
-                console.log('Tx: ', deployTx.hash)
-                const res = await deployTx.wait(1)
-                console.log('Result: ', res)
-            } catch (error) {
-                console.log('Error: ', error)
-            }
             // compute address
             const initCodeHash = ethers.utils.keccak256(initBytecode)
             const address = ethers.utils.getCreate2Address(
@@ -239,8 +258,20 @@ task('deployToken', 'Use SingletonFatory to deploy Token contract')
             )
             console.log(`token: ${address}`)
             addressList['token'] = address
-
-            exportData(addressList, taskArgs.addr)
+            const byteCodeOfFinalAddress = await provider.getCode(address)
+            if (byteCodeOfFinalAddress == '0x') {
+                try {
+                    const deployTx = await contractWithSigner.deploy(initBytecode, saltHex, opts)
+                    console.log('Tx: ', deployTx.hash)
+                    const res = await deployTx.wait(1)
+                    console.log('Result: ', res)
+                } catch (error) {
+                    console.log('Error: ', error)
+                }
+                exportData(addressList, taskArgs.addr)
+            } else {
+                return
+            }
         }
     )
 
@@ -271,15 +302,6 @@ task('deployHelper', 'Use SingletonFatory to deploy Helper contract')
                 ['bytes', 'bytes'],
                 [byteCode, params]
             )
-
-            try {
-                const deployTx = await contractWithSigner.deploy(initBytecode, saltHex, opts)
-                console.log('Tx: ', deployTx.hash)
-                const res = await deployTx.wait(1)
-                console.log('Result: ', res)
-            } catch (error) {
-                console.log('Error: ', error)
-            }
             // compute address
             const initCodeHash = ethers.utils.keccak256(initBytecode)
             const address = ethers.utils.getCreate2Address(
@@ -289,8 +311,21 @@ task('deployHelper', 'Use SingletonFatory to deploy Helper contract')
             )
             console.log(`stateCalHelper: ${address}`)
             addressList['stateCalHelper'] = address
-
-            exportData(addressList, taskArgs.addr)
+            const byteCodeOfFinalAddress = await provider.getCode(address)
+            if (byteCodeOfFinalAddress == '0x') {
+                // await contractWithSigner.callStatic.deploy(initBytecode, saltHex, opts)
+                try {
+                    const deployTx = await contractWithSigner.deploy(initBytecode, saltHex, opts)
+                    console.log('Tx: ', deployTx.hash)
+                    const res = await deployTx.wait(1)
+                    console.log('Result: ', res)
+                } catch (error) {
+                    console.log('Error: ', error)
+                }
+                exportData(addressList, taskArgs.addr)
+            } else {
+                return
+            }
         }
     )
 

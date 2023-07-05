@@ -8,7 +8,7 @@ const opts = {
 }
 
 async function main() {
-    const addressPath = path.join(__dirname, `./json/ARBTestnet.json`)
+    const addressPath = path.join(__dirname, `./json/ARBMainnet.json`)
     const addressList = JSON.parse(fs.readFileSync(addressPath, 'utf8'))
 
     // ganache
@@ -17,14 +17,14 @@ async function main() {
     // const pairETHUSDC = "0xBf4CC059DfF52AeFe7f12516e4CA4Bc691D97474"
 
     // testnet
-    const qti = 0
-    const windowTime = 60
-    const pairETHUSDC = "0x12B2483ADd89741e89C25F2E1C798F9fe8EF7664"
+    // const qti = 0
+    // const windowTime = 60
+    // const pairETHUSDC = "0x12B2483ADd89741e89C25F2E1C798F9fe8EF7664"
 
     // mainnet
-    // const qti = 1
-    // const windowTime = 60
-    // const pairETHUSDC = "0xC31E54c7a869B9FcBEcc14363CF510d1c41fa443"
+    const qti = 1
+    const windowTime = 60
+    const pairETHUSDC = "0xC31E54c7a869B9FcBEcc14363CF510d1c41fa443"
 
     const oracle = ethers.utils.hexZeroPad(
         bn(qti).shl(255).add(bn(windowTime).shl(256 - 64)).add(pairETHUSDC).toHexString(),
