@@ -5,36 +5,18 @@ const { baseParams } = require("../test/shared/baseParams")
 const { SIDE_R, SIDE_C, SIDE_A, SIDE_B } = require("../test/shared/constant")
 const { loadFixtureFromParams } = require("../test/shared/scenerios")
 const { bn, numberToWei, swapToSetPriceMock, packId, weiToNumber } = require("../test/shared/utilities")
+const seedrandom = require('seedrandom');
+const { ethers } = require("hardhat");
+
+// Global PRNG: set Math.random.
+const seed = ethers.utils.randomBytes(32)
+console.log('Random Seed:', ethers.utils.hexlify(seed))
+seedrandom(seed, { global: true });
 
 use(solidity)
 
 const SECONDS_PER_DAY = 86400
 const HLs = [19932680, 1966168] // 0.3%, 3%
-
-var m_w = 123456789;
-var m_z = 987654321;
-var mask = 0xffffffff;
-
-// Takes any integer
-function seed(i) {
-    m_w = (123456789 + i) & mask;
-    m_z = (987654321 - i) & mask;
-}
-
-// Returns number between 0 (inclusive) and 1.0 (exclusive),
-// just like Math.random().
-function random()
-{
-    m_z = (36969 * (m_z & 65535) + (m_z >> 16)) & mask;
-    m_w = (18000 * (m_w & 65535) + (m_w >> 16)) & mask;
-    var result = ((m_z << 16) + (m_w & 65535)) >>> 0;
-    result /= 4294967296;
-    return result;
-}
-
-Math.random = random
-
-seed(0)
 
 function toDailyRate(HALF_LIFE) {
   return HALF_LIFE == 0 ? 0 : 1-2**(-SECONDS_PER_DAY/HALF_LIFE)
