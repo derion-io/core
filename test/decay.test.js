@@ -49,10 +49,9 @@ HLs.forEach(HALF_LIFE => {
         )
         await derivableHelper.deployed()
 
-        const A_ID = packId(0x10, pool.contract.address);
-        const B_ID = packId(0x20, pool.contract.address);
-        const R_ID = packId(0x00, pool.contract.address);
-        const C_ID = packId(0x30, pool.contract.address);
+        const A_ID = packId(SIDE_A, pool.contract.address);
+        const B_ID = packId(SIDE_B, pool.contract.address);
+        const C_ID = packId(SIDE_C, pool.contract.address);
 
         txSignerA = weth.connect(accountA);
         txSignerB = weth.connect(accountB);
@@ -66,8 +65,8 @@ HLs.forEach(HALF_LIFE => {
         txSignerB = pool.connect(accountB);
         
         await txSignerA.swap(
-          0x00,
-          0x30,
+          SIDE_R,
+          SIDE_C,
           numberToWei(1),
           0,
           {
@@ -77,8 +76,8 @@ HLs.forEach(HALF_LIFE => {
 
         async function swapAndWait(period, waitingTime, amountA, amountB) {
           await txSignerA.swap(
-            0x00,
-            0x10,
+            SIDE_R,
+            SIDE_A,
             amountA,
             0,
             {
@@ -86,8 +85,8 @@ HLs.forEach(HALF_LIFE => {
             }
           )
           await txSignerB.swap(
-            0x00,
-            0x20,
+            SIDE_R,
+            SIDE_B,
             amountB,
             0,
             {
@@ -97,15 +96,15 @@ HLs.forEach(HALF_LIFE => {
           const aTokenAmount = await derivable1155.balanceOf(accountA.address, A_ID)
           const bTokenAmount = await derivable1155.balanceOf(accountB.address, B_ID)
           const aFirstBefore = await txSignerA.swap(
-            0x10,
-            0x00,
+            SIDE_A,
+            SIDE_R,
             aTokenAmount,
             0,
             { static: true, recipient: accountA.address }
           )
           const bFirstBefore = await txSignerB.swap(
-            0x20,
-            0x00,
+            SIDE_B,
+            SIDE_R,
             bTokenAmount,
             0,
             { static: true, recipient: accountB.address }
@@ -114,15 +113,15 @@ HLs.forEach(HALF_LIFE => {
             await time.increase(period)
           
           const aFirstAfter = await txSignerA.swap(
-            0x10,
-            0x00,
+            SIDE_A,
+            SIDE_R,
             aTokenAmount,
             0,
             { static: true, recipient: accountA.address }
           )
           const bFirstAfter = await txSignerB.swap(
-            0x20,
-            0x00,
+            SIDE_B,
+            SIDE_R,
             bTokenAmount,
             0,
             { static: true, recipient: accountB.address }
@@ -131,15 +130,15 @@ HLs.forEach(HALF_LIFE => {
           if (waitingTime > 0)
             await time.increase(waitingTime)
           const aSecondBefore = await txSignerA.swap(
-            0x10,
-            0x00,
+            SIDE_A,
+            SIDE_R,
             aTokenAmount,
             0,
             { static: true, recipient: accountA.address }
           )
           const bSecondBefore = await txSignerB.swap(
-            0x20,
-            0x00,
+            SIDE_B,
+            SIDE_R,
             bTokenAmount,
             0,
             { static: true, recipient: accountB.address }
@@ -147,15 +146,15 @@ HLs.forEach(HALF_LIFE => {
           if (period > 0)
             await time.increase(period)
           const aSecondAfter = await txSignerA.swap(
-            0x10,
-            0x00,
+            SIDE_A,
+            SIDE_R,
             aTokenAmount,
             0,
             { static: true, recipient: accountA.address }
           )
           const bSecondAfter = await txSignerB.swap(
-            0x20,
-            0x00,
+            SIDE_B,
+            SIDE_R,
             bTokenAmount,
             0,
             { static: true, recipient: accountB.address }
@@ -185,8 +184,8 @@ HLs.forEach(HALF_LIFE => {
           await txSignerA.approve(utr.address, ethers.constants.MaxUint256)
           txSignerA = utr.connect(accountA);
           const pTxA = await pool.connect(accountA).swap(
-            0x00,
-            0x10,
+            SIDE_R,
+            SIDE_A,
             amountA,
             0,
             {
@@ -213,8 +212,8 @@ HLs.forEach(HALF_LIFE => {
                 inputs: [],
                 code: derivableHelper.address,
                 data: (await derivableHelper.populateTransaction.swapInAll(
-                  0x10,
-                  0x00,
+                  SIDE_A,
+                  SIDE_R,
                   0,
                   ethers.constants.AddressZero,
                   accountA.address
@@ -229,8 +228,8 @@ HLs.forEach(HALF_LIFE => {
           await txSignerB.approve(utr.address, ethers.constants.MaxUint256)
           txSignerB = utr.connect(accountB);
           const pTxB = await pool.connect(accountB).swap(
-            0x00,
-            0x20,
+            SIDE_R,
+            SIDE_B,
             amountB,
             0,
             {
@@ -257,8 +256,8 @@ HLs.forEach(HALF_LIFE => {
                 inputs: [],
                 code: derivableHelper.address,
                 data: (await derivableHelper.populateTransaction.swapInAll(
-                  0x20,
-                  0x00,
+                  SIDE_B,
+                  SIDE_R,
                   0,
                   ethers.constants.AddressZero,
                   accountB.address
@@ -276,8 +275,8 @@ HLs.forEach(HALF_LIFE => {
           await txSignerA.approve(utr.address, ethers.constants.MaxUint256)
           txSignerA = utr.connect(accountA);
           const ptxAmountB = await pool.connect(accountA).swap(
-            0x00,
-            0x20,
+            SIDE_R,
+            SIDE_B,
             amountB,
             0,
             {
@@ -287,8 +286,8 @@ HLs.forEach(HALF_LIFE => {
             }
           )
           const ptxAmountA = await pool.connect(accountA).swap(
-            0x00,
-            0x10,
+            SIDE_R,
+            SIDE_A,
             amountA,
             0,
             {
@@ -327,8 +326,8 @@ HLs.forEach(HALF_LIFE => {
                 inputs: [],
                 code: derivableHelper.address,
                 data: (await derivableHelper.populateTransaction.swapInAll(
-                  0x10,
-                  0x00,
+                  SIDE_A,
+                  SIDE_R,
                   0,
                   ethers.constants.AddressZero,
                   accountA.address
@@ -338,8 +337,8 @@ HLs.forEach(HALF_LIFE => {
                 inputs: [],
                 code: derivableHelper.address,
                 data: (await derivableHelper.populateTransaction.swapInAll(
-                  0x20,
-                  0x00,
+                  SIDE_B,
+                  SIDE_R,
                   0,
                   ethers.constants.AddressZero,
                   accountB.address
@@ -357,30 +356,30 @@ HLs.forEach(HALF_LIFE => {
         async function instantSwapBackNonUTR(amountA, amountB) {
           txSignerA = pool.connect(accountA)
           await txSignerA.swap(
-            0x00,
-            0x10,
+            SIDE_R,
+            SIDE_A,
             amountA,
             0
           )
           const aTokenAmount = await derivable1155.balanceOf(accountA.address, A_ID)
           const valueA = await txSignerA.swap(
-            0x10,
-            0x00,
+            SIDE_A,
+            SIDE_R,
             aTokenAmount,
             0,
             { static: true }
           )
           txSignerB = pool.connect(accountB)
           await txSignerB.swap(
-            0x00,
-            0x20,
+            SIDE_R,
+            SIDE_B,
             amountB,
             0
           )
           const bTokenAmount = await derivable1155.balanceOf(accountB.address, B_ID)
           const valueB = await txSignerB.swap(
-            0x20,
-            0x00,
+            SIDE_B,
+            SIDE_R,
             bTokenAmount,
             0,
             { static: true }
@@ -392,16 +391,16 @@ HLs.forEach(HALF_LIFE => {
         async function swapBackInAHalfLife(amountA, amountB, caseName) {
           txSignerA = pool.connect(accountA)
           await txSignerA.swap(
-            0x00,
-            0x10,
+            SIDE_R,
+            SIDE_A,
             amountA,
             0,
             { recipient: accountA.address }
           )
           txSignerB = pool.connect(accountB)
           await txSignerB.swap(
-            0x00,
-            0x20,
+            SIDE_R,
+            SIDE_B,
             amountB,
             0,
             { recipient: accountB.address }
@@ -410,15 +409,15 @@ HLs.forEach(HALF_LIFE => {
           const aTokenAmount = await derivable1155.balanceOf(accountA.address, A_ID)
           const bTokenAmount = await derivable1155.balanceOf(accountB.address, B_ID)
           const valueABefore = await txSignerA.swap(
-            0x10,
-            0x00,
+            SIDE_A,
+            SIDE_R,
             aTokenAmount,
             0,
             { static: true, recipient: accountA.address }
           )
           const valueBBefore = await txSignerB.swap(
-            0x20,
-            0x00,
+            SIDE_B,
+            SIDE_R,
             bTokenAmount,
             0,
             { static: true, recipient: accountB.address }
@@ -426,15 +425,15 @@ HLs.forEach(HALF_LIFE => {
           if (HALF_LIFE > 0)
             await time.increase(HALF_LIFE)
           const valueAAfter = await txSignerA.swap(
-            0x10,
-            0x00,
+            SIDE_A,
+            SIDE_R,
             aTokenAmount,
             0,
             { static: true, recipient: accountA.address }
           )
           const valueBAfter = await txSignerB.swap(
-            0x20,
-            0x00,
+            SIDE_B,
+            SIDE_R,
             bTokenAmount,
             0,
             { static: true, recipient: accountB.address }
@@ -465,15 +464,15 @@ HLs.forEach(HALF_LIFE => {
           txSignerB = pool.connect(accountB)
 
           await txSignerA.swap(
-            0x00,
-            0x10,
+            SIDE_R,
+            SIDE_A,
             amountA,
             0,
             { recipient: accountA.address }
           )
           await txSignerB.swap(
-            0x00,
-            0x20,
+            SIDE_R,
+            SIDE_B,
             amountB,
             0,
             { recipient: accountB.address }
@@ -483,15 +482,15 @@ HLs.forEach(HALF_LIFE => {
           const bTokenAmount = await derivable1155.balanceOf(accountB.address, B_ID)
           
           const valueABefore = await txSignerA.swap(
-            0x10,
-            0x00,
+            SIDE_A,
+            SIDE_R,
             aTokenAmount,
             0,
             { static: true, recipient: accountA.address }
           )
           const valueBBefore = await txSignerB.swap(
-            0x20,
-            0x00,
+            SIDE_B,
+            SIDE_R,
             aTokenAmount,
             0,
             { static: true, recipient: accountB.address }
@@ -505,15 +504,15 @@ HLs.forEach(HALF_LIFE => {
           const bBefore = await weth.balanceOf(accountB.address)
 
           await txSignerA.swap(
-            0x10,
-            0x00,
+            SIDE_A,
+            SIDE_R,
             aTokenAmount,
             0,
             { recipient: accountA.address }
           )
           await txSignerB.swap(
-            0x20,
-            0x00,
+            SIDE_B,
+            SIDE_R,
             bTokenAmount,
             0,
             { recipient: accountB.address }
@@ -588,8 +587,8 @@ HLs.forEach(HALF_LIFE => {
           config,
           state,
           {min: oraclePrice.spot, max: oraclePrice.twap},
-          0x00,
-          0x20,
+          SIDE_R,
+          SIDE_B,
           bn(await time.latest())
         )
         const totalSupply = await derivable1155.totalSupply(C_ID)
@@ -598,8 +597,8 @@ HLs.forEach(HALF_LIFE => {
 
         const positionReserved = eval.rA.add(eval.rB).add(numberToWei(2))
         const originLPValue = await txSignerA.swap(
-          0x30,
-          0x00,
+          SIDE_C,
+          SIDE_R,
           lpAmount,
           0,
           {
@@ -609,8 +608,8 @@ HLs.forEach(HALF_LIFE => {
         )
         await swapAndRedeemInHalfLife(1, numberToWei(1), numberToWei(1))
         const afterLPValue = await txSignerA.swap(
-          0x30,
-          0x00,
+          SIDE_C,
+          SIDE_R,
           lpAmount,
           0,
           { static: true, recipient: accountA.address }
