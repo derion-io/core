@@ -348,11 +348,10 @@ HLs.forEach(HALF_LIFE => {
             ], opts)
           const afterA = await weth.balanceOf(accountA.address)
           const afterB = await weth.balanceOf(accountB.address)
-          // const changeOfA = beforeA.sub(amountB).sub(afterA)
-          // const changeOfB = afterB.sub(beforeB)
-          // console.log(changeOfA)
-          // console.log(changeOfB)
-          // expect(amountB.gte(changeOfB)).to.be.true
+          const changeOfA = beforeA.sub(afterA)
+          const changeOfB = afterB.sub(beforeB)
+          expect(weiToNumber(amountA)/weiToNumber(changeOfA)).closeTo(1, 0.00000000001)
+          expect(weiToNumber(amountB)/weiToNumber(changeOfB)).closeTo(1, 0.00000000001)
         }
 
         async function instantSwapBackNonUTR(amountA, amountB) {
@@ -637,12 +636,10 @@ HLs.forEach(HALF_LIFE => {
           await swapAndWait(86400, 3.14 * HALF_LIFE, numberToWei(0.5), numberToWei(0.5))
         })
         it("wait, after", async function () {
-          // TODO: Zergity
           const { swapAndRedeemInHalfLife } = await loadFixture(fixture);
-          // await time.increase(3.14 * HALF_LIFE)
           const after = await swapAndRedeemInHalfLife(0, numberToWei(1), numberToWei(1))
-          expect(Number(weiToNumber(after.long))).to.be.closeTo(1, 0.01)
-          expect(Number(weiToNumber(after.short))).to.be.closeTo(1, 0.01)
+          expect(Number(weiToNumber(after.long))).to.be.closeTo(1, 0.0000001)
+          expect(Number(weiToNumber(after.short))).to.be.closeTo(1, 0.0000001)
         })
         it("Open Long does not affect C value", async function() {
           const {pool, derivable1155, owner, C_ID} = await loadFixture(fixture)
@@ -863,7 +860,6 @@ HLs.forEach(HALF_LIFE => {
           const { instantSwapBackUTR } = await loadFixture(fixture)
           await instantSwapBackUTR(numberToWei(0.5), numberToWei(2.5))
         })
-        // TODO: Zergity verify this
         it("Group swap back", async function () {
           const { groupSwapBack } = await loadFixture(fixture)
           await groupSwapBack(numberToWei(2.5), numberToWei(2.5))

@@ -3,7 +3,6 @@ pragma solidity ^0.8.0;
 
 import "@uniswap/lib/contracts/libraries/TransferHelper.sol";
 
-// TODO: whould we implement 777, 721, and 1155  Holder/Receiver interfaces?
 contract FeeReceiver {
     // storage
     address internal s_setter;
@@ -42,7 +41,6 @@ contract FeeReceiver {
         s_collector = collector;
     }
 
-    // TODO: collect all kinds of tokens by passing an eip and id
     function collect(address token, address recipient, uint amount) onlyCollector external {
         if (token == address(0)) {
             TransferHelper.safeTransferETH(recipient, amount);
