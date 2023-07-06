@@ -5,7 +5,7 @@ import "@openzeppelin/contracts/utils/math/Math.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 import "@uniswap/lib/contracts/libraries/TransferHelper.sol";
-import "@derivable/shadow-token/contracts/interfaces/IERC1155Supply.sol";
+import "@derivable/erc1155-maturity/contracts/token/ERC1155/IERC1155Supply.sol";
 
 import "../libs/FullMath.sol";
 import "../subs/Constants.sol";

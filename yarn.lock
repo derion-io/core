@@ -74,11 +74,11 @@
 
 "@derivable/erc1155-maturity@git+ssh://git@github.com:derivable-labs/erc1155-maturity.git":
   version "4.8.2"
-  resolved "git+ssh://git@github.com:derivable-labs/erc1155-maturity.git#1640a5c4770718a5c512cb936032c715fef1c9c8"
+  resolved "git+ssh://git@github.com:derivable-labs/erc1155-maturity.git#fba14233ceac63b88727f0ca573483260d1a45bb"
 
 "@derivable/shadow-token@git+ssh://git@github.com:derivable-labs/shadow-token.git":
   version "1.0.0"
-  resolved "git+ssh://git@github.com:derivable-labs/shadow-token.git#789a1f1038c7ea4aaa2b25f715f585c8d4db851a"
+  resolved "git+ssh://git@github.com:derivable-labs/shadow-token.git#b255de3bc075d8bc4d7c76d87b6d5bde51c05476"
   dependencies:
     "@derivable/erc1155-maturity" "git+ssh://git@github.com:derivable-labs/erc1155-maturity.git"
 

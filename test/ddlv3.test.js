@@ -105,11 +105,11 @@ describe("DDL v3", function () {
         describe("ERC1155SupplyVirtual", function () {
             it("exists", async function () {
                 const { derivable1155, derivablePools} = await loadFixture(fixture)
-                expect(await derivable1155.exists(convertId(SIDE_A, derivablePools[0].contract.address))).equal(true)
-                expect(await derivable1155.exists(convertId(SIDE_B, derivablePools[0].contract.address))).equal(true)
-                expect(await derivable1155.exists(convertId(SIDE_C, derivablePools[0].contract.address))).equal(true)
-                expect(await derivable1155.exists(convertId(SIDE_R, derivablePools[0].contract.address))).equal(false)
-                expect(await derivable1155.exists(0)).equal(false)
+                expect(await derivable1155.totalSupply(convertId(SIDE_A, derivablePools[0].contract.address))).gt(0)
+                expect(await derivable1155.totalSupply(convertId(SIDE_B, derivablePools[0].contract.address))).gt(0)
+                expect(await derivable1155.totalSupply(convertId(SIDE_C, derivablePools[0].contract.address))).gt(0)
+                expect(await derivable1155.totalSupply(convertId(SIDE_R, derivablePools[0].contract.address))).equal(0)
+                expect(await derivable1155.totalSupply(0)).equal(0)
             })
         })
     })
