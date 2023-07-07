@@ -9,7 +9,7 @@ const { loadFixtureFromParams } = require("./shared/scenerios")
 chai.use(solidity)
 const expect = chai.expect
 const { AddressZero, MaxUint256 } = ethers.constants
-const { bn, swapToSetPriceMock, packId } = require("./shared/utilities")
+const { bn, swapToSetPriceMock, packId, numberToWei } = require("./shared/utilities")
 
 const fe = (x) => Number(ethers.utils.formatEther(x))
 const pe = (x) => ethers.utils.parseEther(String(x))
@@ -115,6 +115,56 @@ describe("DDL v3", function () {
     })
 
     describe("Pool", function () {
+        it("Init pool by UTR", async function () {
+            const { owner, weth, utr, params, poolFactory, derivable1155 } = await loadFixture(fixture)
+            const config = {
+                ORACLE: params[0].oracle,
+                TOKEN_R: params[0].reserveToken,
+                MARK: params[0].mark,
+                K: bn(6),
+                INTEREST_HL: params[0].halfLife,
+                PREMIUM_RATE: params[0].premiumRate,
+                MATURITY: params[0].maturity,
+                MATURITY_VEST: params[0].maturityVest,
+                MATURITY_RATE: params[0].maturityRate,
+                OPEN_RATE: params[0].openRate,
+            }
+            const tx = await poolFactory.createPool(config)
+            const receipt = await tx.wait()
+            const poolAddress = ethers.utils.getAddress('0x' + receipt.logs[0].data.slice(-40))
+            expect(await derivable1155.balanceOf(owner.address, convertId(SIDE_A, poolAddress))).equal(0)
+            const initParams = {
+                R: numberToWei(5),
+                a: numberToWei(1),
+                b: numberToWei(1),
+            }
+            const payment = {
+                utr: utr.address,
+                payer: owner.address,
+                recipient: owner.address,
+            }
+            const pool = await ethers.getContractAt("PoolBase", poolAddress)
+            await weth.approve(utr.address, MaxUint256);
+            await utr.exec([],
+            [{
+                inputs: [{
+                    mode: PAYMENT,
+                    eip: 20,
+                    token: weth.address,
+                    id: 0,
+                    amountIn: numberToWei(5),
+                    recipient: poolAddress,
+                }],
+                flags: 0,
+                code: poolAddress,
+                data: (await pool.populateTransaction.init(
+                    initParams,
+                    payment
+                )).data,
+            }])
+            expect(await derivable1155.balanceOf(owner.address, convertId(SIDE_A, poolAddress))).gt(0)
+        })
+
         async function testRIn(sideIn, amountIn, sideOut, isUseUTR) {
             const { owner, weth, derivablePools, utr } = await loadFixture(fixture)
             
