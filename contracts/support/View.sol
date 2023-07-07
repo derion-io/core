@@ -1,160 +1,79 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import "@openzeppelin/contracts/token/ERC1155/extensions/ERC1155Supply.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
-import "../libs/OracleLibrary.sol";
-import "../libs/abdk-consulting/abdk-libraries-solidity/ABDKMath64x64.sol";
-import "../subs/Constants.sol";
-import "../subs/Storage.sol";
+import "../PoolLogic.sol";
 
-interface IERC1155Supply {
-    /**
-     * @dev Total amount of tokens in with a given id.
-     */
-    function totalSupply(uint256 id) external view returns (uint256);
+contract View is PoolLogic {
+    constructor() PoolLogic(
+        address(0), // TOKEN
+        address(0), // FEE_TO
+        5           // FEE_RATE
+    ) {}
 
-    /**
-     * @dev Indicates whether any token exist with a given id, or not.
-     */
-    function exists(uint256 id) external view returns (bool);
-
-    function balanceOf(address account, uint256 id) external view returns (uint256);
-}
-
-contract View is Storage, Constants {
     struct StateView {
+        Config config;
+        State state;
         uint sA;
         uint sB;
         uint sC;
-        uint R;
         uint rA;
         uint rB;
         uint rC;
-        uint a;
-        uint b;
         uint twap;
         uint spot;
-        bytes32 ORACLE;
     }
 
-    struct State {
-        uint R;
-        uint a;
-        uint b;
-    }
+    function getStates(
+        address TOKEN,
+        address pool
+    ) external view returns (StateView memory stateView) {
+        Config memory config = IPool(pool).loadConfig();
+        State memory state = State(_reserve(config.TOKEN_R), s_a, s_b);
 
-
-    struct Market {
-        uint xkA;
-        uint xkB;
-    }
-
-    function _market(
-        uint K,
-        uint MARK,
-        uint decayRateX64,
-        uint price
-    ) internal pure returns (Market memory market) {
-        market.xkA = _powu(FullMath.mulDiv(price, Q128, MARK), K);
-        market.xkB = uint(FullMath.mulDiv(Q256M/market.xkA, Q64, decayRateX64));
-        market.xkA = uint(FullMath.mulDiv(market.xkA, Q64, decayRateX64));
-    }
-
-    function getStates(bytes32 ORACLE, uint MARK, address TOKEN_R, uint k, address TOKEN, uint HALF_LIFE) external view returns (StateView memory states) {
-        states.R = IERC20(TOKEN_R).balanceOf(address(this));
-        states.a = s_a;
-        states.b = s_b;
+        // [INTEREST DECAY]
         {
-            State memory state = State(states.R, states.a, states.b = s_b);
-            uint decayRateX64 = _decayRate(block.timestamp - s_i, HALF_LIFE);
-            (uint min, uint max) = _fetch(ORACLE);
-            if (min > max) {
-                (min, max) = (max, min);
-            }
-            uint rAMax;
-            uint rBMax;
-            (states.rA, rBMax) = _evaluate(_market(k, MARK, decayRateX64, min), state);
-            (rAMax, states.rB) = _evaluate(_market(k, MARK, decayRateX64, max), state);
-            states.rC = (states.rA + rBMax) > (rAMax + states.rB) ?
-            states.R - (states.rA + rBMax) :
-            states.R - (rAMax + states.rB);
-            // states.xkA = market.xkA;
-            // states.xKB = market.xkB;
+            uint interestRateX64 = _expRate(block.timestamp - s_i, config.INTEREST_HL);
+            state.a = FullMath.mulDivRoundingUp(state.a, Q64, interestRateX64);
+            state.b = FullMath.mulDivRoundingUp(state.b, Q64, interestRateX64);
         }
-        states.sA = IERC1155Supply(TOKEN).totalSupply(_packID(address(this), SIDE_A));
-        states.sB = IERC1155Supply(TOKEN).totalSupply(_packID(address(this), SIDE_B));
-        states.sC = IERC1155Supply(TOKEN).totalSupply(_packID(address(this), SIDE_C));
-    }
 
-    function _evaluate(Market memory market, State memory state) internal pure returns (uint rA, uint rB) {
-        rA = _r(market.xkA, state.a, state.R);
-        rB = _r(market.xkB, state.b, state.R);
-    }
+        (uint twap, uint spot) = _fetch(uint(config.ORACLE));
+        (uint rAt, uint rBt) = _evaluate(_xk(config, twap), state);
+        (uint rAs, uint rBs) = _evaluate(_xk(config, spot), state);
 
-    function _decayRate (
-        uint elapsed,
-        uint HALF_LIFE
-    ) internal pure returns (uint rateX64) {
-        if (HALF_LIFE == 0) {
-            return Q64;
+        // [PROTOCOL FEE]
+        uint Rt;
+        (Rt, rAt, rBt) = _applyFee(config.INTEREST_HL, state.R, rAt, rBt);
+        (state.R, rAs, rBs) = _applyFee(config.INTEREST_HL, state.R, rAs, rBs);
+        if (Rt < state.R) {
+            state.R = Rt;
         }
-        int128 rate = ABDKMath64x64.exp_2(int128(int((elapsed << 64) / HALF_LIFE)));
-        return uint(int(rate));
+
+        stateView.rA = Math.min(rAt, rAs);
+        stateView.rB = Math.min(rBt, rBs);
+        stateView.rC = state.R - Math.max(rAt + rBt, rAs + rBs);
+        stateView.sA = _supply(TOKEN, SIDE_A);
+        stateView.sB = _supply(TOKEN, SIDE_B);
+        stateView.sC = _supply(TOKEN, SIDE_C);
     }
 
-    function _fetch(
-        bytes32 ORACLE // 1bit QTI, 31bit reserve, 32bit WINDOW, ... PAIR ADDRESS
-    ) internal view returns (uint twap, uint spot) {
-        address pool = address(uint160(uint(ORACLE)));
-        (uint160 sqrtSpotX96,,,,,,) = IUniswapV3Pool(pool).slot0();
-
-        (int24 arithmeticMeanTick,) = OracleLibrary.consult(pool, uint32(uint(ORACLE) >> 192));
-        uint sqrtTwapX96 = TickMath.getSqrtRatioAtTick(arithmeticMeanTick);
-
-        spot = sqrtSpotX96 << 32;
-        twap = sqrtTwapX96 << 32;
-
-        if (uint(ORACLE) & Q255 == 0) {
-            spot = Q256M / spot;
-            twap = Q256M / twap;
-        }
-    }
-
-    function _packID(address pool, uint side) internal pure returns (uint id) {
-        id = (side << 160) + uint160(pool);
-    }
-
-    function _xk(
-        uint price,
-        uint mark,
-        uint k
-    ) internal pure returns (uint) {
-        uint p = FullMath.mulDiv(price, Q128, mark);
-        return uint(_powu(p, k));
-    }
-
-    function _r(uint xk, uint v, uint R) internal pure returns (uint r) {
-        r = FullMath.mulDiv(v, xk, Q128);
-        if (r > R >> 1) {
-            uint denominator = FullMath.mulDiv(v, xk << 2, Q128);
-            uint minuend = FullMath.mulDiv(R, R, denominator);
-            r = R - minuend;
-        }
-    }
-
-    function _powu(uint x, uint y) internal pure returns (uint z) {
-        // Calculate the first iteration of the loop in advance.
-        z = y & 1 > 0 ? x : Q128;
-        // Equivalent to "for(y /= 2; y > 0; y /= 2)" but faster.
-        for (y >>= 1; y > 0; y >>= 1) {
-            x = FullMath.mulDiv(x, x, Q128);
-            // Equivalent to "y % 2 == 1" but faster.
-            if (y & 1 > 0) {
-                z = FullMath.mulDiv(z, x, Q128);
+    function _applyFee(
+        uint INTEREST_HL,
+        uint R,
+        uint rA,
+        uint rB
+    ) internal view returns (uint, uint, uint) {
+        uint32 elapsed = uint32(block.timestamp & F_MASK) - (s_f & F_MASK);
+        if (elapsed > 0) {
+            uint feeRateX64 = _expRate(elapsed, INTEREST_HL * FEE_RATE);
+            uint rAF = FullMath.mulDivRoundingUp(rA, Q64, feeRateX64);
+            uint rBF = FullMath.mulDivRoundingUp(rB, Q64, feeRateX64);
+            if (rAF < rA || rBF < rB) {
+                uint fee = rA - rAF + rB - rBF;
+                (rA, rB) = (rAF, rBF);
+                R -= fee;
             }
         }
-        // require(z <= type(uint).max, "Pool: upper overflow");
+        return (R, rA, rB);
     }
 }
