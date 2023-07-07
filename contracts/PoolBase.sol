@@ -15,6 +15,7 @@ import "./subs/Constants.sol";
 import "./subs/Storage.sol";
 
 abstract contract PoolBase is IPool, ERC1155Holder, Storage, Constants {
+    uint32 constant internal F_MASK = ~uint32(1);
     address immutable internal TOKEN;
 
     event Swap(
@@ -71,7 +72,7 @@ abstract contract PoolBase is IPool, ERC1155Holder, Storage, Constants {
 
         s_i = uint32(block.timestamp);
         s_a = uint224(a);
-        s_f = uint32(block.timestamp >> 1 << 1);
+        s_f = uint32(block.timestamp & F_MASK);
         s_b = uint224(b);
 
         uint idA = _packID(address(this), SIDE_A);
@@ -99,7 +100,7 @@ abstract contract PoolBase is IPool, ERC1155Holder, Storage, Constants {
         R = IERC20(config.TOKEN_R).balanceOf(address(this));
         i = s_i;
         a = s_a;
-        f = s_f >> 1 << 1;
+        f = s_f & F_MASK;
         b = s_b;
     }
 
@@ -120,9 +121,9 @@ abstract contract PoolBase is IPool, ERC1155Holder, Storage, Constants {
      */
     modifier nonReentrant() {
         ensureStateIntegrity();
-        ++s_f;
+        s_f |= 1;
         _;
-        --s_f;
+        s_f &= F_MASK;
     }
 
     function swap(

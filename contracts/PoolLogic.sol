@@ -157,7 +157,7 @@ contract PoolLogic is PoolBase {
         (uint xk, uint rA, uint rB) = _selectPrice(config, state, sideIn, sideOut);
         // [PROTOCOL FEE]
         {
-            uint32 elapsed = uint32((block.timestamp >> 1) - (s_f >> 1)) << 1;
+            uint32 elapsed = uint32(block.timestamp & F_MASK) - (s_f & F_MASK);
             if (elapsed > 0) {
                 uint feeRateX64 = _expRate(elapsed, config.INTEREST_HL * FEE_RATE);
                 uint rAF = FullMath.mulDivRoundingUp(rA, Q64, feeRateX64);
