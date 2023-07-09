@@ -23,11 +23,10 @@ contract View is PoolLogic {
         uint spot;
     }
 
-    function getStates(
-        address TOKEN,
-        address pool
+    function compute(
+        address TOKEN
     ) external view returns (StateView memory stateView) {
-        Config memory config = IPool(pool).loadConfig();
+        Config memory config = loadConfig();
         State memory state = State(_reserve(config.TOKEN_R), s_a, s_b);
 
         // [INTEREST DECAY]
