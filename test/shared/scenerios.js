@@ -63,7 +63,7 @@ function loadFixtureFromParams (arrParams, options={}) {
     await feeReceiver.deployed()
 
     // logic
-    const Logic = await ethers.getContractFactory("PoolLogic")
+    const Logic = await ethers.getContractFactory("View")
     const logic = await Logic.deploy(
       derivable1155.address,
       feeReceiver.address,
@@ -157,7 +157,7 @@ function loadFixtureFromParams (arrParams, options={}) {
       await derivable1155.connect(accountB).setApprovalForAll(poolAddress, true)
 
       const pool = new Pool(
-        await ethers.getContractAt("PoolLogic", poolAddress),
+        await ethers.getContractAt("View", poolAddress),
         realParams,
         {
           utr,

@@ -4,11 +4,11 @@ pragma solidity ^0.8.0;
 import "../PoolLogic.sol";
 
 contract View is PoolLogic {
-    constructor() PoolLogic(
-        address(0), // TOKEN
-        address(0), // FEE_TO
-        5           // FEE_RATE
-    ) {}
+    constructor(
+        address token,
+        address feeTo,
+        uint feeRate
+    ) PoolLogic(token, feeTo, feeRate) {}
 
     struct StateView {
         Config config;
@@ -54,6 +54,10 @@ contract View is PoolLogic {
         stateView.sA = _supply(TOKEN, SIDE_A);
         stateView.sB = _supply(TOKEN, SIDE_B);
         stateView.sC = _supply(TOKEN, SIDE_C);
+        stateView.twap = twap;
+        stateView.spot = spot;
+        stateView.config = config;
+        stateView.state = state;
     }
 
     function _applyFee(
@@ -64,7 +68,8 @@ contract View is PoolLogic {
     ) internal view returns (uint, uint, uint) {
         uint32 elapsed = uint32(block.timestamp & F_MASK) - (s_f & F_MASK);
         if (elapsed > 0) {
-            uint feeRateX64 = _expRate(elapsed, INTEREST_HL * FEE_RATE);
+            uint feeRate = FEE_RATE > 0 ? FEE_RATE : 5;
+            uint feeRateX64 = _expRate(elapsed, INTEREST_HL * feeRate);
             uint rAF = FullMath.mulDivRoundingUp(rA, Q64, feeRateX64);
             uint rBF = FullMath.mulDivRoundingUp(rB, Q64, feeRateX64);
             if (rAF < rA || rBF < rB) {
