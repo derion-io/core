@@ -1,5 +1,5 @@
 const {
-  loadFixture,
+  loadFixture, time,
 } = require("@nomicfoundation/hardhat-network-helpers")
 const chai = require("chai")
 const { solidity } = require("ethereum-waffle")
@@ -10,6 +10,8 @@ const { loadFixtureFromParams } = require("./shared/scenerios")
 chai.use(solidity)
 const expect = chai.expect
 const { numberToWei, packId, bn, swapToSetPriceMock } = require("./shared/utilities")
+
+const ELLAPSED_TIME = 86400 * 365
 
 describe("View", function () {
   const fixture = loadFixtureFromParams([{
@@ -49,6 +51,8 @@ describe("View", function () {
       const tokenAfter = await derivable1155.balanceOf(owner.address, packId(SIDE_B, pool.contract.address))
       const amountIn = tokenAfter.sub(tokenBefore)
 
+      await time.increase(ELLAPSED_TIME)
+
       const { rA, sA, rB, sB, rC, sC } = await pool.contract.compute(derivable1155.address)
 
       const amountOut = await pool.swap(
@@ -84,6 +88,8 @@ describe("View", function () {
 
       const tokenAfter = await derivable1155.balanceOf(owner.address, packId(SIDE_B, pool.contract.address))
       const amountIn = tokenAfter.sub(tokenBefore)
+
+      await time.increase(ELLAPSED_TIME)
 
       const { rA, sA, rB, sB, rC, sC } = await pool.contract.compute(derivable1155.address)
 
@@ -121,6 +127,8 @@ describe("View", function () {
       const tokenAfter = await derivable1155.balanceOf(owner.address, packId(SIDE_B, pool.contract.address))
       const amountIn = tokenAfter.sub(tokenBefore)
 
+      await time.increase(ELLAPSED_TIME)
+
       const { rA, sA, rB, sB, rC, sC } = await pool.contract.compute(derivable1155.address)
 
       const amountOut = await pool.swap(
@@ -156,6 +164,8 @@ describe("View", function () {
 
       const tokenAfter = await derivable1155.balanceOf(owner.address, packId(SIDE_B, pool.contract.address))
       const amountIn = tokenAfter.sub(tokenBefore)
+
+      await time.increase(ELLAPSED_TIME)
 
       const { rA, sA, rB, sB, rC, sC } = await pool.contract.compute(derivable1155.address)
 
