@@ -16,9 +16,10 @@ const ELLAPSED_TIME = 86400 * 365
 describe("View", function () {
   const fixture = loadFixtureFromParams([{
     ...baseParams,
-    halfLife: bn(19932680)
+    halfLife: bn(19932680),
   }], {
-    feeRate: 12,
+    view: true,
+    feeRate: 5,
     callback: async function ({ derivablePools, uniswapPair }) {
       const pool = derivablePools[0]
       await pool.swap(

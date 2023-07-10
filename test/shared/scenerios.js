@@ -37,6 +37,8 @@ function loadFixtureFromParams (arrParams, options={}) {
     const [owner, accountA, accountB] = await ethers.getSigners();
     const signer = owner;
 
+    const LogicName = options.view ? "View" : "PoolLogic"
+
     // deploy utr
     const UTR = require("@derivable/utr/build/UniversalTokenRouter.json")
     const UniversalRouter = new ethers.ContractFactory(UTR.abi, UTR.bytecode, owner)
@@ -63,7 +65,7 @@ function loadFixtureFromParams (arrParams, options={}) {
     await feeReceiver.deployed()
 
     // logic
-    const Logic = await ethers.getContractFactory("View")
+    const Logic = await ethers.getContractFactory(LogicName)
     const logic = await Logic.deploy(
       derivable1155.address,
       feeReceiver.address,
@@ -157,7 +159,7 @@ function loadFixtureFromParams (arrParams, options={}) {
       await derivable1155.connect(accountB).setApprovalForAll(poolAddress, true)
 
       const pool = new Pool(
-        await ethers.getContractAt("View", poolAddress),
+        await ethers.getContractAt(LogicName, poolAddress),
         realParams,
         {
           utr,
