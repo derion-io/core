@@ -281,7 +281,7 @@ contract Helper is Constants, IHelper {
                 amount = FullMath.mulDiv(amount, __.rB, s);
                 rB1 -= amount;
             } else /*if (sideIn == SIDE_C)*/ {
-                // --amount; // SIDE_C sacrifices number rounding for A and B
+                --amount; // SIDE_C sacrifices number rounding for A and B
                 uint rC = __.R - __.rA - __.rB;
                 amount = FullMath.mulDiv(amount, rC, s);
             }
