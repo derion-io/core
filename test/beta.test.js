@@ -3,7 +3,7 @@ const { expect } = require("chai")
 const { baseParams } = require("./shared/baseParams")
 const { SIDE_R, SIDE_A } = require("./shared/constant")
 const { loadFixtureFromParams } = require("./shared/scenerios")
-const { bn, swapToSetPriceMock, numberToWei } = require("./shared/utilities")
+const { bn, swapToSetPriceMock, numberToWei, weiToNumber } = require("./shared/utilities")
 
 describe('ARB', function() {
   const fixture = loadFixtureFromParams([{
@@ -49,22 +49,25 @@ describe('ARB', function() {
     calInitParams: true
   }) 
 
-  it('test', async function() {
-    const {derivablePools, accountB, weth} = await loadFixture(fixture)
-    const pool = derivablePools[0]
-
-    await time.increase(160 * 86400)
-
-    const balanceBefore = await weth.balanceOf(accountB.address)
-    await pool.connect(accountB).swap(
-      SIDE_R,
-      SIDE_A,
-      numberToWei(0.1),
-      0
-    )
-    const balanceAfter = await weth.balanceOf(accountB.address)
-    const actualValue = balanceBefore.sub(balanceAfter)
-    console.log(actualValue)
-    expect(actualValue).to.be.lte(numberToWei(0.1))
-  })
+  for (let index = 0; index < 100; index++) {
+    const amount = 2 * Math.random()  
+    it(`Test amount: ${amount}`, async function() {
+      const {derivablePools, accountB, weth} = await loadFixture(fixture)
+      const pool = derivablePools[0]
+  
+      await time.increase(160 * 86400)
+  
+      const balanceBefore = await weth.balanceOf(accountB.address)
+      await pool.connect(accountB).swap(
+        SIDE_R,
+        SIDE_A,
+        numberToWei(amount),
+        0
+      )
+      const balanceAfter = await weth.balanceOf(accountB.address)
+      const actualValue = balanceBefore.sub(balanceAfter)
+      console.log(amount/Number(weiToNumber(actualValue)))
+      expect(actualValue).to.be.lte(numberToWei(amount))
+    })  
+  }
 })
