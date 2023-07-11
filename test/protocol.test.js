@@ -27,7 +27,7 @@ const PAYMENT = 0;
 
 const HALF_LIFE = 10 * 365 * 24 * 60 * 60
 
-describe("DDL v3", function () {
+describe("Protocol", function () {
     const fixture = loadFixtureFromParams([{
         ...baseParams,
         halfLife: bn(HALF_LIFE),
