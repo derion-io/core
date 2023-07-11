@@ -37,8 +37,7 @@ function loadFixtureFromParams (arrParams, options={}) {
     const [owner, accountA, accountB] = await ethers.getSigners();
     const signer = owner;
 
-    const LogicName = options.view ? "View" : "PoolLogic"
-
+    const LogicName = options.logicName || 'PoolLogic'
     // deploy utr
     const UTR = require("@derivable/utr/build/UniversalTokenRouter.json")
     const UniversalRouter = new ethers.ContractFactory(UTR.abi, UTR.bytecode, owner)
@@ -105,8 +104,10 @@ function loadFixtureFromParams (arrParams, options={}) {
     })
     
     // INIT PAIRRRRR 
+    const initPrice = options.initPrice || 1500
     const quoteTokenIndex = weth.address.toLowerCase() < usdc.address.toLowerCase() ? 1 : 0
-    const initPriceX96 = encodeSqrtX96(quoteTokenIndex ? 1500 : 1, quoteTokenIndex ? 1 : 1500)
+    const deno = options.initPriceDeno || 1
+    const initPriceX96 = encodeSqrtX96(quoteTokenIndex ? initPrice : deno, quoteTokenIndex ? deno : initPrice)
     const Univ3PoolMock = await ethers.getContractFactory("Univ3PoolMock")
     const uniswapPair = await Univ3PoolMock.deploy(
       initPriceX96, 
@@ -115,6 +116,11 @@ function loadFixtureFromParams (arrParams, options={}) {
       quoteTokenIndex ? usdc.address : weth.address,
     )
     await uniswapPair.deployed()
+
+    // deploy descriptor
+    const FetchPrice = await ethers.getContractFactory("FetchPriceUniV3")
+    const fetchPrice = await FetchPrice.deploy()
+    await fetchPrice.deployed()
 
     // deploy helper
     const StateCalHelper = await ethers.getContractFactory("contracts/support/Helper.sol:Helper")
@@ -167,12 +173,18 @@ function loadFixtureFromParams (arrParams, options={}) {
         }
       )
 
-      // const initParams = await calculateInitParams(config, oracleLibrary, numberToWei(options.initReserved ?? 5))
-      const initParams = {
+      const initParams = options.calInitParams 
+      ? await calculateInitParams(config, fetchPrice, numberToWei(options.initReserved ?? 5))
+      : {
         R: numberToWei(options.initReserved ?? 5),
         a: realParams.a,
         b: realParams.b,
       }
+      // const initParams = {
+      //   R: numberToWei(options.initReserved ?? 5),
+      //   a: realParams.a,
+      //   b: realParams.b,
+      // }
       const payment = {
         utr: AddressZero,
         payer: AddressZero,

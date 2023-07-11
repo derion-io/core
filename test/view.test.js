@@ -18,7 +18,7 @@ describe("View", function () {
     ...baseParams,
     halfLife: bn(19932680),
   }], {
-    view: true,
+    logicName: "View",
     feeRate: 5,
     callback: async function ({ derivablePools, uniswapPair }) {
       const pool = derivablePools[0]
