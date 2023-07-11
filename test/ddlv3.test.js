@@ -236,11 +236,16 @@ describe("DDL v3", function () {
             const payer = isUseUTR ? owner.address : AddressZero
             
             const tokenBefore = await derivable1155.balanceOf(owner.address, convertedId)
+            if (amountIn == null) {
+                amountIn = tokenBefore
+            } else {
+                amountIn = pe(amountIn)
+            }
             if (isUseUTR) {
                 const pTx = await derivablePools[0].swap(
                     sideIn,
                     sideOut,
-                    pe(amountIn),
+                    amountIn,
                     0,
                     {
                         payer,
@@ -254,7 +259,7 @@ describe("DDL v3", function () {
                         eip: 1155,
                         token: derivable1155.address,
                         id: convertedId,
-                        amountIn: pe(amountIn),
+                        amountIn,
                         recipient: derivablePools[0].contract.address,
                     }],
                     code: derivablePools[0].contract.address,
@@ -264,7 +269,7 @@ describe("DDL v3", function () {
                 await derivablePools[0].swap(
                     sideIn,
                     sideOut,
-                    pe(amountIn),
+                    amountIn,
                     0,
                     {
                         payer
@@ -273,9 +278,17 @@ describe("DDL v3", function () {
             }
             const tokenAfter = await derivable1155.balanceOf(owner.address, convertedId)
             const tokenChanged = tokenBefore.sub(tokenAfter)
-            expect(tokenChanged).lte(pe(amountIn))
-            expect(tokenChanged).gte(pe(amountIn).sub(1))
+            expect(tokenChanged).lte(amountIn).gte(amountIn.sub(1))
         }
+        it("all lp -> weth: Non UTR", async function () {
+            await testROut(SIDE_C, null, SIDE_R, false)
+        })
+        it("all long -> weth: Non UTR", async function () {
+            await testROut(SIDE_A, null, SIDE_R, false)
+        })
+        it("all short -> weth: Non UTR", async function () {
+            await testROut(SIDE_B, null, SIDE_R, false)
+        })
         it("lp -> weth: Non UTR", async function () {
             await testROut(SIDE_C, "1", SIDE_R, false)
         })

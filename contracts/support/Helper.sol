@@ -62,8 +62,7 @@ contract Helper is Constants, IHelper {
         if (r <= R >> 1) {
             return FullMath.mulDivRoundingUp(r, Q128, xk);
         }
-        // TODO: denominator should be rounding up or down?
-        uint denominator = FullMath.mulDiv(R - r, xk << 2, Q128);
+        uint denominator = FullMath.mulDivRoundingUp(R - r, xk << 2, Q128);
         return FullMath.mulDivRoundingUp(R, R, denominator);
     }
 

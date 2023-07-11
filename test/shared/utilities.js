@@ -239,19 +239,15 @@ async function swapToSetPriceV3({ account, quoteToken, baseToken, uniswapRouter,
     await tx.wait(1)
 }
 
-async function swapToSetPriceMock({ quoteToken, baseToken, uniswapPair, targetTwap, targetSpot }, populateTransaction = false) {
-    const priceTwapX96 = getSqrtPriceFromPrice(quoteToken, baseToken, targetTwap)
-    const priceSpotX96 = getSqrtPriceFromPrice(quoteToken, baseToken, targetSpot)
-    if (populateTransaction) 
-        return (await uniswapPair.populateTransaction.setPrice(priceSpotX96, priceTwapX96)).data
-    else
-        await uniswapPair.setPrice(priceSpotX96, priceTwapX96)
-    
+async function swapToSetPriceMock({ quoteToken, baseToken, uniswapPair, targetTwap, targetSpot }, denominator = 1) {
+    const priceTwapX96 = getSqrtPriceFromPrice(quoteToken, baseToken, targetTwap, denominator)
+    const priceSpotX96 = getSqrtPriceFromPrice(quoteToken, baseToken, targetSpot, denominator)
+    await uniswapPair.setPrice(priceSpotX96, priceTwapX96)
 }
 
-function getSqrtPriceFromPrice(quoteToken, baseToken, price) {
+function getSqrtPriceFromPrice(quoteToken, baseToken, price, denominator = 1) {
     const quoteTokenIndex = baseToken.address.toLowerCase() < quoteToken.address.toLowerCase() ? 1 : 0
-    return encodeSqrtX96(quoteTokenIndex ? price : 1, quoteTokenIndex ? 1 : price)
+    return encodeSqrtX96(quoteTokenIndex ? price : denominator, quoteTokenIndex ? denominator : price)
 }
 
 function feeToOpenRate(fee) {
