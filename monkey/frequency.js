@@ -123,9 +123,9 @@ configs.forEach(({hl, fee}) => {
       const pReservedAfterInterest = positionReserved.mul(((1 - interestRate) * 1e8).toFixed(0)).div(1e8)
       const actualFeeRate = Number(weiToNumber(feeAmount)) / Number(weiToNumber(pReservedAfterInterest))
       expect(
-        Number(weiToNumber(interest))/Number(weiToNumber(positionReserved))
-      ).to.be.closeTo(interestRate, 0.001)
-      expect(feeRate / actualFeeRate).to.be.closeTo(1, 0.1)
+        Number(weiToNumber(interest))/Number(weiToNumber(positionReserved))/interestRate
+      ).to.be.closeTo(1, 0.003)
+      expect(feeRate / actualFeeRate).to.be.closeTo(1, 0.04)
     })
   })
 })
