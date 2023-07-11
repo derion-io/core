@@ -313,7 +313,7 @@ contract Helper is Constants, IHelper {
         uint c = R - rB - rA;
         uint ac = FullMath.mulDiv(amount*c, premiumRate, Q128);
         uint delta = b * b + 4 * ac;
-        delta = Math.sqrt(delta);
+        delta = Math.sqrt(delta) - 1;
         if (delta + rTuo <= rOut) {
             return amount;
         }

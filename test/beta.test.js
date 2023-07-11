@@ -20,11 +20,12 @@ describe('ARB', function() {
     logicName: 'PoolLogicMock',
     callback: async ({derivablePools, weth, usdc, uniswapPair}) => {
       const pool = derivablePools[0].contract
+      const currentTime = await time.latest()
       await pool.loadState(
         bn('0x012189ab781a7d'),
         bn('0xeb6ed57ba2e5'),
-        bn('1688727030'),
-        bn('1688727030'),
+        bn(currentTime).shr(1).shl(1),
+        currentTime,
         bn('0x012f2a36ecd555'),
         bn('0x012f2a36ecd555'),
         bn('0x9573b178fda2b1')
@@ -52,7 +53,7 @@ describe('ARB', function() {
     const {derivablePools, accountB, weth} = await loadFixture(fixture)
     const pool = derivablePools[0]
 
-    await time.increase(160 * 86400 )
+    await time.increase(160 * 86400)
 
     const balanceBefore = await weth.balanceOf(accountB.address)
     await pool.connect(accountB).swap(
@@ -63,6 +64,7 @@ describe('ARB', function() {
     )
     const balanceAfter = await weth.balanceOf(accountB.address)
     const actualValue = balanceBefore.sub(balanceAfter)
+    console.log(actualValue)
     expect(actualValue).to.be.lte(numberToWei(0.1))
   })
 })
