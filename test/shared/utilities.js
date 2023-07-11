@@ -239,10 +239,14 @@ async function swapToSetPriceV3({ account, quoteToken, baseToken, uniswapRouter,
     await tx.wait(1)
 }
 
-async function swapToSetPriceMock({ quoteToken, baseToken, uniswapPair, targetTwap, targetSpot }) {
+async function swapToSetPriceMock({ quoteToken, baseToken, uniswapPair, targetTwap, targetSpot }, populateTransaction = false) {
     const priceTwapX96 = getSqrtPriceFromPrice(quoteToken, baseToken, targetTwap)
     const priceSpotX96 = getSqrtPriceFromPrice(quoteToken, baseToken, targetSpot)
-    await uniswapPair.setPrice(priceSpotX96, priceTwapX96)
+    if (populateTransaction) 
+        return (await uniswapPair.populateTransaction.setPrice(priceSpotX96, priceTwapX96)).data
+    else
+        await uniswapPair.setPrice(priceSpotX96, priceTwapX96)
+    
 }
 
 function getSqrtPriceFromPrice(quoteToken, baseToken, price) {
