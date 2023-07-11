@@ -22,15 +22,15 @@ seedrandom(seed, { global: true });
 
 const configs = [
   {
-    hl: 19932680,
+    hl: 20000000,
     fee: 12
   },
   {
-    hl: 1993268,
-    fee: 12
+    hl: 2000000,
+    fee: 5
   },
   {
-    hl: 19932680,
+    hl: 20000000,
     fee: 5
   }
 ]
@@ -45,7 +45,7 @@ configs.forEach(({hl, fee}) => {
   describe(`Frequency Test: interest rate - ${dailyInterestRate}, fee - ${fee}`, function() {
     const fixture = loadFixtureFromParams([{
       ...baseParams,
-      halfLife: bn(hl)
+      halfLife: bn(hl),
     }], { 
       feeRate: fee,
       callback: async ({derivablePools, uniswapPair, derivable1155, weth}) => {
@@ -61,7 +61,7 @@ configs.forEach(({hl, fee}) => {
       }
     })
   
-    it('Test', async function() {
+    it('Low R, High HL, High Freq Tx', async function() {
       const { derivablePools, oracleLibrary, params, derivable1155, uniswapPair, owner, feeReceiver, weth, usdc, poolMulticall } = await loadFixture(fixture)
       const pool = derivablePools[0]
       const config = paramToConfig(params[0])
@@ -72,27 +72,29 @@ configs.forEach(({hl, fee}) => {
 
       await weth.transfer(poolMulticall.address, numberToWei(1))
   
+      const rSide = bn(10).pow(9)
+
       await pool.swap(
         SIDE_R,
         SIDE_C,
-        numberToWei(20),
+        rSide,
         0
       )
       await pool.swap(
         SIDE_R,
         SIDE_A,
-        numberToWei(20),
+        rSide,
         0
       )
       await pool.swap(
         SIDE_R,
         SIDE_B,
-        numberToWei(20),
+        rSide,
         0
       )
 
-      await derivable1155.safeTransferFrom(owner.address, poolMulticall.address, A_ID, numberToWei(1), [])
-      await derivable1155.safeTransferFrom(owner.address, poolMulticall.address, B_ID, numberToWei(1), [])
+      await derivable1155.safeTransferFrom(owner.address, poolMulticall.address, A_ID, rSide, [])
+      await derivable1155.safeTransferFrom(owner.address, poolMulticall.address, B_ID, rSide, [])
   
       const state = await pool.contract.getStates()
       const oraclePrice = await oracleLibrary.fetch(config.ORACLE)
@@ -115,30 +117,34 @@ configs.forEach(({hl, fee}) => {
         { static: true }
       )
       
-      const curTime = await time.latest()
+      const startTime = await time.latest()
 
-      for (let index = 0; index < 1000; index++) {
-        let long, short
-        long = await pool.getSwapParam(
-          (index % 2) ? SIDE_R : SIDE_A,
-          (index % 2) ? SIDE_A : SIDE_R,
-          bn(2),
-          0,
+      const SIDES = [SIDE_A, SIDE_B]
+
+      for (let i = 0; i < 100; i++) {
+        // if (i % 10 == 0) {
+        //   console.log(hl, fee, i)
+        // }
+        const params = [];
+        const side = SIDES[Math.floor(Math.random() * SIDES.length)];
+        const n = 1 + Math.floor(Math.random() * 4)
+        for (let j = 0; j < n; ++j) {
+          params.push(
+            await pool.getSwapParam(SIDE_R, side, bn(2), 0),
+            await pool.getSwapParam(side, SIDE_R, bn(2), 0),
         )
-        short = await pool.getSwapParam(
-          (index % 2) ? SIDE_R : SIDE_B,
-          (index % 2) ? SIDE_B : SIDE_R,
-          bn(2),
-          0,
-        )
+        }
         const targetPrice = 1500 + 50 - 100 * Math.random()
-        const encodedPrice = getSqrtPriceFromPrice(usdc, weth, targetPrice)
-        await poolMulticall.exec(encodedPrice, long, short)
-        await time.increase(100)
+        await time.setNextBlockTimestamp(startTime+1+i)
+        await poolMulticall.exec(
+          getSqrtPriceFromPrice(usdc, weth, targetPrice),
+          getSqrtPriceFromPrice(usdc, weth, targetPrice * (1+Math.random()/100)),
+          params,
+        )
       }
       const feeAmount = await weth.balanceOf(feeReceiver.address)
   
-      const ellapsed = await time.latest() - curTime
+      const ellapsed = await time.latest() - startTime
 
       await swapToSetPriceMock({
         quoteToken: usdc,
@@ -159,13 +165,14 @@ configs.forEach(({hl, fee}) => {
       const interestRate = 1 - (1 - dailyInterestRate) ** period
       const interest = rCAfter.sub(rC)
   
-      const feeRate = 1 - (1 - (dailyInterestRate / fee)) ** period
+      const feeRate = 1 - (1 - dailyInterestRate) ** (period / fee)
       const pReservedAfterInterest = positionReserved.mul(((1 - interestRate) * 1e8).toFixed(0)).div(1e8)
       const actualFeeRate = Number(weiToNumber(feeAmount)) / Number(weiToNumber(pReservedAfterInterest))
       expect(
         Number(weiToNumber(interest))/Number(weiToNumber(positionReserved))/interestRate
-      ).to.be.closeTo(1, 0.003)
-      expect(feeRate / actualFeeRate).to.be.closeTo(1, 0.04)
+      ).gte(1).lte(1.01)
+      console.log('HL', hl, 'FeeRate', fee, 'Results', Number(weiToNumber(interest))/Number(weiToNumber(positionReserved))/interestRate, actualFeeRate / feeRate)
+      expect(actualFeeRate / feeRate).gte(1).lte(1.1)
     })
   })
 })

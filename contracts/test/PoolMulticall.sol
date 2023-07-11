@@ -19,19 +19,15 @@ contract PoolMulticall {
   }
 
   function exec(
-    uint160 price,
-    Param calldata swapParam0,
-    Param calldata swapParam1
+    uint160 spot,
+    uint160 twap,
+    Param[] memory params
   ) public {
-    Univ3PoolMock(ROUTER).setPrice(price, price);
-    IPool(POOL).swap(
-      swapParam0,
-      Payment(msg.sender, address(0), msg.sender)
-    );
-    IPool(POOL).swap(
-      swapParam1,
-      Payment(msg.sender, address(0), msg.sender)
-    );
+    Univ3PoolMock(ROUTER).setPrice(spot, twap);
+    Payment memory payment = Payment(msg.sender, address(0), msg.sender);
+    for (uint i = 0; i < params.length; ++i) {
+      IPool(POOL).swap(params[i], payment);
+    }
   }
 
    function onERC1155Received(
