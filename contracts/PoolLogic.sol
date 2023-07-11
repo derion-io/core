@@ -123,7 +123,6 @@ contract PoolLogic is PoolBase {
             xk = _xk(config, min);
             (rA, rB) = _evaluate(xk, state);
         } else {
-            // TODO: assisting flag for min/max
             xk = _xk(config, min);
             (rA, rB) = _evaluate(xk, state);
             if ((sideIn == SIDE_R) == rB > rA) {
