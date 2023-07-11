@@ -49,9 +49,10 @@ describe('ARB', function() {
     calInitParams: true
   }) 
 
-  for (let index = 0; index < 100; index++) {
-    const amount = 2 * Math.random()  
-    it(`Test amount: ${amount}`, async function() {
+  for (let e = 0; e < 38; e++) {
+    it(`Test amount: 10^${e}`, async function() {
+      const amountIn = bn(10).pow(e)
+      // console.log('e', e, 'amountIn', amountIn.toString())
       const {derivablePools, accountB, weth} = await loadFixture(fixture)
       const pool = derivablePools[0]
   
@@ -61,13 +62,13 @@ describe('ARB', function() {
       await pool.connect(accountB).swap(
         SIDE_R,
         SIDE_A,
-        numberToWei(amount),
-        0
+        amountIn,
+        0,
       )
       const balanceAfter = await weth.balanceOf(accountB.address)
       const actualValue = balanceBefore.sub(balanceAfter)
-      console.log(amount/Number(weiToNumber(actualValue)))
-      expect(actualValue).to.be.lte(numberToWei(amount))
-    })  
+      // console.log(actualValue.toString(), amountIn.toString())
+      expect(actualValue, `amountIn: ${amountIn.toString()}`).to.be.lte(amountIn)
+    })
   }
 })

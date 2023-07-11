@@ -62,8 +62,7 @@ contract Helper is Constants, IHelper {
         if (r <= R >> 1) {
             return FullMath.mulDivRoundingUp(r, Q128, xk);
         }
-        // TODO: denominator should be rounding up or down?
-        uint denominator = FullMath.mulDiv(R - r, xk << 2, Q128);
+        uint denominator = FullMath.mulDivRoundingUp(R - r, xk << 2, Q128);
         return FullMath.mulDivRoundingUp(R, R, denominator);
     }
 
@@ -282,7 +281,7 @@ contract Helper is Constants, IHelper {
                 amount = FullMath.mulDiv(amount, __.rB, s);
                 rB1 -= amount;
             } else /*if (sideIn == SIDE_C)*/ {
-                --amount; // SIDE_C sacrifices number rounding for A and B
+                // --amount; // SIDE_C sacrifices number rounding for A and B
                 uint rC = __.R - __.rA - __.rB;
                 amount = FullMath.mulDiv(amount, rC, s);
             }
@@ -313,7 +312,7 @@ contract Helper is Constants, IHelper {
         uint c = R - rB - rA;
         uint ac = FullMath.mulDiv(amount*c, premiumRate, Q128);
         uint delta = b * b + 4 * ac;
-        delta = Math.sqrt(delta) - 1;
+        delta = Math.sqrt(delta);
         if (delta + rTuo <= rOut) {
             return amount;
         }
