@@ -49,7 +49,8 @@ module.exports = {
                     privateKey: '0x0000000000000000000000000000000000000000000000000000000000000003',
                     balance: "900000000000000000000000000000000000000",
                 },
-            ]
+            ],
+            allowBlocksWithSameTimestamp: true
         },
         mainnet: {
             url: process.env.BSC_MAINNET_PROVIDER ?? 'https://bsc-dataseed3.binance.org/',
