@@ -8,16 +8,19 @@ const seedrandom = require("seedrandom")
 
 const SECONDS_PER_DAY = 60 * 60 * 24
 
-const seed = ethers.utils.randomBytes(32)
+let seed = ethers.utils.randomBytes(32)
+// seed = ethers.utils.arrayify('0x5228eb305d22b5f5a8ce749e18ad302a60ca9fb7c5ad34eb68599299ba6090ce')
+// seed = ethers.utils.arrayify('0xaf8305e01a98c1e0fa4368993dad4fabaa8616291dbc6d20dc089938225037b3')
+// seed = ethers.utils.arrayify('0xd7ffa3398fe033735db31d1fe41c2084504f50a1608f8432b9ac0ed458a5b6ca')
 console.log('Random Seed:', ethers.utils.hexlify(seed))
 seedrandom(seed, { global: true });
 
 for (let index = 0; index < 50; index++) {
-  const amount = 0.1 * Math.random()
+  const amount = 1 * Math.random()
   const ellapsedDay = Math.random() * 30
   const price = 1960 + 196 - 1960 * 0.2 * Math.random()
         
-  describe(`Random scenerio: Ellapsed day ${ellapsedDay}, price: ${price}, amount: ${amount}`, function() {
+  describe(`Helper Rounding: Ellapsed day ${ellapsedDay}, price: ${price}, amount: ${amount}`, function() {
     const k = 40
     const dailyFundingRate = (0.02 * k) / 100
     const premiumRate = bn(1).shl(128).div(2);
@@ -52,7 +55,7 @@ for (let index = 0; index < 50; index++) {
       }
     })
 
-    it('Test B -> A', async function() {
+    it('Test R -> A', async function() {
       const {derivablePools, accountB, weth, usdc, uniswapPair} = await loadFixture(fixture)
 
       const pool = derivablePools[0]
@@ -63,7 +66,7 @@ for (let index = 0; index < 50; index++) {
         baseToken: weth,
         uniswapPair,
         targetTwap: price,
-        targetSpot: price
+        targetSpot: price * (1+Math.random()/100),
       }, 10**12)
 
       const balanceBefore = await weth.balanceOf(accountB.address)
@@ -77,7 +80,10 @@ for (let index = 0; index < 50; index++) {
       )
       const balanceAfter = await weth.balanceOf(accountB.address)
       const actualValue = balanceBefore.sub(balanceAfter)
-      expect(actualValue, `amountIn: ${amountIn.toString()}`).to.be.lte(amountIn)
+      expect(actualValue).lte(amountIn)
+      if (actualValue.lt(amountIn.sub(200))) {
+        console.warn('\t', actualValue.toString(), amountIn.toString())
+      }
     })
 
     it('Test C -> R', async function() {
@@ -91,12 +97,12 @@ for (let index = 0; index < 50; index++) {
         baseToken: weth,
         uniswapPair,
         targetTwap: price,
-        targetSpot: price
+        targetSpot: price * (1+Math.random()/100),
       }, 10**12)
       const C_ID = packId(SIDE_C, pool.contract.address);
 
       const balanceBefore = await derivable1155.balanceOf(accountA.address, C_ID)
-      const amountIn = (await derivable1155.balanceOf(accountA.address, C_ID)).sub(100)
+      const amountIn = (await derivable1155.balanceOf(accountA.address, C_ID)).sub(1)
 
       await pool.connect(accountA).swap(
         SIDE_C,
@@ -106,7 +112,10 @@ for (let index = 0; index < 50; index++) {
       )
       const balanceAfter = await derivable1155.balanceOf(accountA.address, C_ID)
       const actualValue = balanceBefore.sub(balanceAfter)
-      expect(actualValue, `amountIn: ${amountIn.toString()}`).to.be.lte(amountIn)
+      expect(actualValue).lte(amountIn)
+      if (actualValue.lt(amountIn.sub(4))) {
+        console.warn('\t', actualValue.toString(), amountIn.toString())
+      }
     })
   })
 }

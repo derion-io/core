@@ -281,9 +281,9 @@ contract Helper is Constants, IHelper {
                 amount = FullMath.mulDiv(amount, __.rB, s);
                 rB1 -= amount;
             } else /*if (sideIn == SIDE_C)*/ {
-                --amount; // SIDE_C sacrifices number rounding for A and B
                 uint rC = __.R - __.rA - __.rB;
-                amount = FullMath.mulDiv(amount, rC, s);
+                // rounding: A+1, B+1, C-2
+                amount = FullMath.mulDiv(amount, rC-2, s+1);
             }
         }
 
@@ -309,13 +309,15 @@ contract Helper is Constants, IHelper {
     ) internal pure returns (uint) {
         (uint rOut, uint rTuo) = sideOut == SIDE_A ? (rA, rB) : (rB, rA);
         uint b = rOut > rTuo ? rOut - rTuo : rTuo - rOut;
-        uint c = R - rB - rA;
+        // rounding: A+1, B+1, C-2
+        uint c = R - rB - rA - 2;
         uint ac = FullMath.mulDiv(amount*c, premiumRate, Q128);
         uint delta = b * b + 4 * ac;
         delta = Math.sqrt(delta);
         if (delta + rTuo <= rOut) {
             return amount;
         }
-        return (delta + rTuo - rOut) / 2;
+        // rounding: amount-1
+        return (delta + rTuo - rOut) / 2 - 1;
     }
 }
