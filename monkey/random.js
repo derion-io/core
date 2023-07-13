@@ -2,7 +2,7 @@ const { time, loadFixture } = require("@nomicfoundation/hardhat-network-helpers"
 const { baseParams } = require("../test/shared/baseParams")
 const { loadFixtureFromParams } = require("../test/shared/scenerios")
 const { bn, swapToSetPriceMock, numberToWei } = require("../test/shared/utilities")
-const { SIDE_R, SIDE_A } = require("../test/shared/constant")
+const { SIDE_R, SIDE_A, SIDE_C } = require("../test/shared/constant")
 const { expect } = require("chai")
 const seedrandom = require("seedrandom")
 
@@ -13,11 +13,11 @@ console.log('Random Seed:', ethers.utils.hexlify(seed))
 seedrandom(seed, { global: true });
 
 for (let index = 0; index < 50; index++) {
-  // const amountIn = numberToWei(10 * Math.random())
-  // const ellapsedDay = Math.random() * 30
-  // const price = 1960 + 196 - 1960 * 0.2 * Math.random()
+  const amount = 0.1 * Math.random()
+  const ellapsedDay = Math.random() * 30
+  const price = 1960 + 196 - 1960 * 0.2 * Math.random()
         
-  describe('Random scenerio', function() {
+  describe(`Random scenerio: Ellapsed day ${ellapsedDay}, price: ${price}, amount: ${amount}`, function() {
     const k = 40
     const dailyFundingRate = (0.02 * k) / 100
     const premiumRate = bn(1).shl(128).div(2);
@@ -40,16 +40,21 @@ for (let index = 0; index < 50; index++) {
       initReserved: 0.001,
       initPrice: 1960.0046769835,
       initPriceDeno: 10**12,
-      calInitParams: true
+      calInitParams: true,
+      callback: async ({derivablePools, accountA}) => {
+        const pool = derivablePools[0]
+        await pool.connect(accountA).swap(
+          SIDE_R,
+          SIDE_C,
+          numberToWei(0.02),
+          0,
+        )
+      }
     })
 
     it('Test', async function() {
       const {derivablePools, accountB, weth, usdc, uniswapPair} = await loadFixture(fixture)
-      const amount = 0.1 * Math.random()
-      const ellapsedDay = Math.random() * 30
-      const price = 1960 + 196 - 1960 * 0.2 * Math.random()
-      console.log(`Ellapsed day ${ellapsedDay}, price: ${price}, amount: ${amount}`)
-      
+
       const pool = derivablePools[0]
       const ellapsed = Math.round(ellapsedDay * 86400)
       await time.increase(ellapsed)
