@@ -45,7 +45,7 @@ for (let index = 0; index < 50; index++) {
 
     it('Test', async function() {
       const {derivablePools, accountB, weth, usdc, uniswapPair} = await loadFixture(fixture)
-      const amount = 10 * Math.random()
+      const amount = 0.1 * Math.random()
       const ellapsedDay = Math.random() * 30
       const price = 1960 + 196 - 1960 * 0.2 * Math.random()
       console.log(`Ellapsed day ${ellapsedDay}, price: ${price}, amount: ${amount}`)
