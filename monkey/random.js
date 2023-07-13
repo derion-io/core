@@ -1,7 +1,7 @@
 const { time, loadFixture } = require("@nomicfoundation/hardhat-network-helpers")
 const { baseParams } = require("../test/shared/baseParams")
 const { loadFixtureFromParams } = require("../test/shared/scenerios")
-const { bn, swapToSetPriceMock, numberToWei } = require("../test/shared/utilities")
+const { bn, swapToSetPriceMock, numberToWei, packId } = require("../test/shared/utilities")
 const { SIDE_R, SIDE_A, SIDE_C } = require("../test/shared/constant")
 const { expect } = require("chai")
 const seedrandom = require("seedrandom")
@@ -52,7 +52,7 @@ for (let index = 0; index < 50; index++) {
       }
     })
 
-    it('Test', async function() {
+    it('Test B -> A', async function() {
       const {derivablePools, accountB, weth, usdc, uniswapPair} = await loadFixture(fixture)
 
       const pool = derivablePools[0]
@@ -76,6 +76,35 @@ for (let index = 0; index < 50; index++) {
         0,
       )
       const balanceAfter = await weth.balanceOf(accountB.address)
+      const actualValue = balanceBefore.sub(balanceAfter)
+      expect(actualValue, `amountIn: ${amountIn.toString()}`).to.be.lte(amountIn)
+    })
+
+    it('Test C -> R', async function() {
+      const {derivablePools, accountA, weth, usdc, uniswapPair, derivable1155} = await loadFixture(fixture)
+
+      const pool = derivablePools[0]
+      const ellapsed = Math.round(ellapsedDay * 86400)
+      await time.increase(ellapsed)
+      await swapToSetPriceMock({
+        quoteToken: usdc,
+        baseToken: weth,
+        uniswapPair,
+        targetTwap: price,
+        targetSpot: price
+      }, 10**12)
+      const C_ID = packId(SIDE_C, pool.contract.address);
+
+      const balanceBefore = await derivable1155.balanceOf(accountA.address, C_ID)
+      const amountIn = (await derivable1155.balanceOf(accountA.address, C_ID)).sub(100)
+
+      await pool.connect(accountA).swap(
+        SIDE_C,
+        SIDE_R,
+        amountIn,
+        0,
+      )
+      const balanceAfter = await derivable1155.balanceOf(accountA.address, C_ID)
       const actualValue = balanceBefore.sub(balanceAfter)
       expect(actualValue, `amountIn: ${amountIn.toString()}`).to.be.lte(amountIn)
     })
