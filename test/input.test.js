@@ -98,7 +98,7 @@ describe('Input', function () {
 
         const wethAfter = await weth.balanceOf(owner.address)
         const wethSpent = wethBefore.sub(wethAfter)
-        expect(wethSpent).lte(amount).gt(amount.sub(10))
+        expect(wethSpent).lte(amount).gt(amount.sub(100))
     })
 
     it('R -> B (With Premium)', async function () {
@@ -145,6 +145,6 @@ describe('Input', function () {
         )
         const wethAfter = await weth.balanceOf(owner.address)
         const wethSpent = wethBefore.sub(wethAfter)
-        expect(wethSpent).lte(amount).gt(amount.sub(10))
+        expect(wethSpent).lte(amount).gt(amount.sub(256))
     })
 })

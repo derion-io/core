@@ -13,6 +13,7 @@ let seed = ethers.utils.randomBytes(32)
 // seed = ethers.utils.arrayify('0xaf8305e01a98c1e0fa4368993dad4fabaa8616291dbc6d20dc089938225037b3')
 // seed = ethers.utils.arrayify('0xd7ffa3398fe033735db31d1fe41c2084504f50a1608f8432b9ac0ed458a5b6ca')
 // seed = ethers.utils.arrayify('0x748a5a239736c65d6eb1704553f34755fb6d4e894b012b6d8cea374900ab5182')
+// seed = ethers.utils.arrayify('0xc7b2d9a2ff4aeed37dedd21b38a6620ce0f098a5bd03e54716efa6597450bcdd')
 console.log('Random Seed:', ethers.utils.hexlify(seed))
 seedrandom(seed, { global: true });
 

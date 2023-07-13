@@ -3,7 +3,6 @@ pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/utils/math/Math.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 import "@uniswap/lib/contracts/libraries/TransferHelper.sol";
 
 import "@derivable/erc1155-maturity/contracts/token/ERC1155/IERC1155Supply.sol";
@@ -263,7 +262,8 @@ contract Helper is Constants, IHelper {
                 PREMIUM_RATE
             );
             if (a < amount) {
-                amount = a - Math.ceilDiv(amount, a);
+                // add more input tolerance with high premium
+                amount = a - amount/a*amount/a;
             }
         }
 
@@ -316,7 +316,6 @@ contract Helper is Constants, IHelper {
         if (delta + rTuo <= rOut) {
             return amount;
         }
-        // rounding: amount-1
         return (delta + rTuo - rOut) / 2;
     }
 }

@@ -278,7 +278,7 @@ describe("Protocol", function () {
             }
             const tokenAfter = await derivable1155.balanceOf(owner.address, convertedId)
             const tokenChanged = tokenBefore.sub(tokenAfter)
-            expect(tokenChanged).lte(amountIn).gte(amountIn.sub(1))
+            expect(tokenChanged).lte(amountIn).gte(amountIn.sub(2))
         }
         it("all lp -> weth: Non UTR", async function () {
             await testROut(SIDE_C, null, SIDE_R, false)

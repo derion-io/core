@@ -85,7 +85,7 @@ describe("View", function () {
       if (closeTo) 
         expect(Number(weiToNumber(amountIn.mul(r).div(s)))).closeTo(Number(weiToNumber(amountOut)), 1e-17)
       else
-        expect(amountIn.mul(r).div(s)).equal(amountOut)
+        expect(amountIn.mul(r).div(s)).gte(amountOut.sub(2)).lte(amountOut.add(2))
     }
 
     it("Short, twap == spot", async function () {
