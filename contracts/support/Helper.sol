@@ -263,7 +263,7 @@ contract Helper is Constants, IHelper {
                 PREMIUM_RATE
             );
             if (a < amount) {
-                amount = a;
+                amount = a - Math.ceilDiv(amount, a);
             }
         }
 
@@ -281,9 +281,9 @@ contract Helper is Constants, IHelper {
                 amount = FullMath.mulDiv(amount, __.rB, s);
                 rB1 -= amount;
             } else /*if (sideIn == SIDE_C)*/ {
-                --amount; // SIDE_C sacrifices number rounding for A and B
                 uint rC = __.R - __.rA - __.rB;
-                amount = FullMath.mulDiv(amount, rC, s);
+                // rounding: A+1, B+1, C-2
+                amount = FullMath.mulDiv(amount, rC-2, s+1);
             }
         }
 
@@ -316,6 +316,7 @@ contract Helper is Constants, IHelper {
         if (delta + rTuo <= rOut) {
             return amount;
         }
+        // rounding: amount-1
         return (delta + rTuo - rOut) / 2;
     }
 }
