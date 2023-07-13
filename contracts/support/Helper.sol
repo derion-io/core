@@ -263,7 +263,7 @@ contract Helper is Constants, IHelper {
                 PREMIUM_RATE
             );
             if (a < amount) {
-                amount = a;
+                amount = a - Math.ceilDiv(amount, a);
             }
         }
 
@@ -309,8 +309,7 @@ contract Helper is Constants, IHelper {
     ) internal pure returns (uint) {
         (uint rOut, uint rTuo) = sideOut == SIDE_A ? (rA, rB) : (rB, rA);
         uint b = rOut > rTuo ? rOut - rTuo : rTuo - rOut;
-        // rounding: A+1, B+1, C-2
-        uint c = R - rB - rA - 2;
+        uint c = R - rB - rA;
         uint ac = FullMath.mulDiv(amount*c, premiumRate, Q128);
         uint delta = b * b + 4 * ac;
         delta = Math.sqrt(delta);
@@ -318,6 +317,6 @@ contract Helper is Constants, IHelper {
             return amount;
         }
         // rounding: amount-1
-        return (delta + rTuo - rOut) / 2 - 1;
+        return (delta + rTuo - rOut) / 2;
     }
 }
