@@ -17,6 +17,7 @@ async function main() {
     const usdc = "0xFF970A61A04b1cA14834A43f5dE4533eBDDB5CC8"
     const weth = "0x82aF49447D8a07e3bd95BD0d56f35241523fBab1"
     const pairETHUSDC = "0xC31E54c7a869B9FcBEcc14363CF510d1c41fa443"
+    const pairETHPEPE = "0x1944AC04bD9FED9a2BcDB38b70C35949c864ec35"
 
     // testnet
     // const utr = "0xbc9a257e43f7b3b1a03aEBE909f15e95A4928834"
@@ -31,15 +32,15 @@ async function main() {
     // const pairETHUSDC = "0xBf4CC059DfF52AeFe7f12516e4CA4Bc691D97474"
 
     const qti = 1
-    const windowTime = 60
+    const windowTime = 10800
     // mainnet
-    const mark = bn("15065122318819189091263847637975040")
-    const k = 24
+    const mark = bn("9627317981834231357895182479523840")
+    const k = 16
     const oracle = ethers.utils.hexZeroPad(
-        bn(qti).shl(255).add(bn(windowTime).shl(256 - 64)).add(pairETHUSDC).toHexString(),
+        bn(qti).shl(255).add(bn(windowTime).shl(256 - 64)).add(pairETHPEPE).toHexString(),
         32,
     )
-    const dailyFundingRate = (0.02 * k) / 100
+    const dailyFundingRate = (0.03 * k) / 100
     const halfLife = Math.round(
         SECONDS_PER_DAY /
         Math.log2(1 / (1 - dailyFundingRate)))
@@ -57,8 +58,8 @@ async function main() {
         INTEREST_HL: halfLife,
         PREMIUM_RATE: premiumRate,
         MATURITY: 60 * 60,
-        MATURITY_VEST: 60,
-        MATURITY_RATE: bn(99).shl(128).div(100),
+        MATURITY_VEST: 60 * 10,
+        MATURITY_RATE: bn(97).shl(128).div(100),
         OPEN_RATE: feeToOpenRate(0),
     }
 
@@ -70,7 +71,7 @@ async function main() {
     const receipt = await tx.wait()
     const poolAddress = ethers.utils.getAddress('0x' + receipt.logs[0].data.slice(-40))
     console.log(`pool: ${poolAddress}`)
-    addressList["pool^12-1"] = poolAddress
+    addressList["pool-PEPE^8-1"] = poolAddress
     exportData(addressList)
 }
 

@@ -23,11 +23,12 @@ async function main() {
 
     // mainnet
     const qti = 1
-    const windowTime = 60
+    const windowTime = 10800
     const pairETHUSDC = "0xC31E54c7a869B9FcBEcc14363CF510d1c41fa443"
+    const pairETHPEPE = "0x1944AC04bD9FED9a2BcDB38b70C35949c864ec35"
 
     const oracle = ethers.utils.hexZeroPad(
-        bn(qti).shl(255).add(bn(windowTime).shl(256 - 64)).add(pairETHUSDC).toHexString(),
+        bn(qti).shl(255).add(bn(windowTime).shl(256 - 64)).add(pairETHPEPE).toHexString(),
         32,
     )
     
