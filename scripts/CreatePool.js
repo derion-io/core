@@ -33,10 +33,8 @@ async function main() {
     const qti = 1
     const windowTime = 60
     // mainnet
-    // const mark = "0x2D9B0000000000000000000000000"
-    // testnet
     const mark = bn("15065122318819189091263847637975040")
-    const k = 40
+    const k = 24
     const oracle = ethers.utils.hexZeroPad(
         bn(qti).shl(255).add(bn(windowTime).shl(256 - 64)).add(pairETHUSDC).toHexString(),
         32,
@@ -72,7 +70,7 @@ async function main() {
     const receipt = await tx.wait()
     const poolAddress = ethers.utils.getAddress('0x' + receipt.logs[0].data.slice(-40))
     console.log(`pool: ${poolAddress}`)
-    addressList["pool^20-1"] = poolAddress
+    addressList["pool^12-1"] = poolAddress
     exportData(addressList)
 }
 
