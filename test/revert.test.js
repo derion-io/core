@@ -10,12 +10,12 @@ const { loadFixtureFromParams } = require("./shared/scenerios")
 chai.use(solidity)
 const { AddressZero, MaxUint256 } = ethers.constants
 const expect = chai.expect
-const { numberToWei, packId, bn, swapToSetPriceMock, weiToNumber } = require("./shared/utilities")
+const { numberToWei, packId, bn } = require("./shared/utilities")
 
 const HALF_LIFE = 10 * 365 * 24 * 60 * 60
 const PAYMENT = 0
 
-describe("Require", function () {
+describe("Revert", function () {
   const fixture = loadFixtureFromParams([{
     ...baseParams,
     halfLife: bn(HALF_LIFE),
@@ -81,7 +81,7 @@ describe("Require", function () {
   }
 
   describe("PoolBase", function () {
-    it("require of init", async function () {
+    it("init: ZP, IP, BP, AI", async function () {
       const { owner, weth, utr, params, poolFactory, derivable1155, fakeUTR } = await loadFixture(fixture)
       const config = {
         ORACLE: params[1].oracle,
@@ -178,7 +178,7 @@ describe("Require", function () {
       )).to.be.revertedWith("AI")
     })
 
-    it("require of swap", async function () {
+    it("swap: MM, MO, SI", async function () {
       const { stateCalHelper, derivablePools, accountA, reentrancyAttack, weth, utr, owner } = await loadFixture(fixture)
       const pool = derivablePools[1]
       await expect(pool.swap(
@@ -201,7 +201,7 @@ describe("Require", function () {
         }
       )).to.be.revertedWith("MO")
 
-      // Require SI
+      // Revert SI
       const swapParams = {
         sideIn: 0,
         sideOut: 48,
@@ -224,7 +224,7 @@ describe("Require", function () {
   })
 
   describe("PoolFactory", function () {
-    it("require of createPool", async function () {
+    it("createPool", async function () {
       const { params, poolFactory } = await loadFixture(fixture)
       const config = {
         ORACLE: params[1].oracle,
@@ -243,7 +243,7 @@ describe("Require", function () {
   })
 
   describe("PoolLogic", function () {
-    it("require of _swap", async function () {
+    it("_swap: SS, OA, OB", async function () {
       const { derivablePools, badHelperOA, badHelperOB } = await loadFixture(fixture)
       const pool = derivablePools[0]
       await expect(pool.swap(
