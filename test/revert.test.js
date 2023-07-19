@@ -274,4 +274,13 @@ describe("Revert", function () {
       )).to.be.revertedWith("OB")
     })
   })
+
+  describe("PoolLogic", function () {
+    it("onlyItsPool: UNAUTHORIZED_MINT_BURN", async function () {
+      const { derivable1155, owner } = await loadFixture(fixture)
+      await expect(
+        derivable1155.mintLock(owner.address, 1, 1, 0, "0x00")
+      ).to.be.revertedWith("UNAUTHORIZED_MINT_BURN")
+    })
+  })
 })
