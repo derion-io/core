@@ -3,9 +3,11 @@ pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/utils/math/Math.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
 import "@uniswap/lib/contracts/libraries/TransferHelper.sol";
 
 import "@derivable/erc1155-maturity/contracts/token/ERC1155/IERC1155Supply.sol";
+import "@derivable/utr/contracts/interfaces/IUniversalTokenRouter.sol";
 
 import "../libs/abdk-consulting/abdk-libraries-solidity/ABDKMath64x64.sol";
 import "../libs/FullMath.sol";
@@ -14,9 +16,10 @@ import "../interfaces/IHelper.sol";
 import "../interfaces/IPool.sol";
 import "../interfaces/IPoolFactory.sol";
 import "../interfaces/IWeth.sol";
+import "../interfaces/IToken.sol";
 
 
-contract Helper is Constants, IHelper {
+contract Helper is Constants, IHelper, ERC1155Holder {
     uint internal constant SIDE_NATIVE = 0x01;
     uint constant MAX_IN = 0;
     address internal immutable TOKEN;
@@ -159,7 +162,7 @@ contract Helper is Constants, IHelper {
         );
     }
 
-    function swap(SwapParams memory params) external payable returns (uint amountOut){
+    function swap(SwapParams memory params) public payable returns (uint amountOut){
         SwapParams memory _params = SwapParams(
             params.sideIn,
             params.poolIn,
@@ -236,6 +239,16 @@ contract Helper is Constants, IHelper {
             _params.amountIn,
             amountOut
         );
+    }
+
+    function sweep(
+        uint id,
+        address recipient
+    ) external returns (uint amountOut) {
+        amountOut = IERC1155Supply(TOKEN).balanceOf(address(this), id);
+        if (amountOut > 0) {
+            IERC1155Supply(TOKEN).safeTransferFrom(address(this), recipient, id, amountOut, '');
+        }
     }
 
     function swapToState(

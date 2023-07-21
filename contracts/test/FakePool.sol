@@ -30,8 +30,8 @@ contract FakePool is IPool{
     }
 
     function swap(
-        Param memory param,
-        Payment memory payment
+        Param memory,
+        Payment memory
     ) external pure returns(uint amountIn, uint amountOut) {
         return (0, 0);
     }
