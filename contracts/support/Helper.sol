@@ -7,16 +7,13 @@ import "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
 import "@uniswap/lib/contracts/libraries/TransferHelper.sol";
 
 import "@derivable/erc1155-maturity/contracts/token/ERC1155/IERC1155Supply.sol";
-import "@derivable/utr/contracts/interfaces/IUniversalTokenRouter.sol";
 
-import "../libs/abdk-consulting/abdk-libraries-solidity/ABDKMath64x64.sol";
 import "../libs/FullMath.sol";
 import "../subs/Constants.sol";
 import "../interfaces/IHelper.sol";
 import "../interfaces/IPool.sol";
 import "../interfaces/IPoolFactory.sol";
 import "../interfaces/IWeth.sol";
-import "../interfaces/IToken.sol";
 
 
 contract Helper is Constants, IHelper, ERC1155Holder {
@@ -56,7 +53,7 @@ contract Helper is Constants, IHelper, ERC1155Holder {
     receive() external payable {}
 
     function _packID(address pool, uint side) internal pure returns (uint id) {
-        id = (side << 160) + uint160(pool);
+        id = (side << 160) | uint160(pool);
     }
 
     // v(r)
@@ -72,17 +69,6 @@ contract Helper is Constants, IHelper, ERC1155Holder {
         return IERC1155Supply(TOKEN).totalSupply(_packID(msg.sender, side));
     }
 
-    function _decayRate (
-        uint elapsed,
-        uint halfLife
-    ) internal pure returns (uint rateX64) {
-        if (halfLife == 0) {
-            return Q64;
-        }
-        int128 rate = ABDKMath64x64.exp_2(int128(int((elapsed << 64) / halfLife)));
-        return uint(int(rate));
-    }
-
     function createPool(Config memory config, State memory state, address factory) external payable returns (address pool) {
         pool = IPoolFactory(factory).createPool(config);
         IWeth(WETH).deposit{value : msg.value}();
@@ -96,7 +82,7 @@ contract Helper is Constants, IHelper, ERC1155Holder {
     function _swapMultiPool(SwapParams memory params, address TOKEN_R) internal returns (uint amountOut) {
         // swap poolIn/sideIn to poolIn/R
         bytes memory payload = abi.encode(
-            uint(0),
+            MAX_IN,
             params.sideIn,
             SIDE_R,
             params.amountIn,
@@ -123,7 +109,7 @@ contract Helper is Constants, IHelper, ERC1155Holder {
 
         // swap (poolIn|PoolOut)/R to poolOut/SideOut
         payload = abi.encode(
-            uint(0),
+            MAX_IN,
             SIDE_R,
             params.sideOut,
             amountOut,
@@ -163,6 +149,7 @@ contract Helper is Constants, IHelper, ERC1155Holder {
     }
 
     function swap(SwapParams memory params) public payable returns (uint amountOut){
+        // TODO: why do we need this?
         SwapParams memory _params = SwapParams(
             params.sideIn,
             params.poolIn,
@@ -199,7 +186,7 @@ contract Helper is Constants, IHelper, ERC1155Holder {
         }
 
         bytes memory payload = abi.encode(
-            uint(0),
+            MAX_IN,
             params.sideIn,
             params.sideOut,
             params.amountIn,
@@ -256,7 +243,7 @@ contract Helper is Constants, IHelper, ERC1155Holder {
         bytes calldata payload
     ) external view override returns (State memory state1) {
         (
-            uint swapType,
+            uint swapType,  // TODO: remove this
             uint sideIn,
             uint sideOut,
             uint amount,
