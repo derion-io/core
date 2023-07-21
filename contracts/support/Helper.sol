@@ -162,7 +162,7 @@ contract Helper is Constants, IHelper, ERC1155Holder {
         );
     }
 
-    function swap(SwapParams memory params) external payable returns (uint amountOut){
+    function swap(SwapParams memory params) public payable returns (uint amountOut){
         SwapParams memory _params = SwapParams(
             params.sideIn,
             params.poolIn,
@@ -241,77 +241,13 @@ contract Helper is Constants, IHelper, ERC1155Holder {
         );
     }
 
-    function swapAndMerge(
-        Param memory param,
-        Payment memory payment,
-        address pool
-    ) external returns (uint amountIn, uint amountOut) {
-        (,,, amountIn,) = abi.decode(param.payload, (uint, uint, uint, uint, uint));
-
-        uint tokenOwed = 0;
-        uint idOut = _packID(pool, param.sideOut);
-        uint idIn = _packID(pool, param.sideIn);
-
-        if (param.sideIn == SIDE_R) {
-            IERC20(WETH).approve(pool, type(uint).max);
-            if (payment.payer != address(0)) {
-                IUniversalTokenRouter(payment.utr).pay(payment.payer, address(this), 20, WETH, 0, amountIn);
-            } else {
-                TransferHelper.safeTransferFrom(WETH, msg.sender, address(this), amountIn);
-            }
-        } else {
-            if (!IERC1155Supply(TOKEN).isApprovedForAll(address(this), pool)) {
-                IERC1155Supply(TOKEN).setApprovalForAll(pool, true);
-            }
-            if (payment.payer != address(0)) {
-                IUniversalTokenRouter(payment.utr).pay(payment.payer, address(this), 1155, TOKEN, idIn, amountIn);
-            } else {
-                IERC1155Supply(TOKEN).safeTransferFrom(msg.sender, address(this), idIn, amountIn, '');
-            }
-        }
-
-        if (param.sideOut != SIDE_R) {
-            if (IToken(TOKEN).maturityOf(payment.recipient, idOut) > block.timestamp) {
-                tokenOwed = IERC1155Supply(TOKEN).balanceOf(payment.recipient, idOut);
-                if (payment.payer != address(0)) {
-                    IUniversalTokenRouter(payment.utr).pay(payment.payer, address(this), 1155, TOKEN, idOut, tokenOwed);
-                } else {
-                    IERC1155Supply(TOKEN).safeTransferFrom(msg.sender, address(this), idOut, tokenOwed, '');
-                }
-            }
-        }
-
-        (amountIn, amountOut) = IPool(pool).swap(
-            param,
-            Payment(
-                address(0),
-                address(0),
-                payment.recipient
-            )
-        );
-
-        if (tokenOwed > 0) {
-            IERC1155Supply(TOKEN).safeTransferFrom(address(this), payment.recipient, idOut, tokenOwed, '');
-        }
-        
-        if (param.sideIn == SIDE_R) {
-            uint leftOver = IERC20(WETH).balanceOf(address(this));
-            if (leftOver > 0) {
-                if (payment.payer != address(0)) {
-                    TransferHelper.safeTransfer(WETH, payment.payer, leftOver);
-                } else {
-                    TransferHelper.safeTransfer(WETH, msg.sender, leftOver);
-                }
-            }
-        } else {
-            uint leftOver = IERC1155Supply(TOKEN).balanceOf(address(this), idIn);
-            if (leftOver > 0) {
-                if (payment.payer != address(0)) {
-                    IERC1155Supply(TOKEN).safeTransferFrom(address(this), payment.payer, idIn, leftOver, '');
-                } else {
-                    IERC1155Supply(TOKEN).safeTransferFrom(address(this), msg.sender, idIn, leftOver, '');
-                }
-            }
+    function sweep(
+        uint id,
+        address recipient
+    ) external returns (uint amountOut) {
+        amountOut = IERC1155Supply(TOKEN).balanceOf(address(this), id);
+        if (amountOut > 0) {
+            IERC1155Supply(TOKEN).safeTransferFrom(address(this), recipient, id, amountOut, '');
         }
     }
 
