@@ -1,7 +1,7 @@
 const { loadFixture, time } = require("@nomicfoundation/hardhat-network-helpers")
 const { baseParams } = require("./shared/baseParams")
 const { loadFixtureFromParams } = require("./shared/scenerios")
-const { weiToNumber, numberToWei, bn } = require("./shared/utilities")
+const { weiToNumber, numberToWei, bn, packId } = require("./shared/utilities")
 const { SIDE_R, SIDE_A, SIDE_B, SIDE_C } = require("./shared/constant")
 const { expect } = require("chai")
 
@@ -222,6 +222,75 @@ configs.forEach(config => describe(`Maturity - EXP = ${config.exp}, COEF ${confi
         )
 
         expect(amountOut).to.be.eq(0)
+    })
+
+    it('User should not be able to open more Long directly', async function () {
+        const {accountA, derivablePools, derivable1155} = await loadFixture(fixture)
+        const derivablePool = derivablePools[0].connect(accountA)
+
+        await derivablePool.swap(
+            SIDE_R,
+            SIDE_A,
+            numberToWei(1),
+            0,
+        )
+
+        const tokenAmount = await derivable1155.balanceOf(accountA.address, packId(SIDE_A, derivablePool.contract.address))
+        expect(tokenAmount).gte(0)
+        await time.increase(10)
+
+        await expect(derivablePool.swap(
+            SIDE_R,
+            SIDE_A,
+            numberToWei(1),
+            0,
+        )).revertedWith('Maturity: locktime order')
+    })
+
+    it('User should not be able to open more Short directly', async function () {
+        const {accountA, derivablePools, derivable1155} = await loadFixture(fixture)
+        const derivablePool = derivablePools[0].connect(accountA)
+
+        await derivablePool.swap(
+            SIDE_R,
+            SIDE_B,
+            numberToWei(1),
+            0,
+        )
+
+        const tokenAmount = await derivable1155.balanceOf(accountA.address, packId(SIDE_B, derivablePool.contract.address))
+        expect(tokenAmount).gte(0)
+        await time.increase(10)
+
+        await expect(derivablePool.swap(
+            SIDE_R,
+            SIDE_B,
+            numberToWei(1),
+            0,
+        )).revertedWith('Maturity: locktime order')
+    })
+
+    it('User should not be able to provide more LP directly', async function () {
+        const {accountA, derivablePools, derivable1155} = await loadFixture(fixture)
+        const derivablePool = derivablePools[0].connect(accountA)
+
+        await derivablePool.swap(
+            SIDE_R,
+            SIDE_C,
+            numberToWei(1),
+            0,
+        )
+
+        const tokenAmount = await derivable1155.balanceOf(accountA.address, packId(SIDE_A, derivablePool.contract.address))
+        expect(tokenAmount).gte(0)
+        await time.increase(10)
+
+        await expect(derivablePool.swap(
+            SIDE_R,
+            SIDE_C,
+            numberToWei(1),
+            0,
+        )).revertedWith('Maturity: locktime order')
     })
 
     it('User should get amountOut > 0 if t > maturity, T - t = 40, buy Long', async function () {
