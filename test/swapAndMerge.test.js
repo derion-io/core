@@ -1,100 +1,111 @@
-const { loadFixture, time } = require("@nomicfoundation/hardhat-network-helpers")
+const { loadFixture } = require("@nomicfoundation/hardhat-network-helpers")
 const { baseParams } = require("./shared/baseParams")
 const { loadFixtureFromParams } = require("./shared/scenerios")
 const { SIDE_R, SIDE_A } = require("./shared/constant")
 const { numberToWei, packId } = require("./shared/utilities")
 const { expect } = require("chai")
-const { AddressZero, MaxUint256 } = ethers.constants;
+const { MaxUint256 } = ethers.constants;
 
 const maturities = [60, 0]
+
+const static = true
+
+const PAYMENT = 0;
+const TRANSFER = 1;
 
 maturities.forEach(maturity => describe(`Swap and merge maturity: ${maturity}`, function () {
   const fixture = loadFixtureFromParams([{
     ...baseParams,
-    maturity
+    maturity,
   }])
 
   it('R -> A, Not yet maturity', async function () {
     const { accountA, accountB, derivablePools, stateCalHelper, weth, utr, derivable1155 } = await loadFixture(fixture)
     const pool = derivablePools[0].connect(accountA)
 
-    const outId = packId(SIDE_A, pool.contract.address)
+    const idOut = packId(SIDE_A, pool.contract.address)
     await weth.connect(accountA).approve(utr.address, MaxUint256)
+
+    const amountIn = numberToWei(1)
 
     await pool.swap(
       SIDE_R,
       SIDE_A,
-      numberToWei(1),
+      amountIn,
       0
     )
-    await time.increase(1)
+
+    if (maturity > 0) {
+      await expect(pool.connect(accountA).swap(
+        SIDE_R,
+        SIDE_A,
+        amountIn,
+        0
+      ), 'merge with maturity').revertedWith('Maturity: locktime order')
+    } else {
+      const amountOut = await pool.connect(accountA).swap(
+        SIDE_R,
+        SIDE_A,
+        amountIn,
+        0,
+        { static },
+      )
+      expect(amountOut, 'merge without maturity').gt(0)
+    }
 
     const inBalanceBefore = await weth.balanceOf(accountA.address)
-    const outBalanceBefore = await derivable1155.balanceOf(accountA.address, outId)
+    const currentBalance = await derivable1155.balanceOf(accountA.address, idOut)
     const expectedAmountOut = await pool.connect(accountB).swap(
       SIDE_R,
       SIDE_A,
-      numberToWei(1),
+      amountIn,
       0,
-      { static: true }
+      { static },
     )
 
-    const txn = await stateCalHelper.connect(accountA).populateTransaction.swap({
+    const swapTx = await stateCalHelper.connect(accountA).populateTransaction.swap({
       sideIn: SIDE_R,
       poolIn: pool.contract.address,
       sideOut: SIDE_A,
       poolOut: pool.contract.address,
-      amountIn: numberToWei(1),
+      amountIn,
       maturity: 0,
       payer: accountA.address,
-      recipient: accountA.address
+      recipient: accountA.address,
     })
-    const sweepTxn = await stateCalHelper.populateTransaction.sweep(
-      outId, accountA.address
+    const sweepTx = await stateCalHelper.populateTransaction.sweep(
+      idOut, accountA.address
     )
 
     await utr.connect(accountA).exec([], [{
       inputs: [{
-        mode: 1,
+        mode: TRANSFER,
         eip: 1155,
         token: derivable1155.address,
-        id: outId,
-        amountIn: outBalanceBefore,
+        id: idOut,
+        amountIn: currentBalance,
         recipient: stateCalHelper.address,
-      }],
-      code: AddressZero,
-      data: []
-    }, 
-    {
-      inputs: [{
-        mode: 0,
+      }, {
+        mode: PAYMENT,
         eip: 20,
         token: weth.address,
         id: 0,
-        amountIn: numberToWei(1),
+        amountIn,
         recipient: derivablePools[0].contract.address,
       }],
       code: stateCalHelper.address,
-      data: txn.data,
+      data: swapTx.data,
     }, {
-      inputs: [{
-        mode: 2,
-        eip: 20,
-        token: weth.address,
-        id: 0,
-        amountIn: 0,
-        recipient: accountA.address,
-      }],
+      inputs: [],
       code: stateCalHelper.address,
-      data: sweepTxn.data,
-    }
-  ])
+      data: sweepTx.data,
+    }])
 
     const inBalanceAfter = await weth.balanceOf(accountA.address)
-    const outBalanceAfter = await derivable1155.balanceOf(accountA.address, outId)
+    const outBalanceAfter = await derivable1155.balanceOf(accountA.address, idOut)
 
-    expect(numberToWei(1).sub(inBalanceBefore.sub(inBalanceAfter))).lte(10)
-    expect(outBalanceAfter.sub(outBalanceBefore)).eq(expectedAmountOut)
+    expect(amountIn.sub(inBalanceBefore.sub(inBalanceAfter))).lte(10)
+    expect(outBalanceAfter.sub(currentBalance)).eq(expectedAmountOut)
   })
 
 }))
