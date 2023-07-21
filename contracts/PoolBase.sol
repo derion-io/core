@@ -88,7 +88,7 @@ abstract contract PoolBase is IPool, ERC1155Holder, Storage, Constants {
     }
 
     function _packID(address pool, uint side) internal pure returns (uint id) {
-        id = (side << 160) + uint160(pool);
+        id = (side << 160) | uint160(pool);
     }
 
     function getStates()

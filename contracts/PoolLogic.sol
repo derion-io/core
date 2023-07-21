@@ -141,7 +141,7 @@ contract PoolLogic is PoolBase {
         require(sideIn != sideOut, 'SS');
         State memory state = State(_reserve(config.TOKEN_R), s_a, s_b);
         // [INTEREST DECAY]
-        {
+        unchecked {
             uint elapsed = block.timestamp - s_i;
             if (elapsed > 0) {
                 uint interestRateX64 = _expRate(elapsed, config.INTEREST_HL);
@@ -159,15 +159,15 @@ contract PoolLogic is PoolBase {
         // [PRICE SELECTION]
         (uint xk, uint rA, uint rB) = _selectPrice(config, state, sideIn, sideOut);
         // [PROTOCOL FEE]
-        {
+        unchecked {
             uint32 elapsed = uint32(block.timestamp & F_MASK) - (s_f & F_MASK);
             if (elapsed > 0) {
                 uint feeRateX64 = _expRate(elapsed, config.INTEREST_HL * FEE_RATE);
                 if (feeRateX64 > Q64) {
                     uint rAF = FullMath.mulDivRoundingUp(rA, Q64, feeRateX64);
                     uint rBF = FullMath.mulDivRoundingUp(rB, Q64, feeRateX64);
-                    if (rAF < rA || rBF < rB) {
-                        uint fee = rA - rAF + rB - rBF;
+                    uint fee = rA - rAF + rB - rBF;
+                    if (0 < fee && fee < state.R) {
                         TransferHelper.safeTransfer(config.TOKEN_R, FEE_TO, fee);
                         (rA, rB) = (rAF, rBF);
                         state.R -= fee;
@@ -240,9 +240,11 @@ contract PoolLogic is PoolBase {
         rate = config.OPEN_RATE;
         if (config.PREMIUM_RATE > 0 && rOut > rTuo) {
             uint rC1 = state.R - rOut - rTuo;
-            uint imbaRate = FullMath.mulDiv(Q128, rOut - rTuo, rC1);
-            if (imbaRate > config.PREMIUM_RATE) {
-                rate = FullMath.mulDiv(rate, config.PREMIUM_RATE, imbaRate);
+            unchecked {
+                uint imbaRate = FullMath.mulDiv(Q128, rOut - rTuo, rC1);
+                if (imbaRate > config.PREMIUM_RATE) {
+                    rate = FullMath.mulDiv(rate, config.PREMIUM_RATE, imbaRate);
+                }
             }
         }
     }
