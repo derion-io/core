@@ -77,7 +77,13 @@ maturities.forEach(maturity => describe(`Swap and merge maturity: ${maturity}`, 
       idOut, accountA.address
     )
 
-    await utr.connect(accountA).exec([], [{
+    await utr.connect(accountA).exec([{
+      recipient: accountA.address,
+      eip: 1155,
+      token: derivable1155.address,
+      id: idOut,
+      amountOutMin: amountIn,
+    }], [{
       inputs: [{
         mode: TRANSFER,
         eip: 1155,
