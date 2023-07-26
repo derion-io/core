@@ -344,7 +344,6 @@ describe("Protocol", function () {
                         data: (await derivableHelper.populateTransaction.swapInAll(
                             side,
                             SIDE_R,
-                            0,
                             AddressZero,
                             owner.address,
                         )).data,
