@@ -26,8 +26,15 @@ abstract contract PoolBase is IPool, ERC1155Holder, Storage, Constants {
         uint sideOut,
         uint maturity,
         uint amountIn,
-        uint amountOut
+        uint amountOut,
+        uint price
     );
+
+    struct Result {
+        uint amountIn;
+        uint amountOut;
+        uint price;
+    }
 
     constructor(address token) {
         TOKEN = token;
@@ -129,7 +136,7 @@ abstract contract PoolBase is IPool, ERC1155Holder, Storage, Constants {
     function swap(
         Param memory param,
         Payment memory payment
-    ) external override nonReentrant returns (uint amountIn, uint amountOut) {
+    ) external override nonReentrant returns (uint amountIn, uint amountOut, uint price) {
         Config memory config = loadConfig();
         if (param.sideOut != SIDE_R) {
             uint maturityMin = uint32(block.timestamp) + config.MATURITY;
@@ -140,7 +147,9 @@ abstract contract PoolBase is IPool, ERC1155Holder, Storage, Constants {
                 require(param.maturity >= maturityMin, "MM");
             }
         }
-        (amountIn, amountOut) = _swap(config, param);
+
+        Result memory result = _swap(config, param);
+        (amountIn, amountOut, price) = (result.amountIn, result.amountOut, result.price);
         if (param.sideIn == SIDE_R) {
             if (payment.payer != address(0)) {
                 uint expected = amountIn + IERC20(config.TOKEN_R).balanceOf(address(this));
@@ -177,10 +186,11 @@ abstract contract PoolBase is IPool, ERC1155Holder, Storage, Constants {
             param.sideOut,
             param.maturity,
             amountIn,
-            amountOut
+            amountOut,
+            price
         );
     }
 
-    function _swap(Config memory config, Param memory param) internal virtual returns (uint amountIn, uint amountOut);
+    function _swap(Config memory config, Param memory param) internal virtual returns (Result memory);
     function _maturityPayoff(Config memory config, uint maturity, uint amountOut) internal view virtual returns (uint);
 }

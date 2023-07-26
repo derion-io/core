@@ -86,7 +86,7 @@ contract BadHelper1 is Constants, IHelper {
             IPool(params.poolIn).loadConfig().PREMIUM_RATE
         );
 
-        (, amountOut) = IPool(params.poolIn).swap(
+        (, amountOut, ) = IPool(params.poolIn).swap(
             Param(
                 params.sideIn,
                 SIDE_R,
@@ -112,7 +112,7 @@ contract BadHelper1 is Constants, IHelper {
             amountOut,
             IPool(params.poolOut).loadConfig().PREMIUM_RATE
         );
-        (, amountOut) = IPool(params.poolOut).swap(
+        (, amountOut, ) = IPool(params.poolOut).swap(
             Param(
                 SIDE_R,
                 params.sideOut,
@@ -187,7 +187,7 @@ contract BadHelper1 is Constants, IHelper {
             IPool(params.poolIn).loadConfig().PREMIUM_RATE
         );
 
-        (, amountOut) = IPool(params.poolIn).swap(
+        (, amountOut, ) = IPool(params.poolIn).swap(
             Param(
                 params.sideIn,
                 params.sideOut,

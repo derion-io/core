@@ -47,5 +47,5 @@ interface IPool {
     function swap(
         Param memory param,
         Payment memory payment
-    ) external returns(uint amountIn, uint amountOut);
+    ) external returns(uint amountIn, uint amountOut, uint price);
 }

@@ -111,22 +111,22 @@ contract PoolLogic is PoolBase {
         State memory state,
         uint sideIn,
         uint sideOut
-    ) internal view returns (uint xk, uint rA, uint rB) {
+    ) internal view returns (uint xk, uint rA, uint rB, uint price) {
         (uint min, uint max) = _fetch(uint(config.ORACLE));
         if (min > max) {
             (min, max) = (max, min);
         }
         if (sideOut == SIDE_A || sideIn == SIDE_B) {
-            xk = _xk(config, max);
+            xk = _xk(config, price = max);
             (rA, rB) = _evaluate(xk, state);
         } else if (sideOut == SIDE_B || sideIn == SIDE_A) {
-            xk = _xk(config, min);
+            xk = _xk(config, price = min);
             (rA, rB) = _evaluate(xk, state);
         } else {
-            xk = _xk(config, min);
+            xk = _xk(config, price = min);
             (rA, rB) = _evaluate(xk, state);
             if ((sideIn == SIDE_R) == rB > rA) {
-                xk = _xk(config, max);
+                xk = _xk(config, price = max);
                 (rA, rB) = _evaluate(xk, state);
             }
         }
@@ -135,7 +135,7 @@ contract PoolLogic is PoolBase {
     function _swap(
         Config memory config,
         Param memory param
-    ) internal override returns(uint amountIn, uint amountOut) {
+    ) internal override returns(Result memory result) {
         uint sideIn = param.sideIn;
         uint sideOut = param.sideOut;
         require(sideIn != sideOut, 'SS');
@@ -157,7 +157,8 @@ contract PoolLogic is PoolBase {
             }
         }
         // [PRICE SELECTION]
-        (uint xk, uint rA, uint rB) = _selectPrice(config, state, sideIn, sideOut);
+        uint xk; uint rA; uint rB;
+        (xk, rA, rB, result.price) = _selectPrice(config, state, sideIn, sideOut);
         // [PROTOCOL FEE]
         unchecked {
             uint32 elapsed = uint32(block.timestamp & F_MASK) - (s_f & F_MASK);
@@ -187,43 +188,43 @@ contract PoolLogic is PoolBase {
         (uint rA1, uint rB1) = _evaluate(xk, state1);
         if (sideIn == SIDE_R) {
             require(rA1 >= rA && rB1 >= rB, "MI:R");
-            amountIn = state1.R - state.R;
+            result.amountIn = state1.R - state.R;
         } else {
             require(state.R >= state1.R, "MI:NR");
             uint s = _supply(TOKEN, sideIn);
             if (sideIn == SIDE_A) {
                 require(rB1 >= rB, "MI:A");
-                amountIn = FullMath.mulDivRoundingUp(s, rA - rA1, rA);
+                result.amountIn = FullMath.mulDivRoundingUp(s, rA - rA1, rA);
             } else {
                 require(rA1 >= rA, "MI:NA");
                 if (sideIn == SIDE_B) {
-                    amountIn = FullMath.mulDivRoundingUp(s, rB - rB1, rB);
+                    result.amountIn = FullMath.mulDivRoundingUp(s, rB - rB1, rB);
                 } else if (sideIn == SIDE_C) {
                     require(rB1 >= rB, "MI:NB");
                     uint rC = state.R - rA - rB;
                     uint rC1 = state1.R - rA1 - rB1;
-                    amountIn = FullMath.mulDivRoundingUp(s, rC - rC1, rC);
+                    result.amountIn = FullMath.mulDivRoundingUp(s, rC - rC1, rC);
                 }
             }
         }
         if (sideOut == SIDE_R) {
-            amountOut = state.R - state1.R;
+            result.amountOut = state.R - state1.R;
         } else {
             if (sideOut == SIDE_C) {
                 uint rC = state.R - rA - rB;
                 uint rC1 = state1.R - rA1 - rB1;
-                amountOut = FullMath.mulDiv(_supply(TOKEN, sideOut), rC1 - rC, rC);
+                result.amountOut = FullMath.mulDiv(_supply(TOKEN, sideOut), rC1 - rC, rC);
             } else {
                 uint inputRate = Q128;
                 if (sideOut == SIDE_A) {
-                    amountOut = FullMath.mulDiv(_supply(TOKEN, sideOut), rA1 - rA, rA);
+                    result.amountOut = FullMath.mulDiv(_supply(TOKEN, sideOut), rA1 - rA, rA);
                     inputRate = _inputRate(config, state1, rA1, rB1);
                 } else if (sideOut == SIDE_B) {
-                    amountOut = FullMath.mulDiv(_supply(TOKEN, sideOut), rB1 - rB, rB);
+                    result.amountOut = FullMath.mulDiv(_supply(TOKEN, sideOut), rB1 - rB, rB);
                     inputRate = _inputRate(config, state1, rB1, rA1);
                 }
                 if (inputRate != Q128) {
-                    amountIn = FullMath.mulDiv(amountIn, Q128, inputRate);
+                    result.amountIn = FullMath.mulDiv(result.amountIn, Q128, inputRate);
                 }
             }
         }

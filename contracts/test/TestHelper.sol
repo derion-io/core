@@ -47,7 +47,7 @@ contract TestHelper {
         uint32 maturity,
         address payer,
         address recipient
-    ) external returns (uint, uint) {
+    ) external returns (uint, uint, uint) {
         IERC1155(TOKEN).setApprovalForAll(POOL, true);
         bytes memory payload = abi.encode(
             MAX_IN,

@@ -45,7 +45,8 @@ contract Helper is Constants, IHelper, ERC1155Holder {
         uint sideIn,
         uint sideOut,
         uint amountIn,
-        uint amountOut
+        uint amountOut,
+        uint price
     );
 
     // accepting ETH for WETH.withdraw
@@ -87,7 +88,7 @@ contract Helper is Constants, IHelper, ERC1155Holder {
             IPool(params.poolIn).loadConfig().PREMIUM_RATE
         );
 
-        (, amountOut) = IPool(params.poolIn).swap(
+        (, amountOut, ) = IPool(params.poolIn).swap(
             Param(
                 params.sideIn,
                 SIDE_R,
@@ -105,6 +106,8 @@ contract Helper is Constants, IHelper, ERC1155Holder {
         // TOKEN_R approve poolOut
         IERC20(TOKEN_R).approve(params.poolOut, amountOut);
 
+        uint price;
+
         // swap (poolIn|PoolOut)/R to poolOut/SideOut
         payload = abi.encode(
             SIDE_R,
@@ -112,7 +115,7 @@ contract Helper is Constants, IHelper, ERC1155Holder {
             amountOut,
             IPool(params.poolOut).loadConfig().PREMIUM_RATE
         );
-        (, amountOut) = IPool(params.poolOut).swap(
+        (, amountOut, price) = IPool(params.poolOut).swap(
             Param(
                 SIDE_R,
                 params.sideOut,
@@ -141,7 +144,8 @@ contract Helper is Constants, IHelper, ERC1155Holder {
             params.sideIn,
             params.sideOut,
             params.amountIn,
-            amountOut
+            amountOut,
+            price
         );
     }
 
@@ -182,6 +186,7 @@ contract Helper is Constants, IHelper, ERC1155Holder {
             params.recipient = address(this);
         }
 
+        uint price;
         bytes memory payload = abi.encode(
             params.sideIn,
             params.sideOut,
@@ -189,7 +194,7 @@ contract Helper is Constants, IHelper, ERC1155Holder {
             config.PREMIUM_RATE
         );
 
-        (, amountOut) = IPool(params.poolIn).swap(
+        (, amountOut, price) = IPool(params.poolIn).swap(
             Param(
                 params.sideIn,
                 params.sideOut,
@@ -220,7 +225,8 @@ contract Helper is Constants, IHelper, ERC1155Holder {
             _params.sideIn,
             _params.sideOut,
             _params.amountIn,
-            amountOut
+            amountOut,
+            price
         );
     }
 
