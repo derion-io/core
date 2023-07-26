@@ -5,9 +5,12 @@ const { use } = require("chai");
 const { solidity } = require("ethereum-waffle");
 const { _init, calculateInitParams } = require("./AsymptoticPerpetual");
 const Pool = require("./Pool");
-const { bn, numberToWei, encodeSqrtX96 } = require("./utilities");
+const { bn, numberToWei, encodeSqrtX96, packId } = require("./utilities");
 const { ethers } = require("hardhat");
+const { SIDE_A, SIDE_B, SIDE_C } = require("./constant");
 const { AddressZero } = ethers.constants;
+
+const AddressOne = "0x0000000000000000000000000000000000000001";
 
 use(solidity)
 
@@ -191,6 +194,20 @@ function loadFixtureFromParams (arrParams, options={}) {
         recipient: owner.address,
       }
       await pool.contract.init(initParams, payment)
+
+      // permanently burn MINIMUM_SUPPLY of each token
+      await derivable1155.safeBatchTransferFrom(
+        owner.address,
+        AddressOne,
+        [
+          packId(SIDE_A, pool.contract.address),
+          packId(SIDE_B, pool.contract.address),
+          packId(SIDE_C, pool.contract.address),
+        ],
+        [1000, 1000, 1000],
+        '0x',
+      )
+
       return pool
     }))
 
