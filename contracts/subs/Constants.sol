@@ -13,4 +13,7 @@ contract Constants {
     uint internal constant SIDE_A = 0x10;
     uint internal constant SIDE_B = 0x20;
     uint internal constant SIDE_C = 0x30;
+
+    uint constant internal MINIMUM_RESERVE = 1000;
+    uint constant internal MINIMUM_SUPPLY = 1000;
 }

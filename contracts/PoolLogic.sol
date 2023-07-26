@@ -206,6 +206,10 @@ contract PoolLogic is PoolBase {
                     result.amountIn = FullMath.mulDivRoundingUp(s, rC - rC1, rC);
                 }
             }
+            unchecked {
+                // rX >= rX - rX1, so s >= amountIn
+                require(MINIMUM_SUPPLY <= s - result.amountIn, 'MS');
+            }
         }
         if (sideOut == SIDE_R) {
             result.amountOut = state.R - state1.R;
@@ -213,13 +217,16 @@ contract PoolLogic is PoolBase {
             if (sideOut == SIDE_C) {
                 uint rC = state.R - rA - rB;
                 uint rC1 = state1.R - rA1 - rB1;
+                require(rC1 >= MINIMUM_RESERVE, 'MR:C');
                 result.amountOut = FullMath.mulDiv(_supply(TOKEN, sideOut), rC1 - rC, rC);
             } else {
                 uint inputRate = Q128;
                 if (sideOut == SIDE_A) {
+                    require(rA1 >= MINIMUM_RESERVE, 'MR:A');
                     result.amountOut = FullMath.mulDiv(_supply(TOKEN, sideOut), rA1 - rA, rA);
                     inputRate = _inputRate(config, state1, rA1, rB1);
                 } else if (sideOut == SIDE_B) {
+                    require(rB1 >= MINIMUM_RESERVE, 'MR:B');
                     result.amountOut = FullMath.mulDiv(_supply(TOKEN, sideOut), rB1 - rB, rB);
                     inputRate = _inputRate(config, state1, rB1, rA1);
                 }
