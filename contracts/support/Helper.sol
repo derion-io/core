@@ -92,7 +92,6 @@ contract Helper is Constants, IHelper, ERC1155Holder {
             Param(
                 params.sideIn,
                 SIDE_R,
-                0,  // R has no expiration
                 address(this),
                 payload
             ),
@@ -119,7 +118,6 @@ contract Helper is Constants, IHelper, ERC1155Holder {
             Param(
                 SIDE_R,
                 params.sideOut,
-                params.maturity,
                 address(this),
                 payload
             ),
@@ -198,7 +196,6 @@ contract Helper is Constants, IHelper, ERC1155Holder {
             Param(
                 params.sideIn,
                 params.sideOut,
-                0,
                 address(this),
                 payload
             ),

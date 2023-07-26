@@ -17,7 +17,6 @@ struct Config {
 struct Param {
     uint sideIn;
     uint sideOut;
-    uint maturity;
     address helper;
     bytes payload;
 }

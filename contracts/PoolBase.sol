@@ -138,15 +138,6 @@ abstract contract PoolBase is IPool, ERC1155Holder, Storage, Constants {
         Payment memory payment
     ) external override nonReentrant returns (uint amountIn, uint amountOut, uint price) {
         Config memory config = loadConfig();
-        if (param.sideOut != SIDE_R) {
-            uint maturityMin = uint32(block.timestamp) + config.MATURITY;
-            if (param.maturity == 0) {
-                param.maturity = maturityMin;
-            } else {
-                require(param.maturity <= type(uint32).max, "MO");
-                require(param.maturity >= maturityMin, "MM");
-            }
-        }
 
         Result memory result = _swap(config, param);
         (amountIn, amountOut, price) = (result.amountIn, result.amountOut, result.price);
@@ -171,11 +162,14 @@ abstract contract PoolBase is IPool, ERC1155Holder, Storage, Constants {
             uint inputMaturity = IToken(TOKEN).maturityOf(payment.payer, idIn);
             amountOut = _maturityPayoff(config, inputMaturity, amountOut);
         }
+
+        uint maturity;
         if (param.sideOut == SIDE_R) {
             TransferHelper.safeTransfer(config.TOKEN_R, payment.recipient, amountOut);
         } else {
             uint idOut = _packID(address(this), param.sideOut);
-            IToken(TOKEN).mintLock(payment.recipient, idOut, amountOut, uint32(param.maturity), "");
+            maturity = uint32(block.timestamp) + config.MATURITY;
+            IToken(TOKEN).mintLock(payment.recipient, idOut, amountOut, uint32(maturity), "");
         }
 
         emit Swap(
@@ -184,7 +178,7 @@ abstract contract PoolBase is IPool, ERC1155Holder, Storage, Constants {
             Math.max(param.sideIn, param.sideOut),
             param.sideIn,
             param.sideOut,
-            param.maturity,
+            maturity,
             amountIn,
             amountOut,
             price

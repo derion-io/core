@@ -102,7 +102,6 @@ contract BadHelper3 is Constants, IHelper {
             Param(
                 params.sideIn,
                 SIDE_R,
-                0,  // R has no expiration
                 address(this),
                 payload
             ),
@@ -127,7 +126,6 @@ contract BadHelper3 is Constants, IHelper {
             Param(
                 SIDE_R,
                 params.sideOut,
-                params.maturity,
                 address(this),
                 payload
             ),
@@ -203,7 +201,6 @@ contract BadHelper3 is Constants, IHelper {
             Param(
                 params.sideIn,
                 params.sideOut,
-                0,
                 address(this),
                 payload
             ),

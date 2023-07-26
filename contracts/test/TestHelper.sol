@@ -56,7 +56,6 @@ contract TestHelper {
             Param(
                 sideIn,
                 sideOut,
-                0,
                 HELPER,
                 payload
             ),
