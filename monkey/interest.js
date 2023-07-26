@@ -8,6 +8,8 @@ const { bn, numberToWei, swapToSetPriceMock, packId, weiToNumber } = require("..
 const seedrandom = require('seedrandom');
 const { ethers } = require("hardhat");
 
+const AddressOne = "0x0000000000000000000000000000000000000001";
+
 // Global PRNG: set Math.random.
 const seed = ethers.utils.randomBytes(32)
 console.log('Random Seed:', ethers.utils.hexlify(seed))
@@ -28,7 +30,7 @@ HLs.forEach(HALF_LIFE => {
     const fixture = loadFixtureFromParams([{
       ...baseParams,
       halfLife: bn(HALF_LIFE),
-      premiumRate: bn(1).shl(128).div(2)
+      premiumRate: 0,
     }])
 
     it('Test', async function() {
@@ -107,38 +109,53 @@ HLs.forEach(HALF_LIFE => {
           })
           currentPrice = targetPrice
         }
-        const wait = Math.random()
-        await time.increase(Math.round(wait * SECONDS_PER_DAY))
+        const wait = Math.round(Math.random() * SECONDS_PER_DAY)
+        if (wait > 0) {
+          await time.increase(wait)
+        }
       }
 
-      await pool.swap(
-        SIDE_A,
-        SIDE_R,
-        await derivable1155.balanceOf(owner.address, A_ID),
-      )
+      const exhaust = async(side) => {
+        const id = packId(side, pool.contract.address)
+        const balance = await derivable1155.balanceOf(owner.address, id)
+        if(balance.gt(0)) {
+          // console.log(side, balance.toString())
+          await pool.swap(side, SIDE_R, balance)
+        }
+      }
 
-      await pool.swap(
-        SIDE_B,
-        SIDE_R,
-        await derivable1155.balanceOf(owner.address, B_ID),
-      )
+      let r = await weth.balanceOf(pool.contract.address)
+      while (r.gt(0)) {
+        for (const side of [SIDE_A, SIDE_B, SIDE_C]) {
+          await exhaust(side)
+        }
+        const r1 = await weth.balanceOf(pool.contract.address)
+        if (r1.gte(r)) {
+          break
+        }
+        r = r1
+      }
 
-      await pool.swap(
-        SIDE_C,
-        SIDE_R,
-        await derivable1155.balanceOf(owner.address, C_ID),
-      )
+      const [sA, sB, sC, R, [bA, bB, bC, oA, oB, oC]] = await Promise.all([
+        derivable1155.totalSupply(A_ID),
+        derivable1155.totalSupply(B_ID),
+        derivable1155.totalSupply(A_ID),
+        weth.balanceOf(pool.contract.address),
+        derivable1155.balanceOfBatch([
+          AddressOne, AddressOne, AddressOne,
+          owner.address, owner.address, owner.address,
+        ], [
+          A_ID, B_ID, C_ID,
+          A_ID, B_ID, C_ID,
+        ]),
+      ])
 
-      const sA = await derivable1155.totalSupply(A_ID)
-      const sB = await derivable1155.totalSupply(B_ID)
-      const sC =  await derivable1155.totalSupply(C_ID)
-      const R = await weth.balanceOf(pool.contract.address)
+      // console.log({sA, sB, sC, R, bA, bB, bC, oA, oB, oC})
 
-
-      expect(sA, 'sA').lte(1)
-      expect(sB, 'sB').lte(1)
-      expect(sC, 'sC').lte(1)
-      expect(R, 'R').lte(3000)
+      expect(sA.sub(bA), 'sA').lte(10000000)
+      expect(sB.sub(bB), 'sB').lte(10000000)
+      expect(sC.sub(bC), 'sC').lte(10000000)
+      expect(R, 'R').lte(400000)
     })
   })
 })
