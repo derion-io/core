@@ -208,7 +208,8 @@ function loadFixtureFromParams (arrParams, options={}) {
       stateCalHelper,
       uniswapPair,
       oracleLibrary,
-      params: returnParams
+      params: returnParams,
+      fetchPrice
     }
 
     if (options.callback) {
