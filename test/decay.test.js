@@ -496,7 +496,7 @@ HLs.forEach(HALF_LIFE => {
             { static: true, recipient: accountB.address }
           )
           if (period != 0 && HALF_LIFE > 0) {
-            console.log(`Wait ${period} HL`)
+            console.log(` Wait ${period} HL`)
             await time.increase(period * HALF_LIFE)
           }
 
