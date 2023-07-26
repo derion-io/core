@@ -50,7 +50,6 @@ configs.forEach(config => describe(`Maturity - EXP = ${config.exp}, COEF ${confi
             SIDE_R,
             SIDE_A,
             numberToWei(1),
-            await time.latest() + 120,
             {
                 recipient: accountA.address
             }
@@ -60,7 +59,6 @@ configs.forEach(config => describe(`Maturity - EXP = ${config.exp}, COEF ${confi
             SIDE_R,
             SIDE_B,
             numberToWei(1),
-            await time.latest() + 120,
             {
                 recipient: accountA.address
             }
@@ -70,7 +68,6 @@ configs.forEach(config => describe(`Maturity - EXP = ${config.exp}, COEF ${confi
             SIDE_R,
             SIDE_C,
             numberToWei(1),
-            await time.latest() + 120,
             {
                 recipient: accountA.address
             }
@@ -81,7 +78,6 @@ configs.forEach(config => describe(`Maturity - EXP = ${config.exp}, COEF ${confi
                 side,
                 SIDE_R,
                 numberToWei(0.1),
-                0,
                 { static: true }
             )
         }))
@@ -90,7 +86,6 @@ configs.forEach(config => describe(`Maturity - EXP = ${config.exp}, COEF ${confi
             toSide,
             SIDE_R,
             numberToWei(0.1),
-            0,
             { 
                 static: true,
                 recipient: accountB.address
@@ -101,7 +96,6 @@ configs.forEach(config => describe(`Maturity - EXP = ${config.exp}, COEF ${confi
             fromSide,
             toSide,
             numberToWei(0.1),
-            0,
             { 
                 recipient: accountB.address
             }
@@ -112,7 +106,6 @@ configs.forEach(config => describe(`Maturity - EXP = ${config.exp}, COEF ${confi
                 side,
                 SIDE_R,
                 numberToWei(0.1),
-                0,
                 { static: true }
             )
         }))
@@ -121,7 +114,6 @@ configs.forEach(config => describe(`Maturity - EXP = ${config.exp}, COEF ${confi
             toSide,
             SIDE_R,
             numberToWei(0.1),
-            await time.latest() + 120,
             { static: true }
         )
 
@@ -136,33 +128,29 @@ configs.forEach(config => describe(`Maturity - EXP = ${config.exp}, COEF ${confi
         const derivablePool = derivablePools[0]
         const poolNoMaturity = derivablePools[1]
 
-        const curTime = await time.latest()
         await derivablePool.swap(
             SIDE_R,
             side,
             numberToWei(1),
-            curTime + 120,
             { 
                 recipient: accountA.address
             }
         )
-
+        const curTime = await time.latest()
         await poolNoMaturity.swap(
             SIDE_R,
             side,
             numberToWei(1),
-            0,
             { 
                 recipient: accountA.address
             }
         )
-        await time.increaseTo(curTime + 120 - t)
+        await time.increaseTo(curTime + 60 - t)
 
         const amountOutNoMaturity = await poolNoMaturity.connect(accountA).swap(
             side,
             SIDE_R,
             numberToWei(1),
-            0,
             { 
                 static: true
             }
@@ -172,7 +160,6 @@ configs.forEach(config => describe(`Maturity - EXP = ${config.exp}, COEF ${confi
             side,
             SIDE_R,
             numberToWei(1),
-            0,
             { 
                 static: true
             }
@@ -195,34 +182,32 @@ configs.forEach(config => describe(`Maturity - EXP = ${config.exp}, COEF ${confi
         }
     }
 
-    it('User should get amountOut = 0 if t < maturity', async function () {
-        const {accountA, derivablePools} = await loadFixture(fixture)
-        const derivablePool = derivablePools[0]
+    // it('User should get amountOut = 0 if t < maturity', async function () {
+    //     const {accountA, derivablePools} = await loadFixture(fixture)
+    //     const derivablePool = derivablePools[0]
 
-        await derivablePool.swap(
-            SIDE_R,
-            SIDE_A,
-            numberToWei(1),
-            await time.latest() + 120,
-            {
-                recipient: accountA.address
-            }
-        )
+    //     await derivablePool.swap(
+    //         SIDE_R,
+    //         SIDE_A,
+    //         numberToWei(1),
+    //         {
+    //             recipient: accountA.address
+    //         }
+    //     )
 
-        await time.increase(45)
+    //     await time.increase(45)
 
-        const amountOut = await derivablePool.connect(accountA).swap(
-            SIDE_A,
-            SIDE_R,
-            numberToWei(1),
-            0,
-            {
-                static: true
-            }
-        )
+    //     const amountOut = await derivablePool.connect(accountA).swap(
+    //         SIDE_A,
+    //         SIDE_R,
+    //         numberToWei(1),
+    //         {
+    //             static: true
+    //         }
+    //     )
 
-        expect(amountOut).to.be.eq(0)
-    })
+    //     expect(amountOut).to.be.eq(0)
+    // })
 
     it('User should not be able to open more Long directly', async function () {
         const {accountA, derivablePools, derivable1155} = await loadFixture(fixture)
@@ -232,7 +217,6 @@ configs.forEach(config => describe(`Maturity - EXP = ${config.exp}, COEF ${confi
             SIDE_R,
             SIDE_A,
             numberToWei(1),
-            0,
         )
 
         const tokenAmount = await derivable1155.balanceOf(accountA.address, packId(SIDE_A, derivablePool.contract.address))
@@ -243,7 +227,6 @@ configs.forEach(config => describe(`Maturity - EXP = ${config.exp}, COEF ${confi
             SIDE_R,
             SIDE_A,
             numberToWei(1),
-            0,
         )).revertedWith('Maturity: locktime order')
     })
 
@@ -255,7 +238,6 @@ configs.forEach(config => describe(`Maturity - EXP = ${config.exp}, COEF ${confi
             SIDE_R,
             SIDE_B,
             numberToWei(1),
-            0,
         )
 
         const tokenAmount = await derivable1155.balanceOf(accountA.address, packId(SIDE_B, derivablePool.contract.address))
@@ -266,7 +248,6 @@ configs.forEach(config => describe(`Maturity - EXP = ${config.exp}, COEF ${confi
             SIDE_R,
             SIDE_B,
             numberToWei(1),
-            0,
         )).revertedWith('Maturity: locktime order')
     })
 
@@ -278,7 +259,6 @@ configs.forEach(config => describe(`Maturity - EXP = ${config.exp}, COEF ${confi
             SIDE_R,
             SIDE_C,
             numberToWei(1),
-            0,
         )
 
         const tokenAmount = await derivable1155.balanceOf(accountA.address, packId(SIDE_A, derivablePool.contract.address))
@@ -289,7 +269,6 @@ configs.forEach(config => describe(`Maturity - EXP = ${config.exp}, COEF ${confi
             SIDE_R,
             SIDE_C,
             numberToWei(1),
-            0,
         )).revertedWith('Maturity: locktime order')
     })
 

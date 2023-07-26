@@ -32,7 +32,6 @@ contract Helper is Constants, IHelper, ERC1155Holder {
         uint sideOut;
         address poolOut;
         uint amountIn;
-        uint32 maturity;
         address payer;
         address recipient;
     }
@@ -155,7 +154,6 @@ contract Helper is Constants, IHelper, ERC1155Holder {
             params.sideOut,
             params.poolOut,
             params.amountIn,
-            params.maturity,
             params.payer,
             params.recipient
         );

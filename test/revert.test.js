@@ -178,28 +178,26 @@ describe("Revert", function () {
       )).to.be.revertedWith("AI")
     })
 
-    it("swap: MM, MO, SI", async function () {
+    it("swap: SI", async function () {
       const { stateCalHelper, derivablePools, accountA, reentrancyAttack, weth, utr, owner } = await loadFixture(fixture)
       const pool = derivablePools[1]
-      await expect(pool.swap(
-        SIDE_R,
-        SIDE_A,
-        numberToWei(5),
-        await time.latest() + 10,
-        {
-          recipient: accountA.address
-        }
-      )).to.be.revertedWith("MM")
+      // await expect(pool.swap(
+      //   SIDE_R,
+      //   SIDE_A,
+      //   numberToWei(5),
+      //   {
+      //     recipient: accountA.address
+      //   }
+      // )).to.be.revertedWith("MM")
 
-      await expect(pool.swap(
-        SIDE_R,
-        SIDE_A,
-        numberToWei(5),
-        MaxUint256,
-        {
-          recipient: accountA.address
-        }
-      )).to.be.revertedWith("MO")
+      // await expect(pool.swap(
+      //   SIDE_R,
+      //   SIDE_A,
+      //   numberToWei(5),
+      //   {
+      //     recipient: accountA.address
+      //   }
+      // )).to.be.revertedWith("MO")
 
       // Revert SI
       const swapParams = {
@@ -250,14 +248,12 @@ describe("Revert", function () {
         SIDE_R,
         SIDE_R,
         numberToWei(5),
-        0
       )).to.be.revertedWith("SS")
 
       await expect(pool.swap(
         SIDE_R,
         SIDE_C,
         numberToWei(5),
-        0,
         {
           helper: badHelperOA.address
         }
@@ -267,7 +263,6 @@ describe("Revert", function () {
         SIDE_R,
         SIDE_C,
         numberToWei(5),
-        0,
         {
           helper: badHelperOB.address
         }

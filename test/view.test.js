@@ -26,7 +26,6 @@ describe("View", function () {
         SIDE_R,
         SIDE_C,
         numberToWei(10),
-        0
       )
 
       const FlashloanAttack = await ethers.getContractFactory('FlashloanAttack');
@@ -55,7 +54,6 @@ describe("View", function () {
         SIDE_R,
         side,
         numberToWei(1),
-        0
       )
 
       const tokenAfter = await derivable1155.balanceOf(owner.address, packId(side, pool.contract.address))
@@ -79,7 +77,6 @@ describe("View", function () {
         side,
         SIDE_R,
         amountIn,
-        0,
         { static: true }
       )
       if (closeTo) 

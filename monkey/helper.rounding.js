@@ -52,7 +52,6 @@ for (let index = 0; index < 50; index++) {
           SIDE_R,
           SIDE_C,
           numberToWei(0.02),
-          0,
         )
       }
     })
@@ -78,7 +77,6 @@ for (let index = 0; index < 50; index++) {
         SIDE_R,
         SIDE_A,
         amountIn,
-        0,
       )
       const balanceAfter = await weth.balanceOf(accountB.address)
       const actualValue = balanceBefore.sub(balanceAfter)
@@ -110,7 +108,6 @@ for (let index = 0; index < 50; index++) {
         SIDE_C,
         SIDE_R,
         amountIn,
-        0,
       )
       const balanceAfter = await derivable1155.balanceOf(accountA.address, C_ID)
       const actualValue = balanceBefore.sub(balanceAfter)

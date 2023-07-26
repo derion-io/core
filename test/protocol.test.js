@@ -39,7 +39,6 @@ describe("Protocol", function () {
                 SIDE_R,
                 SIDE_C,
                 pe("9995"),
-                0,
                 {
                     recipient: owner.address
                 }
@@ -175,7 +174,6 @@ describe("Protocol", function () {
                     sideIn,
                     sideOut,
                     pe(amountIn),
-                    0,
                     {
                         payer,
                         populateTransaction: true
@@ -200,7 +198,6 @@ describe("Protocol", function () {
                     sideIn,
                     sideOut,
                     pe(amountIn),
-                    0,
                     {
                         payer
                     }
@@ -246,7 +243,6 @@ describe("Protocol", function () {
                     sideIn,
                     sideOut,
                     amountIn,
-                    0,
                     {
                         payer,
                         populateTransaction: true
@@ -270,7 +266,6 @@ describe("Protocol", function () {
                     sideIn,
                     sideOut,
                     amountIn,
-                    0,
                     {
                         payer
                     }
@@ -317,7 +312,6 @@ describe("Protocol", function () {
                 SIDE_R,
                 side,
                 pe(amount),
-                0,
                 {
                     populateTransaction: true,
                     recipient: derivableHelper.address,
@@ -384,7 +378,6 @@ describe("Protocol", function () {
                 SIDE_R,
                 isLong ? SIDE_A : SIDE_B,
                 pe(wethAmountIn),
-                0,
                 {
                     payer: AddressZero,
                     recipient: owner.address
@@ -405,7 +398,6 @@ describe("Protocol", function () {
                 isLong ? SIDE_A : SIDE_B,
                 SIDE_R,
                 tokenAfter.sub(tokenBefore),
-                0,
                 {
                     payer: AddressZero,
                     recipient: owner.address,
@@ -483,7 +475,6 @@ describe("Protocol", function () {
                     SIDE_R,
                     side,
                     pe(amountIn),
-                    0,
                     {
                         payer: AddressZero,
                         recipient: owner.address,
@@ -523,7 +514,6 @@ describe("Protocol", function () {
                         side,
                         SIDE_R,
                         tokenAfter.sub(tokenBefore),
-                        0,
                         {
                             payer: AddressZero,
                             recipient: owner.address,
@@ -535,7 +525,6 @@ describe("Protocol", function () {
                         side,
                         SIDE_R,
                         tokenAfter.sub(tokenBefore),
-                        0,
                         {
                             payer: AddressZero,
                             recipient: owner.address,
@@ -562,7 +551,6 @@ describe("Protocol", function () {
                     SIDE_R,
                     SIDE_A,
                     pe(longIn),
-                    0,
                     {
                         payer: AddressZero,
                         recipient: accountA.address,
@@ -576,7 +564,6 @@ describe("Protocol", function () {
                     SIDE_R,
                     SIDE_B,
                     pe(shortIn),
-                    0,
                     {
                         payer: AddressZero,
                         recipient: accountB.address,
@@ -590,7 +577,6 @@ describe("Protocol", function () {
                     SIDE_R,
                     SIDE_C,
                     pe(cIn),
-                    0,
                     {
                         payer: AddressZero,
                         recipient: owner.address,
@@ -623,7 +609,6 @@ describe("Protocol", function () {
                         SIDE_A,
                         SIDE_R,
                         longTokenAfter.sub(longTokenBefore),
-                        0,
                         {
                             payer: AddressZero,
                             recipient: accountA.address,
@@ -634,7 +619,6 @@ describe("Protocol", function () {
                         SIDE_A,
                         SIDE_R,
                         longTokenAfter.sub(longTokenBefore),
-                        0,
                         {
                             payer: AddressZero,
                             recipient: accountA.address,
@@ -648,7 +632,6 @@ describe("Protocol", function () {
                         SIDE_B,
                         SIDE_R,
                         shortTokenAfter.sub(shortTokenBefore),
-                        0,
                         {
                             payer: AddressZero,
                             recipient: accountB.address,
@@ -660,7 +643,6 @@ describe("Protocol", function () {
                         SIDE_B,
                         SIDE_R,
                         shortTokenAfter.sub(shortTokenBefore),
-                        0,
                         {
                             payer: AddressZero,
                             recipient: accountB.address,
@@ -673,7 +655,6 @@ describe("Protocol", function () {
                     SIDE_C,
                     SIDE_R,
                     tokenAfter.sub(tokenBefore),
-                    0,
                     {
                         payer: AddressZero,
                         recipient: owner.address,

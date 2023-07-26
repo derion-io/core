@@ -48,7 +48,6 @@ describe("Decay funding rate", function () {
           SIDE_R,
           SIDE_C,
           numberToWei(1),
-          0
         )
         
         const wethABegin = await weth.balanceOf(accountA.address)
@@ -57,13 +56,11 @@ describe("Decay funding rate", function () {
           SIDE_R,
           SIDE_A,
           longAmount,
-          0
         )
         await poolB.swap(
           SIDE_R,
           SIDE_B,
           shortAmount,
-          0
         )
         
         const wethAAfter = await weth.balanceOf(accountA.address)
@@ -83,13 +80,11 @@ describe("Decay funding rate", function () {
           SIDE_A,
           SIDE_R,
           amountAIn,
-          0
         )
         await poolB.swap(
           SIDE_B,
           SIDE_R,
           amountBIn,
-          0
         )
         
         const tokenAAmountAfter = await derivable1155.balanceOf(accountA.address, A_ID)

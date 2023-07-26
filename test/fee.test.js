@@ -61,7 +61,6 @@ HLs.forEach(HALF_LIFE => {
         SIDE_R,
         side,
         numberToWei(amount),
-        0
       )
 
       const feeAmount = await weth.balanceOf(feeReceiver.address)

@@ -40,7 +40,6 @@ describe("Order", function () {
                 SIDE_R,
                 SIDE_A,
                 pe(1),
-                0
             )
             const longTokenAfter = await derivable1155.balanceOf(accountA.address, packId(SIDE_A, poolA.contract.address))
             const longToken = longTokenAfter.sub(longTokenBefore)
@@ -52,7 +51,6 @@ describe("Order", function () {
                 SIDE_R,
                 SIDE_B,
                 pe(1),
-                0
             )
             
             const shortTokenAfter = await derivable1155.balanceOf(accountB.address, packId(SIDE_B, poolA.contract.address))
@@ -65,14 +63,12 @@ describe("Order", function () {
                 SIDE_A,
                 SIDE_R,
                 longToken,
-                0
             )
 
             await poolB.swap(
                 SIDE_B,
                 SIDE_R,
                 shortToken,
-                0
             )
 
             const aWethAfter = await weth.balanceOf(accountA.address)

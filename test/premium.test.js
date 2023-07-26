@@ -33,72 +33,27 @@ describe("Premium", function () {
       SIDE_R,
       SIDE_A,
       numberToWei(1),
-      0
     )
-    // await attemptSwap(
-    //   txSignerA,
-    //   0,
-    //   0x00,
-    //   0x10,
-    //   numberToWei(1),
-    //   stateCalHelper.address,
-    //   '0x0000000000000000000000000000000000000000',
-    //   accountA.address
-    // )
 
     await poolNoPremium.connect(accountA).swap(
       SIDE_R,
       SIDE_A,
       numberToWei(1),
-      0
     )
-    // await attemptSwap(
-    //   txSignerANoPremium,
-    //   0,
-    //   0x00,
-    //   0x10,
-    //   numberToWei(1),
-    //   stateCalHelper.address,
-    //   '0x0000000000000000000000000000000000000000',
-    //   accountA.address
-    // )
 
     const shortWithPremium = await pool.connect(accountA).swap(
       SIDE_R,
       SIDE_B,
       numberToWei(amount),
-      0,
       { static: true }
     )
-
-    // const shortWithPremium = await attemptStaticSwap(
-    //   txSignerA,
-    //   0,
-    //   0x00,
-    //   0x20,
-    //   numberToWei(amount),
-    //   stateCalHelper.address,
-    //   '0x0000000000000000000000000000000000000000',
-    //   accountA.address
-    // )
 
     const shortWithoutPremium = await poolNoPremium.connect(accountA).swap(
       SIDE_R,
       SIDE_B,
       numberToWei(amount),
-      0,
       { static: true }
     )
-    // const shortWithoutPremium = await attemptStaticSwap(
-    //   txSignerANoPremium,
-    //   0,
-    //   0x00,
-    //   0x20,
-    //   numberToWei(amount),
-    //   stateCalHelper.address,
-    //   '0x0000000000000000000000000000000000000000',
-    //   accountA.address
-    // )
 
     expect(shortWithPremium)
       .to.be.equal(shortWithoutPremium)
@@ -113,73 +68,27 @@ describe("Premium", function () {
       SIDE_R,
       SIDE_B,
       numberToWei(1),
-      0
     )
-    // await attemptSwap(
-    //   txSignerA,
-    //   0,
-    //   0x00,
-    //   0x20,
-    //   numberToWei(1),
-    //   stateCalHelper.address,
-    //   '0x0000000000000000000000000000000000000000',
-    //   accountA.address
-    // )
 
     await poolNoPremium.connect(accountA).swap(
       SIDE_R,
       SIDE_B,
       numberToWei(1),
-      0
     )
-    // await attemptSwap(
-    //   txSignerANoPremium,
-    //   0,
-    //   0x00,
-    //   0x20,
-    //   numberToWei(1),
-    //   stateCalHelper.address,
-    //   '0x0000000000000000000000000000000000000000',
-    //   accountA.address
-    // )
 
     const longWithPremium = await pool.connect(accountA).swap(
       SIDE_R,
       SIDE_A,
       numberToWei(amount),
-      0,
       { static: true }
     )
-
-    // const longWithPremium = await attemptStaticSwap(
-    //   txSignerA,
-    //   0,
-    //   0x00,
-    //   0x10,
-    //   numberToWei(amount),
-    //   stateCalHelper.address,
-    //   '0x0000000000000000000000000000000000000000',
-    //   accountA.address
-    // )
 
     const longWithoutPremium = await poolNoPremium.connect(accountA).swap(
       SIDE_R,
       SIDE_A,
       numberToWei(amount),
-      0,
       { static: true }
     )
-
-    // const longWithoutPremium = await attemptStaticSwap(
-    //   txSignerANoPremium,
-    //   0,
-    //   0x00,
-    //   0x10,
-    //   numberToWei(amount),
-    //   stateCalHelper.address,
-    //   '0x0000000000000000000000000000000000000000',
-    //   accountA.address
-    // )
 
     expect(longWithPremium).to.be.equal(longWithoutPremium)
   }
@@ -207,7 +116,6 @@ describe("Premium", function () {
       SIDE_R,
       SIDE_A,
       numberToWei(amount),
-      0,
       { static: true }
     )
 
@@ -215,7 +123,6 @@ describe("Premium", function () {
       SIDE_R,
       SIDE_A,
       numberToWei(amount),
-      0,
       { static: true }
     )
 
@@ -253,7 +160,6 @@ describe("Premium", function () {
       SIDE_R,
       SIDE_B,
       numberToWei(amount),
-      0,
       { static: true }
     )
 
@@ -261,7 +167,6 @@ describe("Premium", function () {
       SIDE_R,
       SIDE_B,
       numberToWei(amount),
-      0,
       { static: true }
     )
 
@@ -300,7 +205,6 @@ describe("Premium", function () {
       SIDE_R,
       SIDE_A,
       numberToWei(0.1),
-      0,
       { static: true }
     )
 
@@ -308,7 +212,6 @@ describe("Premium", function () {
       SIDE_R,
       SIDE_A,
       numberToWei(0.1),
-      0,
       { static: true }
     )
 
@@ -324,7 +227,6 @@ describe("Premium", function () {
       SIDE_R,
       SIDE_B,
       numberToWei(0.1),
-      0,
       { static: true }
     )
 
@@ -332,7 +234,6 @@ describe("Premium", function () {
       SIDE_R,
       SIDE_B,
       numberToWei(0.1),
-      0,
       { static: true }
     )
 

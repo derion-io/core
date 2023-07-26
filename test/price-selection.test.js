@@ -33,7 +33,6 @@ describe("Price selection", function () {
       sideIn,
       sideOut,
       numberToWei(0.1),
-      0,
       {static: true}
     )
 
@@ -49,7 +48,6 @@ describe("Price selection", function () {
       sideIn,
       sideOut,
       numberToWei(0.1),
-      0,
       {static: true}
     )
 
@@ -65,7 +63,6 @@ describe("Price selection", function () {
       sideIn,
       sideOut,
       numberToWei(0.1),
-      0,
       {static: true}
     )
 
@@ -81,7 +78,6 @@ describe("Price selection", function () {
       sideIn,
       sideOut,
       numberToWei(0.1),
-      0,
       {static: true}
     )
     

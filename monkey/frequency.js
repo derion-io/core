@@ -78,19 +78,16 @@ configs.forEach(({hl, fee}) => {
         SIDE_R,
         SIDE_C,
         rSide,
-        0
       )
       await pool.swap(
         SIDE_R,
         SIDE_A,
         rSide,
-        0
       )
       await pool.swap(
         SIDE_R,
         SIDE_B,
         rSide,
-        0
       )
 
       await derivable1155.safeTransferFrom(owner.address, poolMulticall.address, A_ID, rSide, [])
@@ -113,7 +110,6 @@ configs.forEach(({hl, fee}) => {
         SIDE_C,
         SIDE_R,
         await derivable1155.balanceOf(owner.address, C_ID),
-        0,
         { static: true }
       )
       
@@ -158,7 +154,6 @@ configs.forEach(({hl, fee}) => {
         SIDE_C,
         SIDE_R,
         await derivable1155.balanceOf(owner.address, C_ID),
-        0,
         { static: true }
       )
       const period = ellapsed / SECONDS_PER_DAY

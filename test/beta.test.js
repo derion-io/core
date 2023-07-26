@@ -63,7 +63,6 @@ describe('ARB', function() {
         SIDE_R,
         SIDE_A,
         amountIn,
-        0,
       )
       const balanceAfter = await weth.balanceOf(accountB.address)
       const actualValue = balanceBefore.sub(balanceAfter)

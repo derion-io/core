@@ -32,10 +32,9 @@ module.exports = class Pool {
     sideIn,
     sideOut,
     amount,
-    maturity,
     options = {}
   ) {
-    const swapParams = this.getSwapParam(sideIn, sideOut, amount, maturity, options)
+    const swapParams = this.getSwapParam(sideIn, sideOut, amount, options)
     const paymentParams = {
       utr: this.utilContracts.utr.address,
       payer: options.payer || AddressZero,
@@ -48,7 +47,7 @@ module.exports = class Pool {
     return await this.contract.swap(swapParams, paymentParams)
   }
 
-  getSwapParam(sideIn, sideOut, amount, maturity, options={}) {
+  getSwapParam(sideIn, sideOut, amount, options={}) {
     if (sideOut == SIDE_A || sideOut == SIDE_B) {
       amount = amount.mul(this.config.openRate).div(Q128) // apply open rate
     }
@@ -64,7 +63,6 @@ module.exports = class Pool {
     return {
       sideIn,
       sideOut,
-      maturity,
       helper: options.helper || this.utilContracts.helper.address,
       payload
     }

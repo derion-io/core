@@ -25,7 +25,6 @@ describe('Input', function () {
             sideIn,
             sideOut,
             numberToWei(amount),
-            0
         )
 
         const balanceAfter = (sideIn == SIDE_R) 
@@ -62,7 +61,6 @@ describe('Input', function () {
             SIDE_R,
             SIDE_A,
             numberToWei(1),
-            0
         )
 
         await swapToSetPriceMock({
@@ -93,7 +91,6 @@ describe('Input', function () {
             SIDE_R,
             SIDE_A,
             amount,
-            0
         )
 
         const wethAfter = await weth.balanceOf(owner.address)
@@ -110,7 +107,6 @@ describe('Input', function () {
             SIDE_R,
             SIDE_B,
             numberToWei(1),
-            0
         )
 
         await swapToSetPriceMock({
@@ -141,7 +137,6 @@ describe('Input', function () {
             SIDE_R,
             SIDE_B,
             amount,
-            0
         )
         const wethAfter = await weth.balanceOf(owner.address)
         const wethSpent = wethBefore.sub(wethAfter)

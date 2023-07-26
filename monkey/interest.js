@@ -43,19 +43,16 @@ HLs.forEach(HALF_LIFE => {
         SIDE_R,
         SIDE_C,
         numberToWei(20),
-        0
       )
       await pool.swap(
         SIDE_R,
         SIDE_A,
         numberToWei(20),
-        0
       )
       await pool.swap(
         SIDE_R,
         SIDE_B,
         numberToWei(20),
-        0
       )
       await time.increase(SECONDS_PER_DAY)
 
@@ -79,7 +76,6 @@ HLs.forEach(HALF_LIFE => {
               SIDE_R,
               side,
               numberToWei(amount),
-              0
             )
           } else {
             if (side == SIDE_C) {
@@ -96,7 +92,6 @@ HLs.forEach(HALF_LIFE => {
               side,
               SIDE_R,
               numberToWei(amount),
-              0
             )
           }
           
@@ -120,21 +115,18 @@ HLs.forEach(HALF_LIFE => {
         SIDE_A,
         SIDE_R,
         await derivable1155.balanceOf(owner.address, A_ID),
-        0
       )
 
       await pool.swap(
         SIDE_B,
         SIDE_R,
         await derivable1155.balanceOf(owner.address, B_ID),
-        0
       )
 
       await pool.swap(
         SIDE_C,
         SIDE_R,
         await derivable1155.balanceOf(owner.address, C_ID),
-        0
       )
 
       const sA = await derivable1155.totalSupply(A_ID)

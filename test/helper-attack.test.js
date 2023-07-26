@@ -127,7 +127,6 @@ describe("Helper Attacks", function () {
                     sideOut: sideOut,
                     poolOut: derivablePools[1].contract.address,
                     amountIn: pe(amountIn),
-                    maturity: 0,
                     payer: owner.address,
                     recipient: owner.address
                 })).data,
@@ -197,7 +196,6 @@ describe("Helper Attacks", function () {
                     sideOut: SIDE_B,
                     poolOut: derivablePools[1].contract.address,
                     amountIn: pe(0.0001),
-                    maturity: 0,
                     payer: owner.address,
                     recipient: owner.address
                 })).data,
@@ -238,7 +236,6 @@ describe("Helper Attacks", function () {
                     sideOut: sideOut,
                     poolOut: derivablePools[0].contract.address,
                     amountIn: pe(amountIn),
-                    maturity: 0,
                     payer: owner.address,
                     recipient: owner.address
                 })).data,
@@ -287,7 +284,6 @@ describe("Helper Attacks", function () {
                     sideOut: sideOut,
                     poolOut: derivablePools[0].contract.address,
                     amountIn: pe(amountIn),
-                    maturity: 0,
                     payer: owner.address,
                     recipient: owner.address
                 })).data,
@@ -344,7 +340,6 @@ describe("Helper Attacks", function () {
                     sideOut: SIDE_NATIVE,
                     poolOut: derivablePools[0].contract.address,
                     amountIn: balanceInBefore,
-                    maturity: 0,
                     payer: owner.address,
                     recipient: owner.address
                 })).data,
@@ -375,7 +370,6 @@ describe("Helper Attacks", function () {
                 SIDE_R,
                 sideOut,
                 pe(amount),
-                0,
                 {
                     helper: badHelper.address
                 }
@@ -400,7 +394,6 @@ describe("Helper Attacks", function () {
                 SIDE_R,
                 sideOut,
                 pe(amount),
-                0
             )
             const tokenAfter = await derivable1155.balanceOf(owner.address, convertId(sideOut, derivablePools[0].contract.address))
             const inputAmount = tokenAfter.sub(tokenBefore)
@@ -419,7 +412,6 @@ describe("Helper Attacks", function () {
                 sideOut,
                 SIDE_R,
                 inputAmount,
-                0,
                 {
                     helper: helper ? badHelper1.address : badHelper.address,
                 }

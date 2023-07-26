@@ -32,7 +32,6 @@ maturities.forEach(maturity => describe(`Swap and merge maturity: ${maturity}`, 
       SIDE_R,
       SIDE_A,
       amountIn,
-      0
     )
 
     if (maturity > 0) {
@@ -40,14 +39,12 @@ maturities.forEach(maturity => describe(`Swap and merge maturity: ${maturity}`, 
         SIDE_R,
         SIDE_A,
         amountIn,
-        0
       ), 'merge with maturity').revertedWith('Maturity: locktime order')
     } else {
       const amountOut = await pool.connect(accountA).swap(
         SIDE_R,
         SIDE_A,
         amountIn,
-        0,
         { static },
       )
       expect(amountOut, 'merge without maturity').gt(0)
@@ -59,7 +56,6 @@ maturities.forEach(maturity => describe(`Swap and merge maturity: ${maturity}`, 
       SIDE_R,
       SIDE_A,
       amountIn,
-      0,
       { static },
     )
 
@@ -69,7 +65,6 @@ maturities.forEach(maturity => describe(`Swap and merge maturity: ${maturity}`, 
       sideOut: SIDE_A,
       poolOut: pool.contract.address,
       amountIn,
-      maturity: 0,
       payer: accountA.address,
       recipient: accountA.address,
     })

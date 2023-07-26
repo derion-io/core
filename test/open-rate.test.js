@@ -38,7 +38,6 @@ feeRates.forEach(feeRate => {
         SIDE_R,
         SIDE_A,
         numberToWei(1),
-        0,
         { static: true }
       )
 
@@ -47,7 +46,6 @@ feeRates.forEach(feeRate => {
         SIDE_R,
         SIDE_A,
         numberToWei(1),
-        0,
         { static: true }
       )
 
@@ -64,7 +62,6 @@ feeRates.forEach(feeRate => {
         SIDE_R,
         SIDE_B,
         numberToWei(1),
-        0,
         { static: true }
       )
 
@@ -72,7 +69,6 @@ feeRates.forEach(feeRate => {
         SIDE_R,
         SIDE_B,
         numberToWei(1),
-        0,
         { static: true }
       )
       expect(Number(weiToNumber(amountOutWithFee))/Number(weiToNumber(amountOut)))
@@ -87,7 +83,6 @@ feeRates.forEach(feeRate => {
         SIDE_C,
         SIDE_R,
         '1000',
-        0,
         { static: true }
       )
 
@@ -95,14 +90,12 @@ feeRates.forEach(feeRate => {
         SIDE_R,
         SIDE_A,
         numberToWei(1),
-        0
       )
 
       const amountOutLP1 = await poolWithOpenFee.swap(
         SIDE_C,
         SIDE_R,
         '1000',
-        0,
         { static: true }
       )
   
@@ -110,14 +103,12 @@ feeRates.forEach(feeRate => {
         SIDE_R,
         SIDE_B,
         numberToWei(1),
-        0
       )
       
       const amountOutLP2 = await poolWithOpenFee.swap(
         SIDE_C,
         SIDE_R,
         '1000',
-        0,
         { static: true }
       )
 

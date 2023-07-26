@@ -68,7 +68,6 @@ HLs.forEach(HALF_LIFE => {
           SIDE_R,
           SIDE_C,
           numberToWei(1),
-          0,
           {
               recipient: accountA.address
           }
@@ -79,7 +78,6 @@ HLs.forEach(HALF_LIFE => {
             SIDE_R,
             SIDE_A,
             amountA,
-            0,
             {
                 recipient: accountA.address
             }
@@ -88,7 +86,6 @@ HLs.forEach(HALF_LIFE => {
             SIDE_R,
             SIDE_B,
             amountB,
-            0,
             {
                 recipient: accountB.address
             }
@@ -99,14 +96,12 @@ HLs.forEach(HALF_LIFE => {
             SIDE_A,
             SIDE_R,
             aTokenAmount,
-            0,
             { static: true, recipient: accountA.address }
           )
           const bFirstBefore = await txSignerB.swap(
             SIDE_B,
             SIDE_R,
             bTokenAmount,
-            0,
             { static: true, recipient: accountB.address }
           )
           if (period > 0)
@@ -116,14 +111,12 @@ HLs.forEach(HALF_LIFE => {
             SIDE_A,
             SIDE_R,
             aTokenAmount,
-            0,
             { static: true, recipient: accountA.address }
           )
           const bFirstAfter = await txSignerB.swap(
             SIDE_B,
             SIDE_R,
             bTokenAmount,
-            0,
             { static: true, recipient: accountB.address }
           )
 
@@ -133,14 +126,12 @@ HLs.forEach(HALF_LIFE => {
             SIDE_A,
             SIDE_R,
             aTokenAmount,
-            0,
             { static: true, recipient: accountA.address }
           )
           const bSecondBefore = await txSignerB.swap(
             SIDE_B,
             SIDE_R,
             bTokenAmount,
-            0,
             { static: true, recipient: accountB.address }
           )
           if (period > 0)
@@ -149,14 +140,12 @@ HLs.forEach(HALF_LIFE => {
             SIDE_A,
             SIDE_R,
             aTokenAmount,
-            0,
             { static: true, recipient: accountA.address }
           )
           const bSecondAfter = await txSignerB.swap(
             SIDE_B,
             SIDE_R,
             bTokenAmount,
-            0,
             { static: true, recipient: accountB.address }
           )
 
@@ -187,7 +176,6 @@ HLs.forEach(HALF_LIFE => {
             SIDE_R,
             SIDE_A,
             amountA,
-            0,
             {
               populateTransaction: true,
               recipient: derivableHelper.address,
@@ -230,7 +218,6 @@ HLs.forEach(HALF_LIFE => {
             SIDE_R,
             SIDE_B,
             amountB,
-            0,
             {
               populateTransaction: true,
               recipient: derivableHelper.address,
@@ -276,7 +263,6 @@ HLs.forEach(HALF_LIFE => {
             SIDE_R,
             SIDE_B,
             amountB,
-            0,
             {
               populateTransaction: true,
               recipient: derivableHelper.address,
@@ -287,7 +273,6 @@ HLs.forEach(HALF_LIFE => {
             SIDE_R,
             SIDE_A,
             amountA,
-            0,
             {
               populateTransaction: true,
               recipient: derivableHelper.address,
@@ -355,14 +340,12 @@ HLs.forEach(HALF_LIFE => {
             SIDE_R,
             SIDE_A,
             amountA,
-            0
           )
           const aTokenAmount = await derivable1155.balanceOf(accountA.address, A_ID)
           const valueA = await txSignerA.swap(
             SIDE_A,
             SIDE_R,
             aTokenAmount,
-            0,
             { static: true }
           )
           txSignerB = pool.connect(accountB)
@@ -370,14 +353,12 @@ HLs.forEach(HALF_LIFE => {
             SIDE_R,
             SIDE_B,
             amountB,
-            0
           )
           const bTokenAmount = await derivable1155.balanceOf(accountB.address, B_ID)
           const valueB = await txSignerB.swap(
             SIDE_B,
             SIDE_R,
             bTokenAmount,
-            0,
             { static: true }
           )
           expect(amountA.gte(valueA)).to.be.true
@@ -390,7 +371,6 @@ HLs.forEach(HALF_LIFE => {
             SIDE_R,
             SIDE_A,
             amountA,
-            0,
             { recipient: accountA.address }
           )
           txSignerB = pool.connect(accountB)
@@ -398,7 +378,6 @@ HLs.forEach(HALF_LIFE => {
             SIDE_R,
             SIDE_B,
             amountB,
-            0,
             { recipient: accountB.address }
           )
 
@@ -408,14 +387,12 @@ HLs.forEach(HALF_LIFE => {
             SIDE_A,
             SIDE_R,
             aTokenAmount,
-            0,
             { static: true, recipient: accountA.address }
           )
           const valueBBefore = await txSignerB.swap(
             SIDE_B,
             SIDE_R,
             bTokenAmount,
-            0,
             { static: true, recipient: accountB.address }
           )
           if (HALF_LIFE > 0)
@@ -424,14 +401,12 @@ HLs.forEach(HALF_LIFE => {
             SIDE_A,
             SIDE_R,
             aTokenAmount,
-            0,
             { static: true, recipient: accountA.address }
           )
           const valueBAfter = await txSignerB.swap(
             SIDE_B,
             SIDE_R,
             bTokenAmount,
-            0,
             { static: true, recipient: accountB.address }
           )
           // Check lớn hơn 0 và < 1
@@ -463,14 +438,12 @@ HLs.forEach(HALF_LIFE => {
             SIDE_R,
             SIDE_A,
             amountA,
-            0,
             { recipient: accountA.address }
           )
           await txSignerB.swap(
             SIDE_R,
             SIDE_B,
             amountB,
-            0,
             { recipient: accountB.address }
           )
 
@@ -481,14 +454,12 @@ HLs.forEach(HALF_LIFE => {
             SIDE_A,
             SIDE_R,
             aTokenAmount,
-            0,
             { static: true, recipient: accountA.address }
           )
           const valueBBefore = await txSignerB.swap(
             SIDE_B,
             SIDE_R,
             aTokenAmount,
-            0,
             { static: true, recipient: accountB.address }
           )
           if (period != 0 && HALF_LIFE > 0) {
@@ -503,14 +474,12 @@ HLs.forEach(HALF_LIFE => {
             SIDE_A,
             SIDE_R,
             aTokenAmount,
-            0,
             { recipient: accountA.address }
           )
           await txSignerB.swap(
             SIDE_B,
             SIDE_R,
             bTokenAmount,
-            0,
             { recipient: accountB.address }
           )
 
@@ -596,7 +565,6 @@ HLs.forEach(HALF_LIFE => {
           SIDE_C,
           SIDE_R,
           lpAmount,
-          0,
           {
             static: true,
             recipient: accountA.address
@@ -607,7 +575,6 @@ HLs.forEach(HALF_LIFE => {
           SIDE_C,
           SIDE_R,
           lpAmount,
-          0,
           { static: true, recipient: accountA.address }
         )
         const expectedValue = originLPValue.add(positionReserved.div(2).mul(lpAmount).div(totalSupply))
@@ -644,7 +611,6 @@ HLs.forEach(HALF_LIFE => {
             SIDE_R, 
             SIDE_C,
             numberToWei(5),
-            0
           )
 
           const lpAmount = (await derivable1155.balanceOf(owner.address, C_ID)).sub(balanceBefore)
@@ -653,7 +619,6 @@ HLs.forEach(HALF_LIFE => {
             SIDE_C, 
             SIDE_R,
             lpAmount,
-            0,
             { static: true }
           )
 
@@ -662,14 +627,12 @@ HLs.forEach(HALF_LIFE => {
             SIDE_R, 
             SIDE_A,
             numberToWei(5), 
-            0
           )
           
           const lpValueAfter = await pool.swap(
             SIDE_C, 
             SIDE_R,
             lpAmount,
-            0,
             { static: true }
           )
           expect(Number(weiToNumber(lpValueBefore))/Number(weiToNumber(lpValueAfter))).to.be.closeTo(1, 1e-5)
@@ -683,7 +646,6 @@ HLs.forEach(HALF_LIFE => {
             SIDE_R, 
             SIDE_C,
             numberToWei(5),
-            0
           )
 
           const lpAmount = (await derivable1155.balanceOf(owner.address, C_ID)).sub(balanceBefore)
@@ -692,7 +654,6 @@ HLs.forEach(HALF_LIFE => {
             SIDE_C, 
             SIDE_R,
             lpAmount,
-            0,
             { static: true }
           )
 
@@ -701,14 +662,12 @@ HLs.forEach(HALF_LIFE => {
             SIDE_R, 
             SIDE_B,
             numberToWei(5), 
-            0
           )
           
           const lpValueAfter = await pool.swap(
             SIDE_C, 
             SIDE_R,
             lpAmount,
-            0,
             { static: true }
           )
           expect(Number(weiToNumber(lpValueBefore))/Number(weiToNumber(lpValueAfter))).to.be.closeTo(1, 1e-3)
@@ -723,14 +682,12 @@ HLs.forEach(HALF_LIFE => {
             SIDE_R, 
             SIDE_C,
             numberToWei(5),
-            0
           )
 
           await pool.swap(
             SIDE_R, 
             SIDE_A,
             numberToWei(5), 
-            0
           )
 
           const positionAmount = (await derivable1155.balanceOf(owner.address, A_ID)).sub(balancePositionBefore)
@@ -740,7 +697,6 @@ HLs.forEach(HALF_LIFE => {
             SIDE_C, 
             SIDE_R,
             lpAmount,
-            0,
             { static: true }
           )
 
@@ -749,14 +705,12 @@ HLs.forEach(HALF_LIFE => {
             SIDE_A,
             SIDE_R, 
             positionAmount,
-            0
           )
           
           const lpValueAfter = await pool.swap(
             SIDE_C, 
             SIDE_R,
             lpAmount,
-            0,
             { static: true }
           )
           expect(Number(weiToNumber(lpValueBefore))/Number(weiToNumber(lpValueAfter))).to.be.closeTo(1, 1e-3)
@@ -771,14 +725,12 @@ HLs.forEach(HALF_LIFE => {
             SIDE_R, 
             SIDE_C,
             numberToWei(5),
-            0
           )
 
           await pool.swap(
             SIDE_R, 
             SIDE_B,
             numberToWei(5),
-            0
           )
 
           const positionAmount = (await derivable1155.balanceOf(owner.address, B_ID)).sub(balancePositionBefore)
@@ -788,7 +740,6 @@ HLs.forEach(HALF_LIFE => {
             SIDE_C, 
             SIDE_R,
             lpAmount,
-            0,
             { static: true }
           )
 
@@ -797,14 +748,12 @@ HLs.forEach(HALF_LIFE => {
             SIDE_B,
             SIDE_R, 
             positionAmount, 
-            0
           )
           
           const lpValueAfter = await pool.swap(
             SIDE_C, 
             SIDE_R,
             lpAmount,
-            0,
             { static: true }
           )
           expect(Number(weiToNumber(lpValueBefore))/Number(weiToNumber(lpValueAfter))).to.be.closeTo(1, 1e-3)

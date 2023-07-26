@@ -170,7 +170,7 @@ function encodePayload(sideIn, sideOut, amount) {
     )
 }
 
-async function attemptSwap(signer, sideIn, sideOut, amount, maturity, helper, utr, payer, recipient) {
+async function attemptSwap(signer, sideIn, sideOut, amount, helper, utr, payer, recipient) {
     const [openRate, premiumRate] = await Promise.all([signer.OPEN_RATE(), signer.PREMIUM_RATE()])
     if (sideOut == SIDE_A || sideOut == SIDE_B) {
         amount = amount.mul(openRate).div(Q128) // apply open rate
@@ -183,7 +183,6 @@ async function attemptSwap(signer, sideIn, sideOut, amount, maturity, helper, ut
         {
             sideIn,
             sideOut,
-            maturity,
             helper,
             payload
         },
@@ -205,7 +204,6 @@ async function attemptStaticSwap(signer, sideIn, sideOut, amount, helper, utr, p
         {
             sideIn,
             sideOut,
-            maturity,
             helper,
             payload
         },

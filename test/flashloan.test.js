@@ -43,7 +43,6 @@ describe("Flashloan spec", function () {
         SIDE_R,
         SIDE_C,
         numberToWei(9995),
-        0
       )
 
       const FlashloanAttack = await ethers.getContractFactory('FlashloanAttack');
@@ -64,7 +63,6 @@ describe("Flashloan spec", function () {
           SIDE_R,
           SIDE_A,
           numberToWei(1),
-          0
         )
        
         const tokenAfter = await derivable1155.balanceOf(owner.address, packId(SIDE_A, pool.contract.address))
@@ -74,7 +72,6 @@ describe("Flashloan spec", function () {
           SIDE_A,
           SIDE_R,
           positionAmount,
-          0,
           { static: true }
         )
 
@@ -96,7 +93,6 @@ describe("Flashloan spec", function () {
             SIDE_A,
             SIDE_R,
             positionAmount,
-            0,
             {}
           ),
           AddressZero,
@@ -116,7 +112,6 @@ describe("Flashloan spec", function () {
           SIDE_R,
           SIDE_B,
           numberToWei(1),
-          0
         )
        
         const tokenAfter = await derivable1155.balanceOf(owner.address, packId(SIDE_B, pool.contract.address))
@@ -126,7 +121,6 @@ describe("Flashloan spec", function () {
           SIDE_B,
           SIDE_R,
           positionAmount,
-          0,
           { static: true }
         )
 
@@ -148,7 +142,6 @@ describe("Flashloan spec", function () {
             SIDE_B,
             SIDE_R,
             positionAmount,
-            0,
             {}
           ),
           AddressZero,
