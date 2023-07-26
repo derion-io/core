@@ -163,21 +163,21 @@ function encodePriceSqrt(reserve1, reserve0) {
     )
 }
 
-function encodePayload(swapType, sideIn, sideOut, amount) {
+function encodePayload(sideIn, sideOut, amount) {
     return abiCoder.encode(
-        ["uint", "uint", "uint", "uint"],
-        [swapType, sideIn, sideOut, amount]
+        ["uint", "uint", "uint"],
+        [sideIn, sideOut, amount]
     )
 }
 
-async function attemptSwap(signer, swapType, sideIn, sideOut, amount, maturity, helper, utr, payer, recipient) {
+async function attemptSwap(signer, sideIn, sideOut, amount, maturity, helper, utr, payer, recipient) {
     const [openRate, premiumRate] = await Promise.all([signer.OPEN_RATE(), signer.PREMIUM_RATE()])
     if (sideOut == SIDE_A || sideOut == SIDE_B) {
         amount = amount.mul(openRate).div(Q128) // apply open rate
     }
     const payload = abiCoder.encode(
-        ["uint", "uint", "uint", "uint", "uint"],
-        [swapType, sideIn, sideOut, amount, premiumRate]
+        ["uint", "uint", "uint", "uint"],
+        [sideIn, sideOut, amount, premiumRate]
     )
     return await signer.swap(
         {
@@ -195,11 +195,11 @@ async function attemptSwap(signer, swapType, sideIn, sideOut, amount, maturity, 
     )
 }
 
-async function attemptStaticSwap(signer, swapType, sideIn, sideOut, amount, helper, utr, payer, recipient, timelock = 0) {
+async function attemptStaticSwap(signer, sideIn, sideOut, amount, helper, utr, payer, recipient, timelock = 0) {
     const [openRate, premiumRate] = await Promise.all([signer.OPEN_RATE(), signer.PREMIUM_RATE()])
     const payload = abiCoder.encode(
-        ["uint", "uint", "uint", "uint", "uint", "uint"],
-        [openRate, premiumRate, swapType, sideIn, sideOut, amount]
+        ["uint", "uint", "uint", "uint", "uint"],
+        [openRate, premiumRate, sideIn, sideOut, amount]
     )
     return (await signer.callStatic.swap(
         {

@@ -11,16 +11,6 @@ const fe = (x) => Number(ethers.utils.formatEther(x))
 const pe = (x) => ethers.utils.parseEther(String(x))
 const HALF_LIFE = 10 * 365 * 24 * 60 * 60
 
-const abiCoder = new ethers.utils.AbiCoder()
-
-function encodePayload(swapType, sideIn, sideOut, amount) {
-    return abiCoder.encode(
-        ["uint", "uint", "uint", "uint"],
-        [swapType, sideIn, sideOut, amount]
-    )
-}
-
-
 async function main() {
     const addressList = {
         "weth": "",

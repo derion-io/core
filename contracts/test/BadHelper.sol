@@ -79,7 +79,6 @@ contract BadHelper is Constants, IHelper {
     function _swapMultiPool(SwapParams memory params, address TOKEN_R) internal returns (uint amountOut) {
         // swap poolIn/sideIn to poolIn/R
         bytes memory payload = abi.encode(
-            uint(0),
             params.sideIn,
             SIDE_R,
             params.amountIn,
@@ -106,7 +105,6 @@ contract BadHelper is Constants, IHelper {
 
         // swap (poolIn|PoolOut)/R to poolOut/SideOut
         payload = abi.encode(
-            uint(0),
             SIDE_R,
             params.sideOut,
             amountOut,
@@ -180,7 +178,6 @@ contract BadHelper is Constants, IHelper {
         }
 
         bytes memory payload = abi.encode(
-            uint(0),
             params.sideIn,
             params.sideOut,
             params.amountIn,
@@ -233,13 +230,11 @@ contract BadHelper is Constants, IHelper {
         bytes calldata payload
     ) external view override returns (State memory state1) {
         (
-            uint swapType,
             uint sideIn,
             uint sideOut,
             uint amount,
             uint PREMIUM_RATE
-        ) = abi.decode(payload, (uint, uint, uint, uint, uint));
-        require(swapType == MAX_IN, 'Helper: UNSUPPORTED_SWAP_TYPE');
+        ) = abi.decode(payload, (uint, uint, uint, uint));
 
         if (PREMIUM_RATE > 0 && (sideOut == SIDE_A || sideOut == SIDE_B)) {
             require(sideIn == SIDE_R, 'Helper: UNSUPPORTED_SIDEIN_WITH_PREMIUM');

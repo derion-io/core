@@ -36,7 +36,7 @@ async function swapToState(
   derivable1155,
   pool
 ) {
-  let [swapType, sideIn, sideOut, amount] = abiCoder.decode(["uint", "uint", "uint", "uint"], payload)
+  let [sideIn, sideOut, amount] = abiCoder.decode(["uint", "uint", "uint"], payload)
   const state1 = {...state}
   let rA1 = rA
   let rB1 = rB

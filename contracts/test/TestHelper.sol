@@ -5,8 +5,6 @@ import "../interfaces/IPool.sol";
 import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
 
 contract TestHelper {
-    uint constant MAX_IN = 0;
-
     address private immutable POOL;
     address private immutable TOKEN;
     address private immutable HELPER;
@@ -49,7 +47,6 @@ contract TestHelper {
     ) external returns (uint, uint, uint) {
         IERC1155(TOKEN).setApprovalForAll(POOL, true);
         bytes memory payload = abi.encode(
-            MAX_IN,
             sideIn,
             sideOut,
             IERC1155(TOKEN).balanceOf(address(this), _packID(POOL, sideIn)),

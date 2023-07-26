@@ -24,7 +24,6 @@ module.exports = class Pool {
 
   /**
   * @param options swap options.
-  * @param options.swapType Default 0.
   * @param options.payer Default AddressZero.
   * @param options.recipient Default sender.
   * @param options.static If static = true, the function will return the amountOut when callStatic pool swap.
@@ -54,9 +53,8 @@ module.exports = class Pool {
       amount = amount.mul(this.config.openRate).div(Q128) // apply open rate
     }
     const payload = abiCoder.encode(
-      ["uint", "uint", "uint", "uint", "uint"],
+      ["uint", "uint", "uint", "uint"],
       [
-        options.swapType || 0, 
         sideIn, 
         sideOut, 
         amount, 
