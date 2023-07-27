@@ -213,7 +213,7 @@ contract Helper is Constants, IHelper, ERC1155Holder {
             amountOut = IERC20(WETH).balanceOf(address(this));
             require(amountOut > 0, 'Do not have ETH to transfer');
             IWeth(WETH).withdraw(amountOut);
-            payable(_params.recipient).transfer(amountOut);
+            TransferHelper.safeTransferETH(_params.recipient, amountOut);
         }
 
         emit Swap(
