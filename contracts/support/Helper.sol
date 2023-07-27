@@ -5,6 +5,7 @@ import "@openzeppelin/contracts/utils/math/Math.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
 import "@uniswap/lib/contracts/libraries/TransferHelper.sol";
+import "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 
 import "@derivable/erc1155-maturity/contracts/token/ERC1155/IERC1155Supply.sol";
 
@@ -14,6 +15,7 @@ import "../interfaces/IHelper.sol";
 import "../interfaces/IPool.sol";
 import "../interfaces/IPoolFactory.sol";
 import "../interfaces/IWeth.sol";
+import "../libs/OracleLibrary.sol";
 
 
 contract Helper is Constants, IHelper, ERC1155Holder {
@@ -46,7 +48,8 @@ contract Helper is Constants, IHelper, ERC1155Holder {
         uint sideIn,
         uint sideOut,
         uint amountIn,
-        uint amountOut
+        uint amountOut,
+        uint price
     );
 
     // accepting ETH for WETH.withdraw
@@ -75,6 +78,50 @@ contract Helper is Constants, IHelper, ERC1155Holder {
         uint amount = IWeth(WETH).balanceOf(address(this));
         IERC20(WETH).approve(pool, amount);
         IPool(pool).init(state, Payment(address(0), address(0), msg.sender));
+    }
+
+    function _fetch(uint ORACLE) internal view returns (uint twap, uint spot) {
+        address pool = address(uint160(ORACLE));
+        (uint160 sqrtSpotX96,,,,,,) = IUniswapV3Pool(pool).slot0();
+
+        (int24 arithmeticMeanTick,) = OracleLibrary.consult(pool, uint32(ORACLE >> 192));
+        uint sqrtTwapX96 = TickMath.getSqrtRatioAtTick(arithmeticMeanTick);
+
+        spot = sqrtSpotX96 << 32;
+        twap = sqrtTwapX96 << 32;
+
+        if (ORACLE & Q255 == 0) {
+            spot = Q256M / spot;
+            twap = Q256M / twap;
+        }
+    }
+
+    function _avg(uint x, uint y) internal pure returns (uint z) {
+        unchecked {
+            z = x + y;
+            if (z < x) {
+                return (x >> 1) + (y >> 1);
+            }
+            return z >> 1;
+        }
+    }
+
+    function _selectPrice(
+        uint sideIn,
+        uint sideOut,
+        bytes32 ORACLE
+    ) internal view returns (uint price) {
+        (uint min, uint max) = _fetch(uint(ORACLE));
+        if (min > max) {
+            (min, max) = (max, min);
+        }
+        if (sideOut == SIDE_A || sideIn == SIDE_B) {
+            return max;
+        } else if (sideOut == SIDE_B || sideIn == SIDE_A) {
+            return min;
+        } else {
+            return _avg(min, max);
+        }
     }
 
     // TODO: pass the config in from client instead of contract call
@@ -136,6 +183,8 @@ contract Helper is Constants, IHelper, ERC1155Holder {
             TransferHelper.safeTransfer(TOKEN_R, params.payer, leftOver);
         }
 
+        uint price = _selectPrice(SIDE_R, params.sideOut, IPool(params.poolOut).loadConfig().ORACLE);
+
         emit Swap(
             params.payer, // topic2: poolIn
             params.poolIn,
@@ -144,7 +193,8 @@ contract Helper is Constants, IHelper, ERC1155Holder {
             params.sideIn,
             params.sideOut,
             params.amountIn,
-            amountOut
+            amountOut,
+            price
         );
     }
 
@@ -216,6 +266,8 @@ contract Helper is Constants, IHelper, ERC1155Holder {
             TransferHelper.safeTransferETH(_params.recipient, amountOut);
         }
 
+        uint price = _selectPrice(params.sideIn, params.sideOut, IPool(params.poolOut).loadConfig().ORACLE);
+
         emit Swap(
             _params.payer,
             _params.poolIn,
@@ -224,7 +276,8 @@ contract Helper is Constants, IHelper, ERC1155Holder {
             _params.sideIn,
             _params.sideOut,
             _params.amountIn,
-            amountOut
+            amountOut,
+            price
         );
     }
 
