@@ -129,7 +129,8 @@ describe("Helper Attacks", function () {
                     amountIn: pe(amountIn),
                     maturity: 0,
                     payer: owner.address,
-                    recipient: owner.address
+                    recipient: owner.address,
+                    INDEX_R: 0
                 })).data,
             }], opts)
 
@@ -199,7 +200,8 @@ describe("Helper Attacks", function () {
                     amountIn: pe(0.0001),
                     maturity: 0,
                     payer: owner.address,
-                    recipient: owner.address
+                    recipient: owner.address,
+                    INDEX_R: 0
                 })).data,
             }], opts)
             expect(await weth.balanceOf(stateCalHelper.address)).equal(0)
@@ -240,7 +242,8 @@ describe("Helper Attacks", function () {
                     amountIn: pe(amountIn),
                     maturity: 0,
                     payer: owner.address,
-                    recipient: owner.address
+                    recipient: owner.address,
+                    INDEX_R: 0
                 })).data,
             }], opts)
 
@@ -289,7 +292,8 @@ describe("Helper Attacks", function () {
                     amountIn: pe(amountIn),
                     maturity: 0,
                     payer: owner.address,
-                    recipient: owner.address
+                    recipient: owner.address,
+                    INDEX_R: 0
                 })).data,
             }], {
                 ...opts,
@@ -346,7 +350,8 @@ describe("Helper Attacks", function () {
                     amountIn: balanceInBefore,
                     maturity: 0,
                     payer: owner.address,
-                    recipient: owner.address
+                    recipient: owner.address,
+                    INDEX_R: 0
                 })).data,
             }], opts)
 
