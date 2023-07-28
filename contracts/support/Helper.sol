@@ -89,6 +89,9 @@ contract Helper is Constants, IHelper, ERC1155Holder {
     }
 
     function _fetch(uint INDEX) internal view returns (uint spot) {
+        if (INDEX == 0) {
+            return 0;
+        }
         address pool = address(uint160(INDEX));
         (uint160 sqrtSpotX96,,,,,,) = IUniswapV3Pool(pool).slot0();
 
