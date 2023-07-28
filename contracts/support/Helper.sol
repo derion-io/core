@@ -18,6 +18,8 @@ import "../interfaces/IWeth.sol";
 
 
 contract Helper is Constants, IHelper, ERC1155Holder {
+    uint internal constant Q254 = 1 << 254;
+    uint internal constant Q254M = Q254 - 1;
     uint internal constant SIDE_NATIVE = 0x01;
     uint constant MAX_IN = 0;
     address internal immutable TOKEN;
@@ -28,6 +30,9 @@ contract Helper is Constants, IHelper, ERC1155Holder {
         WETH = weth;
     }
 
+    // INDEX_R == 0: priceR = 0
+    // INDEX_R == Q254 | uint253(p): priceR = p
+    // otherwise: priceR = _fetch(INDEX_R)
     struct SwapParams {
         uint sideIn;
         address poolIn;
@@ -37,7 +42,7 @@ contract Helper is Constants, IHelper, ERC1155Holder {
         uint32 maturity;
         address payer;
         address recipient;
-        uint INDEX_R;   // INDEX is an ORACLE without WINDOW
+        uint INDEX_R;
     }
 
     struct ChangableSwapParams {
@@ -88,10 +93,17 @@ contract Helper is Constants, IHelper, ERC1155Holder {
         IPool(pool).init(state, Payment(address(0), address(0), msg.sender));
     }
 
-    function _fetch(uint INDEX) internal view returns (uint spot) {
+    function _getPrice(uint INDEX) internal view returns (uint spot) {
         if (INDEX == 0) {
             return 0;
         }
+        if (INDEX & Q254 != 0) {
+            return INDEX & Q254M;
+        }
+        return _fetch(INDEX);
+    }
+
+    function _fetch(uint INDEX) internal view returns (uint spot) {
         address pool = address(uint160(INDEX));
         (uint160 sqrtSpotX96,,,,,,) = IUniswapV3Pool(pool).slot0();
 
@@ -160,7 +172,7 @@ contract Helper is Constants, IHelper, ERC1155Holder {
         }
 
         uint price = _fetch(uint(IPool(params.poolOut).loadConfig().ORACLE));
-        uint priceR = _fetch(params.INDEX_R);
+        uint priceR = _getPrice(params.INDEX_R);
 
         emit Swap(
             params.payer,
@@ -242,7 +254,7 @@ contract Helper is Constants, IHelper, ERC1155Holder {
         }
 
         uint price = _fetch(uint(IPool(params.poolOut).loadConfig().ORACLE));
-        uint priceR = _fetch(params.INDEX_R);
+        uint priceR = _getPrice(params.INDEX_R);
 
         emit Swap(
             __.payer,
