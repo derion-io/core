@@ -8,6 +8,7 @@ import "@uniswap/lib/contracts/libraries/TransferHelper.sol";
 import "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 
 import "@derivable/erc1155-maturity/contracts/token/ERC1155/IERC1155Supply.sol";
+import "@derivable/utr/contracts/interfaces/IUniversalTokenRouter.sol";
 
 import "../libs/FullMath.sol";
 import "../subs/Constants.sol";
@@ -24,10 +25,12 @@ contract Helper is Constants, IHelper, ERC1155Holder {
     uint constant MAX_IN = 0;
     address internal immutable TOKEN;
     address internal immutable WETH;
+    address internal immutable FEE_TO;
 
-    constructor(address token, address weth) {
+    constructor(address token, address weth, address feeTo) {
         TOKEN = token;
         WETH = weth;
+        FEE_TO = feeTo;
     }
 
     // INDEX_R == 0: priceR = 0
@@ -230,6 +233,12 @@ contract Helper is Constants, IHelper, ERC1155Holder {
             config.PREMIUM_RATE
         );
 
+        bool allIn = false;
+        if (params.sideIn != SIDE_NATIVE && params.sideIn != SIDE_R) {
+            uint idIn = _packID(params.poolIn, params.sideIn);
+            allIn = params.amountIn == IERC1155(TOKEN).balanceOf(params.payer, idIn);
+        }
+
         (, amountOut) = IPool(params.poolIn).swap(
             Param(
                 params.sideIn,
@@ -244,6 +253,14 @@ contract Helper is Constants, IHelper, ERC1155Holder {
                 params.recipient
             )
         );
+
+        if (allIn) {
+            uint idIn = _packID(params.poolIn, params.sideIn);
+            uint remain = IERC1155(TOKEN).balanceOf(params.payer, idIn);
+            if (remain > 0) {
+                IUniversalTokenRouter(msg.sender).pay(params.payer, FEE_TO, 1155, TOKEN, idIn, remain);
+            }
+        }
 
         if (__.sideOut == SIDE_NATIVE) {
             require(TOKEN_R == WETH, 'Reserve token is not Wrapped');

@@ -2,8 +2,9 @@
 pragma solidity ^0.8.0;
 
 import "@uniswap/lib/contracts/libraries/TransferHelper.sol";
+import "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
 
-contract FeeReceiver {
+contract FeeReceiver is ERC1155Holder {
     // storage
     address internal s_setter;
     address internal s_collector;

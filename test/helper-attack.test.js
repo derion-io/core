@@ -324,22 +324,36 @@ describe("Helper Attacks", function () {
                 derivablePools,
                 utr,
                 derivable1155,
-                stateCalHelper
+                stateCalHelper,
+                feeReceiver
             } = await loadFixture(fixture)
             await weth.deposit({
                 value: numberToWei(1000)
             })
             const balanceInBefore = await derivable1155.balanceOf(owner.address, packId(sideIn, derivablePools[0].contract.address))
             const balanceOutBefore = await owner.provider.getBalance(owner.address)
-            await utr.exec([], [{
-                inputs: [{
+            let inputs = [
+                {
                     mode: PAYMENT,
                     token: sideIn === SIDE_R ? weth.address : derivable1155.address,
                     eip: sideIn === SIDE_R ? 20 : 1155,
                     id: sideIn === SIDE_R ? 0 : packId(sideIn, derivablePools[0].contract.address),
                     amountIn: balanceInBefore,
                     recipient: derivablePools[0].contract.address,
-                }],
+                }
+            ]
+            if (sideIn === SIDE_C) {
+                inputs.push({
+                    mode: PAYMENT,
+                    token: derivable1155.address,
+                    eip: 1155,
+                    id: packId(sideIn, derivablePools[0].contract.address),
+                    amountIn: balanceInBefore.div(100),
+                    recipient: feeReceiver.address,
+                })
+            }
+            await utr.exec([], [{
+                inputs,
                 // flags: 0,
                 code: stateCalHelper.address,
                 data: (await stateCalHelper.populateTransaction.swap({
