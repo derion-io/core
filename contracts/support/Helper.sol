@@ -233,13 +233,8 @@ contract Helper is Constants, IHelper, ERC1155Holder {
             config.PREMIUM_RATE
         );
 
-        bool allIn = false;
-        if (params.sideIn != SIDE_NATIVE && params.sideIn != SIDE_R) {
-            uint idIn = _packID(params.poolIn, params.sideIn);
-            allIn = params.amountIn == IERC1155(TOKEN).balanceOf(params.payer, idIn);
-        }
-
-        (, amountOut) = IPool(params.poolIn).swap(
+        uint amountIn;
+        (amountIn, amountOut) = IPool(params.poolIn).swap(
             Param(
                 params.sideIn,
                 params.sideOut,
@@ -254,11 +249,14 @@ contract Helper is Constants, IHelper, ERC1155Holder {
             )
         );
 
-        if (allIn) {
-            uint idIn = _packID(params.poolIn, params.sideIn);
-            uint remain = IERC1155(TOKEN).balanceOf(params.payer, idIn);
-            if (remain > 0) {
-                IUniversalTokenRouter(msg.sender).pay(params.payer, FEE_TO, 1155, TOKEN, idIn, remain);
+        // donate 1155 dust balance
+        if (params.amountIn > amountIn && params.sideIn >= SIDE_A) {
+            uint remain = params.amountIn - amountIn;
+            if (remain <= params.amountIn / 100) {
+                uint idIn = _packID(params.poolIn, params.sideIn);
+                if (remain == IERC1155(TOKEN).balanceOf(params.payer, idIn)) {
+                    IUniversalTokenRouter(msg.sender).pay(params.payer, FEE_TO, 1155, TOKEN, idIn, remain);
+                }
             }
         }
 
