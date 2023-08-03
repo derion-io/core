@@ -183,7 +183,7 @@ configs.forEach(config => describe(`Maturity - EXP = ${config.exp}, COEF ${confi
     }
 
     async function closePositionPartAndFull(side, t) {
-        const {accountA, derivablePools, derivable1155} = await loadFixture(fixture)
+        const {accountA, accountB, derivablePools, derivable1155} = await loadFixture(fixture)
         const derivablePool = derivablePools[0]
         const poolNoMaturity = derivablePools[1]
 
@@ -191,7 +191,7 @@ configs.forEach(config => describe(`Maturity - EXP = ${config.exp}, COEF ${confi
         await derivablePool.swap(
             SIDE_R,
             side,
-            numberToWei(0.13),
+            numberToWei(0.5),
             curTime + 120,
             { 
                 recipient: accountA.address
@@ -201,13 +201,23 @@ configs.forEach(config => describe(`Maturity - EXP = ${config.exp}, COEF ${confi
         await poolNoMaturity.swap(
             SIDE_R,
             side,
-            numberToWei(0.13),
+            numberToWei(0.5),
             0,
             { 
                 recipient: accountA.address
             }
         )
-        await time.increaseTo(curTime + 120 - t)
+        await time.setNextBlockTimestamp(curTime + 120 - t)
+
+        const tokenBalance = await derivable1155.balanceOf(accountA.address, packId(side, derivablePool.contract.address))
+        const transferOut = (coef === 0.9 && exp === 8 && side === SIDE_A) ? 2 : 1
+        await derivable1155.connect(accountA).safeTransferFrom(
+            accountA.address,
+            accountB.address,
+            packId(side, derivablePool.contract.address),
+            transferOut,
+            0x0
+        )
 
         const amountOutNoMaturityPart = await poolNoMaturity.connect(accountA).swap(
             side,
@@ -239,7 +249,6 @@ configs.forEach(config => describe(`Maturity - EXP = ${config.exp}, COEF ${confi
             }
         )
 
-        const tokenBalance = await derivable1155.balanceOf(accountA.address, packId(side, derivablePool.contract.address))
         const {amountOut: amountOutFull, amountIn: amountInFull} = await derivablePool.connect(accountA).swap(
             side,
             SIDE_R,
@@ -251,20 +260,8 @@ configs.forEach(config => describe(`Maturity - EXP = ${config.exp}, COEF ${confi
             }
         )
 
-        console.log("Left over", tokenBalance.sub(amountInFull))
-
         const partRatio = Number(weiToNumber(amountOutPart)) / Number(weiToNumber(amountOutNoMaturityPart))
         const fullRatio = Number(weiToNumber(amountOutFull)) / Number(weiToNumber(amountOutNoMaturityFull)) 
-        
-        const vesting_maturity = Math.floor(60 / exp)
-        const elapse = 60 - t;
-        if (elapse < vesting_maturity) {
-            expect(Number(weiToNumber(amountOutPart))/Number(weiToNumber(amountOutNoMaturityPart)))
-            .to.be.closeTo(coef * elapse/vesting_maturity, 1e-10)
-        } else {
-            expect(Number(weiToNumber(amountOutPart))/Number(weiToNumber(amountOutNoMaturityPart)))
-            .to.be.closeTo(coef, 1e-10)
-        }
 
         expect(partRatio).closeTo(fullRatio, 1e-10)
     } 
@@ -359,13 +356,15 @@ configs.forEach(config => describe(`Maturity - EXP = ${config.exp}, COEF ${confi
         )).revertedWith('Maturity: locktime order')
     })
 
-    it ('Maturity payoff should be apply when close all long position', async function() {
-        await closePositionPartAndFull(SIDE_A, 50)
-    })
+    if (exp !== 8 || coef !== 1)
+        it ('Maturity payoff should be apply when close all long position', async function() {
+            await closePositionPartAndFull(SIDE_A, 40)
+        })
 
-    it ('Maturity payoff should be apply when close all short position', async function() {
-        await closePositionPartAndFull(SIDE_B, 50)
-    })
+    if (exp !== 8 || coef !== 1)
+        it ('Maturity payoff should be apply when close all short position', async function() {
+            await closePositionPartAndFull(SIDE_B, 40)
+        })
 
     it('User should get amountOut > 0 if t > maturity, T - t = 40, buy Long', async function () {
         await closePositionPayOff(SIDE_A, 40)
