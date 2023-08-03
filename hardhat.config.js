@@ -5,6 +5,7 @@ dotenv.config({ path: __dirname + "/.env" });
 require("@nomiclabs/hardhat-ethers");
 require("hardhat-contract-sizer");
 require("hardhat-gas-reporter");
+require('hardhat-dependency-compiler');
 require("solidity-coverage");
 
 require("./scripts/DeployDDLCore.sf");
@@ -106,6 +107,11 @@ module.exports = {
     },
     mocha: {
         timeout: 100000000
+    },
+    dependencyCompiler: {
+        paths: [
+            '@derivable/utr/contracts/UniversalTokenRouter.sol'
+        ]
     },
     contractSizer: {
         alphaSort: true,
