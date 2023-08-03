@@ -318,7 +318,14 @@ describe("Helper Attacks", function () {
 
     describe("Swap to native", function () {
         async function testSwap(sideIn) {
-            const {
+            const fixture1 = loadFixtureFromParams([{
+                ...baseParams,
+                maturity: 60,
+                maturityVest: Math.floor(60 / 8),
+                maturityRate: bn(0.9*1000).shl(128).div(1000),
+            }])
+            let {
+                accountA,
                 owner,
                 weth,
                 derivablePools,
@@ -326,13 +333,32 @@ describe("Helper Attacks", function () {
                 derivable1155,
                 stateCalHelper,
                 feeReceiver
-            } = await loadFixture(fixture)
+            } = await loadFixture(fixture1)
             await weth.deposit({
                 value: numberToWei(1000)
             })
-            const balanceInBefore = await derivable1155.balanceOf(owner.address, packId(sideIn, derivablePools[0].contract.address))
-            const balanceOutBefore = await owner.provider.getBalance(owner.address)
-            let inputs = [
+
+            let actor = accountA
+            if (sideIn == SIDE_C)
+                actor = owner
+
+            const derivablePool = derivablePools[0]
+
+            if (sideIn !== SIDE_C)
+            await derivablePool.swap(
+                SIDE_R,
+                sideIn,
+                numberToWei(0.13123),
+                0,
+                { 
+                    recipient: actor.address
+                }
+            )
+
+            const balanceInBefore = await derivable1155.balanceOf(actor.address, packId(sideIn, derivablePools[0].contract.address))
+            const balanceOutBefore = await actor.provider.getBalance(actor.address)
+            await time.increase(59)
+            const inputs = [
                 {
                     mode: PAYMENT,
                     token: sideIn === SIDE_R ? weth.address : derivable1155.address,
@@ -340,19 +366,18 @@ describe("Helper Attacks", function () {
                     id: sideIn === SIDE_R ? 0 : packId(sideIn, derivablePools[0].contract.address),
                     amountIn: balanceInBefore,
                     recipient: derivablePools[0].contract.address,
-                }
-            ]
-            if (sideIn === SIDE_C) {
-                inputs.push({
+                },
+                {
                     mode: PAYMENT,
                     token: derivable1155.address,
                     eip: 1155,
                     id: packId(sideIn, derivablePools[0].contract.address),
                     amountIn: balanceInBefore.div(100),
                     recipient: feeReceiver.address,
-                })
-            }
-            await utr.exec([], [{
+                }
+            ]
+           
+            await utr.connect(actor).exec([], [{
                 inputs,
                 // flags: 0,
                 code: stateCalHelper.address,
@@ -363,14 +388,14 @@ describe("Helper Attacks", function () {
                     poolOut: derivablePools[0].contract.address,
                     amountIn: balanceInBefore,
                     maturity: 0,
-                    payer: owner.address,
-                    recipient: owner.address,
+                    payer: actor.address,
+                    recipient: actor.address,
                     INDEX_R: 0
                 })).data,
             }], opts)
 
-            const balanceInAfter = await derivable1155.balanceOf(owner.address, packId(sideIn, derivablePools[0].contract.address))
-            const balanceOutAfter = await owner.provider.getBalance(owner.address)
+            const balanceInAfter = await derivable1155.balanceOf(actor.address, packId(sideIn, derivablePools[0].contract.address))
+            const balanceOutAfter = await actor.provider.getBalance(actor.address)
 
             expect(balanceOutAfter.gt(balanceOutBefore)).equal(true)
             expect(balanceInBefore.gt(balanceInAfter)).equal(true)
