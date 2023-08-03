@@ -60,6 +60,10 @@ contract View is PoolLogic {
         stateView.state = state;
     }
 
+    function _supply(address TOKEN, uint side) internal view returns (uint s) {
+        return IERC1155Supply(TOKEN).totalSupply(_packID(address(this), side));
+    }
+
     function _applyFee(
         uint INTEREST_HL,
         uint R,
