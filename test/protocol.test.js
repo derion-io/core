@@ -207,13 +207,13 @@ describe("Protocol", function () {
             const wethChanged = wethBefore.sub(wethAfter)
             expect(wethChanged).equal(pe(amountIn))
         }
-        it("weth -> lp: Non UTR", async function () {
+        it("weth -> lp: allowance", async function () {
             await testRIn(SIDE_R, "1", SIDE_C, false)
         })
-        it("weth -> long: Non UTR", async function () {
+        it("weth -> long: allowance", async function () {
             await testRIn(SIDE_R, "0.5", SIDE_A, false)
         })
-        it("weth -> short: Non UTR", async function () {
+        it("weth -> short: allowance", async function () {
             await testRIn(SIDE_R, "0.5", SIDE_B, false)
         })
 
@@ -275,22 +275,22 @@ describe("Protocol", function () {
             const tokenChanged = tokenBefore.sub(tokenAfter)
             expect(tokenChanged).lte(amountIn).gte(amountIn.sub(2))
         }
-        it("all lp -> weth: Non UTR", async function () {
+        it("all lp -> weth: allowance", async function () {
             await testROut(SIDE_C, null, SIDE_R, false)
         })
-        it("all long -> weth: Non UTR", async function () {
+        it("all long -> weth: allowance", async function () {
             await testROut(SIDE_A, null, SIDE_R, false)
         })
-        it("all short -> weth: Non UTR", async function () {
+        it("all short -> weth: allowance", async function () {
             await testROut(SIDE_B, null, SIDE_R, false)
         })
-        it("lp -> weth: Non UTR", async function () {
+        it("lp -> weth: allowance", async function () {
             await testROut(SIDE_C, "1", SIDE_R, false)
         })
-        it("long -> weth: Non UTR", async function () {
+        it("long -> weth: allowance", async function () {
             await testROut(SIDE_A, "0.1", SIDE_R, false)
         })
-        it("short -> weth: Non UTR", async function () {
+        it("short -> weth: allowance", async function () {
             await testROut(SIDE_B, "0.1", SIDE_R, false)
         })
 
