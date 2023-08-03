@@ -153,8 +153,9 @@ abstract contract PoolBase is IPool, ERC1155Holder, Storage, Constants {
         } else {
             uint idIn = _packID(address(this), param.sideIn);
             if (payment.payer != address(0)) {
+                uint expectedSupply = IERC1155Supply(TOKEN).totalSupply(idIn) - amountIn;
                 IUniversalTokenRouter(payment.utr).pay(payment.payer, address(this), 1155, TOKEN, idIn, amountIn);
-                IToken(TOKEN).burn(address(this), idIn, amountIn);
+                require(IERC1155Supply(TOKEN).totalSupply(idIn) <= expectedSupply, 'II');
             } else {
                 IToken(TOKEN).burn(msg.sender, idIn, amountIn);
                 payment.payer = msg.sender;
