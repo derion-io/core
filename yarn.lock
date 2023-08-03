@@ -72,19 +72,19 @@
   resolved "https://registry.yarnpkg.com/@colors/colors/-/colors-1.5.0.tgz#bb504579c1cae923e6576a4f5da43d25f97bdbd9"
   integrity sha512-ooWCrlZP11i8GImSjTHYHLkvFDP48nS4+204nGb1RiX/WXYHmJA2III9/e2DWVabCESdW7hBAEzHRqUn9OUVvQ==
 
-"@derivable/erc1155-maturity@git+ssh://git@github.com:derivable-labs/erc1155-maturity.git":
+"@derivable/erc1155-maturity@https://github.com/derivable-labs/erc1155-maturity.git":
   version "4.8.2"
-  resolved "git+ssh://git@github.com:derivable-labs/erc1155-maturity.git#fba14233ceac63b88727f0ca573483260d1a45bb"
+  resolved "https://github.com/derivable-labs/erc1155-maturity.git#c234f1b70bbf19a76f5322580724b9f3c4a87077"
 
-"@derivable/shadow-token@git+ssh://git@github.com:derivable-labs/shadow-token.git":
+"@derivable/shadow-token@https://github.com/derivable-labs/shadow-token.git":
   version "1.0.0"
-  resolved "git+ssh://git@github.com:derivable-labs/shadow-token.git#b255de3bc075d8bc4d7c76d87b6d5bde51c05476"
+  resolved "https://github.com/derivable-labs/shadow-token.git#7a05d4a979a0d596dc08bfbf166be5acf691361d"
   dependencies:
-    "@derivable/erc1155-maturity" "git+ssh://git@github.com:derivable-labs/erc1155-maturity.git"
+    "@derivable/erc1155-maturity" "https://github.com/derivable-labs/erc1155-maturity.git"
 
-"@derivable/utr@git+ssh://git@github.com:derivable-labs/utr.git":
+"@derivable/utr@https://github.com/derivable-labs/utr.git":
   version "1.0.0"
-  resolved "git+ssh://git@github.com:derivable-labs/utr.git#abad4c5e598bb89edafacb8da57f31d8d8aae331"
+  resolved "https://github.com/derivable-labs/utr.git#abad4c5e598bb89edafacb8da57f31d8d8aae331"
   dependencies:
     "@atixlabs/hardhat-time-n-mine" "^0.0.5"
     "@uniswap/lib" "^4.0.1-alpha"
