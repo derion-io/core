@@ -182,6 +182,93 @@ configs.forEach(config => describe(`Maturity - EXP = ${config.exp}, COEF ${confi
         }
     }
 
+    async function closePositionPartAndFull(side, t) {
+        const {accountA, derivablePools, derivable1155} = await loadFixture(fixture)
+        const derivablePool = derivablePools[0]
+        const poolNoMaturity = derivablePools[1]
+
+        const curTime = await time.latest()
+        await derivablePool.swap(
+            SIDE_R,
+            side,
+            numberToWei(0.13),
+            curTime + 120,
+            { 
+                recipient: accountA.address
+            }
+        )
+
+        await poolNoMaturity.swap(
+            SIDE_R,
+            side,
+            numberToWei(0.13),
+            0,
+            { 
+                recipient: accountA.address
+            }
+        )
+        await time.increaseTo(curTime + 120 - t)
+
+        const amountOutNoMaturityPart = await poolNoMaturity.connect(accountA).swap(
+            side,
+            SIDE_R,
+            2000000000000,
+            0,
+            { 
+                static: true
+            }
+        )
+
+        const amountOutPart = await derivablePool.connect(accountA).swap(
+            side,
+            SIDE_R,
+            2000000000000,
+            0,
+            { 
+                static: true
+            }
+        )
+        
+        const amountOutNoMaturityFull = await poolNoMaturity.connect(accountA).swap(
+            side,
+            SIDE_R,
+            await derivable1155.balanceOf(accountA.address, packId(side, poolNoMaturity.contract.address)),
+            0,
+            { 
+                static: true
+            }
+        )
+
+        const tokenBalance = await derivable1155.balanceOf(accountA.address, packId(side, derivablePool.contract.address))
+        const {amountOut: amountOutFull, amountIn: amountInFull} = await derivablePool.connect(accountA).swap(
+            side,
+            SIDE_R,
+            tokenBalance,
+            0,
+            { 
+                static: true,
+                keepBoth: true
+            }
+        )
+
+        console.log("Left over", tokenBalance.sub(amountInFull))
+
+        const partRatio = Number(weiToNumber(amountOutPart)) / Number(weiToNumber(amountOutNoMaturityPart))
+        const fullRatio = Number(weiToNumber(amountOutFull)) / Number(weiToNumber(amountOutNoMaturityFull)) 
+        
+        const vesting_maturity = Math.floor(60 / exp)
+        const elapse = 60 - t;
+        if (elapse < vesting_maturity) {
+            expect(Number(weiToNumber(amountOutPart))/Number(weiToNumber(amountOutNoMaturityPart)))
+            .to.be.closeTo(coef * elapse/vesting_maturity, 1e-10)
+        } else {
+            expect(Number(weiToNumber(amountOutPart))/Number(weiToNumber(amountOutNoMaturityPart)))
+            .to.be.closeTo(coef, 1e-10)
+        }
+
+        expect(partRatio).closeTo(fullRatio, 1e-10)
+    } 
+
     // it('User should get amountOut = 0 if t < maturity', async function () {
     //     const {accountA, derivablePools} = await loadFixture(fixture)
     //     const derivablePool = derivablePools[0]
@@ -270,6 +357,14 @@ configs.forEach(config => describe(`Maturity - EXP = ${config.exp}, COEF ${confi
             SIDE_C,
             numberToWei(1),
         )).revertedWith('Maturity: locktime order')
+    })
+
+    it ('Maturity payoff should be apply when close all long position', async function() {
+        await closePositionPartAndFull(SIDE_A, 50)
+    })
+
+    it ('Maturity payoff should be apply when close all short position', async function() {
+        await closePositionPartAndFull(SIDE_B, 50)
     })
 
     it('User should get amountOut > 0 if t > maturity, T - t = 40, buy Long', async function () {

@@ -40,8 +40,11 @@ module.exports = class Pool {
       payer: options.payer || AddressZero,
       recipient: options.recipient || this.contract.signer.address
     }
-    if (options.static)
+    if (options.static) {
+      if (options.keepBoth)
+        return (await this.contract.callStatic.swap(swapParams, paymentParams))
       return (await this.contract.callStatic.swap(swapParams, paymentParams)).amountOut
+    }
     if (options.populateTransaction)
       return await this.contract.populateTransaction.swap(swapParams, paymentParams)
     return await this.contract.swap(swapParams, paymentParams)
