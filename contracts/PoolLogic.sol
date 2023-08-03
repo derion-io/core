@@ -61,7 +61,7 @@ contract PoolLogic is PoolBase {
         }
     }
 
-    function _supply(address TOKEN, uint side) internal view returns (uint s) {
+    function _supply(uint side) internal view returns (uint s) {
         return IERC1155Supply(TOKEN).totalSupply(_packID(address(this), side));
     }
 
@@ -191,7 +191,7 @@ contract PoolLogic is PoolBase {
             result.amountIn = state1.R - state.R;
         } else {
             require(state.R >= state1.R, "MI:NR");
-            uint s = _supply(TOKEN, sideIn);
+            uint s = _supply(sideIn);
             if (sideIn == SIDE_A) {
                 require(rB1 >= rB, "MI:A");
                 result.amountIn = FullMath.mulDivRoundingUp(s, rA - rA1, rA);
@@ -218,16 +218,16 @@ contract PoolLogic is PoolBase {
                 uint rC = state.R - rA - rB;
                 uint rC1 = state1.R - rA1 - rB1;
                 require(rC1 >= MINIMUM_RESERVE, 'MR:C');
-                result.amountOut = FullMath.mulDiv(_supply(TOKEN, sideOut), rC1 - rC, rC);
+                result.amountOut = FullMath.mulDiv(_supply(sideOut), rC1 - rC, rC);
             } else {
                 uint inputRate = Q128;
                 if (sideOut == SIDE_A) {
                     require(rA1 >= MINIMUM_RESERVE, 'MR:A');
-                    result.amountOut = FullMath.mulDiv(_supply(TOKEN, sideOut), rA1 - rA, rA);
+                    result.amountOut = FullMath.mulDiv(_supply(sideOut), rA1 - rA, rA);
                     inputRate = _inputRate(config, state1, rA1, rB1);
                 } else if (sideOut == SIDE_B) {
                     require(rB1 >= MINIMUM_RESERVE, 'MR:B');
-                    result.amountOut = FullMath.mulDiv(_supply(TOKEN, sideOut), rB1 - rB, rB);
+                    result.amountOut = FullMath.mulDiv(_supply(sideOut), rB1 - rB, rB);
                     inputRate = _inputRate(config, state1, rB1, rA1);
                 }
                 if (inputRate != Q128) {

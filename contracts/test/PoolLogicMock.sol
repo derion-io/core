@@ -26,9 +26,9 @@ contract PoolLogicMock is PoolLogic {
     s_b = b;
     s_f = f;
     s_i = i;
-    uint curSA = _supply(TOKEN, SIDE_A);
-    uint curSB = _supply(TOKEN, SIDE_B);
-    uint curSC = _supply(TOKEN, SIDE_C);
+    uint curSA = _supply(SIDE_A);
+    uint curSB = _supply(SIDE_B);
+    uint curSC = _supply(SIDE_C);
     if (sA < curSA) {
       IToken(TOKEN).burn(msg.sender, _packID(address(this), SIDE_A), curSA - sA);
     } else {
