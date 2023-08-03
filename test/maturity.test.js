@@ -210,7 +210,7 @@ configs.forEach(config => describe(`Maturity - EXP = ${config.exp}, COEF ${confi
         await time.setNextBlockTimestamp(curTime + 120 - t)
 
         const tokenBalance = await derivable1155.balanceOf(accountA.address, packId(side, derivablePool.contract.address))
-        const transferOut = (coef === 0.9 && exp === 8 && side === SIDE_A) ? 2 : 1
+        const transferOut = 1
         await derivable1155.connect(accountA).safeTransferFrom(
             accountA.address,
             accountB.address,
