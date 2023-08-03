@@ -219,6 +219,35 @@ describe("Revert", function () {
         paymentParams
       )).to.be.revertedWith("SI")
     })
+
+    it("Swap: II", async function () {
+      const { stateCalHelper, derivablePools, derivable1155, fakeUTR, owner } = await loadFixture(fixture)
+      await derivable1155.setApprovalForAll(fakeUTR.address, true);
+      const pool = derivablePools[0]
+
+      // console.log('owner', owner.address)
+
+      await expect(fakeUTR.exec([], [{
+        inputs: [{
+            mode: PAYMENT,
+            eip: 1155,
+            token: derivable1155.address,
+            id: packId(SIDE_A, pool.contract.address),
+            amountIn: 1000,
+            recipient: pool.contract.address,
+        }],
+        code: pool.contract.address,
+        data: (await pool.swap(
+          SIDE_A,
+          SIDE_R,
+          1000, {
+            populateTransaction: true,
+            payer: owner.address,
+            utr: fakeUTR.address
+          }
+        )).data,
+      }])).to.be.revertedWith("II")
+    })
   })
 
   describe("PoolFactory", function () {

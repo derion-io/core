@@ -36,7 +36,7 @@ module.exports = class Pool {
   ) {
     const swapParams = this.getSwapParam(sideIn, sideOut, amount, options)
     const paymentParams = {
-      utr: this.utilContracts.utr.address,
+      utr: options.utr || this.utilContracts.utr.address,
       payer: options.payer || AddressZero,
       recipient: options.recipient || this.contract.signer.address
     }

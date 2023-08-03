@@ -369,6 +369,67 @@ describe("Protocol", function () {
             await testRInROut(SIDE_C, "20")
         })
 
+        async function testSupplyIn(side, amount, useUTR) {
+            const {derivable1155, owner, utr, derivablePools} = await loadFixture(fixture)
+            const pool = derivablePools[0]
+            const idIn = packId(side, pool.contract.address)
+
+            const supplyBefore = await derivable1155.totalSupply(idIn)
+            const amountIn = numberToWei(amount)
+
+            if (!useUTR) {
+                await pool.swap(
+                    side,
+                    SIDE_R,
+                    amountIn
+                )
+            } else {
+                const data = (await pool.swap(
+                    side,
+                    SIDE_R,
+                    amountIn, {
+                        populateTransaction: true,
+                        payer: owner.address
+                    }
+                )).data
+                await utr.exec([], [
+                    {
+                        inputs: [{
+                            mode: PAYMENT,
+                            eip: 1155,
+                            token: derivable1155.address,
+                            id: idIn,
+                            amountIn: amountIn,
+                            recipient: pool.contract.address,
+                        }],
+                        code: pool.contract.address,
+                        data: data,
+                    }
+                ])
+            }
+            const supplyAfter = await derivable1155.totalSupply(idIn)
+            // console.log(supplyAfter.sub(supplyBefore.sub(amountIn)))
+            expect(supplyAfter.sub(supplyBefore.sub(amountIn))).lte(1)
+        }
+        it("Supply after swap: A -> R - Non UTR", async function () {
+            await testSupplyIn(SIDE_A, 0.1, false)
+        })
+        it("Supply after swap: B -> R - Non UTR", async function () {
+            await testSupplyIn(SIDE_B, 0.1, false)
+        })
+        it("Supply after swap: C -> R - Non UTR", async function () {
+            await testSupplyIn(SIDE_C, 0.1, false)
+        })
+        it("Supply after swap: A -> R - UTR", async function () {
+            await testSupplyIn(SIDE_A, 0.1, true)
+        })
+        it("Supply after swap: B -> R - UTR", async function () {
+            await testSupplyIn(SIDE_B, 0.1, true)
+        })
+        it("Supply after swap: C -> R - UTR", async function () {
+            await testSupplyIn(SIDE_C, 0.1, true)
+        })
+
         async function testPriceChange(isLong = true, wethAmountIn, priceChange, expected) {
             const { owner, weth, utr, uniswapPair, usdc, derivablePools, derivable1155, stateCalHelper } = await loadFixture(fixture)
             // swap weth -> long
