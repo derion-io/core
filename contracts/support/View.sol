@@ -39,18 +39,15 @@ contract View is PoolLogic {
         (uint twap, uint spot) = _fetch(uint(config.ORACLE));
         (uint rAt, uint rBt) = _evaluate(_xk(config, twap), state);
         (uint rAs, uint rBs) = _evaluate(_xk(config, spot), state);
+        uint rC = state.R - Math.max(rAt + rBt, rAs + rBs);
 
-        // [PROTOCOL FEE]
-        uint Rt;
-        (Rt, rAt, rBt) = _applyFee(config.INTEREST_HL, state.R, rAt, rBt);
-        (state.R, rAs, rBs) = _applyFee(config.INTEREST_HL, state.R, rAs, rBs);
-        if (Rt < state.R) {
-            state.R = Rt;
+        if (rC > rCLast) {
+            rC -= (rC-rCLast) * FEE_RATE / Q128;
         }
 
         stateView.rA = Math.min(rAt, rAs);
         stateView.rB = Math.min(rBt, rBs);
-        stateView.rC = state.R - Math.max(rAt + rBt, rAs + rBs);
+        stateView.rC = rC;
         stateView.sA = _supply(TOKEN, SIDE_A);
         stateView.sB = _supply(TOKEN, SIDE_B);
         stateView.sC = _supply(TOKEN, SIDE_C);
@@ -64,24 +61,4 @@ contract View is PoolLogic {
         return IERC1155Supply(TOKEN).totalSupply(_packID(address(this), side));
     }
 
-    function _applyFee(
-        uint INTEREST_HL,
-        uint R,
-        uint rA,
-        uint rB
-    ) internal view returns (uint, uint, uint) {
-        uint32 elapsed = uint32(block.timestamp & F_MASK) - (s_f & F_MASK);
-        if (elapsed > 0) {
-            uint feeRate = FEE_RATE > 0 ? FEE_RATE : 5;
-            uint feeRateX64 = _expRate(elapsed, INTEREST_HL * feeRate);
-            uint rAF = FullMath.mulDivRoundingUp(rA, Q64, feeRateX64);
-            uint rBF = FullMath.mulDivRoundingUp(rB, Q64, feeRateX64);
-            if (rAF < rA || rBF < rB) {
-                uint fee = rA - rAF + rB - rBF;
-                (rA, rB) = (rAF, rBF);
-                R -= fee;
-            }
-        }
-        return (R, rA, rB);
-    }
 }
