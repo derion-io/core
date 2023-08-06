@@ -21,7 +21,7 @@ const HLs = [
   1966168
 ] // 0.3%, 3%
 
-const FEE_RATE = bn(1).mul(bn(2).pow(128)).div(12)
+const FEE_RATE = bn(1).shl(128).div(12)
 
 function toDailyRate(HALF_LIFE, precision = 4) {
   if (HALF_LIFE == 0) {

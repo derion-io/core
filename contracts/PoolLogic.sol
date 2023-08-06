@@ -207,7 +207,7 @@ contract PoolLogic is PoolBase {
                     uint rC1 = state1.R - rA1 - rB1;
                     result.amountIn = FullMath.mulDivRoundingUp(s, rC - rC1, rC);
                     // TODO: store the rCLast = rC1, and rCLastIn = true
-                    rCLast = rC1;
+                    rCLast = uint240(rC1);
                     rCLastIn = true;
                 }
             }
@@ -225,7 +225,7 @@ contract PoolLogic is PoolBase {
                 require(rC1 >= MINIMUM_RESERVE, 'MR:C');
                 result.amountOut = FullMath.mulDiv(_supply(sideOut), rC1 - rC, rC);
                 // TODO: store the rCLast = rC1, and rCLastIn = false
-                rCLast = rC1;
+                rCLast = uint240(rC1);
                 rCLastIn = false;
             } else {
                 uint inputRate = Q128;
