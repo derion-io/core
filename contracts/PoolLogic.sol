@@ -123,12 +123,24 @@ contract PoolLogic is PoolBase {
             xk = _xk(config, price = min);
             (rA, rB) = _evaluate(xk, state);
         } else {
-            xk = _xk(config, price = min);
+            xk = _xk(config, min);
             (rA, rB) = _evaluate(xk, state);
-            if ((sideIn == SIDE_R) == rB > rA) {
-                xk = _xk(config, price = max);
-                (rA, rB) = _evaluate(xk, state);
+            uint rCMin = state.R - rA - rB;
+            uint xkMax = _xk(config, max);
+            (uint rAMax, uint rBMax) = _evaluate(xkMax, state);
+            uint rCMax = state.R - rAMax - rBMax;
+            if ((sideIn == SIDE_C) == rCMax < rCMin) {
+                xk = xkMax;
+                rA = rAMax;
+                rB = rBMax;
+                price = max;
+            } else {
+                price = min;
             }
+            // if (rCMax < rCMin) {
+            //     (rCMin, rCMax) = (rCMax, rCMin);
+            // }
+            // rCChange = rCLastIn ? rCMax : rCMin - rCLast;
         }
     }
 
@@ -204,6 +216,7 @@ contract PoolLogic is PoolBase {
                     uint rC = state.R - rA - rB;
                     uint rC1 = state1.R - rA1 - rB1;
                     result.amountIn = FullMath.mulDivRoundingUp(s, rC - rC1, rC);
+                    // TODO: store the rCLast = rC1, and rCLastIn = true
                 }
             }
             unchecked {
@@ -219,6 +232,7 @@ contract PoolLogic is PoolBase {
                 uint rC1 = state1.R - rA1 - rB1;
                 require(rC1 >= MINIMUM_RESERVE, 'MR:C');
                 result.amountOut = FullMath.mulDiv(_supply(sideOut), rC1 - rC, rC);
+                // TODO: store the rCLast = rC1, and rCLastIn = false
             } else {
                 uint inputRate = Q128;
                 if (sideOut == SIDE_A) {
