@@ -41,7 +41,7 @@ HLs.forEach(HALF_LIFE => {
     }], { feeRate: 12 })
       
     async function getFeeFromSwap(side, amount, period) {
-      const { derivablePools, oracleLibrary, params, feeReceiver, weth } = await loadFixture(fixture)
+      const { derivablePools, feeReceiver, weth } = await loadFixture(fixture)
 
       const pool = derivablePools[0]
       const config = paramToConfig(params[0])
@@ -122,6 +122,54 @@ HLs.forEach(HALF_LIFE => {
 
     it("Charge fee: Open 1e LP - period 365 day", async function () {
       await getFeeFromSwap(SIDE_C, 1, 365)
+    })
+  })
+
+  describe("Test gas", function() {
+    const fixture = loadFixtureFromParams([{
+      ...baseParams,
+      halfLife: bn(HALF_LIFE)
+    }], { 
+      feeRate: FEE_RATE
+    })
+    async function swap(side, isOpen, amount) {
+      const { derivablePools, feeReceiver, weth } = await loadFixture(fixture)
+      const pool = derivablePools[0]
+
+      if (side == SIDE_C) {
+        await pool.swap(
+          SIDE_R,
+          SIDE_C,
+          100
+        )
+      }
+      await time.increase(86400 * 365)
+      
+      await pool.swap(
+        isOpen ? SIDE_R : side,
+        isOpen ? side : SIDE_R,
+        numberToWei(amount)
+      )
+    }
+    it("gas +A", async function() {
+      await swap(SIDE_A, true, 1)
+    })
+    it("gas +B", async function() {
+      await swap(SIDE_B, true, 1)
+    })
+    it("gas +C", async function() {
+      await swap(SIDE_C, true, 1)
+      await swap(SIDE_C, true, 1)
+    })
+    it("gas -C", async function() {
+      await swap(SIDE_A, false, 0.1)
+    })
+    it("gas -B", async function() {
+      await swap(SIDE_B, false, 0.1)
+    })
+    it("gas -C", async function() {
+      await swap(SIDE_C, false, 0.1)
+      await swap(SIDE_C, false, 0.1)
     })
   })
 })
