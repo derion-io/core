@@ -20,8 +20,12 @@ const HLs = [19932680, 1966168] // 0.3%, 3%
 
 const FEE_RATE = 12
 
-function toDailyRate(HALF_LIFE) {
-  return HALF_LIFE == 0 ? 0 : 1 - 2 ** (-SECONDS_PER_DAY / HALF_LIFE)
+function toDailyRate(HALF_LIFE, precision = 4) {
+  if (HALF_LIFE == 0) {
+    return 0
+  }
+  const rate = 1 - 2 ** (-SECONDS_PER_DAY / HALF_LIFE)
+  return Math.round(rate * 10**precision) / 10**precision
 }
 
 function toHalfLife(dailyRate) {
@@ -30,7 +34,7 @@ function toHalfLife(dailyRate) {
 
 HLs.forEach(HALF_LIFE => {
   const dailyInterestRate = toDailyRate(HALF_LIFE)
-  describe(`Interest rate fee: Interest rate ${dailyInterestRate}`, function () {
+  describe(`Interest rate fee: Interest rate ${dailyInterestRate*100}%`, function () {
     const fixture = loadFixtureFromParams([{
       ...baseParams,
       halfLife: bn(HALF_LIFE)

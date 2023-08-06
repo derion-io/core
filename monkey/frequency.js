@@ -35,14 +35,18 @@ const configs = [
   }
 ]
 
-function toDailyRate(HALF_LIFE) {
-  return HALF_LIFE == 0 ? 0 : 1 - 2 ** (-SECONDS_PER_DAY / HALF_LIFE)
+function toDailyRate(HALF_LIFE, precision = 4) {
+  if (HALF_LIFE == 0) {
+    return 0
+  }
+  const rate = 1 - 2 ** (-SECONDS_PER_DAY / HALF_LIFE)
+  return Math.round(rate * 10**precision) / 10**precision
 }
 
 configs.forEach(({hl, fee}) => {
   const dailyInterestRate = toDailyRate(hl)
 
-  describe(`Frequency Test: interest rate - ${dailyInterestRate}, fee - ${fee}`, function() {
+  describe(`Frequency Test: interest rate - ${dailyInterestRate*100}%, fee - ${fee}`, function() {
     const fixture = loadFixtureFromParams([{
       ...baseParams,
       halfLife: bn(hl),
