@@ -220,40 +220,19 @@ contract PoolLogic is PoolBase {
                 require(rC1 >= MINIMUM_RESERVE, 'MR:C');
                 result.amountOut = FullMath.mulDiv(_supply(sideOut), rC1 - rC, rC);
             } else {
-                uint inputRate = Q128;
                 if (sideOut == SIDE_A) {
                     require(rA1 >= MINIMUM_RESERVE, 'MR:A');
                     result.amountOut = FullMath.mulDiv(_supply(sideOut), rA1 - rA, rA);
-                    inputRate = _inputRate(config, state1, rA1, rB1);
                 } else if (sideOut == SIDE_B) {
                     require(rB1 >= MINIMUM_RESERVE, 'MR:B');
                     result.amountOut = FullMath.mulDiv(_supply(sideOut), rB1 - rB, rB);
-                    inputRate = _inputRate(config, state1, rB1, rA1);
                 }
-                if (inputRate != Q128) {
-                    result.amountIn = FullMath.mulDiv(result.amountIn, Q128, inputRate);
+                if (config.OPEN_RATE != Q128) {
+                    result.amountIn = FullMath.mulDiv(result.amountIn, Q128, config.OPEN_RATE);
                 }
             }
         }
         s_a = uint224(state1.a);
         s_b = uint224(state1.b);
-    }
-
-    function _inputRate(
-        Config memory config,
-        State memory state,
-        uint rOut,
-        uint rTuo
-    ) internal pure returns (uint rate) {
-        rate = config.OPEN_RATE;
-        if (config.PREMIUM_RATE > 0 && rOut > rTuo) {
-            uint rC1 = state.R - rOut - rTuo;
-            unchecked {
-                uint imbaRate = FullMath.mulDiv(Q128, rOut - rTuo, rC1);
-                if (imbaRate > config.PREMIUM_RATE) {
-                    rate = FullMath.mulDiv(rate, config.PREMIUM_RATE, imbaRate);
-                }
-            }
-        }
     }
 }
