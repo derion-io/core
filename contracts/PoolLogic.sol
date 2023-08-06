@@ -123,27 +123,42 @@ contract PoolLogic is PoolBase {
             xk = _xk(config, price = min);
             (rA, rB) = _evaluate(xk, state);
         } else {
-            xk = _xk(config, min);
-            (rA, rB) = _evaluate(xk, state);
-            uint rCMin = state.R - rA - rB;
-            uint xkMax = _xk(config, max);
-            (uint rAMax, uint rBMax) = _evaluate(xkMax, state);
-            uint rCMax = state.R - rAMax - rBMax;
-            if ((sideIn == SIDE_C) == rCMax < rCMin) {
-                xk = xkMax;
-                rA = rAMax;
-                rB = rBMax;
-                price = max;
-            } else {
-                price = min;
+            uint rC;
+            unchecked {
+                xk = _xk(config, min);
+                (rA, rB) = _evaluate(xk, state);
+                rC = state.R - rA - rB;
+                uint xkMax = _xk(config, max);
+                (uint rAMax, uint rBMax) = _evaluate(xkMax, state);
+                uint rCMax = state.R - rAMax - rBMax;
+                if ((sideIn == SIDE_C) == rCMax < rC) {
+                    xk = xkMax;
+                    rA = rAMax;
+                    rB = rBMax;
+                    rC = rCMax;
+                    price = max;
+                } else {
+                    price = min;
+                }
             }
-            if (s_rCLast > 0) {
-                rCMin = s_rCLastIn ? rCMax : rCMin;
-                if (rCMin > s_rCLast) {
-                    rCMin = FullMath.mulDiv(rCMin - s_rCLast, FEE_RATE, Q128);
-                    if (rCMin > 0) {
-                        TransferHelper.safeTransfer(config.TOKEN_R, FEE_TO, rCMin);
-                        state.R -= rCMin; // TODO: UT for this line
+
+            unchecked {
+                uint sC = _supply(SIDE_C);
+                uint c = FullMath.mulDiv(rC, Q128, sC);
+                uint cLast = s_cLast;
+                if (c > cLast) {
+                    if (cLast == 0) {
+                        s_cLast = c;
+                    } else {
+                        uint fee = FullMath.mulDivRoundingUp(cLast, sC, Q128);
+                        if (rC > fee) {
+                            fee = FullMath.mulDiv(rC - fee, FEE_RATE, Q128);
+                            if (fee > 0) {
+                                TransferHelper.safeTransfer(config.TOKEN_R, FEE_TO, fee);
+                                state.R -= fee; // TODO: UT for this line
+                                s_cLast = c;
+                            }
+                        }
                     }
                 }
             }
@@ -204,8 +219,6 @@ contract PoolLogic is PoolBase {
                     uint rC = state.R - rA - rB;
                     uint rC1 = state1.R - rA1 - rB1;
                     result.amountIn = FullMath.mulDivRoundingUp(s, rC - rC1, rC);
-                    s_rCLast = uint240(rC1);
-                    s_rCLastIn = true;
                 }
             }
             unchecked {
@@ -221,8 +234,6 @@ contract PoolLogic is PoolBase {
                 uint rC1 = state1.R - rA1 - rB1;
                 require(rC1 >= MINIMUM_RESERVE, 'MR:C');
                 result.amountOut = FullMath.mulDiv(_supply(sideOut), rC1 - rC, rC);
-                s_rCLast = uint240(rC1);
-                s_rCLastIn = false;
             } else {
                 uint inputRate = Q128;
                 if (sideOut == SIDE_A) {

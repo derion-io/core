@@ -41,16 +41,18 @@ contract View is PoolLogic {
         (uint rAs, uint rBs) = _evaluate(_xk(config, spot), state);
         uint rC = state.R - Math.max(rAt + rBt, rAs + rBs);
 
-        if (rC > s_rCLast) {
-            rC -= (rC-s_rCLast) * FEE_RATE / Q128;
+        stateView.sA = _supply(TOKEN, SIDE_A);
+        stateView.sB = _supply(TOKEN, SIDE_B);
+        stateView.sC = _supply(TOKEN, SIDE_C);
+
+        uint rCLast = s_cLast * stateView.sC / Q128;
+        if (rC > rCLast) {
+            rC -= (rC-rCLast) * FEE_RATE / Q128;
         }
 
         stateView.rA = Math.min(rAt, rAs);
         stateView.rB = Math.min(rBt, rBs);
         stateView.rC = rC;
-        stateView.sA = _supply(TOKEN, SIDE_A);
-        stateView.sB = _supply(TOKEN, SIDE_B);
-        stateView.sC = _supply(TOKEN, SIDE_C);
         stateView.twap = twap;
         stateView.spot = spot;
         stateView.config = config;
