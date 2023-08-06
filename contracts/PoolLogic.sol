@@ -147,14 +147,41 @@ contract PoolLogic is PoolBase {
         unchecked {
             uint elapsed = block.timestamp - s_i;
             if (elapsed > 0) {
-                uint interestRateX64 = _expRate(elapsed, config.INTEREST_HL);
-                if (interestRateX64 > Q64) {
-                    uint rAF = FullMath.mulDivRoundingUp(rA, Q64, interestRateX64);
-                    uint rBF = FullMath.mulDivRoundingUp(rB, Q64, interestRateX64);
-                    uint interest = rA - rAF + rB - rBF;
+                uint interest;
+                uint rate = _expRate(elapsed, config.INTEREST_HL);
+                if (rate > Q64) {
+                    uint rAF = FullMath.mulDivRoundingUp(rA, Q64, rate);
+                    uint rBF = FullMath.mulDivRoundingUp(rB, Q64, rate);
+                    interest = rA - rAF + rB - rBF;
                     if (0 < interest) {
                         (rA, rB) = (rAF, rBF);
+                        // need updated only once
                         s_i = uint32(block.timestamp);
+                    }
+                }
+                // TODO: config.PREMIUM_HL
+                rate = _expRate(elapsed, config.INTEREST_HL / 4);
+                if (rate > Q64) {
+                    if (rA > rB) {
+                        uint premium = FullMath.mulDiv(rA - rB, Q64, rate);
+                        if (premium > 0) {
+                            rB += FullMath.mulDiv(premium, rB, state.R - rA);
+                            rA -= premium;
+                            if (interest == 0) {
+                                // need updated only once
+                                s_i = uint32(block.timestamp);
+                            }
+                        }
+                    } else {
+                        uint premium = FullMath.mulDiv(rB - rA, Q64, rate);
+                        if (premium > 0) {
+                            rA += FullMath.mulDiv(premium, rA, state.R - rB);
+                            rB -= premium;
+                            if (interest == 0) {
+                                // need updated only once
+                                s_i = uint32(block.timestamp);
+                            }
+                        }
                     }
                 }
             }
