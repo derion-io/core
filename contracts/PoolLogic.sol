@@ -140,25 +140,25 @@ contract PoolLogic is PoolBase {
         uint sideOut = param.sideOut;
         require(sideIn != sideOut, 'SS');
         State memory state = State(_reserve(config.TOKEN_R), s_a, s_b);
+        // [PRICE SELECTION]
+        uint xk; uint rA; uint rB;
+        (xk, rA, rB, result.price) = _selectPrice(config, state, sideIn, sideOut);
         // [INTEREST DECAY]
         unchecked {
             uint elapsed = block.timestamp - s_i;
             if (elapsed > 0) {
                 uint interestRateX64 = _expRate(elapsed, config.INTEREST_HL);
                 if (interestRateX64 > Q64) {
-                    uint a = FullMath.mulDivRoundingUp(state.a, Q64, interestRateX64);
-                    uint b = FullMath.mulDivRoundingUp(state.b, Q64, interestRateX64);
-                    if (a < state.a || b < state.b) {
-                        state.a = a;
-                        state.b = b;
+                    uint rAF = FullMath.mulDivRoundingUp(rA, Q64, interestRateX64);
+                    uint rBF = FullMath.mulDivRoundingUp(rB, Q64, interestRateX64);
+                    uint interest = rA - rAF + rB - rBF;
+                    if (0 < interest) {
+                        (rA, rB) = (rAF, rBF);
                         s_i = uint32(block.timestamp);
                     }
                 }
             }
         }
-        // [PRICE SELECTION]
-        uint xk; uint rA; uint rB;
-        (xk, rA, rB, result.price) = _selectPrice(config, state, sideIn, sideOut);
         // [PROTOCOL FEE]
         unchecked {
             uint32 elapsed = uint32(block.timestamp & F_MASK) - (s_f & F_MASK);
