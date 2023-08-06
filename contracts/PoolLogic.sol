@@ -137,10 +137,15 @@ contract PoolLogic is PoolBase {
             } else {
                 price = min;
             }
-            min = rCLastIn ? rCMax : rCMin;
-            if (min > rCLast && rCLast > 0) {
-                min = FullMath.mulDiv(min - rCLast, FEE_RATE, Q128);
-                TransferHelper.safeTransfer(config.TOKEN_R, FEE_TO, min);
+            if (rCLast > 0) {
+                rCMin = rCLastIn ? rCMax : rCMin;
+                if (rCMin > rCLast) {
+                    rCMin = FullMath.mulDiv(rCMin - rCLast, FEE_RATE, Q128);
+                    if (rCMin > 0) {
+                        TransferHelper.safeTransfer(config.TOKEN_R, FEE_TO, rCMin);
+                        state.R -= rCMin; // TODO: UT for this line
+                    }
+                }
             }
         }
     }
@@ -172,13 +177,6 @@ contract PoolLogic is PoolBase {
         // [PRICE SELECTION]
         uint xk; uint rA; uint rB;
         (xk, rA, rB, result.price) = _selectPrice(config, state, sideIn, sideOut);
-        // [PROTOCOL FEE]
-        unchecked {
-            uint32 elapsed = uint32(block.timestamp & F_MASK) - (s_f & F_MASK);
-            if (elapsed > 0) {
-                s_f += elapsed;
-            }
-        }
         // [CALCULATION]
         State memory state1 = IHelper(param.helper).swapToState(
             Slippable(xk, state.R, rA, rB),
@@ -206,7 +204,6 @@ contract PoolLogic is PoolBase {
                     uint rC = state.R - rA - rB;
                     uint rC1 = state1.R - rA1 - rB1;
                     result.amountIn = FullMath.mulDivRoundingUp(s, rC - rC1, rC);
-                    // TODO: store the rCLast = rC1, and rCLastIn = true
                     rCLast = uint240(rC1);
                     rCLastIn = true;
                 }
@@ -224,7 +221,6 @@ contract PoolLogic is PoolBase {
                 uint rC1 = state1.R - rA1 - rB1;
                 require(rC1 >= MINIMUM_RESERVE, 'MR:C');
                 result.amountOut = FullMath.mulDiv(_supply(sideOut), rC1 - rC, rC);
-                // TODO: store the rCLast = rC1, and rCLastIn = false
                 rCLast = uint240(rC1);
                 rCLastIn = false;
             } else {
