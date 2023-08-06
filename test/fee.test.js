@@ -16,9 +16,12 @@ use(solidity)
 
 const SECONDS_PER_DAY = 86400
 
-const HLs = [19932680, 1966168] // 0.3%, 3%
+const HLs = [
+  19932680, 
+  1966168
+] // 0.3%, 3%
 
-const FEE_RATE = 12
+const FEE_RATE = bn(1).mul(bn(2).pow(128)).div(12)
 
 function toDailyRate(HALF_LIFE, precision = 4) {
   if (HALF_LIFE == 0) {
@@ -38,42 +41,43 @@ HLs.forEach(HALF_LIFE => {
     const fixture = loadFixtureFromParams([{
       ...baseParams,
       halfLife: bn(HALF_LIFE)
-    }], { feeRate: 12 })
+    }], { 
+      logicName: "PoolExposedR",
+      feeRate: FEE_RATE
+    })
       
     async function getFeeFromSwap(side, amount, period) {
       const { derivablePools, feeReceiver, weth } = await loadFixture(fixture)
 
       const pool = derivablePools[0]
-      const config = paramToConfig(params[0])
-      const state = await pool.contract.getStates()
-      const oraclePrice = await oracleLibrary.fetch(config.ORACLE)
-      const price = _selectPrice(
-        config,
-        state,
-        { min: oraclePrice.spot, max: oraclePrice.twap },
-        0x00,
-        0x20,
-        bn(await time.latest())
+      await pool.swap(
+        SIDE_R,
+        SIDE_C,
+        10,
       )
-
-      const eval = _evaluate(price.market, state)
-      const positionReserved = eval.rA.add(eval.rB)
+      const {rC} = await pool.contract.callStatic.getReserves()
 
       await time.increase(period * SECONDS_PER_DAY);
-
+      
+      const {rC: rC1} = await pool.contract.callStatic.getReserves()
       await pool.swap(
         SIDE_R,
         side,
         numberToWei(amount),
       )
 
-      const feeAmount = await weth.balanceOf(feeReceiver.address)
-      const interestRate = 1 - (1 - dailyInterestRate) ** period
-      const feeRate = 1 - (1 - (dailyInterestRate / FEE_RATE)) ** period
-      const pReservedAfterInterest = positionReserved.mul(((1 - interestRate) * 1e8).toFixed(0)).div(1e8)
-      const actualFeeRate = Number(weiToNumber(feeAmount)) / Number(weiToNumber(pReservedAfterInterest))
+      if (side != SIDE_C) 
+        await pool.swap(
+          SIDE_R,
+          SIDE_C,
+          100,
+        )
 
-      expect(feeRate / actualFeeRate).to.be.closeTo(1, 0.1)
+      const feeAmount = await weth.balanceOf(feeReceiver.address)
+      const interest = rC1.sub(rC)
+      const expectedFee = interest.div(12)
+
+      expect(Number(weiToNumber(feeAmount)) / Number(weiToNumber(expectedFee))).to.be.closeTo(1, 1e-3)
     }
 
     it("Charge fee: Open 0.1e Long - period 1 day", async function () {

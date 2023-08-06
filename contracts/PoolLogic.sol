@@ -111,7 +111,7 @@ contract PoolLogic is PoolBase {
         State memory state,
         uint sideIn,
         uint sideOut
-    ) internal view returns (uint xk, uint rA, uint rB, uint price) {
+    ) internal returns (uint xk, uint rA, uint rB, uint price) {
         (uint min, uint max) = _fetch(uint(config.ORACLE));
         if (min > max) {
             (min, max) = (max, min);
@@ -137,10 +137,11 @@ contract PoolLogic is PoolBase {
             } else {
                 price = min;
             }
-            // if (rCMax < rCMin) {
-            //     (rCMin, rCMax) = (rCMax, rCMin);
-            // }
-            // rCChange = rCLastIn ? rCMax : rCMin - rCLast;
+            min = rCLastIn ? rCMax : rCMin;
+            if (min > rCLast && rCLast > 0) {
+                min = FullMath.mulDiv(min - rCLast, FEE_RATE, Q128);
+                TransferHelper.safeTransfer(config.TOKEN_R, FEE_TO, min);
+            }
         }
     }
 
@@ -175,18 +176,7 @@ contract PoolLogic is PoolBase {
         unchecked {
             uint32 elapsed = uint32(block.timestamp & F_MASK) - (s_f & F_MASK);
             if (elapsed > 0) {
-                uint feeRateX64 = _expRate(elapsed, config.INTEREST_HL * FEE_RATE);
-                if (feeRateX64 > Q64) {
-                    uint rAF = FullMath.mulDivRoundingUp(rA, Q64, feeRateX64);
-                    uint rBF = FullMath.mulDivRoundingUp(rB, Q64, feeRateX64);
-                    uint fee = rA - rAF + rB - rBF;
-                    if (0 < fee && fee < state.R) {
-                        TransferHelper.safeTransfer(config.TOKEN_R, FEE_TO, fee);
-                        (rA, rB) = (rAF, rBF);
-                        state.R -= fee;
-                        s_f += elapsed;
-                    }
-                }
+                s_f += elapsed;
             }
         }
         // [CALCULATION]
@@ -217,6 +207,8 @@ contract PoolLogic is PoolBase {
                     uint rC1 = state1.R - rA1 - rB1;
                     result.amountIn = FullMath.mulDivRoundingUp(s, rC - rC1, rC);
                     // TODO: store the rCLast = rC1, and rCLastIn = true
+                    rCLast = rC1;
+                    rCLastIn = true;
                 }
             }
             unchecked {
@@ -233,6 +225,8 @@ contract PoolLogic is PoolBase {
                 require(rC1 >= MINIMUM_RESERVE, 'MR:C');
                 result.amountOut = FullMath.mulDiv(_supply(sideOut), rC1 - rC, rC);
                 // TODO: store the rCLast = rC1, and rCLastIn = false
+                rCLast = rC1;
+                rCLastIn = false;
             } else {
                 uint inputRate = Q128;
                 if (sideOut == SIDE_A) {
