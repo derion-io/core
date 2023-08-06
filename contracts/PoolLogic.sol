@@ -165,6 +165,7 @@ contract PoolLogic is PoolBase {
                     if (rA > rB) {
                         uint premium = FullMath.mulDiv(rA - rB, Q64, rate);
                         if (premium > 0) {
+                            // TODO: rB == 0 or state.R == rA?
                             rB += FullMath.mulDiv(premium, rB, state.R - rA);
                             rA -= premium;
                             if (interest == 0) {
@@ -175,6 +176,7 @@ contract PoolLogic is PoolBase {
                     } else {
                         uint premium = FullMath.mulDiv(rB - rA, Q64, rate);
                         if (premium > 0) {
+                            // TODO: rA == 0 or state.R == rB?
                             rA += FullMath.mulDiv(premium, rA, state.R - rB);
                             rB -= premium;
                             if (interest == 0) {
