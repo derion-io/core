@@ -160,7 +160,7 @@ contract PoolLogic is PoolBase {
                     }
                 }
                 // TODO: config.PREMIUM_HL
-                rate = _expRate(elapsed, config.INTEREST_HL / 4);
+                rate = _expRate(elapsed, 0);
                 if (rate > Q64) {
                     if (rA > rB) {
                         uint premium = FullMath.mulDiv(rA - rB, Q64, rate);
