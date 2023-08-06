@@ -8,6 +8,8 @@ import "./libs/abdk-consulting/abdk-libraries-solidity/ABDKMath64x64.sol";
 import "./libs/OracleLibrary.sol";
 import "./interfaces/IHelper.sol";
 
+import "hardhat/console.sol";
+
 contract PoolLogic is PoolBase {
     address immutable internal FEE_TO;
     uint immutable internal FEE_RATE;
@@ -160,10 +162,10 @@ contract PoolLogic is PoolBase {
                     }
                 }
                 // TODO: config.PREMIUM_HL
-                rate = _expRate(elapsed, 0);
+                rate = _expRate(elapsed, 5958798);
                 if (rate > Q64) {
                     if (rA > rB) {
-                        uint premium = FullMath.mulDiv(rA - rB, Q64, rate);
+                        uint premium = rA - rB - FullMath.mulDiv(rA - rB, Q64, rate);
                         if (premium > 0) {
                             // TODO: rB == 0 or state.R == rA?
                             rB += FullMath.mulDiv(premium, rB, state.R - rA);
@@ -174,7 +176,7 @@ contract PoolLogic is PoolBase {
                             }
                         }
                     } else {
-                        uint premium = FullMath.mulDiv(rB - rA, Q64, rate);
+                        uint premium = rB - rA - FullMath.mulDiv(rB - rA, Q64, rate);
                         if (premium > 0) {
                             // TODO: rA == 0 or state.R == rB?
                             rA += FullMath.mulDiv(premium, rA, state.R - rB);

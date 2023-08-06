@@ -76,7 +76,7 @@ contract View is PoolLogic {
         }
         elapsed = uint32(block.timestamp & F_MASK) - (s_f & F_MASK);
         if (elapsed > 0) {
-            uint feeRateX64 = _expRate(elapsed, HL * Math.max(FEE_RATE, 5));
+            uint feeRateX64 = _expRate(elapsed, HL * FEE_RATE);
             uint rAF = FullMath.mulDivRoundingUp(rA, Q64, feeRateX64);
             uint rBF = FullMath.mulDivRoundingUp(rB, Q64, feeRateX64);
             if (rAF < rA || rBF < rB) {
