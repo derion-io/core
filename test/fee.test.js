@@ -7,7 +7,7 @@ const { solidity } = require("ethereum-waffle");
 const { ethers } = require("hardhat");
 const { _selectPrice, _evaluate } = require("./shared/AsymptoticPerpetual");
 const { SIDE_R, SIDE_A, SIDE_B, SIDE_C } = require("./shared/constant");
-const { weiToNumber, bn, numberToWei, paramToConfig } = require("./shared/utilities");
+const { weiToNumber, bn, numberToWei, paramToConfig, swapToSetPriceMock } = require("./shared/utilities");
 const { AddressZero } = require("@ethersproject/constants");
 const { loadFixtureFromParams } = require("./shared/scenerios");
 const { baseParams } = require("./shared/baseParams");
@@ -126,6 +126,42 @@ HLs.forEach(HALF_LIFE => {
 
     it("Charge fee: Open 1e LP - period 365 day", async function () {
       await getFeeFromSwap(SIDE_C, 1, 365)
+    })
+
+    it("No fee: Price LP goes down", async function () {
+      const { derivablePools, feeReceiver, weth, usdc, uniswapPair } = await loadFixture(fixture)
+
+      const pool = derivablePools[0]
+      await pool.swap(
+        SIDE_R,
+        SIDE_C,
+        10,
+      )
+
+      await pool.swap(
+        SIDE_R,
+        SIDE_A,
+        numberToWei(1)
+      )
+
+      await swapToSetPriceMock({
+        quoteToken: usdc,
+        baseToken: weth,
+        uniswapPair,
+        targetTwap: 3000,
+        targetSpot: 3000
+      })
+
+      await time.increase(86400 * 30)
+
+      await pool.swap(
+        SIDE_R,
+        SIDE_C,
+        10,
+      )
+
+      const feeAmount = await weth.balanceOf(feeReceiver.address)
+      expect(feeAmount).to.eq(0)
     })
   })
 
