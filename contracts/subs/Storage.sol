@@ -6,6 +6,6 @@ contract Storage {
     uint224 internal s_a;
     uint32  internal s_f;   // the first bit is use for reentrant lock
     uint224 internal s_b;
-    bool internal rCLastIn;
-    uint240 internal rCLast;
+    uint240 internal s_rCLast;
+    bool internal s_rCLastIn;
 }

@@ -41,8 +41,8 @@ contract View is PoolLogic {
         (uint rAs, uint rBs) = _evaluate(_xk(config, spot), state);
         uint rC = state.R - Math.max(rAt + rBt, rAs + rBs);
 
-        if (rC > rCLast) {
-            rC -= (rC-rCLast) * FEE_RATE / Q128;
+        if (rC > s_rCLast) {
+            rC -= (rC-s_rCLast) * FEE_RATE / Q128;
         }
 
         stateView.rA = Math.min(rAt, rAs);

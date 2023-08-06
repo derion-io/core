@@ -137,10 +137,10 @@ contract PoolLogic is PoolBase {
             } else {
                 price = min;
             }
-            if (rCLast > 0) {
-                rCMin = rCLastIn ? rCMax : rCMin;
-                if (rCMin > rCLast) {
-                    rCMin = FullMath.mulDiv(rCMin - rCLast, FEE_RATE, Q128);
+            if (s_rCLast > 0) {
+                rCMin = s_rCLastIn ? rCMax : rCMin;
+                if (rCMin > s_rCLast) {
+                    rCMin = FullMath.mulDiv(rCMin - s_rCLast, FEE_RATE, Q128);
                     if (rCMin > 0) {
                         TransferHelper.safeTransfer(config.TOKEN_R, FEE_TO, rCMin);
                         state.R -= rCMin; // TODO: UT for this line
@@ -204,8 +204,8 @@ contract PoolLogic is PoolBase {
                     uint rC = state.R - rA - rB;
                     uint rC1 = state1.R - rA1 - rB1;
                     result.amountIn = FullMath.mulDivRoundingUp(s, rC - rC1, rC);
-                    rCLast = uint240(rC1);
-                    rCLastIn = true;
+                    s_rCLast = uint240(rC1);
+                    s_rCLastIn = true;
                 }
             }
             unchecked {
@@ -221,8 +221,8 @@ contract PoolLogic is PoolBase {
                 uint rC1 = state1.R - rA1 - rB1;
                 require(rC1 >= MINIMUM_RESERVE, 'MR:C');
                 result.amountOut = FullMath.mulDiv(_supply(sideOut), rC1 - rC, rC);
-                rCLast = uint240(rC1);
-                rCLastIn = false;
+                s_rCLast = uint240(rC1);
+                s_rCLastIn = false;
             } else {
                 uint inputRate = Q128;
                 if (sideOut == SIDE_A) {
