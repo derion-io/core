@@ -123,14 +123,23 @@ Interest Rate is charged from both Long and Short sides to the LP side, by apply
 
 With $t$ is the elapsed time, $I$ is *INTEREST_HL* config, we have:
 
-* $InterestRate = 2^{-t\over{I}}$
-* $r_{A0}' = r_{A0} \times InterestRate$
-* $r_{B0}' = r_{B0} \times InterestRate$
+* $interest = (r_{A0} + r_{B0}) \times (1-2^{-t\over{I}})$
+* $r_{A0}' = r_{A0} \times 2^{-t\over{I}}$
+* $r_{B0}' = r_{B0} \times 2^{-t\over{I}}$
+
+### Protocol Fee
+Protocol fee is cut from the interest by a fixed ratio, and produce an token transfer to `FeeReceiver` and directly reduce the pool reserve in each transaction.
+
+$$fee = interest \div 5$$
+
+<div align=center>
+<img alt="Interest and Fee" width=600px src="https://github.com/derivable-labs/derivable-core/assets/37166829/8d4826ef-9a1a-42ec-bd5e-b791b033b369"/>
+</div>
 
 ### Premium Rate
 Premium Rate is charged from the larger side of Long and Short, and pay to the other two sides, pro-rata, give them the chance of negative funding rates. With $t$ is the elapsed time, $P$ is *PREMIUM_HL* config, we have:
 
-* $premium = |r_{A0}' - r_{B0}'| \times 2^{-t\over{P}}$
+* $premium = |r_{A0}' - r_{B0}'| \times (1-2^{-t\over{P}})$
 
 If $r_{A0}' > r_{B0}'$, the premium is applied as:
 * $r_{A0}'' = r_{A0}' - premium$
@@ -141,17 +150,6 @@ If $r_{B0}' > r_{A0}'$, the premium is applied as:
 * $r_{B0}'' = r_{B0}' - premium$
 * $r_{A0}'' = r_{A0}' + premium \times{\dfrac{r_{A0}'}{r_{A0}'+r_{C0}'}}$
 * $r_{C0}'' = r_{C0}' + premium \times {\dfrac{r_{C0}'}{r_{A0}'+r_{C0}'}}$ (effectively)
-
-### Protocol Fee
-Protocol Fee is also charged from both Long and Short sides to `FeeReceiver`, but by applying the decay rate to the current payoff reserves $r_{A0}$ and $r_{B0}$, (so it is not affected by the deleverage state of each curve like LP Interest). **Protocol Fee** decay does produce an token transfer to `FeeReceiver` in each transaction.
-
-Protocol's decay halflife is not configured by pool creator, but is calculated from Interest's decay halflife and protocol configured `FeeRate`:
-
-$$FeeHL = InterestHL \times FeeRate$$
-
-<div align=center>
-<img alt="Interest and Fee" width=600px src="https://github.com/derivable-labs/derivable-core/assets/37166829/8d4826ef-9a1a-42ec-bd5e-b791b033b369"/>
-</div>
 
 ## Transition Rate
 
