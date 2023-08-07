@@ -94,8 +94,7 @@ contract BadHelper2 is Constants, IHelper {
         bytes memory payload = abi.encode(
             params.sideIn,
             SIDE_R,
-            params.amountIn,
-            IPool(params.poolIn).loadConfig().PREMIUM_RATE
+            params.amountIn
         );
 
         (, amountOut, ) = IPool(params.poolIn).swap(
@@ -119,8 +118,7 @@ contract BadHelper2 is Constants, IHelper {
         payload = abi.encode(
             SIDE_R,
             params.sideOut,
-            amountOut,
-            IPool(params.poolOut).loadConfig().PREMIUM_RATE
+            amountOut
         );
         (, amountOut, ) = IPool(params.poolOut).swap(
             Param(
@@ -192,8 +190,7 @@ contract BadHelper2 is Constants, IHelper {
         bytes memory payload = abi.encode(
             params.sideIn,
             params.sideOut,
-            params.amountIn,
-            config.PREMIUM_RATE
+            params.amountIn
         );
 
         (, amountOut, ) = IPool(params.poolIn).swap(
@@ -237,25 +234,8 @@ contract BadHelper2 is Constants, IHelper {
         (
             uint sideIn,
             uint sideOut,
-            uint amount,
-            uint PREMIUM_RATE
-        ) = abi.decode(payload, (uint, uint, uint, uint));
-
-        if (PREMIUM_RATE > 0 && (sideOut == SIDE_A || sideOut == SIDE_B)) {
-            require(sideIn == SIDE_R, 'Helper: UNSUPPORTED_SIDEIN_WITH_PREMIUM');
-            uint a = _solve(
-                __.R,
-                __.rA,
-                __.rB,
-                sideOut,
-                amount,
-                PREMIUM_RATE
-            );
-            if (a < amount) {
-                // add more input tolerance with high premium
-                amount = a - amount/a*amount/a;
-            }
-        }
+            uint amount
+        ) = abi.decode(payload, (uint, uint, uint));
 
         state1.R = __.R;
         (uint rA1, uint rB1) = (__.rA, __.rB);
@@ -288,25 +268,5 @@ contract BadHelper2 is Constants, IHelper {
         // test require OA
         state1.a = 2 ** 224 + 1;
         state1.b = _v(Q256M/__.xk, rB1, state1.R);
-    }
-
-    function _solve(
-        uint R,
-        uint rA,
-        uint rB,
-        uint sideOut,
-        uint amount, 
-        uint premiumRate
-    ) internal pure returns (uint) {
-        (uint rOut, uint rTuo) = sideOut == SIDE_A ? (rA, rB) : (rB, rA);
-        uint b = rOut > rTuo ? rOut - rTuo : rTuo - rOut;
-        uint c = R - rB - rA;
-        uint ac = FullMath.mulDiv(amount*c, premiumRate, Q128);
-        uint delta = b * b + 4 * ac;
-        delta = Math.sqrt(delta);
-        if (delta + rTuo <= rOut) {
-            return amount;
-        }
-        return (delta + rTuo - rOut) / 2;
     }
 }

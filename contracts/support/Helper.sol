@@ -82,8 +82,7 @@ contract Helper is Constants, IHelper, ERC1155Holder {
         bytes memory payload = abi.encode(
             params.sideIn,
             SIDE_R,
-            params.amountIn,
-            IPool(params.poolIn).loadConfig().PREMIUM_RATE
+            params.amountIn
         );
 
         (, amountOut, ) = IPool(params.poolIn).swap(
@@ -109,8 +108,7 @@ contract Helper is Constants, IHelper, ERC1155Holder {
         payload = abi.encode(
             SIDE_R,
             params.sideOut,
-            amountOut,
-            IPool(params.poolOut).loadConfig().PREMIUM_RATE
+            amountOut
         );
         (, amountOut, price) = IPool(params.poolOut).swap(
             Param(
@@ -185,8 +183,7 @@ contract Helper is Constants, IHelper, ERC1155Holder {
         bytes memory payload = abi.encode(
             params.sideIn,
             params.sideOut,
-            params.amountIn,
-            config.PREMIUM_RATE
+            params.amountIn
         );
 
         (, amountOut, price) = IPool(params.poolIn).swap(
@@ -241,8 +238,8 @@ contract Helper is Constants, IHelper, ERC1155Holder {
         (
             uint sideIn,
             uint sideOut,
-            uint amount,
-        ) = abi.decode(payload, (uint, uint, uint, uint));
+            uint amount
+        ) = abi.decode(payload, (uint, uint, uint));
 
         state1.R = __.R;
         (uint rA1, uint rB1) = (__.rA, __.rB);

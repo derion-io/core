@@ -31,7 +31,7 @@ describe("Protocol", function () {
     const fixture = loadFixtureFromParams([{
         ...baseParams,
         halfLife: bn(HALF_LIFE),
-        premiumRate: bn(1).shl(128).div(2)
+        premiumHL: bn(1).shl(128).div(2)
     }], {
         callback: async ({weth, usdc, derivable1155, stateCalHelper, owner, derivablePools, accountA, accountB}) => {
             const pool = derivablePools[0]
@@ -122,7 +122,7 @@ describe("Protocol", function () {
                 MARK: params[0].mark,
                 K: bn(6),
                 INTEREST_HL: params[0].halfLife,
-                PREMIUM_RATE: params[0].premiumRate,
+                PREMIUM_HL: params[0].premiumHL,
                 MATURITY: params[0].maturity,
                 MATURITY_VEST: params[0].maturityVest,
                 MATURITY_RATE: params[0].maturityRate,

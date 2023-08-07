@@ -20,11 +20,13 @@ describe("Premium", function () {
     const fixture = loadFixtureFromParams([{
         ...baseParams,
         halfLife: bn(0),
+        premiumHL: bn(toHalfLife(PREMIUM_RATE)),
         mark: bn('13179171373343029902768196957842336318319')
     },
     {
         ...baseParams,
         halfLife: bn(toHalfLife(DAILY_RATE)),
+        premiumHL: bn(toHalfLife(PREMIUM_RATE)),
         mark: bn('13179171373343029902768196957842336318319')
     }], {
         logicName: 'View',
@@ -32,21 +34,7 @@ describe("Premium", function () {
         feeRate: 0
     })
 
-    it("Apply interest and premium: Long - Interest 0", async function () {
-        const { derivablePools, derivable1155} = await loadFixture(fixture)
-
-        const pool = derivablePools[0]
-        await pool.swap(
-            SIDE_R,
-            SIDE_C,
-            numberToWei(1)
-        )
-        await pool.swap(
-            SIDE_R,
-            SIDE_A,
-            numberToWei(2)
-        )
-        
+    async function compare(pool, derivable1155) {
         const {rA, rB, rC} = await pool.contract.compute(derivable1155.address)
         const rANum = Number(weiToNumber(rA))
         const rBNum = Number(weiToNumber(rB))
@@ -63,13 +51,86 @@ describe("Premium", function () {
         const rB1Num = Number(weiToNumber(rB1))
         const rC1Num = Number(weiToNumber(rC1))
 
-        const expectedPremium = (rANum - rBNum) * PREMIUM_RATE
-        const expectedRA1Num = rANum - expectedPremium
-        const expectedRB1Num = rBNum + expectedPremium * rBNum/(rBNum + rCNum)
-        const expectedRC1Num = rCNum + expectedPremium * rCNum/(rBNum + rCNum)
+        let expectedRA1Num
+        let expectedRB1Num
+        let expectedRC1Num
+
+        if (rANum > rBNum) {
+            const expectedPremium = (rANum - rBNum) * PREMIUM_RATE
+            expectedRA1Num = rANum - expectedPremium
+            expectedRB1Num = rBNum + expectedPremium * rBNum/(rBNum + rCNum)
+            expectedRC1Num = rCNum + expectedPremium * rCNum/(rBNum + rCNum)
+        } else {
+            const expectedPremium = (rBNum - rANum) * PREMIUM_RATE
+            expectedRB1Num = rBNum - expectedPremium
+            expectedRA1Num = rANum + expectedPremium * rANum/(rANum + rCNum)
+            expectedRC1Num = rCNum + expectedPremium * rCNum/(rANum + rCNum)
+        }
+        
         expect(rA1Num).to.be.closeTo(expectedRA1Num, 1e-5)
         expect(rB1Num).to.be.closeTo(expectedRB1Num, 1e-5)
         expect(rC1Num).to.be.closeTo(expectedRC1Num, 1e-5)
+    }
+
+    async function compareWithInterest(pool, derivable1155) {
+        const {rA, rB, rC} = await pool.contract.compute(derivable1155.address)
+        const rANum = Number(weiToNumber(rA))
+        const rBNum = Number(weiToNumber(rB))
+        const rCNum = Number(weiToNumber(rC))
+        await time.increase(SECONDS_PER_DAY)
+
+        const rADecayed = rANum * (1 - DAILY_RATE)
+        const rBDecayed = rBNum * (1 - DAILY_RATE)
+        const rCDecayed = rCNum + (rANum + rBNum) * DAILY_RATE
+
+        await pool.swap(
+            SIDE_R,
+            SIDE_C,
+            1
+        )
+
+        const {rA: rA1, rB: rB1, rC: rC1} = await pool.contract.compute(derivable1155.address)
+        const rA1Num = Number(weiToNumber(rA1))
+        const rB1Num = Number(weiToNumber(rB1))
+        const rC1Num = Number(weiToNumber(rC1))
+
+        let expectedRA1Num
+        let expectedRB1Num
+        let expectedRC1Num
+
+        if (rADecayed > rBDecayed) {
+            const expectedPremium = (rADecayed - rBDecayed) * PREMIUM_RATE
+            expectedRA1Num = rADecayed - expectedPremium
+            expectedRB1Num = rBDecayed + expectedPremium * rBDecayed/(rBDecayed + rCDecayed)
+            expectedRC1Num = rCDecayed + expectedPremium * rCDecayed/(rBDecayed + rCDecayed)
+        } else {
+            const expectedPremium = (rBDecayed - rADecayed) * PREMIUM_RATE
+            expectedRB1Num = rBDecayed - expectedPremium
+            expectedRA1Num = rADecayed + expectedPremium * rADecayed/(rADecayed + rCDecayed)
+            expectedRC1Num = rCDecayed + expectedPremium * rCDecayed/(rADecayed + rCDecayed)
+        }
+        
+        expect(rA1Num).to.be.closeTo(expectedRA1Num, 1e-5)
+        expect(rB1Num).to.be.closeTo(expectedRB1Num, 1e-5)
+        expect(rC1Num).to.be.closeTo(expectedRC1Num, 1e-5)
+    }
+
+    it("Apply interest and premium: Long - Interest 0", async function () {
+        const { derivablePools, derivable1155} = await loadFixture(fixture)
+
+        const pool = derivablePools[0]
+        await pool.swap(
+            SIDE_R,
+            SIDE_C,
+            numberToWei(1)
+        )
+        await pool.swap(
+            SIDE_R,
+            SIDE_A,
+            numberToWei(2)
+        )
+        
+        await compare(pool, derivable1155)
     })
 
     it("Apply interest and premium: Long - Interest 4%", async function () {
@@ -87,34 +148,59 @@ describe("Premium", function () {
             numberToWei(2)
         )
         
-        const {rA, rB, rC} = await pool.contract.compute(derivable1155.address)
-        const rANum = Number(weiToNumber(rA))
-        const rBNum = Number(weiToNumber(rB))
-        const rCNum = Number(weiToNumber(rC))
-        await time.increase(SECONDS_PER_DAY)
+        await compareWithInterest(pool, derivable1155)
+    })
 
-        const rADecayed = rANum * (1 - DAILY_RATE)
-        const rBDecayed = rBNum * (1 - DAILY_RATE)
-        const rCDecayed = rCNum + (rANum + rBNum) * DAILY_RATE
+    it("Apply interest and premium continuos: After a year - Long - Interest 0", async function () {
+        const { derivablePools, derivable1155} = await loadFixture(fixture)
+
+        const pool = derivablePools[0]
+        await pool.swap(
+            SIDE_R,
+            SIDE_C,
+            numberToWei(1)
+        )
+        await pool.swap(
+            SIDE_R,
+            SIDE_A,
+            numberToWei(2)
+        )
+
+        await time.increase(SECONDS_PER_DAY * 365)
 
         await pool.swap(
             SIDE_R,
             SIDE_C,
             1
         )
+        
+        await compare(pool, derivable1155)
+    })
 
-        const {rA: rA1, rB: rB1, rC: rC1} = await pool.contract.compute(derivable1155.address)
-        const rA1Num = Number(weiToNumber(rA1))
-        const rB1Num = Number(weiToNumber(rB1))
-        const rC1Num = Number(weiToNumber(rC1))
+    it("Apply interest and premium continuous: After a year - Long - Interest 4%", async function () {
+        const { derivablePools, derivable1155} = await loadFixture(fixture)
 
-        const expectedPremium = (rADecayed - rBDecayed) * PREMIUM_RATE
-        const expectedRA1Num = rADecayed - expectedPremium
-        const expectedRB1Num = rBDecayed + expectedPremium * rBDecayed/(rBDecayed + rCDecayed)
-        const expectedRC1Num = rCDecayed + expectedPremium * rCDecayed/(rBDecayed + rCDecayed)
-        expect(rA1Num).to.be.closeTo(expectedRA1Num, 1e-5)
-        expect(rB1Num).to.be.closeTo(expectedRB1Num, 1e-5)
-        expect(rC1Num).to.be.closeTo(expectedRC1Num, 1e-5)
+        const pool = derivablePools[1]
+        await pool.swap(
+            SIDE_R,
+            SIDE_C,
+            numberToWei(1)
+        )
+        await pool.swap(
+            SIDE_R,
+            SIDE_A,
+            numberToWei(2)
+        )
+
+        await time.increase(SECONDS_PER_DAY * 365)
+
+        await pool.swap(
+            SIDE_R,
+            SIDE_C,
+            1
+        )
+        
+        await compareWithInterest(pool, derivable1155)
     })
 
     it("Apply interest and premium: Short - Interest 0", async function () {
@@ -132,32 +218,10 @@ describe("Premium", function () {
             numberToWei(2)
         )
         
-        const {rA, rB, rC} = await pool.contract.compute(derivable1155.address)
-        const rANum = Number(weiToNumber(rA))
-        const rBNum = Number(weiToNumber(rB))
-        const rCNum = Number(weiToNumber(rC))
-        await time.increase(SECONDS_PER_DAY)
-
-        await pool.swap(
-            SIDE_R,
-            SIDE_C,
-            1
-        )
-        const {rA: rA1, rB: rB1, rC: rC1} = await pool.contract.compute(derivable1155.address)
-        const rA1Num = Number(weiToNumber(rA1))
-        const rB1Num = Number(weiToNumber(rB1))
-        const rC1Num = Number(weiToNumber(rC1))
-
-        const expectedPremium = (rBNum - rANum) * PREMIUM_RATE
-        const expectedRA1Num = rANum + expectedPremium * rANum/(rANum + rCNum)
-        const expectedRB1Num = rBNum - expectedPremium
-        const expectedRC1Num = rCNum + expectedPremium * rCNum/(rANum + rCNum)
-        expect(rA1Num).to.be.closeTo(expectedRA1Num, 1e-5)
-        expect(rB1Num).to.be.closeTo(expectedRB1Num, 1e-5)
-        expect(rC1Num).to.be.closeTo(expectedRC1Num, 1e-5)
+        await compare(pool, derivable1155)
     })
 
-    it("Apply interest and premium: Shhort - Interest 4%", async function () {
+    it("Apply interest and premium: Short - Interest 4%", async function () {
         const { derivablePools, derivable1155} = await loadFixture(fixture)
 
         const pool = derivablePools[1]
@@ -172,33 +236,58 @@ describe("Premium", function () {
             numberToWei(2)
         )
         
-        const {rA, rB, rC} = await pool.contract.compute(derivable1155.address)
-        const rANum = Number(weiToNumber(rA))
-        const rBNum = Number(weiToNumber(rB))
-        const rCNum = Number(weiToNumber(rC))
-        await time.increase(SECONDS_PER_DAY)
+        await compareWithInterest(pool, derivable1155)
+    })
 
-        const rADecayed = rANum * (1 - DAILY_RATE)
-        const rBDecayed = rBNum * (1 - DAILY_RATE)
-        const rCDecayed = rCNum + (rANum + rBNum) * DAILY_RATE
+    it("Apply interest and premium continuos: After a year - Short - Interest 0", async function () {
+        const { derivablePools, derivable1155} = await loadFixture(fixture)
+
+        const pool = derivablePools[0]
+        await pool.swap(
+            SIDE_R,
+            SIDE_C,
+            numberToWei(1)
+        )
+        await pool.swap(
+            SIDE_R,
+            SIDE_B,
+            numberToWei(2)
+        )
+
+        await time.increase(SECONDS_PER_DAY * 365)
 
         await pool.swap(
             SIDE_R,
             SIDE_C,
             1
         )
+        
+        await compare(pool, derivable1155)
+    })
 
-        const {rA: rA1, rB: rB1, rC: rC1} = await pool.contract.compute(derivable1155.address)
-        const rA1Num = Number(weiToNumber(rA1))
-        const rB1Num = Number(weiToNumber(rB1))
-        const rC1Num = Number(weiToNumber(rC1))
+    it("Apply interest and premium continuous: After a year - Short - Interest 4%", async function () {
+        const { derivablePools, derivable1155} = await loadFixture(fixture)
 
-        const expectedPremium = (rBDecayed - rADecayed) * PREMIUM_RATE
-        const expectedRA1Num = rADecayed + expectedPremium * rADecayed/(rADecayed + rCDecayed)
-        const expectedRB1Num = rBDecayed - expectedPremium
-        const expectedRC1Num = rCDecayed + expectedPremium * rCDecayed/(rADecayed + rCDecayed)
-        expect(rA1Num).to.be.closeTo(expectedRA1Num, 1e-5)
-        expect(rB1Num).to.be.closeTo(expectedRB1Num, 1e-5)
-        expect(rC1Num).to.be.closeTo(expectedRC1Num, 1e-5)
+        const pool = derivablePools[1]
+        await pool.swap(
+            SIDE_R,
+            SIDE_C,
+            numberToWei(1)
+        )
+        await pool.swap(
+            SIDE_R,
+            SIDE_B,
+            numberToWei(2)
+        )
+
+        await time.increase(SECONDS_PER_DAY * 365)
+
+        await pool.swap(
+            SIDE_R,
+            SIDE_C,
+            1
+        )
+        
+       await compareWithInterest(pool, derivable1155)
     })
 })

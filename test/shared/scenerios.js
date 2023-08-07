@@ -21,7 +21,7 @@ function toConfig(params) {
     MARK: params.mark,
     K: params.k,
     INTEREST_HL: params.halfLife,
-    PREMIUM_RATE: params.premiumRate,
+    PREMIUM_HL: params.premiumHL,
     MATURITY: params.maturity,
     MATURITY_VEST: params.maturityVest,
     MATURITY_RATE: params.maturityRate,

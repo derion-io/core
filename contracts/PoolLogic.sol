@@ -8,8 +8,6 @@ import "./libs/abdk-consulting/abdk-libraries-solidity/ABDKMath64x64.sol";
 import "./libs/OracleLibrary.sol";
 import "./interfaces/IHelper.sol";
 
-import "hardhat/console.sol";
-
 contract PoolLogic is PoolBase {
     address immutable internal FEE_TO;
     uint immutable internal FEE_RATE;
@@ -172,7 +170,7 @@ contract PoolLogic is PoolBase {
             elapsed = uint32(block.timestamp & F_MASK) - (s_f & F_MASK);
             if (elapsed > 0) {
                 // TODO: config.PREMIUM_HL
-                uint rate = _expRate(elapsed, 5958798);
+                uint rate = _expRate(elapsed, config.PREMIUM_HL);
                 if (rate > Q64) {
                     uint premium = rA > rB ? rA - rB : rB - rA;
                     premium -= FullMath.mulDivRoundingUp(premium, Q64, rate);

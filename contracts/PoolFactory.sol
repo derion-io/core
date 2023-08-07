@@ -37,7 +37,7 @@ contract PoolFactory is IPoolFactory {
                 config.K,
                 config.MARK,
                 config.INTEREST_HL,
-                config.PREMIUM_RATE,
+                config.PREMIUM_HL,
                 config.MATURITY,
                 config.MATURITY_VEST,
                 config.MATURITY_RATE,

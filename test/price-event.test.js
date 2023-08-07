@@ -16,7 +16,7 @@ const { encodePriceSqrt } = require("./shared/utilities")
 describe("Price selection", function () {
   const fixture = loadFixtureFromParams([{
     ...baseParams,
-    premiumRate: bn(1).shl(128).div(2)
+    premiumHL: bn(1).shl(128).div(2)
   }])
 
   async function testPriceSelection(sideIn, sideOut, spotPrice, twapPrice, isMax) {

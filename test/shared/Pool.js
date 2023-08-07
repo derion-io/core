@@ -55,12 +55,11 @@ module.exports = class Pool {
       amount = amount.mul(this.config.openRate).div(Q128) // apply open rate
     }
     const payload = abiCoder.encode(
-      ["uint", "uint", "uint", "uint"],
+      ["uint", "uint", "uint"],
       [
         sideIn, 
         sideOut, 
-        amount, 
-        this.config.premiumRate,
+        amount
       ]
     )
     return {

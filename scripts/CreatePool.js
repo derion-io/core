@@ -48,7 +48,7 @@ async function main() {
     const addressPath = path.join(__dirname, `./json/ARBMainnet.json`)
     const addressList = JSON.parse(fs.readFileSync(addressPath, 'utf8'))
 
-    const premiumRate = bn(1).shl(128).div(2);
+    const premiumHL = bn(1).shl(128).div(2);
 
     const param = {
         ORACLE: oracle,
@@ -56,7 +56,7 @@ async function main() {
         MARK: mark,
         K: k,
         INTEREST_HL: halfLife,
-        PREMIUM_RATE: premiumRate,
+        PREMIUM_HL: premiumHL,
         MATURITY: 60 * 60,
         MATURITY_VEST: 60 * 10,
         MATURITY_RATE: bn(97).shl(128).div(100),

@@ -11,7 +11,7 @@ describe('Input', function () {
     const fixture = loadFixtureFromParams([{
         ...baseParams,
         openRate: feeToOpenRate(0.003),
-        premiumRate: bn(1).shl(128).div(2)
+        premiumHL: bn(1).shl(128).div(2)
     }])
 
     async function swapExpectInput(sideIn, sideOut, amount) {

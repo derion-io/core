@@ -8,7 +8,7 @@ const baseParams = {
     a: numberToWei(1),
     b: numberToWei(1),
     halfLife: bn(0),
-    premiumRate: bn(0),
+    premiumHL: bn(0),
     maturity: 0,
     maturityVest: 0,
     maturityRate: 0,

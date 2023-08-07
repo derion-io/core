@@ -7,7 +7,7 @@ struct Config {
     uint    K;
     uint    MARK;
     uint    INTEREST_HL;
-    uint    PREMIUM_RATE;
+    uint    PREMIUM_HL;
     uint    MATURITY;
     uint    MATURITY_VEST;
     uint    MATURITY_RATE;   // x128
