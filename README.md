@@ -32,7 +32,7 @@ Each pool is identified by its immutable configs:
 * TOKEN_R: the reserve token (also the settlement currency).
 * MARK: square-root of the mark (or referrent) price.
 * INTEREST_HL: decay half-life for the LP interest rate (in seconds).
-* PREMIUM_RATE: the input premium rate (x128).
+* PREMIUM_HL: decay half-life for the premium rate (in seconds).
 * MATURITY: minimum maturity duration for new position (in seconds).
 * MATURITY_VEST: the vesting duration of the maturity payoff (in seconds).
 * MATURITY_RATE: the maximum payoff rate before the position is fully matured (x128).
@@ -103,60 +103,70 @@ In state transistions, all core calculation is peformed one side (from state to 
 **Note**: the entire state transition process is locked for reentrancy. 3rd-party application contracts querying Derivable pool must call `ensureStateIntegrity()` to prevent read-only reentrancy attacks.
 
 1. Load the current state: $s_0 = 〈R_0,a_0,b_0〉$
-2. Apply LP interest rate to current state ($s_0$)
-3. Price selection based on swap direction
-4. Calculate current payoff: $p_0 = 〈R_0, r_{A0}, r_{B0}〉$
-5. Apply the protocol fee to current payoff $p_0$, and transfer the protocol fee out to `FeeReceiver`
-6. Call `Helper.swapToState` with input `payload` to calculate the target state ($s_1$)
-7. Calculate target payoff: $p_1 = 〈R_1, r_{A1}, r_{B1}〉$
-8. Calculate the payoff deltas for `amountIn` and `amountOut`, and verify that there's only one side in.
-9. Increase the `amountIn` for premium and open rate, decrease the `amountOut`  for maturity payoff rate
-10. Update the pool state storage to $s_1$
-11. Transfer the `amountIn` in, and transfer the `amountOut` out.
+2. Price selection based on swap direction
+3. Calculate current payoff: $p_0 = 〈R_0, r_{A0}, r_{B0}〉$
+4. Apply interest rate to current payoff $p_0$ ⇒ $p_0'$
+5. Cut the protocol fee from the interest and transfer out to `FeeReceiver`
+6. Apply Premium rate to current payoff $p_0'$ ⇒ $p_0''$
+7. Call `Helper.swapToState` with input `payload` to calculate the target state ($s_1$)
+8. Calculate target payoff: $p_1 = 〈R_1, r_{A1}, r_{B1}〉$
+9. Verify that there's only one side in.
+10. Calculate the payoff deltas from $p_0''$ to $p_1$ to get the `amountIn` and `amountOut` values.
+11. Increase the `amountIn` for open rate, decrease the `amountOut`  for maturity payoff rate.
+12. Update the pool state storage to $s_1$
+13. Transfer the `amountIn` in, and transfer the `amountOut` out.
 
-## Interest & Fee (Decay Rate)
+## Decay Rate
 
-**LP Interest** is charged from both Long and Short sides to the LP side, by applying the decay rate directly to the 2 coefficients $a_0$ and $b_0$ before the price is selected. **LP Interest** decay does not produce any token transfer, and the total pool reserve is unaffected.
+### Interest Rate
+Interest Rate is charged from both Long and Short sides to the LP side, by applying the decay rate to the 2 payoff value $r_{A0}$ and $r_{B0}$. The interest decay does not produce any token transfer, and the total pool reserve is unaffected.
 
-**Protocol Fee** is also charged from both Long and Short sides to `FeeReceiver`, but by applying the decay rate to the current payoff reserves $r_{A0}$ and $r_{B0}$, (so it is not affected by the deleverage state of each curve like LP Interest). **Protocol Fee** decay does produce an token transfer to `FeeReceiver` in each transaction.
+With $t$ is the elapsed time, $I$ is *INTEREST_HL* config, we have:
 
-Protocol's decay halflife is not configured by pool creator, but is calculated from Interest's decay halflife and protocol configured `FeeRate`:
-$$FeeHL = InterestHL \times FeeRate$$
+* $interest = (r_{A0} + r_{B0}) \times (1-2^{-t\over{I}})$
+* $r_{A0}' = r_{A0} \times 2^{-t\over{I}}$
+* $r_{B0}' = r_{B0} \times 2^{-t\over{I}}$
+
+### Protocol Fee
+Protocol fee is cut from the interest by a fixed ratio, and produce an token transfer to `FeeReceiver` and directly reduce the pool reserve in each transaction.
+
+$$fee = interest \div 5$$
 
 <div align=center>
 <img alt="Interest and Fee" width=600px src="https://github.com/derivable-labs/derivable-core/assets/37166829/8d4826ef-9a1a-42ec-bd5e-b791b033b369"/>
 </div>
 
-## Input Rate
+### Premium Rate
+Premium Rate is charged from the larger side of Long and Short, and pay to the other two sides, pro-rata, give them the chance of negative funding rates. With $t$ is the elapsed time, $P$ is *PREMIUM_HL* config, we have:
 
-Input rates are rate applied to Long and Short opening state transition's input token amount, including **PremiumRate** and **OpenRate**.
+* $premium = |r_{A0}' - r_{B0}'| \times (1-2^{-t\over{P}})$
 
-**OpenRate** is a percentage-based rate to charge fee on Long and Short position opening.
+If $r_{A0}' > r_{B0}'$, the premium is applied as:
+* $r_{A0}'' = r_{A0}' - premium$
+* $r_{B0}'' = r_{B0}' + premium \times {\dfrac{r_{B0}'}{r_{B0}'+r_{C0}'}}$
+* $r_{C0}'' = r_{C0}' + premium \times {\dfrac{r_{C0}'}{r_{B0}'+r_{C0}'}}$ (effectively)
 
-**PremiumRate** is applied based pool risk factor of the target payoff after the state transition.
+If $r_{B0}' > r_{A0}'$, the premium is applied as:
+* $r_{B0}'' = r_{B0}' - premium$
+* $r_{A0}'' = r_{A0}' + premium \times{\dfrac{r_{A0}'}{r_{A0}'+r_{C0}'}}$
+* $r_{C0}'' = r_{C0}' + premium \times {\dfrac{r_{C0}'}{r_{A0}'+r_{C0}'}}$ (effectively)
 
-$$RiskFactor = \dfrac{r_{A1} - r_{B1}}{r_{C1}}$$
+## Transition Rate
 
-Input Rate to opening a Long position:
+### Open Rate
+Open Rate is a percentage-based rate to charge fee on Long and Short position opening.
 
-$$InputRate = OpenRate \times min(1, \dfrac{PremiumRate}{RiskFactor})$$
+### Close Rate
 
-Input Rate to opening a Short position:
-
-$$InputRate = OpenRate \times min(1, \dfrac{PremiumRate}{-RiskFactor})$$
-
-The actual token amount transactor has to pay is: $$amountIn / InputRate$$
-
-## Ouput Rate (Maturity)
-
-Output rate is applied to all position closing state transition's output token amount, which is affected by maturity payoff.
+Close rate is applied to all position closing state transition's output token amount, which is affected by maturity payoff.
 
 Each pool position is opened with a maturity date recorded along with its balance. The mimimum maturity date for newly open position is `maturity = MATURITY + block.timestamp` with `MATURIY` is a pool configuration.
 
-The Output Rate (payoff) before maturity date is calculated as follow:
+With $MV$ is `MATURITY_VEST` and $MR$ is the `MATURITY_RATE`, the Close Rate (payoff) before maturity date is calculated as follow:
 
-$$Elapsed = max(0, MATURITY + now() - maturity)$$
-$$OutputRate = min(1, {Elapsed\over {MATURITY\_VEST}})\times MATURITY\_RATE$$
+$$t = max(0, MATURITY + now() - maturity)$$
+
+$$CloseRate = min(1, {t\over{MV}})\times MR$$
 
 <div align=center>
 <img alt="Maturity" width=600px src="https://github.com/derivable-labs/derivable-core/assets/37166829/9ff13c77-78a1-4947-9774-c78408ea14c6"/>

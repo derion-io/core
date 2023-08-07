@@ -34,7 +34,7 @@ HLs.forEach(HALF_LIFE => {
     const fixture = loadFixtureFromParams([{
       ...baseParams,
       halfLife: bn(HALF_LIFE),
-      premiumRate: 0,
+      premiumHL: 0,
     }])
 
     it('Test', async function() {

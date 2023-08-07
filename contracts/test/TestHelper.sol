@@ -49,8 +49,7 @@ contract TestHelper {
         bytes memory payload = abi.encode(
             sideIn,
             sideOut,
-            IERC1155(TOKEN).balanceOf(address(this), _packID(POOL, sideIn)),
-            IPool(POOL).loadConfig().PREMIUM_RATE
+            IERC1155(TOKEN).balanceOf(address(this), _packID(POOL, sideIn))
         );
         return IPool(POOL).swap(
             Param(

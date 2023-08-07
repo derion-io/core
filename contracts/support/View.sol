@@ -29,28 +29,23 @@ contract View is PoolLogic {
         Config memory config = loadConfig();
         State memory state = State(_reserve(config.TOKEN_R), s_a, s_b);
 
-        // [INTEREST DECAY]
-        {
-            uint interestRateX64 = _expRate(block.timestamp - s_i, config.INTEREST_HL);
-            state.a = FullMath.mulDivRoundingUp(state.a, Q64, interestRateX64);
-            state.b = FullMath.mulDivRoundingUp(state.b, Q64, interestRateX64);
-        }
-
         (uint twap, uint spot) = _fetch(uint(config.ORACLE));
         (uint rAt, uint rBt) = _evaluate(_xk(config, twap), state);
         (uint rAs, uint rBs) = _evaluate(_xk(config, spot), state);
 
-        // [PROTOCOL FEE]
+        // [INTEREST & FEE]
         uint Rt;
-        (Rt, rAt, rBt) = _applyFee(config.INTEREST_HL, state.R, rAt, rBt);
-        (state.R, rAs, rBs) = _applyFee(config.INTEREST_HL, state.R, rAs, rBs);
+        (Rt, rAt, rBt) = _applyRate(config, state.R, rAt, rBt);
+        (state.R, rAs, rBs) = _applyRate(config, state.R, rAs, rBs);
+
+        stateView.rA = Math.min(rAt, rAs);
+        stateView.rB = Math.min(rBt, rBs);
+        stateView.rC = Math.min(Rt - rAt - rBt, state.R - rAs - rBs);
+
         if (Rt < state.R) {
             state.R = Rt;
         }
 
-        stateView.rA = Math.min(rAt, rAs);
-        stateView.rB = Math.min(rBt, rBs);
-        stateView.rC = state.R - Math.max(rAt + rBt, rAs + rBs);
         stateView.sA = _supply(TOKEN, SIDE_A);
         stateView.sB = _supply(TOKEN, SIDE_B);
         stateView.sC = _supply(TOKEN, SIDE_C);
@@ -64,22 +59,43 @@ contract View is PoolLogic {
         return IERC1155Supply(TOKEN).totalSupply(_packID(address(this), side));
     }
 
-    function _applyFee(
-        uint INTEREST_HL,
+    function _applyRate(
+        Config memory config,
         uint R,
         uint rA,
         uint rB
     ) internal view returns (uint, uint, uint) {
-        uint32 elapsed = uint32(block.timestamp & F_MASK) - (s_f & F_MASK);
+        uint32 elapsed = uint32(block.timestamp) - s_i;
         if (elapsed > 0) {
-            uint feeRate = FEE_RATE > 0 ? FEE_RATE : 5;
-            uint feeRateX64 = _expRate(elapsed, INTEREST_HL * feeRate);
+            uint feeRateX64 = _expRate(elapsed, config.INTEREST_HL);
             uint rAF = FullMath.mulDivRoundingUp(rA, Q64, feeRateX64);
             uint rBF = FullMath.mulDivRoundingUp(rB, Q64, feeRateX64);
-            if (rAF < rA || rBF < rB) {
-                uint fee = rA - rAF + rB - rBF;
+            uint interest = rA + rB - rAF - rBF;
+            if (FEE_RATE > 0) {
+                interest /= FEE_RATE;
+            }
+            if (interest > 0) {
+                if (FEE_RATE > 0) {
+                    R -= interest;
+                }
                 (rA, rB) = (rAF, rBF);
-                R -= fee;
+            }
+        }
+        elapsed = uint32(block.timestamp & F_MASK) - (s_f & F_MASK);
+        if (elapsed > 0) {
+            uint rate = _expRate(elapsed, config.PREMIUM_HL);
+            if (rate > Q64) {
+                uint premium = rA > rB ? rA - rB : rB - rA;
+                premium -= FullMath.mulDivRoundingUp(premium, Q64, rate);
+                if (premium > 0) {
+                    if (rA > rB) {
+                        rB += FullMath.mulDivRoundingUp(premium, rB, R - rA);
+                        rA -= premium;
+                    } else {
+                        rA += FullMath.mulDivRoundingUp(premium, rA, R - rB);
+                        rB -= premium;
+                    }
+                }
             }
         }
         return (R, rA, rB);

@@ -18,7 +18,7 @@ const scenerios = [
     scenerio: loadFixtureFromParams([{
       ...baseParams,
       mark: bn(40).shl(128),
-      premiumRate: bn(1).shl(128).div(2),
+      premiumHL: bn(1).shl(128).div(2),
       halfLife: bn(HALF_LIFE)
     }])
   },
@@ -27,7 +27,7 @@ const scenerios = [
     scenerio: loadFixtureFromParams([{
       ...baseParams,
       mark: bn(35).shl(128),
-      premiumRate: bn(1).shl(128).div(2),
+      premiumHL: bn(1).shl(128).div(2),
       halfLife: bn(HALF_LIFE)
     }])
   }

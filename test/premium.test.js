@@ -1,259 +1,293 @@
-const {
-  time,
-  loadFixture,
-} = require("@nomicfoundation/hardhat-network-helpers");
-const { expect, use } = require("chai");
-const { solidity } = require("ethereum-waffle");
-const { _evaluate, _selectPrice, _init, _xk, _r } = require("./shared/AsymptoticPerpetual");
-const { baseParams } = require("./shared/baseParams");
-const { SIDE_R, SIDE_A, SIDE_B, Q256M } = require("./shared/constant");
-const { loadFixtureFromParams } = require("./shared/scenerios");
-const { weiToNumber, bn, getDeltaSupply, numberToWei, packId, unpackId, encodeSqrtX96, encodePayload, attemptSwap, attemptStaticSwap, feeToOpenRate, paramToConfig } = require("./shared/utilities");
-const abiCoder = new ethers.utils.AbiCoder()
-use(solidity)
+const { loadFixture, time } = require("@nomicfoundation/hardhat-network-helpers")
+const { baseParams } = require("./shared/baseParams")
+const { loadFixtureFromParams } = require("./shared/scenerios")
+const { SIDE_R, SIDE_A, SIDE_C, SIDE_B } = require("./shared/constant")
+const { numberToWei, bn, weiToNumber } = require("./shared/utilities")
+const { MaxUint256 } = require("@ethersproject/constants")
+const { expect } = require("chai")
 
-const HALF_LIFE = 0;
+const PAYMENT       = 0;
+const SECONDS_PER_DAY = 86400
 
-const pe = (x) => ethers.utils.parseEther(String(x))
+function toHalfLife(dailyRate) {
+    return Math.round(dailyRate == 0 ? 0 : SECONDS_PER_DAY / Math.log2(1 / (1 - dailyRate)))
+}
+
+const DAILY_INTEREST = 0.04
+const DAILY_PREMIUM = 0.01
 
 describe("Premium", function () {
-  const fixture = loadFixtureFromParams([
-    baseParams, 
+    const fixture = loadFixtureFromParams([{
+        ...baseParams,
+        halfLife: bn(0),
+        premiumHL: bn(toHalfLife(DAILY_PREMIUM)),
+        mark: bn('13179171373343029902768196957842336318319')
+    },
     {
-      ...baseParams,
-      premiumRate: bn(1).shl(128).div(2)
+        ...baseParams,
+        halfLife: bn(toHalfLife(DAILY_INTEREST)),
+        premiumHL: bn(toHalfLife(DAILY_PREMIUM)),
+        mark: bn('13179171373343029902768196957842336318319')
+    }], {
+        logicName: 'View',
+        initReserved: 3,
+        feeRate: 0
+    })
+
+    async function compare(pool, derivable1155) {
+        const {rA, rB, rC} = await pool.contract.compute(derivable1155.address)
+        const rANum = Number(weiToNumber(rA))
+        const rBNum = Number(weiToNumber(rB))
+        const rCNum = Number(weiToNumber(rC))
+        await time.increase(SECONDS_PER_DAY)
+
+        await pool.swap(
+            SIDE_R,
+            SIDE_C,
+            1
+        )
+        const {rA: rA1, rB: rB1, rC: rC1} = await pool.contract.compute(derivable1155.address)
+        const rA1Num = Number(weiToNumber(rA1))
+        const rB1Num = Number(weiToNumber(rB1))
+        const rC1Num = Number(weiToNumber(rC1))
+
+        let expectedRA1Num
+        let expectedRB1Num
+        let expectedRC1Num
+
+        if (rANum > rBNum) {
+            const expectedPremium = (rANum - rBNum) * DAILY_PREMIUM
+            expectedRA1Num = rANum - expectedPremium
+            expectedRB1Num = rBNum + expectedPremium * rBNum/(rBNum + rCNum)
+            expectedRC1Num = rCNum + expectedPremium * rCNum/(rBNum + rCNum)
+        } else {
+            const expectedPremium = (rBNum - rANum) * DAILY_PREMIUM
+            expectedRB1Num = rBNum - expectedPremium
+            expectedRA1Num = rANum + expectedPremium * rANum/(rANum + rCNum)
+            expectedRC1Num = rCNum + expectedPremium * rCNum/(rANum + rCNum)
+        }
+        
+        expect(rA1Num).to.be.closeTo(expectedRA1Num, 1e-5)
+        expect(rB1Num).to.be.closeTo(expectedRB1Num, 1e-5)
+        expect(rC1Num).to.be.closeTo(expectedRC1Num, 1e-5)
     }
-  ])
 
-  async function premiumAppliedLongBuyShort(amount) {
-    const {derivablePools, accountA, accountB} = await loadFixture(fixture)
-    const poolNoPremium = derivablePools[0]
-    const pool = derivablePools[1]
-    await pool.connect(accountA).swap(
-      SIDE_R,
-      SIDE_A,
-      numberToWei(1),
-    )
+    async function compareWithInterest(pool, derivable1155) {
+        const {rA, rB, rC} = await pool.contract.compute(derivable1155.address)
+        const rANum = Number(weiToNumber(rA))
+        const rBNum = Number(weiToNumber(rB))
+        const rCNum = Number(weiToNumber(rC))
+        await time.increase(SECONDS_PER_DAY)
 
-    await poolNoPremium.connect(accountA).swap(
-      SIDE_R,
-      SIDE_A,
-      numberToWei(1),
-    )
+        const rADecayed = rANum * (1 - DAILY_INTEREST)
+        const rBDecayed = rBNum * (1 - DAILY_INTEREST)
+        const rCDecayed = rCNum + (rANum + rBNum) * DAILY_INTEREST
 
-    const shortWithPremium = await pool.connect(accountA).swap(
-      SIDE_R,
-      SIDE_B,
-      numberToWei(amount),
-      { static: true }
-    )
-
-    const shortWithoutPremium = await poolNoPremium.connect(accountA).swap(
-      SIDE_R,
-      SIDE_B,
-      numberToWei(amount),
-      { static: true }
-    )
-
-    expect(shortWithPremium)
-      .to.be.equal(shortWithoutPremium)
-  }
-
-  async function premiumAppliedShortBuyLong(amount) {
-    const {derivablePools, accountA, accountB} = await loadFixture(fixture)
-    const poolNoPremium = derivablePools[0]
-    const pool = derivablePools[1]
-
-    await pool.connect(accountA).swap(
-      SIDE_R,
-      SIDE_B,
-      numberToWei(1),
-    )
-
-    await poolNoPremium.connect(accountA).swap(
-      SIDE_R,
-      SIDE_B,
-      numberToWei(1),
-    )
-
-    const longWithPremium = await pool.connect(accountA).swap(
-      SIDE_R,
-      SIDE_A,
-      numberToWei(amount),
-      { static: true }
-    )
-
-    const longWithoutPremium = await poolNoPremium.connect(accountA).swap(
-      SIDE_R,
-      SIDE_A,
-      numberToWei(amount),
-      { static: true }
-    )
-
-    expect(longWithPremium).to.be.equal(longWithoutPremium)
-  }
-
-  async function premiumBuyingLong(amount) {
-    const { derivablePools, accountA, oracleLibrary, params } = await loadFixture(fixture)
-    const poolNoPremium = derivablePools[0]
-    const pool = derivablePools[1]
-    const config = paramToConfig(params[0])
-
-    const state = await pool.contract.getStates()
-    const oraclePrice = await oracleLibrary.fetch(config.ORACLE)
-    
-    const xk = _xk(oraclePrice.twap, config.K, config.MARK)
-    const rA = _r(xk, state.a, state.R)
-    const rB = _r(Q256M.div(xk), state.b, state.R)
-    
-    const rA1 = rA.add(numberToWei(amount));
-    const rB1 = rB;
-    const R = state.R.add(numberToWei(amount));
-    const rC1 = R.sub(rA).sub(rB);
-    const imbalanceRate = rA1.sub(rB1).mul(bn(1).shl(128)).div(rC1)
-
-    const longWithPremium = await pool.connect(accountA).swap(
-      SIDE_R,
-      SIDE_A,
-      numberToWei(amount),
-      { static: true }
-    )
-
-    const longWithoutPremium = await poolNoPremium.connect(accountA).swap(
-      SIDE_R,
-      SIDE_A,
-      numberToWei(amount),
-      { static: true }
-    )
-
-    expect(longWithPremium, "premium taken").lt(longWithoutPremium)
-    expect(longWithPremium, "premium taken").gte(
-      longWithoutPremium.mul(config.PREMIUM_RATE).div(imbalanceRate).sub(20)
-    )
-    if (amount <= 1)
-      expect(Number(weiToNumber(longWithPremium.mul(imbalanceRate).div(config.PREMIUM_RATE))))
-        .to.be.closeTo(
-          Number(weiToNumber(longWithoutPremium)), 0.00001
+        await pool.swap(
+            SIDE_R,
+            SIDE_C,
+            1
         )
-  }
 
-  async function premiumBuyingShort(amount) {
-    const { derivablePools, accountA, oracleLibrary, params } = await loadFixture(fixture)
-    const poolNoPremium = derivablePools[0]
-    const pool = derivablePools[1]
-    const config = paramToConfig(params[0])
+        const {rA: rA1, rB: rB1, rC: rC1} = await pool.contract.compute(derivable1155.address)
+        const rA1Num = Number(weiToNumber(rA1))
+        const rB1Num = Number(weiToNumber(rB1))
+        const rC1Num = Number(weiToNumber(rC1))
 
-    const state = await pool.contract.getStates()
-    const oraclePrice = await oracleLibrary.fetch(config.ORACLE)
-    
-    const xk = _xk(oraclePrice.twap, config.K, config.MARK)
-    const rA = _r(xk, state.a, state.R)
-    const rB = _r(Q256M.div(xk), state.b, state.R)
-    
-    const rA1 = rA;
-    const rB1 = rB.add(numberToWei(amount));
-    const R = state.R.add(numberToWei(amount));
-    const rC1 = R.sub(rA).sub(rB);
-    const imbalanceRate = rB1.sub(rA1).mul(bn(1).shl(128)).div(rC1)
+        let expectedRA1Num
+        let expectedRB1Num
+        let expectedRC1Num
 
-    const shortWithPremium = await pool.connect(accountA).swap(
-      SIDE_R,
-      SIDE_B,
-      numberToWei(amount),
-      { static: true }
-    )
+        if (rADecayed > rBDecayed) {
+            const expectedPremium = (rADecayed - rBDecayed) * DAILY_PREMIUM
+            expectedRA1Num = rADecayed - expectedPremium
+            expectedRB1Num = rBDecayed + expectedPremium * rBDecayed/(rBDecayed + rCDecayed)
+            expectedRC1Num = rCDecayed + expectedPremium * rCDecayed/(rBDecayed + rCDecayed)
+        } else {
+            const expectedPremium = (rBDecayed - rADecayed) * DAILY_PREMIUM
+            expectedRB1Num = rBDecayed - expectedPremium
+            expectedRA1Num = rADecayed + expectedPremium * rADecayed/(rADecayed + rCDecayed)
+            expectedRC1Num = rCDecayed + expectedPremium * rCDecayed/(rADecayed + rCDecayed)
+        }
+        
+        expect(rA1Num).to.be.closeTo(expectedRA1Num, 1e-5)
+        expect(rB1Num).to.be.closeTo(expectedRB1Num, 1e-5)
+        expect(rC1Num).to.be.closeTo(expectedRC1Num, 1e-5)
+    }
 
-    const shortWithoutPremium = await poolNoPremium.connect(accountA).swap(
-      SIDE_R,
-      SIDE_B,
-      numberToWei(amount),
-      { static: true }
-    )
+    it("Apply interest and premium: Long - Interest 0", async function () {
+        const { derivablePools, derivable1155} = await loadFixture(fixture)
 
-    expect(shortWithPremium, "premium taken").lt(shortWithoutPremium)
-    expect(shortWithPremium, "premium taken").gte(
-      shortWithoutPremium.mul(config.PREMIUM_RATE).div(imbalanceRate).sub(20)
-    )
-    if (amount <= 1)
-      expect(Number(weiToNumber(shortWithPremium.mul(imbalanceRate).div(config.PREMIUM_RATE))))
-        .to.be.closeTo(
-          Number(weiToNumber(shortWithoutPremium)), 0.00001
+        const pool = derivablePools[0]
+        await pool.swap(
+            SIDE_R,
+            SIDE_C,
+            numberToWei(1)
         )
-  }
+        await pool.swap(
+            SIDE_R,
+            SIDE_A,
+            numberToWei(2)
+        )
+        
+        await compare(pool, derivable1155)
+    })
 
-  it("RiskFactor > PremiumRate: Buy long 1.7e", async function () {
-    await premiumBuyingLong(1.7)
-  })
+    it("Apply interest and premium: Long - Interest 4%", async function () {
+        const { derivablePools, derivable1155} = await loadFixture(fixture)
 
-  it("RiskFactor > PremiumRate: Buy long 3e", async function () {
-    await premiumBuyingLong(3)
-  })
+        const pool = derivablePools[1]
+        await pool.swap(
+            SIDE_R,
+            SIDE_C,
+            numberToWei(1)
+        )
+        await pool.swap(
+            SIDE_R,
+            SIDE_A,
+            numberToWei(2)
+        )
+        
+        await compareWithInterest(pool, derivable1155)
+    })
 
-  it("RiskFactor > PremiumRate: Buy long 2e", async function () {
-    await premiumBuyingLong(2)
-  })
+    it("Apply interest and premium continuos: After a year - Long - Interest 0", async function () {
+        const { derivablePools, derivable1155} = await loadFixture(fixture)
 
-  it("RiskFactor > PremiumRate: Buy short 0.1e", async function () {
-    await premiumAppliedLongBuyShort(0.1)
-  })
+        const pool = derivablePools[0]
+        await pool.swap(
+            SIDE_R,
+            SIDE_C,
+            numberToWei(1)
+        )
+        await pool.swap(
+            SIDE_R,
+            SIDE_A,
+            numberToWei(2)
+        )
 
-  it("RiskFactor ≤ PremiumRate: Buy long 0.1e", async function () {
-    const { derivablePools, accountA } = await loadFixture(fixture)
-    const poolNoPremium = derivablePools[0]
-    const pool = derivablePools[1]
-    const withPremium = await pool.connect(accountA).swap(
-      SIDE_R,
-      SIDE_A,
-      numberToWei(0.1),
-      { static: true }
-    )
+        await time.increase(SECONDS_PER_DAY * 365)
 
-    const withoutPremium = await poolNoPremium.connect(accountA).swap(
-      SIDE_R,
-      SIDE_A,
-      numberToWei(0.1),
-      { static: true }
-    )
+        await pool.swap(
+            SIDE_R,
+            SIDE_C,
+            1
+        )
+        
+        await compare(pool, derivable1155)
+    })
 
-    expect(withPremium)
-      .to.be.equal(withoutPremium)
-  })
+    it("Apply interest and premium continuous: After a year - Long - Interest 4%", async function () {
+        const { derivablePools, derivable1155} = await loadFixture(fixture)
 
-  it("RiskFactor ≥ -PremiumRate: Buy short 0.1e", async function () {
-    const { derivablePools, accountA } = await loadFixture(fixture)
-    const poolNoPremium = derivablePools[0]
-    const pool = derivablePools[1]
-    const withPremium = await pool.connect(accountA).swap(
-      SIDE_R,
-      SIDE_B,
-      numberToWei(0.1),
-      { static: true }
-    )
+        const pool = derivablePools[1]
+        await pool.swap(
+            SIDE_R,
+            SIDE_C,
+            numberToWei(1)
+        )
+        await pool.swap(
+            SIDE_R,
+            SIDE_A,
+            numberToWei(2)
+        )
 
-    const withoutPremium = await poolNoPremium.connect(accountA).swap(
-      SIDE_R,
-      SIDE_B,
-      numberToWei(0.1),
-      { static: true }
-    )
+        await time.increase(SECONDS_PER_DAY * 365)
 
-    expect(withPremium)
-      .to.be.equal(withoutPremium)
-  })
+        await pool.swap(
+            SIDE_R,
+            SIDE_C,
+            1
+        )
+        
+        await compareWithInterest(pool, derivable1155)
+    })
 
-  it("RiskFactor < -PremiumRate: Buy short 3e", async function () {
-    await premiumBuyingShort(3)
-  })
+    it("Apply interest and premium: Short - Interest 0", async function () {
+        const { derivablePools, derivable1155} = await loadFixture(fixture)
 
-  it("RiskFactor < -PremiumRate: Buy short 1.7e", async function () {
-    await premiumBuyingShort(1.7)
-  })
+        const pool = derivablePools[0]
+        await pool.swap(
+            SIDE_R,
+            SIDE_C,
+            numberToWei(1)
+        )
+        await pool.swap(
+            SIDE_R,
+            SIDE_B,
+            numberToWei(2)
+        )
+        
+        await compare(pool, derivable1155)
+    })
 
-  it("RiskFactor < -PremiumRate: Buy short 2e", async function () {
-    await premiumBuyingShort(2)
-  })
+    it("Apply interest and premium: Short - Interest 4%", async function () {
+        const { derivablePools, derivable1155} = await loadFixture(fixture)
 
-  it("RiskFactor < -PremiumRate: Buy long 0.1e", async function () {
-    await premiumAppliedShortBuyLong(0.1)
-  })
+        const pool = derivablePools[1]
+        await pool.swap(
+            SIDE_R,
+            SIDE_C,
+            numberToWei(1)
+        )
+        await pool.swap(
+            SIDE_R,
+            SIDE_B,
+            numberToWei(2)
+        )
+        
+        await compareWithInterest(pool, derivable1155)
+    })
+
+    it("Apply interest and premium continuos: After a year - Short - Interest 0", async function () {
+        const { derivablePools, derivable1155} = await loadFixture(fixture)
+
+        const pool = derivablePools[0]
+        await pool.swap(
+            SIDE_R,
+            SIDE_C,
+            numberToWei(1)
+        )
+        await pool.swap(
+            SIDE_R,
+            SIDE_B,
+            numberToWei(2)
+        )
+
+        await time.increase(SECONDS_PER_DAY * 365)
+
+        await pool.swap(
+            SIDE_R,
+            SIDE_C,
+            1
+        )
+        
+        await compare(pool, derivable1155)
+    })
+
+    it("Apply interest and premium continuous: After a year - Short - Interest 4%", async function () {
+        const { derivablePools, derivable1155} = await loadFixture(fixture)
+
+        const pool = derivablePools[1]
+        await pool.swap(
+            SIDE_R,
+            SIDE_C,
+            numberToWei(1)
+        )
+        await pool.swap(
+            SIDE_R,
+            SIDE_B,
+            numberToWei(2)
+        )
+
+        await time.increase(SECONDS_PER_DAY * 365)
+
+        await pool.swap(
+            SIDE_R,
+            SIDE_C,
+            1
+        )
+        
+       await compareWithInterest(pool, derivable1155)
+    })
 })

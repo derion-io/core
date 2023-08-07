@@ -140,38 +140,47 @@ contract PoolLogic is PoolBase {
         uint sideOut = param.sideOut;
         require(sideIn != sideOut, 'SS');
         State memory state = State(_reserve(config.TOKEN_R), s_a, s_b);
-        // [INTEREST DECAY]
+        // [PRICE SELECTION]
+        uint xk; uint rA; uint rB;
+        (xk, rA, rB, result.price) = _selectPrice(config, state, sideIn, sideOut);
         unchecked {
-            uint elapsed = block.timestamp - s_i;
+            // [FEE & INTEREST]
+            uint32 elapsed = uint32(block.timestamp) - s_i;
             if (elapsed > 0) {
-                uint interestRateX64 = _expRate(elapsed, config.INTEREST_HL);
-                if (interestRateX64 > Q64) {
-                    uint a = FullMath.mulDivRoundingUp(state.a, Q64, interestRateX64);
-                    uint b = FullMath.mulDivRoundingUp(state.b, Q64, interestRateX64);
-                    if (a < state.a || b < state.b) {
-                        state.a = a;
-                        state.b = b;
+                uint interest;
+                uint rate = _expRate(elapsed, config.INTEREST_HL);
+                if (rate > Q64) {
+                    uint rAF = FullMath.mulDivRoundingUp(rA, Q64, rate);
+                    uint rBF = FullMath.mulDivRoundingUp(rB, Q64, rate);
+                    interest = rA + rB - rAF - rBF;
+                    if (FEE_RATE > 0) {
+                        interest /= FEE_RATE;
+                    }
+                    if (interest > 0) {
+                        if (FEE_RATE > 0) {
+                            TransferHelper.safeTransfer(config.TOKEN_R, FEE_TO, interest);
+                            state.R -= interest;
+                        }
+                        (rA, rB) = (rAF, rBF);
                         s_i = uint32(block.timestamp);
                     }
                 }
             }
-        }
-        // [PRICE SELECTION]
-        uint xk; uint rA; uint rB;
-        (xk, rA, rB, result.price) = _selectPrice(config, state, sideIn, sideOut);
-        // [PROTOCOL FEE]
-        unchecked {
-            uint32 elapsed = uint32(block.timestamp & F_MASK) - (s_f & F_MASK);
+            // [PREMIUM]
+            elapsed = uint32(block.timestamp & F_MASK) - (s_f & F_MASK);
             if (elapsed > 0) {
-                uint feeRateX64 = _expRate(elapsed, config.INTEREST_HL * FEE_RATE);
-                if (feeRateX64 > Q64) {
-                    uint rAF = FullMath.mulDivRoundingUp(rA, Q64, feeRateX64);
-                    uint rBF = FullMath.mulDivRoundingUp(rB, Q64, feeRateX64);
-                    uint fee = rA - rAF + rB - rBF;
-                    if (0 < fee && fee < state.R) {
-                        TransferHelper.safeTransfer(config.TOKEN_R, FEE_TO, fee);
-                        (rA, rB) = (rAF, rBF);
-                        state.R -= fee;
+                uint rate = _expRate(elapsed, config.PREMIUM_HL);
+                if (rate > Q64) {
+                    uint premium = rA > rB ? rA - rB : rB - rA;
+                    premium -= FullMath.mulDivRoundingUp(premium, Q64, rate);
+                    if (premium > 0) {
+                        if (rA > rB) {
+                            rB += FullMath.mulDivRoundingUp(premium, rB, state.R - rA);
+                            rA -= premium;
+                        } else {
+                            rA += FullMath.mulDivRoundingUp(premium, rA, state.R - rB);
+                            rB -= premium;
+                        }
                         s_f += elapsed;
                     }
                 }
@@ -220,40 +229,19 @@ contract PoolLogic is PoolBase {
                 require(rC1 >= MINIMUM_RESERVE, 'MR:C');
                 result.amountOut = FullMath.mulDiv(_supply(sideOut), rC1 - rC, rC);
             } else {
-                uint inputRate = Q128;
                 if (sideOut == SIDE_A) {
                     require(rA1 >= MINIMUM_RESERVE, 'MR:A');
                     result.amountOut = FullMath.mulDiv(_supply(sideOut), rA1 - rA, rA);
-                    inputRate = _inputRate(config, state1, rA1, rB1);
                 } else if (sideOut == SIDE_B) {
                     require(rB1 >= MINIMUM_RESERVE, 'MR:B');
                     result.amountOut = FullMath.mulDiv(_supply(sideOut), rB1 - rB, rB);
-                    inputRate = _inputRate(config, state1, rB1, rA1);
                 }
-                if (inputRate != Q128) {
-                    result.amountIn = FullMath.mulDiv(result.amountIn, Q128, inputRate);
+                if (config.OPEN_RATE != Q128) {
+                    result.amountIn = FullMath.mulDiv(result.amountIn, Q128, config.OPEN_RATE);
                 }
             }
         }
         s_a = uint224(state1.a);
         s_b = uint224(state1.b);
-    }
-
-    function _inputRate(
-        Config memory config,
-        State memory state,
-        uint rOut,
-        uint rTuo
-    ) internal pure returns (uint rate) {
-        rate = config.OPEN_RATE;
-        if (config.PREMIUM_RATE > 0 && rOut > rTuo) {
-            uint rC1 = state.R - rOut - rTuo;
-            unchecked {
-                uint imbaRate = FullMath.mulDiv(Q128, rOut - rTuo, rC1);
-                if (imbaRate > config.PREMIUM_RATE) {
-                    rate = FullMath.mulDiv(rate, config.PREMIUM_RATE, imbaRate);
-                }
-            }
-        }
     }
 }

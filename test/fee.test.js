@@ -67,13 +67,12 @@ HLs.forEach(HALF_LIFE => {
         numberToWei(amount),
       )
 
-      const feeAmount = await weth.balanceOf(feeReceiver.address)
+      const actualFee = await weth.balanceOf(feeReceiver.address)
       const interestRate = 1 - (1 - dailyInterestRate) ** period
-      const feeRate = 1 - (1 - (dailyInterestRate / FEE_RATE)) ** period
-      const pReservedAfterInterest = positionReserved.mul(((1 - interestRate) * 1e8).toFixed(0)).div(1e8)
-      const actualFeeRate = Number(weiToNumber(feeAmount)) / Number(weiToNumber(pReservedAfterInterest))
+      const interest = positionReserved.mul((interestRate* 1e8).toFixed(0)).div(1e8)
+      const feeRate = interest.mul(1e6).div(actualFee).toNumber() / 1e6
 
-      expect(feeRate / actualFeeRate).to.be.closeTo(1, 0.1)
+      expect(feeRate / FEE_RATE).to.be.closeTo(1, 0.0001)
     }
 
     it("Charge fee: Open 0.1e Long - period 1 day", async function () {

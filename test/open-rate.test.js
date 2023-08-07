@@ -21,10 +21,10 @@ const feeRates = [0.03, 0.005, 0.95, 0.999]
 feeRates.forEach(feeRate => {
   const fixture = loadFixtureFromParams([{
     ...baseParams,
-    premiumRate: bn(1).shl(128).div(2)
+    premiumHL: bn(1).shl(128).div(2)
   }, {
     ...baseParams,
-    premiumRate: bn(1).shl(128).div(2),
+    premiumHL: bn(1).shl(128).div(2),
     openRate: feeToOpenRate(feeRate)
   }])
 

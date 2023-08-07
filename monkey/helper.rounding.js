@@ -25,7 +25,7 @@ for (let index = 0; index < 50; index++) {
   describe(`Helper Rounding: Ellapsed day ${ellapsedDay}, price: ${price}, amount: ${amount}`, function() {
     const k = 40
     const dailyFundingRate = (0.02 * k) / 100
-    const premiumRate = bn(1).shl(128).div(2);
+    const premiumHL = bn(1).shl(128).div(2);
   
     const halfLife = Math.round(
       SECONDS_PER_DAY /
@@ -35,7 +35,7 @@ for (let index = 0; index < 50; index++) {
       ...baseParams,
       halfLife: bn(halfLife),
       k: bn(k),
-      premiumRate: bn(premiumRate),
+      premiumHL: bn(premiumHL),
       mark: bn("15065122318819189091263847637975040"),
       maturity: bn('3600'),
       maturityVest: bn('60'),

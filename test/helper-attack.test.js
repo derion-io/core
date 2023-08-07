@@ -39,12 +39,12 @@ describe("Helper Attacks", function () {
     const fixture = loadFixtureFromParams([{
         ...baseParams,
         halfLife: bn(HALF_LIFE),
-        premiumRate: bn(1).shl(128).div(2),
+        premiumHL: bn(1).shl(128).div(2),
     }, {
         ...baseParams,
         k: bn(2),
         halfLife: bn(HALF_LIFE),
-        premiumRate: bn(1).shl(128).div(2),
+        premiumHL: bn(1).shl(128).div(2),
     }], {
         callback: async ({derivablePools, weth, usdc, derivable1155, stateCalHelper, accountA}) => {
             // deploy helper

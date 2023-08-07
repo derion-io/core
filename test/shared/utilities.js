@@ -261,7 +261,7 @@ function paramToConfig(param) {
         MARK: param.mark,
         INIT_TIME: param.initTime,
         HALF_LIFE: bn(param.halfLife),
-        PREMIUM_RATE: bn(param.premiumRate)
+        PREMIUM_HL: bn(param.premiumHL)
     }
 }
 
