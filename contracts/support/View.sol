@@ -35,8 +35,8 @@ contract View is PoolLogic {
 
         // [INTEREST & FEE]
         uint Rt;
-        (Rt, rAt, rBt) = _applyFee(config.INTEREST_HL, state.R, rAt, rBt);
-        (state.R, rAs, rBs) = _applyFee(config.INTEREST_HL, state.R, rAs, rBs);
+        (Rt, rAt, rBt) = _applyRate(config, state.R, rAt, rBt);
+        (state.R, rAs, rBs) = _applyRate(config, state.R, rAs, rBs);
 
         stateView.rA = Math.min(rAt, rAs);
         stateView.rB = Math.min(rBt, rBs);
@@ -59,30 +59,43 @@ contract View is PoolLogic {
         return IERC1155Supply(TOKEN).totalSupply(_packID(address(this), side));
     }
 
-    function _applyFee(
-        uint HL,
+    function _applyRate(
+        Config memory config,
         uint R,
         uint rA,
         uint rB
     ) internal view returns (uint, uint, uint) {
         uint32 elapsed = uint32(block.timestamp) - s_i;
         if (elapsed > 0) {
-            uint feeRateX64 = _expRate(elapsed, HL);
+            uint feeRateX64 = _expRate(elapsed, config.INTEREST_HL);
             uint rAF = FullMath.mulDivRoundingUp(rA, Q64, feeRateX64);
             uint rBF = FullMath.mulDivRoundingUp(rB, Q64, feeRateX64);
-            if (rAF < rA || rBF < rB) {
+            uint interest = rA + rB - rAF - rBF;
+            if (FEE_RATE > 0) {
+                interest /= FEE_RATE;
+            }
+            if (interest > 0) {
+                if (FEE_RATE > 0) {
+                    R -= interest;
+                }
                 (rA, rB) = (rAF, rBF);
             }
         }
         elapsed = uint32(block.timestamp & F_MASK) - (s_f & F_MASK);
         if (elapsed > 0) {
-            uint feeRateX64 = _expRate(elapsed, HL * FEE_RATE);
-            uint rAF = FullMath.mulDivRoundingUp(rA, Q64, feeRateX64);
-            uint rBF = FullMath.mulDivRoundingUp(rB, Q64, feeRateX64);
-            if (rAF < rA || rBF < rB) {
-                uint fee = rA + rB - rAF - rBF;
-                R -= fee;
-                (rA, rB) = (rAF, rBF);
+            uint rate = _expRate(elapsed, config.PREMIUM_HL);
+            if (rate > Q64) {
+                uint premium = rA > rB ? rA - rB : rB - rA;
+                premium -= FullMath.mulDivRoundingUp(premium, Q64, rate);
+                if (premium > 0) {
+                    if (rA > rB) {
+                        rB += FullMath.mulDivRoundingUp(premium, rB, R - rA);
+                        rA -= premium;
+                    } else {
+                        rA += FullMath.mulDivRoundingUp(premium, rA, R - rB);
+                        rB -= premium;
+                    }
+                }
             }
         }
         return (R, rA, rB);
