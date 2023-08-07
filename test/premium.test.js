@@ -13,20 +13,20 @@ function toHalfLife(dailyRate) {
     return Math.round(dailyRate == 0 ? 0 : SECONDS_PER_DAY / Math.log2(1 / (1 - dailyRate)))
 }
 
-const DAILY_RATE = 0.04
-const PREMIUM_RATE = 0.01
+const DAILY_INTEREST = 0.04
+const DAILY_PREMIUM = 0.01
 
 describe("Premium", function () {
     const fixture = loadFixtureFromParams([{
         ...baseParams,
         halfLife: bn(0),
-        premiumHL: bn(toHalfLife(PREMIUM_RATE)),
+        premiumHL: bn(toHalfLife(DAILY_PREMIUM)),
         mark: bn('13179171373343029902768196957842336318319')
     },
     {
         ...baseParams,
-        halfLife: bn(toHalfLife(DAILY_RATE)),
-        premiumHL: bn(toHalfLife(PREMIUM_RATE)),
+        halfLife: bn(toHalfLife(DAILY_INTEREST)),
+        premiumHL: bn(toHalfLife(DAILY_PREMIUM)),
         mark: bn('13179171373343029902768196957842336318319')
     }], {
         logicName: 'View',
@@ -56,12 +56,12 @@ describe("Premium", function () {
         let expectedRC1Num
 
         if (rANum > rBNum) {
-            const expectedPremium = (rANum - rBNum) * PREMIUM_RATE
+            const expectedPremium = (rANum - rBNum) * DAILY_PREMIUM
             expectedRA1Num = rANum - expectedPremium
             expectedRB1Num = rBNum + expectedPremium * rBNum/(rBNum + rCNum)
             expectedRC1Num = rCNum + expectedPremium * rCNum/(rBNum + rCNum)
         } else {
-            const expectedPremium = (rBNum - rANum) * PREMIUM_RATE
+            const expectedPremium = (rBNum - rANum) * DAILY_PREMIUM
             expectedRB1Num = rBNum - expectedPremium
             expectedRA1Num = rANum + expectedPremium * rANum/(rANum + rCNum)
             expectedRC1Num = rCNum + expectedPremium * rCNum/(rANum + rCNum)
@@ -79,9 +79,9 @@ describe("Premium", function () {
         const rCNum = Number(weiToNumber(rC))
         await time.increase(SECONDS_PER_DAY)
 
-        const rADecayed = rANum * (1 - DAILY_RATE)
-        const rBDecayed = rBNum * (1 - DAILY_RATE)
-        const rCDecayed = rCNum + (rANum + rBNum) * DAILY_RATE
+        const rADecayed = rANum * (1 - DAILY_INTEREST)
+        const rBDecayed = rBNum * (1 - DAILY_INTEREST)
+        const rCDecayed = rCNum + (rANum + rBNum) * DAILY_INTEREST
 
         await pool.swap(
             SIDE_R,
@@ -99,12 +99,12 @@ describe("Premium", function () {
         let expectedRC1Num
 
         if (rADecayed > rBDecayed) {
-            const expectedPremium = (rADecayed - rBDecayed) * PREMIUM_RATE
+            const expectedPremium = (rADecayed - rBDecayed) * DAILY_PREMIUM
             expectedRA1Num = rADecayed - expectedPremium
             expectedRB1Num = rBDecayed + expectedPremium * rBDecayed/(rBDecayed + rCDecayed)
             expectedRC1Num = rCDecayed + expectedPremium * rCDecayed/(rBDecayed + rCDecayed)
         } else {
-            const expectedPremium = (rBDecayed - rADecayed) * PREMIUM_RATE
+            const expectedPremium = (rBDecayed - rADecayed) * DAILY_PREMIUM
             expectedRB1Num = rBDecayed - expectedPremium
             expectedRA1Num = rADecayed + expectedPremium * rADecayed/(rADecayed + rCDecayed)
             expectedRC1Num = rCDecayed + expectedPremium * rCDecayed/(rADecayed + rCDecayed)
