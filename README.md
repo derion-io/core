@@ -105,9 +105,9 @@ In state transistions, all core calculation is peformed one side (from state to 
 1. Load the current state: $s_0 = 〈R_0,a_0,b_0〉$
 2. Price selection based on swap direction
 3. Calculate current payoff: $p_0 = 〈R_0, r_{A0}, r_{B0}〉$
-4. Apply Interest rate to current payoff $p_0$ ⇒ $p_0'$
-5. Apply Premium rate to current payoff $p_0'$ ⇒ $p_0''$
-6. Apply the protocol fee to current payoff $p_0$, and transfer the protocol fee out to `FeeReceiver`
+4. Apply interest rate to current payoff $p_0$ ⇒ $p_0'$
+5. Cut the protocol fee from the interest and transfer out to `FeeReceiver`
+6. Apply Premium rate to current payoff $p_0'$ ⇒ $p_0''$
 7. Call `Helper.swapToState` with input `payload` to calculate the target state ($s_1$)
 8. Calculate target payoff: $p_1 = 〈R_1, r_{A1}, r_{B1}〉$
 9. Verify that there's only one side in.
