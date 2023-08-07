@@ -164,27 +164,19 @@ contract PoolLogic is PoolBase {
                 // TODO: config.PREMIUM_HL
                 rate = _expRate(elapsed, 5958798);
                 if (rate > Q64) {
-                    if (rA > rB) {
-                        uint premium = rA - rB - FullMath.mulDiv(rA - rB, Q64, rate);
-                        if (premium > 0) {
-                            // TODO: rB == 0 or state.R == rA?
-                            rB += FullMath.mulDiv(premium, rB, state.R - rA);
+                    uint premium = rA > rB ? rA - rB : rB - rA;
+                    premium -= FullMath.mulDivRoundingUp(premium, Q64, rate);
+                    if (premium > 0) {
+                        if (rA > rB) {
+                            rB += FullMath.mulDivRoundingUp(premium, rB, state.R - rA);
                             rA -= premium;
-                            if (interest == 0) {
-                                // need updated only once
-                                s_i = uint32(block.timestamp);
-                            }
-                        }
-                    } else {
-                        uint premium = rB - rA - FullMath.mulDiv(rB - rA, Q64, rate);
-                        if (premium > 0) {
-                            // TODO: rA == 0 or state.R == rB?
-                            rA += FullMath.mulDiv(premium, rA, state.R - rB);
+                        } else {
+                            rA += FullMath.mulDivRoundingUp(premium, rA, state.R - rB);
                             rB -= premium;
-                            if (interest == 0) {
-                                // need updated only once
-                                s_i = uint32(block.timestamp);
-                            }
+                        }
+                        if (interest == 0) {
+                            // need updated only once
+                            s_i = uint32(block.timestamp);
                         }
                     }
                 }

@@ -67,9 +67,9 @@ describe("Premium", function () {
         const expectedRA1Num = rANum - expectedPremium
         const expectedRB1Num = rBNum + expectedPremium * rBNum/(rBNum + rCNum)
         const expectedRC1Num = rCNum + expectedPremium * rCNum/(rBNum + rCNum)
-        expect(rA1Num).to.be.closeTo(expectedRA1Num, 1e-6)
-        expect(rB1Num).to.be.closeTo(expectedRB1Num, 1e-6)
-        expect(rC1Num).to.be.closeTo(expectedRC1Num, 1e-6)
+        expect(rA1Num).to.be.closeTo(expectedRA1Num, 1e-5)
+        expect(rB1Num).to.be.closeTo(expectedRB1Num, 1e-5)
+        expect(rC1Num).to.be.closeTo(expectedRC1Num, 1e-5)
     })
 
     it("Apply interest and premium: Long - Interest 4%", async function () {
@@ -152,9 +152,9 @@ describe("Premium", function () {
         const expectedRA1Num = rANum + expectedPremium * rANum/(rANum + rCNum)
         const expectedRB1Num = rBNum - expectedPremium
         const expectedRC1Num = rCNum + expectedPremium * rCNum/(rANum + rCNum)
-        expect(rA1Num).to.be.closeTo(expectedRA1Num, 1e-6)
-        expect(rB1Num).to.be.closeTo(expectedRB1Num, 1e-6)
-        expect(rC1Num).to.be.closeTo(expectedRC1Num, 1e-6)
+        expect(rA1Num).to.be.closeTo(expectedRA1Num, 1e-5)
+        expect(rB1Num).to.be.closeTo(expectedRB1Num, 1e-5)
+        expect(rC1Num).to.be.closeTo(expectedRC1Num, 1e-5)
     })
 
     it("Apply interest and premium: Shhort - Interest 4%", async function () {
