@@ -1,8 +1,10 @@
 const ethers = require("ethers");
 const { feeToOpenRate, numberToWei } = require("./utilities");
 const bn = ethers.BigNumber.from
+const { AddressZero } = ethers.constants
 
 const baseParams = {
+    fetcher: AddressZero,
     mark: bn(38).shl(128),
     k: bn(5),
     a: numberToWei(1),

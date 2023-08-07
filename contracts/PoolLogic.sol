@@ -7,8 +7,9 @@ import "./PoolBase.sol";
 import "./libs/abdk-consulting/abdk-libraries-solidity/ABDKMath64x64.sol";
 import "./libs/OracleLibrary.sol";
 import "./interfaces/IHelper.sol";
+import "./Fetcher.sol";
 
-contract PoolLogic is PoolBase {
+contract PoolLogic is PoolBase, Fetcher {
     address immutable internal FEE_TO;
     uint immutable internal FEE_RATE;
 
@@ -35,19 +36,11 @@ contract PoolLogic is PoolBase {
         // require(z <= type(uint).max, "Pool: upper overflow");
     }
 
-    function _fetch(uint ORACLE) internal view returns (uint twap, uint spot) {
-        address pool = address(uint160(ORACLE));
-        (uint160 sqrtSpotX96,,,,,,) = IUniswapV3Pool(pool).slot0();
-
-        (int24 arithmeticMeanTick,) = OracleLibrary.consult(pool, uint32(ORACLE >> 192));
-        uint sqrtTwapX96 = TickMath.getSqrtRatioAtTick(arithmeticMeanTick);
-
-        spot = sqrtSpotX96 << 32;
-        twap = sqrtTwapX96 << 32;
-
-        if (ORACLE & Q255 == 0) {
-            spot = Q256M / spot;
-            twap = Q256M / twap;
+    function _fetch(address fetcher, uint ORACLE) internal view returns (uint twap, uint spot) {
+        if (fetcher == address(0)) {
+            return fetch(ORACLE);
+        } else {
+            return Fetcher(fetcher).fetch(ORACLE);
         }
     }
 
@@ -112,7 +105,7 @@ contract PoolLogic is PoolBase {
         uint sideIn,
         uint sideOut
     ) internal view returns (uint xk, uint rA, uint rB, uint price) {
-        (uint min, uint max) = _fetch(uint(config.ORACLE));
+        (uint min, uint max) = _fetch(config.FETCHER, uint(config.ORACLE));
         if (min > max) {
             (min, max) = (max, min);
         }

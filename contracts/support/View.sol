@@ -29,7 +29,7 @@ contract View is PoolLogic {
         Config memory config = loadConfig();
         State memory state = State(_reserve(config.TOKEN_R), s_a, s_b);
 
-        (uint twap, uint spot) = _fetch(uint(config.ORACLE));
+        (uint twap, uint spot) = _fetch(config.FETCHER, uint(config.ORACLE));
         (uint rAt, uint rBt) = _evaluate(_xk(config, twap), state);
         (uint rAs, uint rBs) = _evaluate(_xk(config, spot), state);
 
