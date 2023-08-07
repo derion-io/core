@@ -145,24 +145,34 @@ contract PoolLogic is PoolBase {
         // [PRICE SELECTION]
         uint xk; uint rA; uint rB;
         (xk, rA, rB, result.price) = _selectPrice(config, state, sideIn, sideOut);
-        // [INTEREST DECAY]
         unchecked {
-            uint elapsed = block.timestamp - s_i;
+            // [FEE & INTEREST]
+            uint32 elapsed = uint32(block.timestamp) - s_i;
             if (elapsed > 0) {
                 uint interest;
                 uint rate = _expRate(elapsed, config.INTEREST_HL);
                 if (rate > Q64) {
                     uint rAF = FullMath.mulDivRoundingUp(rA, Q64, rate);
                     uint rBF = FullMath.mulDivRoundingUp(rB, Q64, rate);
-                    interest = rA - rAF + rB - rBF;
-                    if (0 < interest) {
+                    interest = rA + rB - rAF - rBF;
+                    if (FEE_RATE > 0) {
+                        interest /= FEE_RATE;
+                    }
+                    if (interest > 0) {
+                        if (FEE_RATE > 0) {
+                            TransferHelper.safeTransfer(config.TOKEN_R, FEE_TO, interest);
+                            state.R -= interest;
+                        }
                         (rA, rB) = (rAF, rBF);
-                        // need updated only once
                         s_i = uint32(block.timestamp);
                     }
                 }
+            }
+            // [PREMIUM]
+            elapsed = uint32(block.timestamp & F_MASK) - (s_f & F_MASK);
+            if (elapsed > 0) {
                 // TODO: config.PREMIUM_HL
-                rate = _expRate(elapsed, 5958798);
+                uint rate = _expRate(elapsed, 5958798);
                 if (rate > Q64) {
                     uint premium = rA > rB ? rA - rB : rB - rA;
                     premium -= FullMath.mulDivRoundingUp(premium, Q64, rate);
@@ -174,27 +184,6 @@ contract PoolLogic is PoolBase {
                             rA += FullMath.mulDivRoundingUp(premium, rA, state.R - rB);
                             rB -= premium;
                         }
-                        if (interest == 0) {
-                            // need updated only once
-                            s_i = uint32(block.timestamp);
-                        }
-                    }
-                }
-            }
-        }
-        // [PROTOCOL FEE]
-        unchecked {
-            uint32 elapsed = uint32(block.timestamp & F_MASK) - (s_f & F_MASK);
-            if (elapsed > 0) {
-                uint feeRateX64 = _expRate(elapsed, config.INTEREST_HL * FEE_RATE);
-                if (feeRateX64 > Q64) {
-                    uint rAF = FullMath.mulDivRoundingUp(rA, Q64, feeRateX64);
-                    uint rBF = FullMath.mulDivRoundingUp(rB, Q64, feeRateX64);
-                    uint fee = rA - rAF + rB - rBF;
-                    if (0 < fee && fee < state.R) {
-                        TransferHelper.safeTransfer(config.TOKEN_R, FEE_TO, fee);
-                        (rA, rB) = (rAF, rBF);
-                        state.R -= fee;
                         s_f += elapsed;
                     }
                 }
