@@ -169,7 +169,6 @@ contract PoolLogic is PoolBase {
             // [PREMIUM]
             elapsed = uint32(block.timestamp & F_MASK) - (s_f & F_MASK);
             if (elapsed > 0) {
-                // TODO: config.PREMIUM_HL
                 uint rate = _expRate(elapsed, config.PREMIUM_HL);
                 if (rate > Q64) {
                     uint premium = rA > rB ? rA - rB : rB - rA;

@@ -3,8 +3,6 @@ pragma solidity ^0.8.0;
 
 import "../PoolLogic.sol";
 
-import "hardhat/console.sol";
-
 contract PoolLogicMock is PoolLogic {
   constructor(
     address token,
