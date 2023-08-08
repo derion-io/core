@@ -6,7 +6,6 @@ import "./libs/OracleLibrary.sol";
 import "./subs/Constants.sol";
 
 contract Fetcher is Constants {
-
     function fetch(uint ORACLE) public view returns (uint twap, uint spot) {
         address pool = address(uint160(ORACLE));
         (uint160 sqrtSpotX96,,,,,,) = IUniswapV3Pool(pool).slot0();
