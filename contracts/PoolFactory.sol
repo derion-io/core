@@ -33,6 +33,7 @@ contract PoolFactory is IPoolFactory {
             config.ORACLE & ORACLE_MASK,            // topic2: price index
             bytes32(uint(uint160(config.TOKEN_R))), // topic3: reserve token
             abi.encode(
+                config.FETCHER,
                 config.ORACLE,
                 config.K,
                 config.MARK,

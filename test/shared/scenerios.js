@@ -16,6 +16,7 @@ use(solidity)
 
 function toConfig(params) {
   return {
+    FETCHER: params.fetcher,
     ORACLE: params.oracle,
     TOKEN_R: params.reserveToken,
     MARK: params.mark,

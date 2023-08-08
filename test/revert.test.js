@@ -84,6 +84,7 @@ describe("Revert", function () {
     it("init: ZP, IP, BP, AI", async function () {
       const { owner, weth, utr, params, poolFactory, derivable1155, fakeUTR } = await loadFixture(fixture)
       const config = {
+        FETCHER: params[1].fetcher,
         ORACLE: params[1].oracle,
         TOKEN_R: params[1].reserveToken,
         MARK: params[1].mark,
@@ -254,6 +255,7 @@ describe("Revert", function () {
     it("createPool", async function () {
       const { params, poolFactory } = await loadFixture(fixture)
       const config = {
+        FETCHER: params[1].fetcher,
         ORACLE: params[1].oracle,
         TOKEN_R: params[1].reserveToken,
         MARK: params[1].mark,
