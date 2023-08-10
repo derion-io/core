@@ -127,13 +127,13 @@ configs.forEach(config => {
                     } else {
                         if (side == SIDE_C) {
                             const supplyC = Number(weiToNumber(await derivable1155.totalSupply(C_ID)))
-                            amount = (supplyC * amount / 10).toFixed(6)
+                            amount = (supplyC * amount / 10)
                         } else if (side == SIDE_A) {
                             const supplyA = Number(weiToNumber(await derivable1155.totalSupply(A_ID)))
-                            amount = (supplyA * amount / 10).toFixed(6)
+                            amount = (supplyA * amount / 10)
                         } else {
                             const supplyB = Number(weiToNumber(await derivable1155.totalSupply(B_ID)))
-                            amount = (supplyB * amount / 10).toFixed(6)
+                            amount = (supplyB * amount / 10)
                         }
                         await pool.swap(
                             side,
