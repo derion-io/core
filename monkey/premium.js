@@ -23,7 +23,7 @@ function toHalfLife(dailyRate) {
 const configs = [
     {
         interestRate: 0.04,
-        premiumRate: 0.01
+        premiumRate: 0.5
     },
     {
         interestRate: 0.02,
@@ -90,9 +90,9 @@ configs.forEach(config => {
                 expectedRC1Num = rCDecayed + expectedPremium * rCDecayed / (rADecayed + rCDecayed)
             }
     
-            expect(rA1Num).to.be.closeTo(expectedRA1Num, 1e-3)
-            expect(rB1Num).to.be.closeTo(expectedRB1Num, 1e-3)
-            expect(rC1Num).to.be.closeTo(expectedRC1Num, 1e-3)
+            expect(rA1Num/expectedRA1Num).to.be.closeTo(1, 1e-3)
+            expect(rB1Num/expectedRB1Num).to.be.closeTo(1, 1e-3)
+            expect(rC1Num/expectedRC1Num).to.be.closeTo(1, 1e-3)
         }
     
         it('Test', async function () {
