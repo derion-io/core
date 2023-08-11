@@ -7,7 +7,7 @@ const { TickMath } = require('@uniswap/v3-sdk')
 
 require('dotenv').config()
 
-const POOL_ADDRESS = '0x12B2483ADd89741e89C25F2E1C798F9fe8EF7664'
+const POOL_ADDRESS = '0xe987b9F1aDf0a1A290703f8CD40fbfb3F19DDC50'
 
 const provider = new ethers.providers.JsonRpcProvider(hre.network.config.url)
 const poolContract = new ethers.Contract(

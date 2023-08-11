@@ -329,6 +329,22 @@ task('deployHelper', 'Use SingletonFatory to deploy Helper contract')
         }
     )
 
+task('deployFetcher', 'Use SingletonFatory to deploy Fetcher contract')
+    .addParam('addr', 'The address list json file')
+    .setAction(
+        async (taskArgs, hre) => {
+            // deploy fetchPrice factory
+            const addressList = {
+                "fetchPrice": ""
+            }
+            const Fetcher = await ethers.getContractFactory("Fetcher")
+            const fetcher = await Fetcher.deploy()
+            console.log('fetchPrice: ', fetcher.address)
+            addressList["fetchPrice"] = fetcher.address
+            exportData(addressList, taskArgs.addr)
+        }
+    )
+
 function exportData(dictOutput, fileName) {
     let json = JSON.stringify(dictOutput, null, 2)
     fs.writeFileSync(path.join(__dirname, '/json/' + fileName + '.json'), json)

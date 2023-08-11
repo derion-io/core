@@ -84,6 +84,14 @@ module.exports = {
             timeout: 20000,
             chainId: 421613
         },
+        optestnet: {
+            url: process.env.OP_TESTNET_PROVIDER ?? 'https://goerli.optimism.io',
+            accounts: [
+                process.env.TESTNET_DEPLOYER ?? '0x0000000000000000000000000000000000000000000000000000000000000001',
+            ],
+            timeout: 20000,
+            chainId: 420
+        },
         ganache: {
             url: 'http://127.0.0.1:8545',
             // kick balcony people guess oppose verb faint explain spoil learn that pool
