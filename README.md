@@ -4,18 +4,28 @@
 ## Core Protocol
 * `Token`: a single ERC-1155 token shared by all Derivable pools.
 * `PoolFactory`: factory contract to deploy Derivable pool using ERC-3448.
+* `Fetcher`: fetcher logic for Uniswap V3 oracle.
 * `PoolBase`: base implementation of Derivable pool.
 * `PoolLogic`: mathematic and finance logic of Derivable pool.
 * `subs/Constants`: shared constants between multiple contracts.
 * `subs/Storage`: Derivable pool storage variables.
 
-## Support and Peripheral
+# 3rd-party Libs
+The following contracts are either directly imported from third-party libraries or verbatim copies of the original code:
+* `ABDKMath64x64` by [ABDK Consulting](https://github.com/abdk-consulting).
+* `FullMath` by [Uniswap](https://github.com/Uniswap)
+* `OracleLibrary` by [Uniswap](https://github.com/Uniswap)
+* `MetaProxyFactory` from [ERC-3448](https://eips.ethereum.org/EIPS/eip-3448#reference-implementation)
+* Various from [OpenZeppelin](https://github.com/OpenZeppelin)
+
+## Support and Periphery
 The following contracts are not part of the core protocol so user's funds should be completely safe even when they are malformed or malicious.
+
 * `TokenDescriptor`: view-only, replacable, ERC-1155 metadata descriptor.
 * `FeeReceiver`: protocol fee receiver and collector. Does not affect Derivable pool users, only affects protocol fee recipient, which initialy is Derivable Labs, and later will be replaced by a DAO.
 * `Helper`: deal with market slippage to achieve the desired state transition. Provided by user in each state transition, and can be malformed and malicious.
 * `View`: supporting contract for front-end code using state override for calculation.
-* `Universal Token Router` ([ERC-6120](https://eips.ethereum.org/EIPS/eip-6120))  provided by user in each state transition. Can be malicious.
+* `Universal Token Router` ([ERC-6120](https://eips.ethereum.org/EIPS/eip-6120))  provided by user in each state transition.
 
 # Design
 
@@ -27,6 +37,7 @@ Derivable pool is a liquidity pool of perpetual derivatives for a single leverag
 ## Pool Configs
 
 Each pool is identified by its immutable configs:
+* FETCHER: Custom oracle fetcher logic contract.
 * ORACLE: UniswapV3 pool, QuoteTokenIndex, and TWAP's window.
 * K: twice the leverage power.
 * TOKEN_R: the reserve token (also the settlement currency).
@@ -176,10 +187,3 @@ $$CloseRate = min(1, {t\over{MV}})\times MR$$
 There are two methods to transfer token into Derivable pool for state transistion:
 * `TransferHelper.safeTransferFrom(msg.sender, ...)` from the pool, which requires direct user token approval to each pool. This method is designed for inter-contract interaction, and not recommended for interactive users.
 * [ERC-6120](https://eips.ethereum.org/EIPS/eip-6120) or its interface can be used for interactive token payment to the pools.
-
-# 3rd-party Libs
-* `ABDKMath64x64` by [ABDK Consulting](https://github.com/abdk-consulting).
-* `FullMath` by [Uniswap](https://github.com/Uniswap)
-* `OracleLibrary` by [Uniswap](https://github.com/Uniswap)
-* `MetaProxyFactory` from [ERC-3448](https://eips.ethereum.org/EIPS/eip-3448)
-* Various from [OpenZeppelin](https://github.com/OpenZeppelin)
