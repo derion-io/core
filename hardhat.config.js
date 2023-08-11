@@ -92,6 +92,22 @@ module.exports = {
             timeout: 20000,
             chainId: 420
         },
+        basetestnet: {
+            url: process.env.BASE_TESTNET_PROVIDER ?? 'https://goerli.base.org',
+            accounts: [
+                process.env.TESTNET_DEPLOYER ?? '0x0000000000000000000000000000000000000000000000000000000000000001',
+            ],
+            timeout: 20000,
+            chainId: 84531
+        },
+        basemainnet: {
+            url: process.env.BASE_MAINNET_PROVIDER ?? 'https://mainnet.base.org',
+            accounts: [
+                process.env.MAINNET_DEPLOYER ?? '0x0000000000000000000000000000000000000000000000000000000000000001',
+            ],
+            timeout: 20000,
+            chainId: 8453
+        },
         ganache: {
             url: 'http://127.0.0.1:8545',
             // kick balcony people guess oppose verb faint explain spoil learn that pool

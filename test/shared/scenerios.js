@@ -121,7 +121,7 @@ function loadFixtureFromParams (arrParams, options={}) {
     )
     await uniswapPair.deployed()
 
-    // deploy descriptor
+    // deploy fetchPrice
     const FetchPrice = await ethers.getContractFactory("FetchPriceUniV3")
     const fetchPrice = await FetchPrice.deploy()
     await fetchPrice.deployed()

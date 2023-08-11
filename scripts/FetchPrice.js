@@ -28,12 +28,22 @@ async function main() {
     // const pairETHPEPE = "0x1944AC04bD9FED9a2BcDB38b70C35949c864ec35"
 
     // op testnet
+    // const qti = 0
+    // const windowTime = 60
+    // const pairETHUSDC = "0xe987b9F1aDf0a1A290703f8CD40fbfb3F19DDC50"
+
+    // base testnet
+    // const qti = 1
+    // const windowTime = 60
+    // const pairETHUSDC = "0xc357410bFf9Db82c8825eb29756E2C7993E2844D"
+
+    // base mainnet
     const qti = 0
-    const windowTime = 60
-    const pairETHUSDC = "0xe987b9F1aDf0a1A290703f8CD40fbfb3F19DDC50"
+    const windowTime = 600
+    const pairETHTOSHI = "0xE6E16fA8f4C2b9f56A3378b227bEdE63940a657C"
 
     const oracle = ethers.utils.hexZeroPad(
-        bn(qti).shl(255).add(bn(windowTime).shl(256 - 64)).add(pairETHUSDC).toHexString(),
+        bn(qti).shl(255).add(bn(windowTime).shl(256 - 64)).add(pairETHTOSHI).toHexString(),
         32,
     )
     

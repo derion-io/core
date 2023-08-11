@@ -3,27 +3,38 @@ const fs = require('fs')
 const path = require('path')
 require('dotenv').config()
 const { bn, feeToOpenRate } = require("../test/shared/utilities")
+const { AddressZero } = ethers.constants
 
 const pe = (x) => ethers.utils.parseEther(String(x))
 const opts = {
-    gasLimit: 6000000
+    gasLimit: 20000000
 }
 
 const SECONDS_PER_DAY = 60 * 60 * 24
 
 async function main() {
-    // mainnet
-    const utr = "0xbc9a257e43f7b3b1a03aEBE909f15e95A4928834"
-    const usdc = "0xFF970A61A04b1cA14834A43f5dE4533eBDDB5CC8"
-    const weth = "0x82aF49447D8a07e3bd95BD0d56f35241523fBab1"
-    const pairETHUSDC = "0xC31E54c7a869B9FcBEcc14363CF510d1c41fa443"
-    const pairETHPEPE = "0x1944AC04bD9FED9a2BcDB38b70C35949c864ec35"
+    // arb mainnet
+    // const utr = "0xbc9a257e43f7b3b1a03aEBE909f15e95A4928834"
+    // const usdc = "0xFF970A61A04b1cA14834A43f5dE4533eBDDB5CC8"
+    // const weth = "0x82aF49447D8a07e3bd95BD0d56f35241523fBab1"
+    // const pairETHUSDC = "0xC31E54c7a869B9FcBEcc14363CF510d1c41fa443"
+    // const pairETHPEPE = "0x1944AC04bD9FED9a2BcDB38b70C35949c864ec35"
 
-    // testnet
+    // arb testnet
     // const utr = "0xbc9a257e43f7b3b1a03aEBE909f15e95A4928834"
     // const usdc = "0x8FB1E3fC51F3b789dED7557E680551d93Ea9d892"
     // const weth = "0xe39Ab88f8A4777030A534146A9Ca3B52bd5D43A3"
     // const pairETHUSDC = "0x12B2483ADd89741e89C25F2E1C798F9fe8EF7664"
+    
+    // base testnet
+    // const utr = "0xb29647dd03F9De2a9Fe9e32DF431dA5015c60353"
+    // const usdc = "0x5010B0988a035915C91a2a432085824FcB3D8d3f"
+    // const weth = "0x4200000000000000000000000000000000000006"
+    // const pairETHUSDC = "0xc357410bFf9Db82c8825eb29756E2C7993E2844D"
+
+    // base mainnet
+    const weth = "0x4200000000000000000000000000000000000006"
+    const pairETHTOSHI = "0xE6E16fA8f4C2b9f56A3378b227bEdE63940a657C"
 
     // // ganache
     // const utr = "0x4F1111145AB659CF9BBB45442F54A5D427783DaA"
@@ -31,13 +42,13 @@ async function main() {
     // const weth = "0xaf9173D7fcd8f18d57Ea7EE2b3DeCF263C25679F"
     // const pairETHUSDC = "0xBf4CC059DfF52AeFe7f12516e4CA4Bc691D97474"
 
-    const qti = 1
-    const windowTime = 10800
+    const qti = 0
+    const windowTime = 600
     // mainnet
-    const mark = bn("9627317981834231357895182479523840")
-    const k = 16
+    const mark = bn("54107259509387202169693103509772902")
+    const k = 8
     const oracle = ethers.utils.hexZeroPad(
-        bn(qti).shl(255).add(bn(windowTime).shl(256 - 64)).add(pairETHPEPE).toHexString(),
+        bn(qti).shl(255).add(bn(windowTime).shl(256 - 64)).add(pairETHTOSHI).toHexString(),
         32,
     )
     const dailyFundingRate = (0.03 * k) / 100
@@ -45,20 +56,21 @@ async function main() {
         SECONDS_PER_DAY /
         Math.log2(1 / (1 - dailyFundingRate)))
 
-    const addressPath = path.join(__dirname, `./json/ARBMainnet.json`)
+    const addressPath = path.join(__dirname, `./json/${process.env.addr}.json`)
     const addressList = JSON.parse(fs.readFileSync(addressPath, 'utf8'))
 
     const premiumHL = bn(1).shl(128).div(2);
 
     const param = {
+        FETCHER: AddressZero,
         ORACLE: oracle,
         TOKEN_R: weth,
         MARK: mark,
         K: k,
         INTEREST_HL: halfLife,
         PREMIUM_HL: premiumHL,
-        MATURITY: 60 * 60,
-        MATURITY_VEST: 60 * 10,
+        MATURITY: 60 * 60 * 24,
+        MATURITY_VEST: 60 * 60 * 4,
         MATURITY_RATE: bn(97).shl(128).div(100),
         OPEN_RATE: feeToOpenRate(0),
     }
@@ -71,13 +83,13 @@ async function main() {
     const receipt = await tx.wait()
     const poolAddress = ethers.utils.getAddress('0x' + receipt.logs[0].data.slice(-40))
     console.log(`pool: ${poolAddress}`)
-    addressList["pool-PEPE^8-1"] = poolAddress
+    addressList["pool-TOSHI^4-1"] = poolAddress
     exportData(addressList)
 }
 
 function exportData(dictOutput) {
     let json = JSON.stringify(dictOutput, null, 2)
-    fs.writeFileSync(path.join(__dirname, "/json/ARBMainnet.json"), json)
+    fs.writeFileSync(path.join(__dirname, `/json/${process.env.addr}.json`), json)
 }
 
 // We recommend this pattern to be able to use async/await everywhere
