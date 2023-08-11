@@ -23,14 +23,14 @@ const numberToWei = (number, decimal = 18) => {
     if (typeof number === 'number') {
         number = number.toLocaleString('fullwide', { useGrouping: false })
     }
-    return ethers.utils.parseUnits(number, decimal)
+    return ethers.utils.parseUnits(String(number), decimal)
 }
 
 const weiToNumber = (number, decimal = 18) => {
     if (typeof number === 'number') {
         number = number.toLocaleString('fullwide', { useGrouping: false })
     }
-    return ethers.utils.formatUnits(number, decimal)
+    return ethers.utils.formatUnits(String(number), decimal)
 }
 
 const calculateSwapToPrice = ({ r0, r1, token0, token1 }, targetPrice, quoteToken) => {

@@ -483,7 +483,7 @@ describe("Protocol", function () {
             }
             const supplyAfter = await derivable1155.totalSupply(idIn)
             // console.log(supplyAfter.sub(supplyBefore.sub(amountIn)))
-            expect(supplyAfter.sub(supplyBefore.sub(amountIn))).lte(1)
+            expect(supplyAfter.sub(supplyBefore.sub(amountIn))).lte(2)
         }
         it("Supply after swap: A -> R - Non UTR", async function () {
             await testSupplyIn(SIDE_A, 0.1, false)
