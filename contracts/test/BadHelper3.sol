@@ -4,10 +4,10 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts/utils/math/Math.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@uniswap/lib/contracts/libraries/TransferHelper.sol";
+import "abdk-libraries-solidity/ABDKMath64x64.sol";
 
 import "@derivable/erc1155-maturity/contracts/token/ERC1155/IERC1155Supply.sol";
 
-import "../libs/abdk-consulting/abdk-libraries-solidity/ABDKMath64x64.sol";
 import "../libs/FullMath.sol";
 import "../subs/Constants.sol";
 import "../interfaces/IHelper.sol";

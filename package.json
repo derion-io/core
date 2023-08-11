@@ -25,6 +25,7 @@
     "@uniswap/v3-core": "https://github.com/Uniswap/v3-core.git#0.8",
     "@uniswap/v3-periphery": "https://github.com/Uniswap/v3-periphery.git#0.8",
     "@uniswap/v3-sdk": "^3.9.0",
+    "abdk-libraries-solidity": "^3.2.0",
     "bignumber.js": "^9.1.1",
     "bn.js": "^5.2.1",
     "canonical-weth": "^1.4.0",
