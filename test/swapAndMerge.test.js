@@ -67,6 +67,7 @@ maturities.forEach(maturity => describe(`Swap and merge maturity: ${maturity}`, 
       amountIn,
       payer: accountA.address,
       recipient: accountA.address,
+      INDEX_R: 0
     })
     const sweepTx = await stateCalHelper.populateTransaction.sweep(
       idOut, accountA.address

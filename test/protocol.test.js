@@ -233,7 +233,8 @@ describe("Protocol", function () {
                     poolOut: poolAddress,
                     amountIn: pe(0.0001),
                     payer: owner.address,
-                    recipient: owner.address
+                    recipient: owner.address,
+                    INDEX_R: 0
                 })).data,
             }], opts)
         })

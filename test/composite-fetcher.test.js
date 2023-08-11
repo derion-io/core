@@ -274,7 +274,8 @@ describe("Pool with CompositeFetcher", function () {
                     poolOut: poolAddress,
                     amountIn: numberToWei(0.0001),
                     payer: owner.address,
-                    recipient: owner.address
+                    recipient: owner.address,
+                    INDEX_R: 0
                 })).data,
             }])
     })
