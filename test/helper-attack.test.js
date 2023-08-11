@@ -128,7 +128,8 @@ describe("Helper Attacks", function () {
                     poolOut: derivablePools[1].contract.address,
                     amountIn: pe(amountIn),
                     payer: owner.address,
-                    recipient: owner.address
+                    recipient: owner.address,
+                    INDEX_R: 0
                 })).data,
             }], opts)
 
@@ -197,7 +198,8 @@ describe("Helper Attacks", function () {
                     poolOut: derivablePools[1].contract.address,
                     amountIn: pe(0.0001),
                     payer: owner.address,
-                    recipient: owner.address
+                    recipient: owner.address,
+                    INDEX_R: 0
                 })).data,
             }], opts)
             expect(await weth.balanceOf(stateCalHelper.address)).equal(0)
@@ -237,7 +239,8 @@ describe("Helper Attacks", function () {
                     poolOut: derivablePools[0].contract.address,
                     amountIn: pe(amountIn),
                     payer: owner.address,
-                    recipient: owner.address
+                    recipient: owner.address,
+                    INDEX_R: 0
                 })).data,
             }], opts)
 
@@ -285,7 +288,8 @@ describe("Helper Attacks", function () {
                     poolOut: derivablePools[0].contract.address,
                     amountIn: pe(amountIn),
                     payer: owner.address,
-                    recipient: owner.address
+                    recipient: owner.address,
+                    INDEX_R: 0
                 })).data,
             }], {
                 ...opts,
@@ -341,7 +345,8 @@ describe("Helper Attacks", function () {
                     poolOut: derivablePools[0].contract.address,
                     amountIn: balanceInBefore,
                     payer: owner.address,
-                    recipient: owner.address
+                    recipient: owner.address,
+                    INDEX_R: 0
                 })).data,
             }], opts)
 
