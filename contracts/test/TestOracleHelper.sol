@@ -2,7 +2,7 @@
 pragma solidity ^0.8.0;
 
 import "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
-import "../libs/OracleLibrary.sol";
+import "@uniswap/v3-periphery/contracts/libraries/OracleLibrary.sol";
 
 contract TestOracleHelper {
     uint internal constant Q256M = type(uint).max;
