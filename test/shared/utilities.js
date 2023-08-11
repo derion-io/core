@@ -20,11 +20,17 @@ const opts = {
 }
 const bn = ethers.BigNumber.from
 const numberToWei = (number, decimal = 18) => {
-    return ethers.utils.parseUnits(number.toString(), decimal)
+    if (typeof number === 'number') {
+        number = number.toLocaleString('fullwide', { useGrouping: false })
+    }
+    return ethers.utils.parseUnits(number, decimal)
 }
 
 const weiToNumber = (number, decimal = 18) => {
-    return ethers.utils.formatUnits(number.toString(), decimal)
+    if (typeof number === 'number') {
+        number = number.toLocaleString('fullwide', { useGrouping: false })
+    }
+    return ethers.utils.formatUnits(number, decimal)
 }
 
 const calculateSwapToPrice = ({ r0, r1, token0, token1 }, targetPrice, quoteToken) => {
