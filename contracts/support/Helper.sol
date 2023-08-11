@@ -5,6 +5,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
 import "@uniswap/lib/contracts/libraries/TransferHelper.sol";
 import '@uniswap/v3-core/contracts/libraries/FullMath.sol';
+import "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 
 import "@derivable/erc1155-maturity/contracts/token/ERC1155/IERC1155Supply.sol";
 
@@ -16,6 +17,8 @@ import "../interfaces/IWeth.sol";
 
 
 contract Helper is Constants, IHelper, ERC1155Holder {
+    uint internal constant Q254 = 1 << 254;
+    uint internal constant Q254M = Q254 - 1;
     uint internal constant SIDE_NATIVE = 0x01;
     address internal immutable TOKEN;
     address internal immutable WETH;
@@ -25,12 +28,23 @@ contract Helper is Constants, IHelper, ERC1155Holder {
         WETH = weth;
     }
 
+    // INDEX_R == 0: priceR = 0
+    // INDEX_R == Q254 | uint253(p): priceR = p
+    // otherwise: priceR = _fetch(INDEX_R)
     struct SwapParams {
         uint sideIn;
         address poolIn;
         uint sideOut;
         address poolOut;
         uint amountIn;
+        address payer;
+        address recipient;
+        uint INDEX_R;
+    }
+
+    struct ChangableSwapParams {
+        uint sideIn;
+        uint sideOut;
         address payer;
         address recipient;
     }
@@ -44,7 +58,8 @@ contract Helper is Constants, IHelper, ERC1155Holder {
         uint sideOut,
         uint amountIn,
         uint amountOut,
-        uint price
+        uint price,
+        uint priceR
     );
 
     // accepting ETH for WETH.withdraw
@@ -75,8 +90,27 @@ contract Helper is Constants, IHelper, ERC1155Holder {
         IPool(pool).init(state, Payment(address(0), address(0), msg.sender));
     }
 
-    // TODO: pass the config in from client instead of contract call
-    // TODO: handle OPEN_RATE
+    function _getPrice(uint INDEX) internal view returns (uint spot) {
+        if (INDEX == 0) {
+            return 0;
+        }
+        if (INDEX & Q254 != 0) {
+            return INDEX & Q254M;
+        }
+        return _fetch(INDEX);
+    }
+
+    function _fetch(uint INDEX) internal view returns (uint spot) {
+        address pool = address(uint160(INDEX));
+        (uint160 sqrtSpotX96,,,,,,) = IUniswapV3Pool(pool).slot0();
+
+        spot = sqrtSpotX96 << 32;
+
+        if (INDEX & Q255 == 0) {
+            spot = Q256M / spot;
+        }
+    }
+
     function _swapMultiPool(SwapParams memory params, address TOKEN_R) internal returns (uint amountOut) {
         // swap poolIn/sideIn to poolIn/R
         bytes memory payload = abi.encode(
@@ -130,27 +164,26 @@ contract Helper is Constants, IHelper, ERC1155Holder {
             TransferHelper.safeTransfer(TOKEN_R, params.payer, leftOver);
         }
 
+        uint priceR = _getPrice(params.INDEX_R);
+
         emit Swap(
-            params.payer, // topic2: poolIn
+            params.payer,
             params.poolIn,
             params.poolOut,
-            params.recipient, // topic3: poolOut
+            params.recipient,
             params.sideIn,
             params.sideOut,
             params.amountIn,
             amountOut,
-            price
+            price,
+            priceR
         );
     }
 
     function swap(SwapParams memory params) public payable returns (uint amountOut){
-        // TODO: why do we need this?
-        SwapParams memory _params = SwapParams(
+        ChangableSwapParams memory __ = ChangableSwapParams(
             params.sideIn,
-            params.poolIn,
             params.sideOut,
-            params.poolOut,
-            params.amountIn,
             params.payer,
             params.recipient
         );
@@ -200,24 +233,27 @@ contract Helper is Constants, IHelper, ERC1155Holder {
             )
         );
 
-        if (_params.sideOut == SIDE_NATIVE) {
+        if (__.sideOut == SIDE_NATIVE) {
             require(TOKEN_R == WETH, 'Reserve token is not Wrapped');
             amountOut = IERC20(WETH).balanceOf(address(this));
             require(amountOut > 0, 'Do not have ETH to transfer');
             IWeth(WETH).withdraw(amountOut);
-            TransferHelper.safeTransferETH(_params.recipient, amountOut);
+            TransferHelper.safeTransferETH(__.recipient, amountOut);
         }
 
+        uint priceR = _getPrice(params.INDEX_R);
+
         emit Swap(
-            _params.payer,
-            _params.poolIn,
-            _params.poolOut,
-            _params.recipient,
-            _params.sideIn,
-            _params.sideOut,
-            _params.amountIn,
+            __.payer,
+            params.poolIn,
+            params.poolOut,
+            __.recipient,
+            __.sideIn,
+            __.sideOut,
+            params.amountIn,
             amountOut,
-            price
+            price,
+            priceR
         );
     }
 
