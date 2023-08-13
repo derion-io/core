@@ -15,6 +15,7 @@ const {
     packId,
     swapToSetPriceMock,
 } = require("./shared/utilities")
+const { calculateInitParams } = require("./shared/AsymptoticPerpetual")
 
 const pe = (x) => ethers.utils.parseEther(String(x))
 
@@ -365,6 +366,37 @@ describe("Helper Attacks", function () {
         })
         it("swap C to native", async function () {
             await testSwap(SIDE_C)
+        })
+    })
+
+    it("Helper create pool", async function () {
+        const {stateCalHelper, params, fetchPrice, poolFactory} = await loadFixture(fixture)
+
+        function toConfig(params) {
+            return {
+              FETCHER: params.fetcher,
+              ORACLE: params.oracle,
+              TOKEN_R: params.reserveToken,
+              MARK: params.mark,
+              K: params.k,
+              INTEREST_HL: params.halfLife,
+              PREMIUM_HL: params.premiumHL,
+              MATURITY: params.maturity,
+              MATURITY_VEST: params.maturityVest,
+              MATURITY_RATE: params.maturityRate,
+              OPEN_RATE: params.openRate,
+            }
+          }
+
+        const params1 = {
+            ...params[0],
+            k: bn(20)
+        }
+
+        const config = toConfig(params1) 
+        const initParams = await calculateInitParams(config, fetchPrice, numberToWei(5))
+        await stateCalHelper.createPool(config, initParams, poolFactory.address, {
+            value: numberToWei(5)
         })
     })
 
