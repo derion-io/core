@@ -25,6 +25,7 @@ contract CompositeFetcher is Constants {
         WETH_BTC = weth_btc;
     }
 
+    // QTI(1bit)|SQTI(1bit)|SPI(30bit)|WINDOW(32bit)|SWINDOW(32bit)|POOL(160bit)
     function fetch(uint ORACLE) public view returns (uint twap, uint spot) {
         (twap, spot) = _fetchPrice(
             address(uint160(ORACLE)), 
@@ -38,24 +39,6 @@ contract CompositeFetcher is Constants {
         );
         twap = FullMath.mulDiv(twap, sTwap, Q128);
         spot = FullMath.mulDiv(spot, sSpot, Q128);
-    }
-
-    // QTI(1bit)|SQTI(1bit)|SPI(30bit)|WINDOW(32bit)|SWINDOW(32bit)|POOL(160bit)
-    function _unpack(uint ORACLE) internal pure 
-    returns (
-        address primaryPool,
-        uint qti,
-        uint sqti,
-        uint secondaryPoolIndex,
-        uint window,
-        uint secondaryWindow
-    ) {
-        primaryPool = address(uint160(ORACLE));
-        qti = ORACLE >> 255;
-        sqti = (ORACLE >> 254) % 2;
-        secondaryPoolIndex = (ORACLE >> 224) % (1 << 30);
-        window = uint32(ORACLE >> 192);
-        secondaryWindow = uint32(ORACLE >> 160);
     }
 
     function _fetchPrice(address pool, uint qti, uint32 window) internal view returns (uint twap, uint spot) {

@@ -32,6 +32,11 @@ describe("Protocol", function () {
         ...baseParams,
         halfLife: bn(HALF_LIFE),
         premiumHL: bn(1).shl(128).div(2)
+    }, {
+        ...baseParams,
+        maturity: 60,
+        maturityVest: 30,
+        maturityRate: bn(97).shl(128).div(100)
     }], {
         callback: async ({weth, usdc, derivable1155, stateCalHelper, owner, derivablePools, accountA, accountB}) => {
             const pool = derivablePools[0]
@@ -100,6 +105,12 @@ describe("Protocol", function () {
             await expect(derivable1155.connect(accountA).setDescriptor(tokenDescriptor.address)).to.be.revertedWith("UNAUTHORIZED")
             await derivable1155.setDescriptorSetter(accountA.address)
             await derivable1155.connect(accountA).setDescriptor(tokenDescriptor.address)
+        })
+        it("Verify Descriptor", async function () {
+            const { derivable1155, derivablePools } = await loadFixture(fixture)
+            expect(await derivable1155.getShadowDecimals(packId(SIDE_A, derivablePools[0].contract.address))).eq(18)
+            expect(await derivable1155.getShadowSymbol(packId(SIDE_A, derivablePools[0].contract.address))).eq('WETH+2.5xWETH/USDC')
+            expect(await derivable1155.symbol()).eq("DERIVABLE-POS")
         })
         describe("ERC1155SupplyVirtual", function () {
             it("exists", async function () {
@@ -237,6 +248,59 @@ describe("Protocol", function () {
                     INDEX_R: 0
                 })).data,
             }], opts)
+        })
+
+        it('_maturityPayoff return 0', async function () {
+            const {accountA, derivablePools, weth, owner, utr, derivable1155, stateCalHelper} = await loadFixture(fixture)
+            const derivablePool = derivablePools[1].connect(owner)
+            // deploy TestHelper
+            const TestHelper = await ethers.getContractFactory("contracts/test/TestHelper.sol:TestHelper")
+            const maturityPoolTestHelper = await TestHelper.deploy(
+                derivablePool.contract.address,
+                derivable1155.address,
+                stateCalHelper.address
+            )
+            await maturityPoolTestHelper.deployed()
+
+            await weth.approve(utr.address, MaxUint256)
+            const pTx = await derivablePool.swap(
+                SIDE_R,
+                SIDE_A,
+                numberToWei(1),
+                {
+                    populateTransaction: true,
+                    recipient: maturityPoolTestHelper.address,
+                    payer: owner.address
+                }
+            )
+            const before = await weth.balanceOf(owner.address)
+            await utr.exec([],
+                [
+                    {
+                        inputs: [{
+                            mode: PAYMENT,
+                            eip: 20,
+                            token: weth.address,
+                            id: 0,
+                            amountIn: numberToWei(1),
+                            recipient: derivablePool.contract.address,
+                        }],
+                        code: derivablePool.contract.address,
+                        data: pTx.data,
+                    },
+                    {
+                        inputs: [],
+                        code: maturityPoolTestHelper.address,
+                        data: (await maturityPoolTestHelper.populateTransaction.swapInAll(
+                            SIDE_A,
+                            SIDE_R,
+                            ethers.constants.AddressZero,
+                            owner.address
+                        )).data,
+                    }
+                ], opts)
+            const after = await weth.balanceOf(owner.address)
+            expect(before.sub(after)).equal(numberToWei(1))
         })
 
         async function testRIn(sideIn, amountIn, sideOut, isUseUTR) {
