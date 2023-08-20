@@ -22,8 +22,8 @@ contract PoolLogicMock is PoolLogic {
     Config memory config = loadConfig();
     s_a = a;
     s_b = b;
-    s_f = f;
-    s_i = i;
+    s_lastPremiumTime = f;
+    s_lastInterestTime = i;
     uint256 curSA = _supply(SIDE_A);
     uint256 curSB = _supply(SIDE_B);
     uint256 curSC = _supply(SIDE_C);

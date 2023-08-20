@@ -2,8 +2,16 @@
 pragma solidity >=0.8.0;
 
 contract Storage {
-    uint32  internal s_i;
+    // the last time interest is charged
+    uint32  internal s_lastInterestTime;
+
+    // the LONG coefficient of the pool
     uint224 internal s_a;
-    uint32  internal s_f;   // the first bit is use for reentrant lock
+
+    // uint31: the last time premium is charged
+    // uint1: reentrant lock 
+    uint32  internal s_lastPremiumTime;
+
+    // the SHORT coefficient of the pool
     uint224 internal s_b;
 }

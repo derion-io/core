@@ -65,7 +65,7 @@ contract View is PoolLogic {
         uint256 rA,
         uint256 rB
     ) internal view returns (uint256, uint256, uint256) {
-        uint32 elapsed = uint32(block.timestamp) - s_i;
+        uint32 elapsed = uint32(block.timestamp) - s_lastInterestTime;
         if (elapsed > 0) {
             uint256 feeRateX64 = _expRate(elapsed, config.INTEREST_HL);
             uint256 rAF = FullMath.mulDivRoundingUp(rA, Q64, feeRateX64);
@@ -81,7 +81,7 @@ contract View is PoolLogic {
                 (rA, rB) = (rAF, rBF);
             }
         }
-        elapsed = uint32(block.timestamp & F_MASK) - (s_f & F_MASK);
+        elapsed = uint32(block.timestamp & F_MASK) - (s_lastPremiumTime & F_MASK);
         if (elapsed > 0) {
             uint256 rate = _expRate(elapsed, config.PREMIUM_HL);
             if (rate > Q64) {

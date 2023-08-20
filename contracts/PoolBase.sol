@@ -45,9 +45,9 @@ abstract contract PoolBase is IPool, ERC1155Holder, Storage, Constants {
      */
     modifier nonReentrant() {
         ensureStateIntegrity();
-        s_f |= 1;
+        s_lastPremiumTime |= 1;
         _;
-        s_f &= F_MASK;
+        s_lastPremiumTime &= F_MASK;
     }
 
     constructor(address token) {
@@ -56,7 +56,7 @@ abstract contract PoolBase is IPool, ERC1155Holder, Storage, Constants {
     }
 
     function init(State memory state, Payment memory payment) external {
-        require(s_i == 0, "PoolBase: ALREADY_INITIALIZED");
+        require(s_lastInterestTime == 0, "PoolBase: ALREADY_INITIALIZED");
         uint256 R = state.R;
         uint256 a = state.a;
         uint256 b = state.b;
@@ -73,9 +73,9 @@ abstract contract PoolBase is IPool, ERC1155Holder, Storage, Constants {
             TransferHelper.safeTransferFrom(config.TOKEN_R, msg.sender, address(this), R);
         }
 
-        s_i = uint32(block.timestamp);
+        s_lastInterestTime = uint32(block.timestamp);
         s_a = uint224(a);
-        s_f = uint32(block.timestamp & F_MASK);
+        s_lastPremiumTime = uint32(block.timestamp & F_MASK);
         s_b = uint224(b);
 
         uint256 idA = _packID(address(this), SIDE_A);
@@ -152,9 +152,9 @@ abstract contract PoolBase is IPool, ERC1155Holder, Storage, Constants {
     {
         Config memory config = loadConfig();
         R = IERC20(config.TOKEN_R).balanceOf(address(this));
-        i = s_i;
+        i = s_lastInterestTime;
         a = s_a;
-        f = s_f & F_MASK;
+        f = s_lastPremiumTime & F_MASK;
         b = s_b;
     }
 
@@ -162,7 +162,7 @@ abstract contract PoolBase is IPool, ERC1155Holder, Storage, Constants {
      * @dev against read-only reentrancy
      */
     function ensureStateIntegrity() public view {
-        uint256 f = s_f;
+        uint256 f = s_lastPremiumTime;
         require(f & 1 == 0 && f > 0, 'SI');
     }
 

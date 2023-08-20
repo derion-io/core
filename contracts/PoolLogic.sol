@@ -135,7 +135,7 @@ contract PoolLogic is PoolBase, Fetcher {
         (xk, rA, rB, result.price) = _selectPrice(config, state, sideIn, sideOut);
         unchecked {
             // [FEE & INTEREST]
-            uint32 elapsed = uint32(block.timestamp) - s_i;
+            uint32 elapsed = uint32(block.timestamp) - s_lastInterestTime;
             if (elapsed > 0) {
                 uint256 interest;
                 uint256 rate = _expRate(elapsed, config.INTEREST_HL);
@@ -152,12 +152,12 @@ contract PoolLogic is PoolBase, Fetcher {
                             state.R -= interest;
                         }
                         (rA, rB) = (rAF, rBF);
-                        s_i = uint32(block.timestamp);
+                        s_lastInterestTime = uint32(block.timestamp);
                     }
                 }
             }
             // [PREMIUM]
-            elapsed = uint32(block.timestamp & F_MASK) - (s_f & F_MASK);
+            elapsed = uint32(block.timestamp & F_MASK) - (s_lastPremiumTime & F_MASK);
             if (elapsed > 0) {
                 uint256 rate = _expRate(elapsed, config.PREMIUM_HL);
                 if (rate > Q64) {
@@ -171,7 +171,7 @@ contract PoolLogic is PoolBase, Fetcher {
                             rA += FullMath.mulDivRoundingUp(premium, rA, state.R - rB);
                             rB -= premium;
                         }
-                        s_f += elapsed;
+                        s_lastPremiumTime += elapsed;
                     }
                 }
             }
