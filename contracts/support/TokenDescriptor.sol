@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BSL-1.1
-pragma solidity ^0.8.0;
+pragma solidity >=0.8.0;
 import "@openzeppelin/contracts/utils/Strings.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import "@openzeppelin/contracts/utils/Base64.sol";
@@ -12,9 +12,9 @@ import "../interfaces/ITokenDescriptor.sol";
 import "../interfaces/IPoolFactory.sol";
 
 contract TokenDescriptor is ITokenDescriptor {
-    uint internal constant SIDE_A = 0x10;
-    uint internal constant SIDE_B = 0x20;
-    uint internal constant SIDE_C = 0x30;
+    uint256 internal constant SIDE_A = 0x10;
+    uint256 internal constant SIDE_B = 0x20;
+    uint256 internal constant SIDE_C = 0x30;
 
     address internal immutable POOL_FACTORY;
 
@@ -22,38 +22,38 @@ contract TokenDescriptor is ITokenDescriptor {
         POOL_FACTORY = poolFactory;
     }
 
-    modifier onlyDerivableToken(uint id) {
+    modifier onlyDerivableToken(uint256 id) {
         address pool = address(uint160(id));
         require(_computePoolAddress(IPool(pool).loadConfig()) == pool, "NOT_A_DERIVABLE_TOKEN");
         _;
     }
 
-    function getName(uint id) public view virtual override onlyDerivableToken(id) returns (string memory) {
+    function getName(uint256 id) public view virtual override onlyDerivableToken(id) returns (string memory) {
         address pool = address(uint160(id));
         bytes32 oracle = IPool(pool).loadConfig().ORACLE;
         (address base, address quote) = _getBaseQuote(oracle);
-        uint side = id >> 160;
+        uint256 side = id >> 160;
         return _getName(base, quote, pool, side);
     }
 
-    function getSymbol(uint id) public view virtual override onlyDerivableToken(id) returns (string memory) {
+    function getSymbol(uint256 id) public view virtual override onlyDerivableToken(id) returns (string memory) {
         address pool = address(uint160(id));
         bytes32 oracle = IPool(pool).loadConfig().ORACLE;
         (address base, address quote) = _getBaseQuote(oracle);
-        uint side = id >> 160;
+        uint256 side = id >> 160;
         return _getSymbol(base, quote, pool, side);
     }
 
-    function getDecimals(uint id) public view virtual override onlyDerivableToken(id) returns (uint8) {
+    function getDecimals(uint256 id) public view virtual override onlyDerivableToken(id) returns (uint8) {
         address pool = address(uint160(id));
         return IERC20Metadata(IPool(pool).loadConfig().TOKEN_R).decimals();
     }
 
-    function constructMetadata(uint id) public view virtual override onlyDerivableToken(id) returns (string memory) {
+    function constructMetadata(uint256 id) public view virtual override onlyDerivableToken(id) returns (string memory) {
         address pool = address(uint160(id));
         bytes32 oracle = IPool(pool).loadConfig().ORACLE;
         (address base, address quote) = _getBaseQuote(oracle);
-        uint side = id >> 160;
+        uint256 side = id >> 160;
         string memory image = Base64.encode(bytes(_getImage()));
         return
             string(
@@ -77,7 +77,7 @@ contract TokenDescriptor is ITokenDescriptor {
             );
     }
 
-    function _getDescription(address base, address quote, address pool, uint side) internal view returns (string memory) {
+    function _getDescription(address base, address quote, address pool, uint256 side) internal view returns (string memory) {
         Config memory config = IPool(pool).loadConfig();
         string memory sideStr;
         if (side == SIDE_C) {
@@ -111,7 +111,7 @@ contract TokenDescriptor is ITokenDescriptor {
         }
     }
 
-    function _getName(address base, address quote, address pool, uint side) internal view returns (string memory) {
+    function _getName(address base, address quote, address pool, uint256 side) internal view returns (string memory) {
         Config memory config = IPool(pool).loadConfig();
         string memory sideStr = "LP";
         if (side == SIDE_A) {
@@ -130,13 +130,13 @@ contract TokenDescriptor is ITokenDescriptor {
         );
     }
 
-    function _getPower(uint k) internal pure returns (string memory) {
+    function _getPower(uint256 k) internal pure returns (string memory) {
         return (k % 2 == 0) ?
             Strings.toString(k / 2) :
             string(abi.encodePacked(Strings.toString(k / 2), ".5"));
     }
 
-    function _getSymbol(address base, address quote, address pool, uint side) internal view returns (string memory) {
+    function _getSymbol(address base, address quote, address pool, uint256 side) internal view returns (string memory) {
         Config memory config = IPool(pool).loadConfig();
         string memory sideStr = "(LP)";
         if (side == SIDE_A) {
@@ -156,8 +156,8 @@ contract TokenDescriptor is ITokenDescriptor {
     }
 
     function _getBaseQuote(bytes32 oracle) internal view returns (address base, address quote) {
-        uint qti = (uint(oracle) & (1 << 255) == 0) ? 0 : 1;
-        address pair = address(uint160(uint(oracle)));
+        uint256 qti = (uint256(oracle) & (1 << 255) == 0) ? 0 : 1;
+        address pair = address(uint160(uint256(oracle)));
         base = (qti == 0) ? IUniswapV3Pool(pair).token1() : IUniswapV3Pool(pair).token0();
         quote = (qti == 0) ? IUniswapV3Pool(pair).token0() : IUniswapV3Pool(pair).token1();
     }

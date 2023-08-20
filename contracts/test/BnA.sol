@@ -5,8 +5,8 @@
 // File: contracts/interfaces/IERC20.sol
 
 interface IERC20 {
-    function balanceOf(address owner) external view returns (uint);
-    function allowance(address owner, address spender) external view returns (uint);
+    function balanceOf(address owner) external view returns (uint256);
+    function allowance(address owner, address spender) external view returns (uint256);
 }
 
 // File: contracts/BnA.sol
@@ -25,12 +25,12 @@ contract BnA {
         address[] calldata tokens,
         address[] calldata owners,
         address[] calldata spenders
-    ) external view returns (uint[] memory rets, uint blockNumber) {
-        rets = new uint[](tokens.length * owners.length * (1 + spenders.length));
-        uint n = 0;
-        for (uint i = 0; i < tokens.length; ++i) {
+    ) external view returns (uint256[] memory rets, uint256 blockNumber) {
+        rets = new uint256[](tokens.length * owners.length * (1 + spenders.length));
+        uint256 n = 0;
+        for (uint256 i = 0; i < tokens.length; ++i) {
             IERC20 token = IERC20(tokens[i]);
-            for (uint j = 0; j < owners.length; ++j) {
+            for (uint256 j = 0; j < owners.length; ++j) {
                 address owner = owners[j];
 
                 if (address(token) == COIN) {
@@ -39,13 +39,13 @@ contract BnA {
                     continue;
                 }
 
-                try token.balanceOf(owner) returns (uint balance) {
+                try token.balanceOf(owner) returns (uint256 balance) {
                     rets[n] = balance;
                 } catch (bytes memory /*lowLevelData*/) {}
                 n++;
 
-                for (uint k = 0; k < spenders.length; ++k) {
-                    try token.allowance(owner, spenders[k]) returns (uint allowance) {
+                for (uint256 k = 0; k < spenders.length; ++k) {
+                    try token.allowance(owner, spenders[k]) returns (uint256 allowance) {
                         rets[n] = allowance;
                     } catch (bytes memory /*lowLevelData*/) {}
                     n++;

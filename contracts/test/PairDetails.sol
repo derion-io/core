@@ -7,42 +7,42 @@ pragma solidity >=0.6.2;
 pragma experimental ABIEncoderV2;
 
 contract PairDetails {
-    uint constant TOKEN_SYMBOL      = 0x1;
-    uint constant TOKEN_NAME        = 0x10;
-    uint constant TOKEN_DECIMAlS    = 0x100;
-    uint constant TOKEN_SUPPLY      = 0x1000;
+    uint256 constant TOKEN_SYMBOL      = 0x1;
+    uint256 constant TOKEN_NAME        = 0x10;
+    uint256 constant TOKEN_DECIMAlS    = 0x100;
+    uint256 constant TOKEN_SUPPLY      = 0x1000;
 
-    uint constant PAIR_SUPPLY       = 0x10000000000000000000000000000000000000000000000000000000000;
-    uint constant PAIR_RESERVES     = 0x100000000000000000000000000000000000000000000000000000000000;
-    uint constant PAIR_FACTORY      = 0x1000000000000000000000000000000000000000000000000000000000000;
-    uint constant PAIR_DECIMALS     = 0x10000000000000000000000000000000000000000000000000000000000000;
-    uint constant PAIR_NAME         = 0x100000000000000000000000000000000000000000000000000000000000000;
-    uint constant PAIR_SYMBOL       = 0x1000000000000000000000000000000000000000000000000000000000000000;
+    uint256 constant PAIR_SUPPLY       = 0x10000000000000000000000000000000000000000000000000000000000;
+    uint256 constant PAIR_RESERVES     = 0x100000000000000000000000000000000000000000000000000000000000;
+    uint256 constant PAIR_FACTORY      = 0x1000000000000000000000000000000000000000000000000000000000000;
+    uint256 constant PAIR_DECIMALS     = 0x10000000000000000000000000000000000000000000000000000000000000;
+    uint256 constant PAIR_NAME         = 0x100000000000000000000000000000000000000000000000000000000000000;
+    uint256 constant PAIR_SYMBOL       = 0x1000000000000000000000000000000000000000000000000000000000000000;
 
     struct Token {
         address adr;
         string symbol;
         string name;
-        uint decimals;
-        uint totalSupply;
-        uint reserve;
+        uint256 decimals;
+        uint256 totalSupply;
+        uint256 reserve;
     }
 
     struct PairDetail {
         string symbol;
         string name;
-        uint decimals;
+        uint256 decimals;
         address factory;
-        uint totalSupply;
+        uint256 totalSupply;
         Token token0;
         Token token1;
     }
 
-    function query(address[] calldata pairs, uint flags) external view returns (
+    function query(address[] calldata pairs, uint256 flags) external view returns (
         PairDetail[] memory details
     ) {
         details = new PairDetail[](pairs.length);
-        for (uint i = 0; i < pairs.length; ++i) {
+        for (uint256 i = 0; i < pairs.length; ++i) {
             IERC20 lp = IERC20(pairs[i]);
             if (flags & PAIR_SYMBOL > 0) {
                 details[i].symbol = lp.symbol();
@@ -97,5 +97,5 @@ interface IERC20 {
     function name() external view returns (string memory);
     function symbol() external view returns (string memory);
     function decimals() external view returns (uint8);
-    function totalSupply() external view returns (uint);
+    function totalSupply() external view returns (uint256);
 }

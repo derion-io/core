@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BSL-1.1
-pragma solidity ^0.8.0;
+pragma solidity >=0.8.0;
 
 import "@openzeppelin/contracts/utils/math/Math.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -17,7 +17,7 @@ import "../interfaces/IWeth.sol";
 
 
 contract BadHelper3 is Constants, IHelper {
-    uint internal constant SIDE_NATIVE = 0x01;
+    uint256 internal constant SIDE_NATIVE = 0x01;
     address internal immutable TOKEN;
     address internal immutable WETH;
 
@@ -27,11 +27,11 @@ contract BadHelper3 is Constants, IHelper {
     }
 
     struct SwapParams {
-        uint sideIn;
+        uint256 sideIn;
         address poolIn;
-        uint sideOut;
+        uint256 sideOut;
         address poolOut;
-        uint amountIn;
+        uint256 amountIn;
         uint32 maturity;
         address payer;
         address recipient;
@@ -42,54 +42,54 @@ contract BadHelper3 is Constants, IHelper {
         address indexed poolIn,
         address indexed poolOut,
         address recipient,
-        uint sideIn,
-        uint sideOut,
-        uint amountIn,
-        uint amountOut
+        uint256 sideIn,
+        uint256 sideOut,
+        uint256 amountIn,
+        uint256 amountOut
     );
 
     // accepting ETH for WETH.withdraw
     receive() external payable {}
 
-    function _packID(address pool, uint side) internal pure returns (uint id) {
+    function _packID(address pool, uint256 side) internal pure returns (uint256 id) {
         id = (side << 160) + uint160(pool);
     }
 
     // v(r)
-    function _v(uint xk, uint r, uint R) internal pure returns (uint v) {
+    function _v(uint256 xk, uint256 r, uint256 R) internal pure returns (uint256 v) {
         if (r <= R >> 1) {
             return FullMath.mulDivRoundingUp(r, Q128, xk);
         }
-        uint denominator = FullMath.mulDivRoundingUp(R - r, xk << 2, Q128);
+        uint256 denominator = FullMath.mulDivRoundingUp(R - r, xk << 2, Q128);
         return FullMath.mulDivRoundingUp(R, R, denominator);
     }
 
-    function _supply(uint side) internal view returns (uint s) {
+    function _supply(uint256 side) internal view returns (uint256 s) {
         return IERC1155Supply(TOKEN).totalSupply(_packID(msg.sender, side));
     }
 
     function _decayRate (
-        uint elapsed,
-        uint halfLife
-    ) internal pure returns (uint rateX64) {
+        uint256 elapsed,
+        uint256 halfLife
+    ) internal pure returns (uint256 rateX64) {
         if (halfLife == 0) {
             return Q64;
         }
         int128 rate = ABDKMath64x64.exp_2(int128(int((elapsed << 64) / halfLife)));
-        return uint(int(rate));
+        return uint256(int(rate));
     }
 
     function createPool(Config memory config, State memory state, address factory) external payable returns (address pool) {
         pool = IPoolFactory(factory).createPool(config);
         IWeth(WETH).deposit{value : msg.value}();
-        uint amount = IWeth(WETH).balanceOf(address(this));
+        uint256 amount = IWeth(WETH).balanceOf(address(this));
         IERC20(WETH).approve(pool, amount);
         IPool(pool).init(state, Payment(address(0), address(0), msg.sender));
     }
 
     // TODO: pass the config in from client instead of contract call
     // TODO: handle OPEN_RATE
-    function _swapMultiPool(SwapParams memory params, address TOKEN_R) internal returns (uint amountOut) {
+    function _swapMultiPool(SwapParams memory params, address TOKEN_R) internal returns (uint256 amountOut) {
         // swap poolIn/sideIn to poolIn/R
         bytes memory payload = abi.encode(
             params.sideIn,
@@ -135,7 +135,7 @@ contract BadHelper3 is Constants, IHelper {
         );
 
         // check leftOver
-        uint leftOver = IERC20(TOKEN_R).balanceOf(address(this));
+        uint256 leftOver = IERC20(TOKEN_R).balanceOf(address(this));
         if (leftOver > 0) {
             TransferHelper.safeTransfer(TOKEN_R, params.payer, leftOver);
         }
@@ -152,7 +152,7 @@ contract BadHelper3 is Constants, IHelper {
         );
     }
 
-    function swap(SwapParams memory params) external payable returns (uint amountOut){
+    function swap(SwapParams memory params) external payable returns (uint256 amountOut){
         SwapParams memory _params = SwapParams(
             params.sideIn,
             params.poolIn,
@@ -176,7 +176,7 @@ contract BadHelper3 is Constants, IHelper {
             require(TOKEN_R == WETH, 'Reserve token is not Wrapped');
             require(msg.value != 0, 'Value need > 0');
             IWeth(WETH).deposit{value : msg.value}();
-            uint amount = IWeth(WETH).balanceOf(address(this));
+            uint256 amount = IWeth(WETH).balanceOf(address(this));
             IERC20(WETH).approve(params.poolIn, amount);
             params.payer = address(0);
             params.sideIn = SIDE_R;
@@ -233,18 +233,18 @@ contract BadHelper3 is Constants, IHelper {
         bytes calldata payload
     ) external view override returns (State memory state1) {
         (
-            uint sideIn,
-            uint sideOut,
-            uint amount
-        ) = abi.decode(payload, (uint, uint, uint));
+            uint256 sideIn,
+            uint256 sideOut,
+            uint256 amount
+        ) = abi.decode(payload, (uint256, uint256, uint256));
 
         state1.R = __.R;
-        (uint rA1, uint rB1) = (__.rA, __.rB);
+        (uint256 rA1, uint256 rB1) = (__.rA, __.rB);
 
         if (sideIn == SIDE_R) {
             state1.R += amount;
         } else {
-            uint s = _supply(sideIn);
+            uint256 s = _supply(sideIn);
             if (sideIn == SIDE_A) {
                 amount = FullMath.mulDiv(amount, __.rA, s);
                 rA1 -= amount;
@@ -252,7 +252,7 @@ contract BadHelper3 is Constants, IHelper {
                 amount = FullMath.mulDiv(amount, __.rB, s);
                 rB1 -= amount;
             } else /*if (sideIn == SIDE_C)*/ {
-                uint rC = __.R - __.rA - __.rB;
+                uint256 rC = __.R - __.rA - __.rB;
                 // rounding: A+1, B+1, C-2
                 amount = FullMath.mulDiv(amount, rC-2, s+1);
             }

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BSL-1.1
-pragma solidity ^0.8.0;
+pragma solidity >=0.8.0;
 
 import "@openzeppelin/contracts/utils/math/Math.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -15,29 +15,155 @@ import "./subs/Constants.sol";
 import "./subs/Storage.sol";
 
 abstract contract PoolBase is IPool, ERC1155Holder, Storage, Constants {
+    struct Result {
+        uint256 amountIn;
+        uint256 amountOut;
+        uint256 price;
+    }
+    
     uint32 constant internal F_MASK = ~uint32(1);
     address immutable internal TOKEN;
 
     event Swap(
         address indexed payer,
         address indexed recipient,
-        uint indexed sideMax,
-        uint sideIn,
-        uint sideOut,
-        uint maturity,
-        uint amountIn,
-        uint amountOut,
-        uint price
+        uint256 indexed sideMax,
+        uint256 sideIn,
+        uint256 sideOut,
+        uint256 maturity,
+        uint256 amountIn,
+        uint256 amountOut,
+        uint256 price
     );
 
-    struct Result {
-        uint amountIn;
-        uint amountOut;
-        uint price;
+    /**
+     * @dev Prevents a contract from calling itself, directly or indirectly.
+     * Calling a `nonReentrant` function from another `nonReentrant`
+     * function is not supported. It is possible to prevent this from happening
+     * by making the `nonReentrant` function external, and making it call a
+     * `private` function that does the actual work.
+     */
+    modifier nonReentrant() {
+        ensureStateIntegrity();
+        s_f |= 1;
+        _;
+        s_f &= F_MASK;
     }
 
     constructor(address token) {
+        require(token != address(0), "PoolBase: Address Zero");
         TOKEN = token;
+    }
+
+    function init(State memory state, Payment memory payment) external {
+        require(s_i == 0, "AI");
+        uint256 R = state.R;
+        uint256 a = state.a;
+        uint256 b = state.b;
+        require(R > 0 && a > 0 && b > 0, "ZP");
+        require(a <= R >> 1 && b <= R >> 1, "IP");
+
+        Config memory config = loadConfig();
+
+        if (payment.payer != address(0)) {
+            uint256 expected = R + IERC20(config.TOKEN_R).balanceOf(address(this));
+            IUniversalTokenRouter(payment.utr).pay(payment.payer, address(this), 20, config.TOKEN_R, 0, R);
+            require(expected <= IERC20(config.TOKEN_R).balanceOf(address(this)), "BP");
+        } else {
+            TransferHelper.safeTransferFrom(config.TOKEN_R, msg.sender, address(this), R);
+        }
+
+        s_i = uint32(block.timestamp);
+        s_a = uint224(a);
+        s_f = uint32(block.timestamp & F_MASK);
+        s_b = uint224(b);
+
+        uint256 idA = _packID(address(this), SIDE_A);
+        uint256 idB = _packID(address(this), SIDE_B);
+        uint256 idC = _packID(address(this), SIDE_C);
+
+        // mint tokens to recipient
+        uint256 R3 = R / 3;
+        uint32 maturity = uint32(block.timestamp + config.MATURITY);
+        IToken(TOKEN).mintLock(payment.recipient, idA, R3, maturity, "");
+        IToken(TOKEN).mintLock(payment.recipient, idB, R3, maturity, "");
+        IToken(TOKEN).mintLock(payment.recipient, idC, R - (R3 << 1), maturity, "");
+    }
+
+    function swap(
+        Param memory param,
+        Payment memory payment
+    ) external override nonReentrant returns (uint256 amountIn, uint256 amountOut, uint256 price) {
+        Config memory config = loadConfig();
+
+        Result memory result = _swap(config, param);
+        (amountIn, amountOut, price) = (result.amountIn, result.amountOut, result.price);
+        if (param.sideIn == SIDE_R) {
+            if (payment.payer != address(0)) {
+                uint256 expected = amountIn + IERC20(config.TOKEN_R).balanceOf(address(this));
+                IUniversalTokenRouter(payment.utr).pay(payment.payer, address(this), 20, config.TOKEN_R, 0, amountIn);
+                require(expected <= IERC20(config.TOKEN_R).balanceOf(address(this)), "BP");
+            } else {
+                TransferHelper.safeTransferFrom(config.TOKEN_R, msg.sender, address(this), amountIn);
+                payment.payer = msg.sender;
+            }
+        } else {
+            uint256 idIn = _packID(address(this), param.sideIn);
+            uint256 inputMaturity;
+            if (payment.payer != address(0)) {
+                inputMaturity = IToken(TOKEN).maturityOf(payment.payer, idIn);
+                uint256 expectedSupply = IERC1155Supply(TOKEN).totalSupply(idIn) - amountIn;
+                IUniversalTokenRouter(payment.utr).pay(payment.payer, address(this), 1155, TOKEN, idIn, amountIn);
+                require(IERC1155Supply(TOKEN).totalSupply(idIn) <= expectedSupply, 'II');
+            } else {
+                inputMaturity = IToken(TOKEN).maturityOf(msg.sender, idIn);
+                IToken(TOKEN).burn(msg.sender, idIn, amountIn);
+                payment.payer = msg.sender;
+            }
+            amountOut = _maturityPayoff(config, inputMaturity, amountOut);
+        }
+
+        uint256 maturity;
+        if (param.sideOut == SIDE_R) {
+            TransferHelper.safeTransfer(config.TOKEN_R, payment.recipient, amountOut);
+        } else {
+            uint256 idOut = _packID(address(this), param.sideOut);
+            maturity = uint32(block.timestamp) + config.MATURITY;
+            IToken(TOKEN).mintLock(payment.recipient, idOut, amountOut, uint32(maturity), "");
+        }
+
+        emit Swap(
+            payment.payer,
+            payment.recipient,
+            Math.max(param.sideIn, param.sideOut),
+            param.sideIn,
+            param.sideOut,
+            maturity,
+            amountIn,
+            amountOut,
+            price
+        );
+    }
+
+    function getStates()
+        external
+        view
+        returns (uint256 R, uint256 a, uint256 b, uint32 i, uint32 f)
+    {
+        Config memory config = loadConfig();
+        R = IERC20(config.TOKEN_R).balanceOf(address(this));
+        i = s_i;
+        a = s_a;
+        f = s_f & F_MASK;
+        b = s_b;
+    }
+
+    /**
+     * @dev against read-only reentrancy
+     */
+    function ensureStateIntegrity() public view {
+        uint256 f = s_f;
+        require(f & 1 == 0 && f > 0, 'SI');
     }
 
     /// @notice Returns the metadata of this (MetaProxy) contract.
@@ -59,135 +185,10 @@ abstract contract PoolBase is IPool, ERC1155Holder, Storage, Constants {
         return abi.decode(data, (Config));
     }
 
-    function init(State memory state, Payment memory payment) external {
-        require(s_i == 0, "AI");
-        uint R = state.R;
-        uint a = state.a;
-        uint b = state.b;
-        require(R > 0 && a > 0 && b > 0, "ZP");
-        require(a <= R >> 1 && b <= R >> 1, "IP");
-
-        Config memory config = loadConfig();
-
-        if (payment.payer != address(0)) {
-            uint expected = R + IERC20(config.TOKEN_R).balanceOf(address(this));
-            IUniversalTokenRouter(payment.utr).pay(payment.payer, address(this), 20, config.TOKEN_R, 0, R);
-            require(expected <= IERC20(config.TOKEN_R).balanceOf(address(this)), "BP");
-        } else {
-            TransferHelper.safeTransferFrom(config.TOKEN_R, msg.sender, address(this), R);
-        }
-
-        s_i = uint32(block.timestamp);
-        s_a = uint224(a);
-        s_f = uint32(block.timestamp & F_MASK);
-        s_b = uint224(b);
-
-        uint idA = _packID(address(this), SIDE_A);
-        uint idB = _packID(address(this), SIDE_B);
-        uint idC = _packID(address(this), SIDE_C);
-
-        // mint tokens to recipient
-        uint R3 = R / 3;
-        uint32 maturity = uint32(block.timestamp + config.MATURITY);
-        IToken(TOKEN).mintLock(payment.recipient, idA, R3, maturity, "");
-        IToken(TOKEN).mintLock(payment.recipient, idB, R3, maturity, "");
-        IToken(TOKEN).mintLock(payment.recipient, idC, R - (R3 << 1), maturity, "");
-    }
-
-    function _packID(address pool, uint side) internal pure returns (uint id) {
+    function _packID(address pool, uint256 side) internal pure returns (uint256 id) {
         id = (side << 160) | uint160(pool);
     }
 
-    function getStates()
-        external
-        view
-        returns (uint R, uint a, uint b, uint32 i, uint32 f)
-    {
-        Config memory config = loadConfig();
-        R = IERC20(config.TOKEN_R).balanceOf(address(this));
-        i = s_i;
-        a = s_a;
-        f = s_f & F_MASK;
-        b = s_b;
-    }
-
-    /**
-     * @dev against read-only reentrancy
-     */
-    function ensureStateIntegrity() public view {
-        uint f = s_f;
-        require(f & 1 == 0 && f > 0, 'SI');
-    }
-
-    /**
-     * @dev Prevents a contract from calling itself, directly or indirectly.
-     * Calling a `nonReentrant` function from another `nonReentrant`
-     * function is not supported. It is possible to prevent this from happening
-     * by making the `nonReentrant` function external, and making it call a
-     * `private` function that does the actual work.
-     */
-    modifier nonReentrant() {
-        ensureStateIntegrity();
-        s_f |= 1;
-        _;
-        s_f &= F_MASK;
-    }
-
-    function swap(
-        Param memory param,
-        Payment memory payment
-    ) external override nonReentrant returns (uint amountIn, uint amountOut, uint price) {
-        Config memory config = loadConfig();
-
-        Result memory result = _swap(config, param);
-        (amountIn, amountOut, price) = (result.amountIn, result.amountOut, result.price);
-        if (param.sideIn == SIDE_R) {
-            if (payment.payer != address(0)) {
-                uint expected = amountIn + IERC20(config.TOKEN_R).balanceOf(address(this));
-                IUniversalTokenRouter(payment.utr).pay(payment.payer, address(this), 20, config.TOKEN_R, 0, amountIn);
-                require(expected <= IERC20(config.TOKEN_R).balanceOf(address(this)), "BP");
-            } else {
-                TransferHelper.safeTransferFrom(config.TOKEN_R, msg.sender, address(this), amountIn);
-                payment.payer = msg.sender;
-            }
-        } else {
-            uint idIn = _packID(address(this), param.sideIn);
-            uint inputMaturity;
-            if (payment.payer != address(0)) {
-                inputMaturity = IToken(TOKEN).maturityOf(payment.payer, idIn);
-                uint expectedSupply = IERC1155Supply(TOKEN).totalSupply(idIn) - amountIn;
-                IUniversalTokenRouter(payment.utr).pay(payment.payer, address(this), 1155, TOKEN, idIn, amountIn);
-                require(IERC1155Supply(TOKEN).totalSupply(idIn) <= expectedSupply, 'II');
-            } else {
-                inputMaturity = IToken(TOKEN).maturityOf(msg.sender, idIn);
-                IToken(TOKEN).burn(msg.sender, idIn, amountIn);
-                payment.payer = msg.sender;
-            }
-            amountOut = _maturityPayoff(config, inputMaturity, amountOut);
-        }
-
-        uint maturity;
-        if (param.sideOut == SIDE_R) {
-            TransferHelper.safeTransfer(config.TOKEN_R, payment.recipient, amountOut);
-        } else {
-            uint idOut = _packID(address(this), param.sideOut);
-            maturity = uint32(block.timestamp) + config.MATURITY;
-            IToken(TOKEN).mintLock(payment.recipient, idOut, amountOut, uint32(maturity), "");
-        }
-
-        emit Swap(
-            payment.payer,
-            payment.recipient,
-            Math.max(param.sideIn, param.sideOut),
-            param.sideIn,
-            param.sideOut,
-            maturity,
-            amountIn,
-            amountOut,
-            price
-        );
-    }
-
     function _swap(Config memory config, Param memory param) internal virtual returns (Result memory);
-    function _maturityPayoff(Config memory config, uint maturity, uint amountOut) internal view virtual returns (uint);
+    function _maturityPayoff(Config memory config, uint256 maturity, uint256 amountOut) internal view virtual returns (uint256);
 }

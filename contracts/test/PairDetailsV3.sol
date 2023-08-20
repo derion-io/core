@@ -3,19 +3,19 @@ pragma solidity >=0.6.2;
 pragma experimental ABIEncoderV2;
 
 contract PairDetailsV3 {
-    uint constant TOKEN_SYMBOL      = 0x1;
-    uint constant TOKEN_NAME        = 0x10;
-    uint constant TOKEN_DECIMAlS    = 0x100;
-    uint constant TOKEN_SUPPLY      = 0x1000;
+    uint256 constant TOKEN_SYMBOL      = 0x1;
+    uint256 constant TOKEN_NAME        = 0x10;
+    uint256 constant TOKEN_DECIMAlS    = 0x100;
+    uint256 constant TOKEN_SUPPLY      = 0x1000;
 
-    uint constant PAIR_FACTORY      = 0x10000000000000000000000000000000000000000000000000000000000;
+    uint256 constant PAIR_FACTORY      = 0x10000000000000000000000000000000000000000000000000000000000;
 
     struct Token {
         address adr;
         string symbol;
         string name;
-        uint decimals;
-        uint totalSupply;
+        uint256 decimals;
+        uint256 totalSupply;
     }
 
     struct PairDetail {
@@ -24,11 +24,11 @@ contract PairDetailsV3 {
         Token token1;
     }
 
-    function query(address[] calldata pairs, uint flags) external view returns (
+    function query(address[] calldata pairs, uint256 flags) external view returns (
         PairDetail[] memory details
     ) {
         details = new PairDetail[](pairs.length);
-        for (uint i = 0; i < pairs.length; ++i) {
+        for (uint256 i = 0; i < pairs.length; ++i) {
             IUniswapV3Pair pair = IUniswapV3Pair(pairs[i]);
             if (flags & PAIR_FACTORY > 0) {
                 details[i].factory = pair.factory();
@@ -66,5 +66,5 @@ interface IERC20 {
     function name() external view returns (string memory);
     function symbol() external view returns (string memory);
     function decimals() external view returns (uint8);
-    function totalSupply() external view returns (uint);
+    function totalSupply() external view returns (uint256);
 }

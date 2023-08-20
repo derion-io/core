@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.8.0;
+pragma solidity >=0.8.0;
 
 import "../PoolBase.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -10,7 +10,7 @@ contract ReentrancyAttack {
     PoolBase p;
     address internal immutable POOL;
     address internal immutable WETH;
-    uint public count;
+    uint256 public count;
     Param PARAM;
     Payment PAYMENT;
 
@@ -24,7 +24,7 @@ contract ReentrancyAttack {
     }
 
     function attack(
-        uint amount,
+        uint256 amount,
         Param memory param,
         Payment memory payment
     ) public {

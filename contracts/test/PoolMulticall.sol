@@ -15,7 +15,7 @@ contract PoolMulticall {
     ROUTER = router;
     POOL = pool;
     IERC1155(deriToken).setApprovalForAll(POOL, true);
-    IERC20(weth).approve(POOL, type(uint).max);
+    IERC20(weth).approve(POOL, type(uint256).max);
   }
 
   function exec(
@@ -25,7 +25,7 @@ contract PoolMulticall {
   ) public {
     Univ3PoolMock(ROUTER).setPrice(spot, twap);
     Payment memory payment = Payment(msg.sender, address(0), msg.sender);
-    for (uint i = 0; i < params.length; ++i) {
+    for (uint256 i = 0; i < params.length; ++i) {
       IPool(POOL).swap(params[i], payment);
     }
   }
