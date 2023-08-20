@@ -27,7 +27,7 @@ contract Token is ShadowFactory {
         address descriptorSetter,
         address descriptor
     ) ShadowFactory("") {
-        require(utr != address(0), "Token: Address Zero");
+        require(utr != address(0), "Token: ZERO_ADDRESS");
         UTR = utr;
         s_descriptor = descriptor;
         s_descriptorSetter = descriptorSetter;

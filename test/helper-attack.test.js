@@ -456,27 +456,27 @@ describe("Helper Attacks", function () {
         }
 
         it("sideIn R | Try to break rA1 >= rA", async function() {
-            await helperAttackBuyIn(SIDE_B, 1, "MI:R")
+            await helperAttackBuyIn(SIDE_B, 1, "INVALID_STATE1_R")
         })
 
         it("sideIn R | Try to break rB1 >= rB", async function() {
-            await helperAttackBuyIn(SIDE_A, 1, "MI:R")
+            await helperAttackBuyIn(SIDE_A, 1, "INVALID_STATE1_R")
         })
 
         it("sideIn A | Try to break state.R >= state1.R", async function() {
-            await buyInSwapBack(SIDE_A, 1, 2, 0, "MI:NR")
+            await buyInSwapBack(SIDE_A, 1, 2, 0, "INVALID_STATE1_NR")
         })
 
         it("sideIn A | Try to break rB1 >= rB", async function() {
-            await buyInSwapBack(SIDE_A, 1, 2, 1, "MI:A")
+            await buyInSwapBack(SIDE_A, 1, 2, 1, "INVALID_STATE1_A")
         })
 
         it("sideIn B | Try to break rA1 >= rA", async function() {
-            await buyInSwapBack(SIDE_B, 1, 2, 1, "MI:NA")
+            await buyInSwapBack(SIDE_B, 1, 2, 1, "INVALID_STATE1_NA")
         })
 
         it("sideIn C | Try to break rB1 >= rB", async function() {
-            await buyInSwapBack(SIDE_C, 1, 2, 1, "MI:NB")
+            await buyInSwapBack(SIDE_C, 1, 2, 1, "INVALID_STATE1_NB")
         })
     })
 })

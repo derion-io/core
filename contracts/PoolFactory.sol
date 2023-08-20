@@ -19,7 +19,7 @@ contract PoolFactory is IPoolFactory {
     );
 
     constructor(address logic) {
-        require(logic != address(0), "PoolFactory: Address Zero");
+        require(logic != address(0), "PoolFactory: ZERO_ADDRESS");
         LOGIC = logic;
     }
 
@@ -28,7 +28,7 @@ contract PoolFactory is IPoolFactory {
     ) external returns (address pool) {
         bytes memory input = abi.encode(config);
         pool = MetaProxyFactory.metaProxyFromBytes(LOGIC, input);
-        require(pool != address(0), "PoolFactory: Failed on deploy");
+        require(pool != address(0), "PoolFactory: CREATE2_FAILED");
         emit Derivable(
             'PoolCreated',                          // topic1: event name
             config.ORACLE & ORACLE_MASK,            // topic2: price index

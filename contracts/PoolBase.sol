@@ -51,24 +51,24 @@ abstract contract PoolBase is IPool, ERC1155Holder, Storage, Constants {
     }
 
     constructor(address token) {
-        require(token != address(0), "PoolBase: Address Zero");
+        require(token != address(0), "PoolBase: ZERO_ADDRESS");
         TOKEN = token;
     }
 
     function init(State memory state, Payment memory payment) external {
-        require(s_i == 0, "AI");
+        require(s_i == 0, "PoolBase: ALREADY_INITIALIZED");
         uint256 R = state.R;
         uint256 a = state.a;
         uint256 b = state.b;
-        require(R > 0 && a > 0 && b > 0, "ZP");
-        require(a <= R >> 1 && b <= R >> 1, "IP");
+        require(R > 0 && a > 0 && b > 0, "PoolBase: ZERO_PARAM");
+        require(a <= R >> 1 && b <= R >> 1, "PoolBase: INVALID_PARAM");
 
         Config memory config = loadConfig();
 
         if (payment.payer != address(0)) {
             uint256 expected = R + IERC20(config.TOKEN_R).balanceOf(address(this));
             IUniversalTokenRouter(payment.utr).pay(payment.payer, address(this), 20, config.TOKEN_R, 0, R);
-            require(expected <= IERC20(config.TOKEN_R).balanceOf(address(this)), "BP");
+            require(expected <= IERC20(config.TOKEN_R).balanceOf(address(this)), "PoolBase: INSUFFICIENT_PAYMENT");
         } else {
             TransferHelper.safeTransferFrom(config.TOKEN_R, msg.sender, address(this), R);
         }
@@ -102,7 +102,7 @@ abstract contract PoolBase is IPool, ERC1155Holder, Storage, Constants {
             if (payment.payer != address(0)) {
                 uint256 expected = amountIn + IERC20(config.TOKEN_R).balanceOf(address(this));
                 IUniversalTokenRouter(payment.utr).pay(payment.payer, address(this), 20, config.TOKEN_R, 0, amountIn);
-                require(expected <= IERC20(config.TOKEN_R).balanceOf(address(this)), "BP");
+                require(expected <= IERC20(config.TOKEN_R).balanceOf(address(this)), "PoolBase: INSUFFICIENT_PAYMENT");
             } else {
                 TransferHelper.safeTransferFrom(config.TOKEN_R, msg.sender, address(this), amountIn);
                 payment.payer = msg.sender;
@@ -114,7 +114,7 @@ abstract contract PoolBase is IPool, ERC1155Holder, Storage, Constants {
                 inputMaturity = IToken(TOKEN).maturityOf(payment.payer, idIn);
                 uint256 expectedSupply = IERC1155Supply(TOKEN).totalSupply(idIn) - amountIn;
                 IUniversalTokenRouter(payment.utr).pay(payment.payer, address(this), 1155, TOKEN, idIn, amountIn);
-                require(IERC1155Supply(TOKEN).totalSupply(idIn) <= expectedSupply, 'II');
+                require(IERC1155Supply(TOKEN).totalSupply(idIn) <= expectedSupply, 'PoolBase: INSUFFICIENT_PAYMENT');
             } else {
                 inputMaturity = IToken(TOKEN).maturityOf(msg.sender, idIn);
                 IToken(TOKEN).burn(msg.sender, idIn, amountIn);

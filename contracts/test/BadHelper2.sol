@@ -265,7 +265,7 @@ contract BadHelper2 is Constants, IHelper {
             rB1 += amount;
         }
 
-        // test require OA
+        // test require STATE1_OVERFLOW_A
         state1.a = 2 ** 224 + 1;
         state1.b = _v(Q256M/__.xk, rB1, state1.R);
     }
