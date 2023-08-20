@@ -128,7 +128,7 @@ contract PoolLogic is PoolBase, Fetcher {
     ) internal override returns(Result memory result) {
         uint256 sideIn = param.sideIn;
         uint256 sideOut = param.sideOut;
-        require(sideIn != sideOut, 'SS');
+        require(sideIn != sideOut, 'PoolLogic: SAME_SIDE');
         State memory state = State(_reserve(config.TOKEN_R), s_a, s_b);
         // [PRICE SELECTION]
         uint256 xk; uint256 rA; uint256 rB;

@@ -272,14 +272,14 @@ describe("Revert", function () {
   })
 
   describe("PoolLogic", function () {
-    it("_swap: SS, STATE1_OVERFLOW_A, STATE1_OVERFLOW_B", async function () {
+    it("_swap: SAME_SIDE, STATE1_OVERFLOW_A, STATE1_OVERFLOW_B", async function () {
       const { derivablePools, badHelperOA, badHelperOB } = await loadFixture(fixture)
       const pool = derivablePools[0]
       await expect(pool.swap(
         SIDE_R,
         SIDE_R,
         numberToWei(5),
-      )).to.be.revertedWith("SS")
+      )).to.be.revertedWith("SAME_SIDE")
 
       await expect(pool.swap(
         SIDE_R,
