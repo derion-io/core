@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BSL-1.1
-pragma solidity ^0.8.0;
+pragma solidity >=0.8.0;
 
 import "abdk-libraries-solidity/ABDKMath64x64.sol";
 import "./PoolBase.sol";
@@ -8,18 +8,19 @@ import "./Fetcher.sol";
 
 contract PoolLogic is PoolBase, Fetcher {
     address immutable internal FEE_TO;
-    uint immutable internal FEE_RATE;
+    uint256 immutable internal FEE_RATE;
 
     constructor(
         address token,
         address feeTo,
-        uint feeRate
+        uint256 feeRate
     ) PoolBase(token) {
+        require(feeTo != address(0), "PoolLogic: ZERO_ADDRESS");
         FEE_TO = feeTo;
         FEE_RATE = feeRate;
     }
 
-    function _powu(uint x, uint y) internal pure returns (uint z) {
+    function _powu(uint256 x, uint256 y) internal pure returns (uint256 z) {
         // Calculate the first iteration of the loop in advance.
         z = y & 1 > 0 ? x : Q128;
         // Equivalent to "for(y /= 2; y > 0; y /= 2)" but faster.
@@ -30,10 +31,9 @@ contract PoolLogic is PoolBase, Fetcher {
                 z = FullMath.mulDiv(z, x, Q128);
             }
         }
-        // require(z <= type(uint).max, "Pool: upper overflow");
     }
 
-    function _fetch(address fetcher, uint ORACLE) internal view returns (uint twap, uint spot) {
+    function _fetch(address fetcher, uint256 ORACLE) internal view returns (uint256 twap, uint256 spot) {
         if (fetcher == address(0)) {
             return fetch(ORACLE);
         } else {
@@ -42,38 +42,38 @@ contract PoolLogic is PoolBase, Fetcher {
     }
 
     // r(v)
-    function _r(uint xk, uint v, uint R) internal pure returns (uint r) {
+    function _r(uint256 xk, uint256 v, uint256 R) internal pure returns (uint256 r) {
         r = FullMath.mulDiv(v, xk, Q128);
         if (r > R >> 1) {
-            uint denominator = FullMath.mulDiv(v, xk << 2, Q128);
-            uint minuend = FullMath.mulDiv(R, R, denominator);
+            uint256 denominator = FullMath.mulDiv(v, xk << 2, Q128);
+            uint256 minuend = FullMath.mulDiv(R, R, denominator);
             r = R - minuend;
         }
     }
 
-    function _supply(uint side) internal view returns (uint s) {
+    function _supply(uint256 side) internal view returns (uint256 s) {
         return IERC1155Supply(TOKEN).totalSupply(_packID(address(this), side));
     }
 
-    function _reserve(address TOKEN_R) internal view returns (uint R) {
+    function _reserve(address TOKEN_R) internal view returns (uint256 R) {
         return IERC20(TOKEN_R).balanceOf(address(this));
     }
 
-    function _evaluate(uint xk, State memory state) internal pure returns (uint rA, uint rB) {
+    function _evaluate(uint256 xk, State memory state) internal pure returns (uint256 rA, uint256 rB) {
         rA = _r(xk, state.a, state.R);
         rB = _r(Q256M/xk, state.b, state.R);
     }
 
-    function _maturityPayoff(Config memory config, uint maturity, uint amountOut) internal view override returns (uint) {
+    function _maturityPayoff(Config memory config, uint256 maturity, uint256 amountOut) internal view override returns (uint256) {
         unchecked {
             if (maturity <= block.timestamp) {
                 return amountOut;
             }
-            uint remain = maturity - block.timestamp;
+            uint256 remain = maturity - block.timestamp;
             if (config.MATURITY <= remain) {
                 return 0;
             }
-            uint elapsed = config.MATURITY - remain;
+            uint256 elapsed = config.MATURITY - remain;
             if (elapsed < config.MATURITY_VEST) {
                 amountOut = amountOut * elapsed / config.MATURITY_VEST;
             }
@@ -82,27 +82,27 @@ contract PoolLogic is PoolBase, Fetcher {
     }
 
     function _expRate (
-        uint elapsed,
-        uint halfLife
-    ) internal pure returns (uint rateX64) {
+        uint256 elapsed,
+        uint256 halfLife
+    ) internal pure returns (uint256 rateX64) {
         if (halfLife == 0) {
             return Q64;
         }
         int128 rate = ABDKMath64x64.exp_2(int128(int((elapsed << 64) / halfLife)));
-        return uint(int(rate));
+        return uint256(int(rate));
     }
 
-    function _xk(Config memory config, uint price) internal pure returns (uint xk) {
+    function _xk(Config memory config, uint256 price) internal pure returns (uint256 xk) {
         xk = _powu(FullMath.mulDiv(Q128, price, config.MARK), config.K);
     }
 
     function _selectPrice(
         Config memory config,
         State memory state,
-        uint sideIn,
-        uint sideOut
-    ) internal view returns (uint xk, uint rA, uint rB, uint price) {
-        (uint min, uint max) = _fetch(config.FETCHER, uint(config.ORACLE));
+        uint256 sideIn,
+        uint256 sideOut
+    ) internal view returns (uint256 xk, uint256 rA, uint256 rB, uint256 price) {
+        (uint256 min, uint256 max) = _fetch(config.FETCHER, uint256(config.ORACLE));
         if (min > max) {
             (min, max) = (max, min);
         }
@@ -126,22 +126,22 @@ contract PoolLogic is PoolBase, Fetcher {
         Config memory config,
         Param memory param
     ) internal override returns(Result memory result) {
-        uint sideIn = param.sideIn;
-        uint sideOut = param.sideOut;
+        uint256 sideIn = param.sideIn;
+        uint256 sideOut = param.sideOut;
         require(sideIn != sideOut, 'SS');
         State memory state = State(_reserve(config.TOKEN_R), s_a, s_b);
         // [PRICE SELECTION]
-        uint xk; uint rA; uint rB;
+        uint256 xk; uint256 rA; uint256 rB;
         (xk, rA, rB, result.price) = _selectPrice(config, state, sideIn, sideOut);
         unchecked {
             // [FEE & INTEREST]
             uint32 elapsed = uint32(block.timestamp) - s_i;
             if (elapsed > 0) {
-                uint interest;
-                uint rate = _expRate(elapsed, config.INTEREST_HL);
+                uint256 interest;
+                uint256 rate = _expRate(elapsed, config.INTEREST_HL);
                 if (rate > Q64) {
-                    uint rAF = FullMath.mulDivRoundingUp(rA, Q64, rate);
-                    uint rBF = FullMath.mulDivRoundingUp(rB, Q64, rate);
+                    uint256 rAF = FullMath.mulDivRoundingUp(rA, Q64, rate);
+                    uint256 rBF = FullMath.mulDivRoundingUp(rB, Q64, rate);
                     interest = rA + rB - rAF - rBF;
                     if (FEE_RATE > 0) {
                         interest /= FEE_RATE;
@@ -159,9 +159,9 @@ contract PoolLogic is PoolBase, Fetcher {
             // [PREMIUM]
             elapsed = uint32(block.timestamp & F_MASK) - (s_f & F_MASK);
             if (elapsed > 0) {
-                uint rate = _expRate(elapsed, config.PREMIUM_HL);
+                uint256 rate = _expRate(elapsed, config.PREMIUM_HL);
                 if (rate > Q64) {
-                    uint premium = rA > rB ? rA - rB : rB - rA;
+                    uint256 premium = rA > rB ? rA - rB : rB - rA;
                     premium -= FullMath.mulDivRoundingUp(premium, Q64, rate);
                     if (premium > 0) {
                         if (rA > rB) {
@@ -181,49 +181,49 @@ contract PoolLogic is PoolBase, Fetcher {
             Slippable(xk, state.R, rA, rB),
             param.payload
         );
-        require(state1.a <= type(uint224).max, "OA");
-        require(state1.b <= type(uint224).max, "OB");
+        require(state1.a <= type(uint224).max, "PoolLogic: STATE1_OVERFLOW_A");
+        require(state1.b <= type(uint224).max, "PoolLogic: STATE1_OVERFLOW_B");
         // [TRANSITION]
-        (uint rA1, uint rB1) = _evaluate(xk, state1);
+        (uint256 rA1, uint256 rB1) = _evaluate(xk, state1);
         if (sideIn == SIDE_R) {
-            require(rA1 >= rA && rB1 >= rB, "MI:R");
+            require(rA1 >= rA && rB1 >= rB, "PoolLogic: INVALID_STATE1_R");
             result.amountIn = state1.R - state.R;
         } else {
-            require(state.R >= state1.R, "MI:NR");
-            uint s = _supply(sideIn);
+            require(state.R >= state1.R, "PoolLogic: INVALID_STATE1_NR");
+            uint256 s = _supply(sideIn);
             if (sideIn == SIDE_A) {
-                require(rB1 >= rB, "MI:A");
+                require(rB1 >= rB, "PoolLogic: INVALID_STATE1_A");
                 result.amountIn = FullMath.mulDivRoundingUp(s, rA - rA1, rA);
             } else {
-                require(rA1 >= rA, "MI:NA");
+                require(rA1 >= rA, "PoolLogic: INVALID_STATE1_NA");
                 if (sideIn == SIDE_B) {
                     result.amountIn = FullMath.mulDivRoundingUp(s, rB - rB1, rB);
                 } else if (sideIn == SIDE_C) {
-                    require(rB1 >= rB, "MI:NB");
-                    uint rC = state.R - rA - rB;
-                    uint rC1 = state1.R - rA1 - rB1;
+                    require(rB1 >= rB, "PoolLogic: INVALID_STATE1_NB");
+                    uint256 rC = state.R - rA - rB;
+                    uint256 rC1 = state1.R - rA1 - rB1;
                     result.amountIn = FullMath.mulDivRoundingUp(s, rC - rC1, rC);
                 }
             }
             unchecked {
                 // rX >= rX - rX1, so s >= amountIn
-                require(MINIMUM_SUPPLY <= s - result.amountIn, 'MS');
+                require(MINIMUM_SUPPLY <= s - result.amountIn, 'PoolLogic: MINIMUM_SUPPLY');
             }
         }
         if (sideOut == SIDE_R) {
             result.amountOut = state.R - state1.R;
         } else {
             if (sideOut == SIDE_C) {
-                uint rC = state.R - rA - rB;
-                uint rC1 = state1.R - rA1 - rB1;
-                require(rC1 >= MINIMUM_RESERVE, 'MR:C');
+                uint256 rC = state.R - rA - rB;
+                uint256 rC1 = state1.R - rA1 - rB1;
+                require(rC1 >= MINIMUM_RESERVE, 'PoolLogic: MINIMUM_RESERVE_C');
                 result.amountOut = FullMath.mulDiv(_supply(sideOut), rC1 - rC, rC);
             } else {
                 if (sideOut == SIDE_A) {
-                    require(rA1 >= MINIMUM_RESERVE, 'MR:A');
+                    require(rA1 >= MINIMUM_RESERVE, 'PoolLogic: MINIMUM_RESERVE_A');
                     result.amountOut = FullMath.mulDiv(_supply(sideOut), rA1 - rA, rA);
                 } else if (sideOut == SIDE_B) {
-                    require(rB1 >= MINIMUM_RESERVE, 'MR:B');
+                    require(rB1 >= MINIMUM_RESERVE, 'PoolLogic: MINIMUM_RESERVE_B');
                     result.amountOut = FullMath.mulDiv(_supply(sideOut), rB1 - rB, rB);
                 }
                 if (config.OPEN_RATE != Q128) {

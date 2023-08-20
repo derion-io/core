@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BSL-1.1
-pragma solidity ^0.8.0;
+pragma solidity >=0.8.0;
 
 import "../PoolLogic.sol";
 
@@ -7,7 +7,7 @@ contract PoolLogicMock is PoolLogic {
   constructor(
     address token,
     address feeTo,
-    uint feeRate
+    uint256 feeRate
   ) PoolLogic(token, feeTo, feeRate) {}
 
   function loadState(
@@ -15,18 +15,18 @@ contract PoolLogicMock is PoolLogic {
     uint224 b,
     uint32 f,
     uint32 i,
-    uint sA,
-    uint sB,
-    uint sC
+    uint256 sA,
+    uint256 sB,
+    uint256 sC
   ) external {
     Config memory config = loadConfig();
     s_a = a;
     s_b = b;
     s_f = f;
     s_i = i;
-    uint curSA = _supply(SIDE_A);
-    uint curSB = _supply(SIDE_B);
-    uint curSC = _supply(SIDE_C);
+    uint256 curSA = _supply(SIDE_A);
+    uint256 curSB = _supply(SIDE_B);
+    uint256 curSC = _supply(SIDE_C);
     if (sA < curSA) {
       IToken(TOKEN).burn(msg.sender, _packID(address(this), SIDE_A), curSA - sA);
     } else {

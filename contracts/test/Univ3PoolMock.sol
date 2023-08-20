@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-pragma solidity ^0.8.0;
+pragma solidity >=0.8.0;
 
 import '@uniswap/v3-core/contracts/libraries/TickMath.sol';
 
@@ -57,7 +57,7 @@ contract Univ3PoolMock {
         tickCumulatives = new int56[](2);
         secondsPerLiquidityCumulativeX128s = new uint160[](2);
         tickCumulatives[0] = 0;
-        tickCumulatives[1] = int56(TickMath.getTickAtSqrtRatio(twap)) * int56(int(uint(secondsAgos[0])));
+        tickCumulatives[1] = int56(TickMath.getTickAtSqrtRatio(twap)) * int56(int(uint256(secondsAgos[0])));
         secondsPerLiquidityCumulativeX128s[0] = 0;
         secondsPerLiquidityCumulativeX128s[1] = 10000000;
     }

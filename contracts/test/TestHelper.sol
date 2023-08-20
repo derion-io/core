@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BSL-1.1
-pragma solidity ^0.8.0;
+pragma solidity >=0.8.0;
 
 import "../interfaces/IPool.sol";
 import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
@@ -35,16 +35,16 @@ contract TestHelper {
         return this.onERC1155BatchReceived.selector;
     }
 
-    function _packID(address pool, uint side) internal pure returns (uint id) {
+    function _packID(address pool, uint256 side) internal pure returns (uint256 id) {
         id = (side << 160) + uint160(pool);
     }
 
     function swapInAll(
-        uint sideIn,
-        uint sideOut,
+        uint256 sideIn,
+        uint256 sideOut,
         address payer,
         address recipient
-    ) external returns (uint, uint, uint) {
+    ) external returns (uint256, uint256, uint256) {
         IERC1155(TOKEN).setApprovalForAll(POOL, true);
         bytes memory payload = abi.encode(
             sideIn,

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BSL-1.1
-pragma solidity ^0.8.0;
+pragma solidity >=0.8.0;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
@@ -17,9 +17,9 @@ import "../interfaces/IWeth.sol";
 
 
 contract Helper is Constants, IHelper, ERC1155Holder {
-    uint internal constant Q254 = 1 << 254;
-    uint internal constant Q254M = Q254 - 1;
-    uint internal constant SIDE_NATIVE = 0x01;
+    uint256 internal constant Q254 = 1 << 254;
+    uint256 internal constant Q254M = Q254 - 1;
+    uint256 internal constant SIDE_NATIVE = 0x01;
     address internal immutable TOKEN;
     address internal immutable WETH;
 
@@ -32,19 +32,19 @@ contract Helper is Constants, IHelper, ERC1155Holder {
     // INDEX_R == Q254 | uint253(p): priceR = p
     // otherwise: priceR = _fetch(INDEX_R)
     struct SwapParams {
-        uint sideIn;
+        uint256 sideIn;
         address poolIn;
-        uint sideOut;
+        uint256 sideOut;
         address poolOut;
-        uint amountIn;
+        uint256 amountIn;
         address payer;
         address recipient;
-        uint INDEX_R;
+        uint256 INDEX_R;
     }
 
     struct ChangableSwapParams {
-        uint sideIn;
-        uint sideOut;
+        uint256 sideIn;
+        uint256 sideOut;
         address payer;
         address recipient;
     }
@@ -54,43 +54,43 @@ contract Helper is Constants, IHelper, ERC1155Holder {
         address indexed poolIn,
         address indexed poolOut,
         address recipient,
-        uint sideIn,
-        uint sideOut,
-        uint amountIn,
-        uint amountOut,
-        uint price,
-        uint priceR
+        uint256 sideIn,
+        uint256 sideOut,
+        uint256 amountIn,
+        uint256 amountOut,
+        uint256 price,
+        uint256 priceR
     );
 
     // accepting ETH for WETH.withdraw
     receive() external payable {}
 
-    function _packID(address pool, uint side) internal pure returns (uint id) {
+    function _packID(address pool, uint256 side) internal pure returns (uint256 id) {
         id = (side << 160) | uint160(pool);
     }
 
     // v(r)
-    function _v(uint xk, uint r, uint R) internal pure returns (uint v) {
+    function _v(uint256 xk, uint256 r, uint256 R) internal pure returns (uint256 v) {
         if (r <= R >> 1) {
             return FullMath.mulDivRoundingUp(r, Q128, xk);
         }
-        uint denominator = FullMath.mulDivRoundingUp(R - r, xk << 2, Q128);
+        uint256 denominator = FullMath.mulDivRoundingUp(R - r, xk << 2, Q128);
         return FullMath.mulDivRoundingUp(R, R, denominator);
     }
 
-    function _supply(uint side) internal view returns (uint s) {
+    function _supply(uint256 side) internal view returns (uint256 s) {
         return IERC1155Supply(TOKEN).totalSupply(_packID(msg.sender, side));
     }
 
     function createPool(Config memory config, State memory state, address factory) external payable returns (address pool) {
         pool = IPoolFactory(factory).createPool(config);
         IWeth(WETH).deposit{value : msg.value}();
-        uint amount = IWeth(WETH).balanceOf(address(this));
+        uint256 amount = IWeth(WETH).balanceOf(address(this));
         IERC20(WETH).approve(pool, amount);
         IPool(pool).init(state, Payment(address(0), address(0), msg.sender));
     }
 
-    function _getPrice(uint INDEX) internal view returns (uint spot) {
+    function _getPrice(uint256 INDEX) internal view returns (uint256 spot) {
         if (INDEX == 0) {
             return 0;
         }
@@ -100,7 +100,7 @@ contract Helper is Constants, IHelper, ERC1155Holder {
         return _fetch(INDEX);
     }
 
-    function _fetch(uint INDEX) internal view returns (uint spot) {
+    function _fetch(uint256 INDEX) internal view returns (uint256 spot) {
         address pool = address(uint160(INDEX));
         (uint160 sqrtSpotX96,,,,,,) = IUniswapV3Pool(pool).slot0();
 
@@ -111,7 +111,7 @@ contract Helper is Constants, IHelper, ERC1155Holder {
         }
     }
 
-    function _swapMultiPool(SwapParams memory params, address TOKEN_R) internal returns (uint amountOut) {
+    function _swapMultiPool(SwapParams memory params, address TOKEN_R) internal returns (uint256 amountOut) {
         // swap poolIn/sideIn to poolIn/R
         bytes memory payload = abi.encode(
             params.sideIn,
@@ -136,7 +136,7 @@ contract Helper is Constants, IHelper, ERC1155Holder {
         // TOKEN_R approve poolOut
         IERC20(TOKEN_R).approve(params.poolOut, amountOut);
 
-        uint price;
+        uint256 price;
 
         // swap (poolIn|PoolOut)/R to poolOut/SideOut
         payload = abi.encode(
@@ -159,12 +159,12 @@ contract Helper is Constants, IHelper, ERC1155Holder {
         );
 
         // check leftOver
-        uint leftOver = IERC20(TOKEN_R).balanceOf(address(this));
+        uint256 leftOver = IERC20(TOKEN_R).balanceOf(address(this));
         if (leftOver > 0) {
             TransferHelper.safeTransfer(TOKEN_R, params.payer, leftOver);
         }
 
-        uint priceR = _getPrice(params.INDEX_R);
+        uint256 priceR = _getPrice(params.INDEX_R);
 
         emit Swap(
             params.payer,
@@ -180,7 +180,7 @@ contract Helper is Constants, IHelper, ERC1155Holder {
         );
     }
 
-    function swap(SwapParams memory params) public payable returns (uint amountOut){
+    function swap(SwapParams memory params) public payable returns (uint256 amountOut){
         ChangableSwapParams memory __ = ChangableSwapParams(
             params.sideIn,
             params.sideOut,
@@ -200,7 +200,7 @@ contract Helper is Constants, IHelper, ERC1155Holder {
             require(TOKEN_R == WETH, 'Reserve token is not Wrapped');
             require(msg.value != 0, 'Value need > 0');
             IWeth(WETH).deposit{value : msg.value}();
-            uint amount = IWeth(WETH).balanceOf(address(this));
+            uint256 amount = IWeth(WETH).balanceOf(address(this));
             IERC20(WETH).approve(params.poolIn, amount);
             params.payer = address(0);
             params.sideIn = SIDE_R;
@@ -212,7 +212,7 @@ contract Helper is Constants, IHelper, ERC1155Holder {
             params.recipient = address(this);
         }
 
-        uint price;
+        uint256 price;
         bytes memory payload = abi.encode(
             params.sideIn,
             params.sideOut,
@@ -241,7 +241,7 @@ contract Helper is Constants, IHelper, ERC1155Holder {
             TransferHelper.safeTransferETH(__.recipient, amountOut);
         }
 
-        uint priceR = _getPrice(params.INDEX_R);
+        uint256 priceR = _getPrice(params.INDEX_R);
 
         emit Swap(
             __.payer,
@@ -258,9 +258,9 @@ contract Helper is Constants, IHelper, ERC1155Holder {
     }
 
     function sweep(
-        uint id,
+        uint256 id,
         address recipient
-    ) external returns (uint amountOut) {
+    ) external returns (uint256 amountOut) {
         amountOut = IERC1155Supply(TOKEN).balanceOf(address(this), id);
         if (amountOut > 0) {
             IERC1155Supply(TOKEN).safeTransferFrom(address(this), recipient, id, amountOut, '');
@@ -272,18 +272,18 @@ contract Helper is Constants, IHelper, ERC1155Holder {
         bytes calldata payload
     ) external view override returns (State memory state1) {
         (
-            uint sideIn,
-            uint sideOut,
-            uint amount
-        ) = abi.decode(payload, (uint, uint, uint));
+            uint256 sideIn,
+            uint256 sideOut,
+            uint256 amount
+        ) = abi.decode(payload, (uint256, uint256, uint256));
 
         state1.R = __.R;
-        (uint rA1, uint rB1) = (__.rA, __.rB);
+        (uint256 rA1, uint256 rB1) = (__.rA, __.rB);
 
         if (sideIn == SIDE_R) {
             state1.R += amount;
         } else {
-            uint s = _supply(sideIn);
+            uint256 s = _supply(sideIn);
             if (sideIn == SIDE_A) {
                 amount = FullMath.mulDiv(amount, __.rA, s);
                 rA1 -= amount;
@@ -291,7 +291,7 @@ contract Helper is Constants, IHelper, ERC1155Holder {
                 amount = FullMath.mulDiv(amount, __.rB, s);
                 rB1 -= amount;
             } else /*if (sideIn == SIDE_C)*/ {
-                uint rC = __.R - __.rA - __.rB;
+                uint256 rC = __.R - __.rA - __.rB;
                 // rounding: A+1, B+1, C-2
                 amount = FullMath.mulDiv(amount, rC-2, s+1);
             }

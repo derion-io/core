@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BSL-1.1
-pragma solidity ^0.8.0;
+pragma solidity >=0.8.0;
 
 import '@uniswap/v3-core/contracts/libraries/FullMath.sol';
 
@@ -14,9 +14,9 @@ contract TokenPriceView {
         address[] calldata otherTokens,
         address weth,
         address usd
-    ) external view returns (uint[] memory sqrtPriceX96) {
-        sqrtPriceX96 = new uint[](tokens.length);
-        for (uint i = 0; i < tokens.length; i++) {
+    ) external view returns (uint256[] memory sqrtPriceX96) {
+        sqrtPriceX96 = new uint256[](tokens.length);
+        for (uint256 i = 0; i < tokens.length; i++) {
             sqrtPriceX96[i] = fetchMarket(tokens[i], factory, otherTokens, weth, usd);
         }
     }
@@ -27,15 +27,15 @@ contract TokenPriceView {
         address[] calldata otherTokens,
         address weth,
         address usd
-    ) public view returns (uint sqrtPriceX96) {
+    ) public view returns (uint256 sqrtPriceX96) {
         uint16[3] memory FEE = [500, 3000, 10000];
-        uint curReserve = 0;
+        uint256 curReserve = 0;
         address bestOtherToken;
-        for (uint i = 0; i < FEE.length; i++) {
-            for (uint j = 0; j < otherTokens.length; j++) {
+        for (uint256 i = 0; i < FEE.length; i++) {
+            for (uint256 j = 0; j < otherTokens.length; j++) {
                 address pool = IUniswapV3Factory(factory).getPool(token, otherTokens[j], uint24(FEE[i]));
                 if (pool != address(0)) {
-                    uint tokenReserve = IERC20(token).balanceOf(pool);
+                    uint256 tokenReserve = IERC20(token).balanceOf(pool);
                     if (curReserve < tokenReserve) {
 
                         curReserve = tokenReserve;
@@ -49,16 +49,16 @@ contract TokenPriceView {
         
         if (bestOtherToken == weth) {
             address pool = IUniswapV3Factory(factory).getPool(weth, usd, 500);
-            uint wethSqrtPriceX96 = _getTokenPrice(pool, weth, usd);
+            uint256 wethSqrtPriceX96 = _getTokenPrice(pool, weth, usd);
             sqrtPriceX96 = FullMath.mulDiv(sqrtPriceX96, wethSqrtPriceX96, 1 << 96);
         }
     }
 
-    function _getTokenPrice(address pool, address token, address otherToken) internal view returns (uint sqrtPriceX96) {
+    function _getTokenPrice(address pool, address token, address otherToken) internal view returns (uint256 sqrtPriceX96) {
         
         (uint160 price,,,,,,) = IUniswapV3Pool(pool).slot0();
 
-        sqrtPriceX96 = uint(price);
+        sqrtPriceX96 = uint256(price);
         if (token > otherToken) {
             sqrtPriceX96 = (1 << 192) / sqrtPriceX96;
 

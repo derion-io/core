@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BSL-1.1
-pragma solidity ^0.8.0;
+pragma solidity >=0.8.0;
 
 import "../interfaces/IPool.sol";
 import "../interfaces/IToken.sol";
@@ -32,7 +32,7 @@ contract FakePool is IPool{
     function swap(
         Param memory,
         Payment memory
-    ) external pure returns(uint amountIn, uint amountOut, uint price) {
+    ) external pure returns(uint256 amountIn, uint256 amountOut, uint256 price) {
         return (0, 0, 0);
     }
 }

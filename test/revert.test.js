@@ -81,7 +81,7 @@ describe("Revert", function () {
   }
 
   describe("PoolBase", function () {
-    it("init: ZP, IP, BP, AI", async function () {
+    it("init: ZERO_PARAM, INVALID_PARAM, INSUFFICIENT_PAYMENT, ALREADY_INITIALIZED", async function () {
       const { owner, weth, utr, params, poolFactory, derivable1155, fakeUTR } = await loadFixture(fixture)
       const config = {
         FETCHER: params[1].fetcher,
@@ -111,7 +111,7 @@ describe("Revert", function () {
         recipient: owner.address,
       }
       const pool = await ethers.getContractAt("PoolBase", poolAddress)
-      // Revert ZP
+      // Revert ZERO_PARAM
       await expect(pool.callStatic.init(
         {
           R: numberToWei(5),
@@ -119,8 +119,8 @@ describe("Revert", function () {
           b: numberToWei(1),
         },
         payment
-      )).to.be.revertedWith("ZP")
-      // Revert IP
+      )).to.be.revertedWith("ZERO_PARAM")
+      // Revert INVALID_PARAM
       await expect(pool.callStatic.init(
         {
           R: numberToWei(5),
@@ -128,8 +128,8 @@ describe("Revert", function () {
           b: numberToWei(1),
         },
         payment
-      )).to.be.revertedWith("IP")
-      // Revert BP
+      )).to.be.revertedWith("INVALID_PARAM")
+      // Revert INSUFFICIENT_PAYMENT
       await weth.approve(fakeUTR.address, MaxUint256)
       await expect(fakeUTR.exec([],
         [{
@@ -151,7 +151,7 @@ describe("Revert", function () {
               recipient: owner.address,
             }
           )).data,
-        }])).to.be.revertedWith("BP")
+        }])).to.be.revertedWith("INSUFFICIENT_PAYMENT")
       // Normal case
       await weth.approve(utr.address, MaxUint256)
       await utr.exec([],
@@ -172,11 +172,11 @@ describe("Revert", function () {
           )).data,
         }])
       expect(await derivable1155.balanceOf(owner.address, convertId(SIDE_A, poolAddress))).gt(0)
-      // Revert AI
+      // Revert ALREADY_INITIALIZED
       await expect(pool.init(
         initParams,
         payment
-      )).to.be.revertedWith("AI")
+      )).to.be.revertedWith("ALREADY_INITIALIZED")
     })
 
     it("swap: SI", async function () {
@@ -221,7 +221,7 @@ describe("Revert", function () {
       )).to.be.revertedWith("SI")
     })
 
-    it("Swap: II", async function () {
+    it("Swap: INSUFFICIENT_PAYMENT", async function () {
       const { stateCalHelper, derivablePools, derivable1155, fakeUTR, owner } = await loadFixture(fixture)
       await derivable1155.setApprovalForAll(fakeUTR.address, true);
       const pool = derivablePools[0]
@@ -247,7 +247,7 @@ describe("Revert", function () {
             utr: fakeUTR.address
           }
         )).data,
-      }])).to.be.revertedWith("II")
+      }])).to.be.revertedWith("INSUFFICIENT_PAYMENT")
     })
   })
 
@@ -267,12 +267,12 @@ describe("Revert", function () {
         MATURITY_RATE: params[1].maturityRate,
         OPEN_RATE: params[1].openRate,
       }
-      await expect(poolFactory.createPool(config)).to.be.revertedWith("PoolFactory: Failed on deploy")
+      await expect(poolFactory.createPool(config)).to.be.revertedWith("PoolFactory: CREATE2_FAILED")
     })
   })
 
   describe("PoolLogic", function () {
-    it("_swap: SS, OA, OB", async function () {
+    it("_swap: SS, STATE1_OVERFLOW_A, STATE1_OVERFLOW_B", async function () {
       const { derivablePools, badHelperOA, badHelperOB } = await loadFixture(fixture)
       const pool = derivablePools[0]
       await expect(pool.swap(
@@ -288,7 +288,7 @@ describe("Revert", function () {
         {
           helper: badHelperOA.address
         }
-      )).to.be.revertedWith("OA")
+      )).to.be.revertedWith("STATE1_OVERFLOW_A")
 
       await expect(pool.swap(
         SIDE_R,
@@ -297,7 +297,7 @@ describe("Revert", function () {
         {
           helper: badHelperOB.address
         }
-      )).to.be.revertedWith("OB")
+      )).to.be.revertedWith("STATE1_OVERFLOW_B")
     })
   })
 
