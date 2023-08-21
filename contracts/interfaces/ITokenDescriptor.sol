@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BSL-1.1
-pragma solidity >=0.8.0;
+pragma solidity 0.8.20;
 
 interface ITokenDescriptor {
   function constructMetadata(uint256 id) external view returns (string memory);

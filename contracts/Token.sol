@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BSL-1.1
-pragma solidity >=0.8.0;
+pragma solidity 0.8.20;
 
 import "@derivable/shadow-token/contracts/ShadowFactory.sol";
 import "./interfaces/IPool.sol";
