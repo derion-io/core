@@ -303,6 +303,34 @@ describe("Protocol", function () {
             expect(before.sub(after)).equal(numberToWei(1))
         })
 
+        it('constructor require', async function () {
+            const {owner, derivable1155} = await loadFixture(fixture)
+            // PoolLogic
+            const PoolLogic = await ethers.getContractFactory('PoolLogic')
+            await expect(PoolLogic.deploy(
+                derivable1155.address,
+                AddressZero,
+                5
+            )).revertedWith('PoolLogic: ZERO_ADDRESS')
+            await expect(PoolLogic.deploy(
+                AddressZero,
+                owner.address,
+                5
+            )).revertedWith('PoolBase: ZERO_ADDRESS')
+            // Token
+            const Token = await ethers.getContractFactory("Token")
+            await expect(Token.deploy(
+                AddressZero,
+                owner.address,
+                AddressZero
+            )).revertedWith('Token: ZERO_ADDRESS')
+            // PoolFactory
+            const PoolFactory = await ethers.getContractFactory('PoolFactory')
+            await expect(PoolFactory.deploy(
+                AddressZero
+            )).revertedWith('PoolFactory: ZERO_ADDRESS')
+        })
+
         async function testRIn(sideIn, amountIn, sideOut, isUseUTR) {
             const { owner, weth, derivablePools, utr } = await loadFixture(fixture)
             

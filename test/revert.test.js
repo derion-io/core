@@ -222,11 +222,30 @@ describe("Revert", function () {
     })
 
     it("Swap: INSUFFICIENT_PAYMENT", async function () {
-      const { stateCalHelper, derivablePools, derivable1155, fakeUTR, owner } = await loadFixture(fixture)
+      const { weth, derivablePools, derivable1155, fakeUTR, owner } = await loadFixture(fixture)
       await derivable1155.setApprovalForAll(fakeUTR.address, true);
       const pool = derivablePools[0]
-
-      // console.log('owner', owner.address)
+      await weth.approve(fakeUTR.address, MaxUint256)
+      await expect(fakeUTR.exec([], [{
+        inputs: [{
+            mode: PAYMENT,
+            eip: 20,
+            token: weth.address,
+            id: 0,
+            amountIn: 1000,
+            recipient: pool.contract.address,
+        }],
+        code: pool.contract.address,
+        data: (await pool.swap(
+          SIDE_R,
+          SIDE_C,
+          1000, {
+            populateTransaction: true,
+            payer: owner.address,
+            utr: fakeUTR.address
+          }
+        )).data,
+      }])).to.be.revertedWith("INSUFFICIENT_PAYMENT")
 
       await expect(fakeUTR.exec([], [{
         inputs: [{
@@ -306,6 +325,9 @@ describe("Revert", function () {
       const { derivable1155, owner } = await loadFixture(fixture)
       await expect(
         derivable1155.mintLock(owner.address, 1, 1, 0, "0x00")
+      ).to.be.revertedWith("UNAUTHORIZED_MINT_BURN")
+      await expect(
+        derivable1155.burn(owner.address, 1, 1)
       ).to.be.revertedWith("UNAUTHORIZED_MINT_BURN")
     })
   })
