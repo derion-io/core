@@ -331,6 +331,108 @@ describe("Protocol", function () {
             )).revertedWith('PoolFactory: ZERO_ADDRESS')
         })
 
+        it("swap without interest", async function () {
+            const { owner, weth, utr, params, poolFactory, derivable1155, stateCalHelper } = await loadFixture(fixture)
+            const SECONDS_PER_DAY = 60 * 60 * 24
+            const dailyFundingRate = (0.0000000002 * 6) / 100
+            const halfLife = Math.round(
+                SECONDS_PER_DAY /
+                Math.log2(1 / (1 - dailyFundingRate)))
+            const config = {
+                FETCHER: AddressZero,
+                ORACLE: params[0].oracle,
+                TOKEN_R: params[0].reserveToken,
+                MARK: params[0].mark,
+                K: bn(6),
+                INTEREST_HL: halfLife,
+                PREMIUM_HL: params[0].premiumHL,
+                MATURITY: params[0].maturity,
+                MATURITY_VEST: params[0].maturityVest,
+                MATURITY_RATE: params[0].maturityRate,
+                OPEN_RATE: params[0].openRate,
+            }
+            const tx = await poolFactory.createPool(config)
+            const receipt = await tx.wait()
+            const poolAddress = ethers.utils.getAddress('0x' + receipt.logs[0].data.slice(-40))
+            const initParams = {
+                R: numberToWei(0.005),
+                a: numberToWei(0.001),
+                b: numberToWei(0.001),
+            }
+            const payment = {
+                utr: utr.address,
+                payer: owner.address,
+                recipient: owner.address,
+            }
+            const poolBase = await ethers.getContractAt("PoolBase", poolAddress)
+            await weth.approve(utr.address, MaxUint256);
+            await utr.exec([],
+            [{
+                inputs: [{
+                    mode: PAYMENT,
+                    eip: 20,
+                    token: weth.address,
+                    id: 0,
+                    amountIn: numberToWei(0.005),
+                    recipient: poolAddress,
+                }],
+                flags: 0,
+                code: poolAddress,
+                data: (await poolBase.populateTransaction.init(
+                    initParams,
+                    payment
+                )).data,
+            }])
+            const curTime = await time.latest()
+
+            // deploy TestHelper
+            const TestHelper = await ethers.getContractFactory("contracts/test/TestHelper.sol:TestHelper")
+            const testHelper = await TestHelper.deploy(
+                poolAddress,
+                derivable1155.address,
+                stateCalHelper.address
+            )
+            await testHelper.deployed()
+
+            // instant swap back
+            await weth.approve(utr.address, MaxUint256)
+            await time.setNextBlockTimestamp(curTime + 10)
+            await utr.exec([],
+                [
+                    {
+                        inputs: [{
+                            mode: PAYMENT,
+                            eip: 20,
+                            token: weth.address,
+                            id: 0,
+                            amountIn: pe(0.0001),
+                            recipient: poolAddress,
+                        }],
+                        code: stateCalHelper.address,
+                        data: (await stateCalHelper.populateTransaction.swap({
+                            sideIn: SIDE_R,
+                            poolIn: poolAddress,
+                            sideOut: SIDE_A,
+                            poolOut: poolAddress,
+                            amountIn: pe(0.0001),
+                            payer: owner.address,
+                            recipient: poolAddress,
+                            INDEX_R: 0
+                        })).data,
+                    },
+                    {
+                        inputs: [],
+                        code: testHelper.address,
+                        data: (await testHelper.populateTransaction.swapInAll(
+                            SIDE_A,
+                            SIDE_R,
+                            AddressZero,
+                            owner.address
+                        )).data,
+                    }
+                ], opts)
+        })
+
         async function testRIn(sideIn, amountIn, sideOut, isUseUTR) {
             const { owner, weth, derivablePools, utr } = await loadFixture(fixture)
             
