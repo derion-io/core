@@ -12,6 +12,8 @@ const { AddressZero, MaxUint256 } = ethers.constants
 const expect = chai.expect
 const { numberToWei, packId, bn } = require("./shared/utilities")
 
+const pe = (x) => ethers.utils.parseEther(String(x))
+
 const HALF_LIFE = 10 * 365 * 24 * 60 * 60
 const PAYMENT = 0
 
@@ -291,7 +293,7 @@ describe("Revert", function () {
   })
 
   describe("PoolLogic", function () {
-    it("_swap: SAME_SIDE, STATE1_OVERFLOW_A, STATE1_OVERFLOW_B", async function () {
+    it("_swap: SAME_SIDE, STATE1_OVERFLOW_A, STATE1_OVERFLOW_B, INVALID_SIDE_IN, INVALID_SIDE_OUT", async function () {
       const { derivablePools, badHelperOA, badHelperOB } = await loadFixture(fixture)
       const pool = derivablePools[0]
       await expect(pool.swap(
@@ -317,6 +319,159 @@ describe("Revert", function () {
           helper: badHelperOB.address
         }
       )).to.be.revertedWith("STATE1_OVERFLOW_B")
+
+      await expect(pool.swap(
+        SIDE_R,
+        0x40,
+        numberToWei(5),
+      )).to.be.revertedWith("INVALID_SIDE_OUT")
+      await expect(pool.swap(
+        0x01,
+        SIDE_R,
+        numberToWei(5),
+      )).to.be.revertedWith("INVALID_SIDE_IN")
+    })
+
+    it("_swap: MINIMUM_SUPPLY, MINIMUM_RESERVE_C, MINIMUM_RESERVE_A, MINIMUM_RESERVE_B", async function () {
+      const { owner, weth, utr, params, poolFactory, derivable1155, stateCalHelper } = await loadFixture(fixture)
+      const SECONDS_PER_DAY = 60 * 60 * 24
+      const dailyFundingRate = (0.0000000002 * 6) / 100
+      const halfLife = Math.round(
+        SECONDS_PER_DAY /
+        Math.log2(1 / (1 - dailyFundingRate)))
+      const config = {
+        FETCHER: AddressZero,
+        ORACLE: params[0].oracle,
+        TOKEN_R: params[0].reserveToken,
+        MARK: params[0].mark,
+        K: bn(6),
+        INTEREST_HL: halfLife,
+        PREMIUM_HL: params[0].premiumHL,
+        MATURITY: params[0].maturity,
+        MATURITY_VEST: params[0].maturityVest,
+        MATURITY_RATE: params[0].maturityRate,
+        OPEN_RATE: params[0].openRate,
+      }
+      const tx = await poolFactory.createPool(config)
+      const receipt = await tx.wait()
+      const poolAddress = ethers.utils.getAddress('0x' + receipt.logs[0].data.slice(-40))
+      const initParams = {
+        R: 500,
+        a: 200,
+        b: 200,
+      }
+      const payment = {
+        utr: utr.address,
+        payer: owner.address,
+        recipient: owner.address,
+      }
+      const poolBase = await ethers.getContractAt("PoolBase", poolAddress)
+      await weth.approve(utr.address, MaxUint256);
+      await utr.exec([],
+        [{
+          inputs: [{
+            mode: PAYMENT,
+            eip: 20,
+            token: weth.address,
+            id: 0,
+            amountIn: 5000,
+            recipient: poolAddress,
+          }],
+          flags: 0,
+          code: poolAddress,
+          data: (await poolBase.populateTransaction.init(
+            initParams,
+            payment
+          )).data,
+        }])
+
+      await expect(utr.exec([], [{
+        inputs: [{
+          mode: PAYMENT,
+          eip: 20,
+          token: weth.address,
+          id: 0,
+          amountIn: 50,
+          recipient: poolAddress,
+        }],
+        code: stateCalHelper.address,
+        data: (await stateCalHelper.populateTransaction.swap({
+          sideIn: SIDE_A,
+          poolIn: poolAddress,
+          sideOut: SIDE_R,
+          poolOut: poolAddress,
+          amountIn: 50,
+          payer: owner.address,
+          recipient: owner.address,
+          INDEX_R: 0
+        })).data,
+      }])).to.be.revertedWith("MINIMUM_SUPPLY")
+
+      await expect(utr.exec([], [{
+        inputs: [{
+          mode: PAYMENT,
+          eip: 20,
+          token: weth.address,
+          id: 0,
+          amountIn: 50,
+          recipient: poolAddress,
+        }],
+        code: stateCalHelper.address,
+        data: (await stateCalHelper.populateTransaction.swap({
+          sideIn: SIDE_R,
+          poolIn: poolAddress,
+          sideOut: SIDE_C,
+          poolOut: poolAddress,
+          amountIn: 50,
+          payer: owner.address,
+          recipient: owner.address,
+          INDEX_R: 0
+        })).data,
+      }])).to.be.revertedWith("MINIMUM_RESERVE_C")
+
+      await expect(utr.exec([], [{
+        inputs: [{
+          mode: PAYMENT,
+          eip: 20,
+          token: weth.address,
+          id: 0,
+          amountIn: 50,
+          recipient: poolAddress,
+        }],
+        code: stateCalHelper.address,
+        data: (await stateCalHelper.populateTransaction.swap({
+          sideIn: SIDE_R,
+          poolIn: poolAddress,
+          sideOut: SIDE_A,
+          poolOut: poolAddress,
+          amountIn: 50,
+          payer: owner.address,
+          recipient: owner.address,
+          INDEX_R: 0
+        })).data,
+      }])).to.be.revertedWith("MINIMUM_RESERVE_A")
+
+      await expect(utr.exec([], [{
+        inputs: [{
+          mode: PAYMENT,
+          eip: 20,
+          token: weth.address,
+          id: 0,
+          amountIn: 50,
+          recipient: poolAddress,
+        }],
+        code: stateCalHelper.address,
+        data: (await stateCalHelper.populateTransaction.swap({
+          sideIn: SIDE_R,
+          poolIn: poolAddress,
+          sideOut: SIDE_B,
+          poolOut: poolAddress,
+          amountIn: 50,
+          payer: owner.address,
+          recipient: owner.address,
+          INDEX_R: 0
+        })).data,
+      }])).to.be.revertedWith("MINIMUM_RESERVE_B")
     })
   })
 
