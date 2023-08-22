@@ -163,7 +163,7 @@ abstract contract PoolBase is IPool, ERC1155Holder, Storage, Constants {
      */
     function ensureStateIntegrity() public view {
         uint256 f = s_lastPremiumTime;
-        require(f & 1 == 0 && f > 0, 'SI');
+        require(f & 1 == 0 && f > 0, 'PoolBase: STATE_INTEGRITY');
     }
 
     /// @notice Returns the metadata of this (MetaProxy) contract.

@@ -179,7 +179,7 @@ describe("Revert", function () {
       )).to.be.revertedWith("ALREADY_INITIALIZED")
     })
 
-    it("swap: SI", async function () {
+    it("swap: STATE_INTEGRITY", async function () {
       const { stateCalHelper, derivablePools, accountA, reentrancyAttack, weth, utr, owner } = await loadFixture(fixture)
       const pool = derivablePools[1]
       // await expect(pool.swap(
@@ -200,7 +200,7 @@ describe("Revert", function () {
       //   }
       // )).to.be.revertedWith("MO")
 
-      // Revert SI
+      // Revert STATE_INTEGRITY
       const swapParams = {
         sideIn: 0,
         sideOut: 48,
@@ -218,7 +218,7 @@ describe("Revert", function () {
         numberToWei(5),
         swapParams,
         paymentParams
-      )).to.be.revertedWith("SI")
+      )).to.be.revertedWith("STATE_INTEGRITY")
     })
 
     it("Swap: INSUFFICIENT_PAYMENT", async function () {
