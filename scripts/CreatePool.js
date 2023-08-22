@@ -2,7 +2,7 @@ const { ethers } = require("hardhat")
 const fs = require('fs')
 const path = require('path')
 require('dotenv').config()
-const { bn, feeToOpenRate } = require("../test/shared/utilities")
+const { bn, feeToOpenRate, toHalfLife } = require("../test/shared/utilities")
 const { AddressZero } = ethers.constants
 
 const pe = (x) => ethers.utils.parseEther(String(x))
@@ -45,21 +45,17 @@ async function main() {
     const qti = 0
     const windowTime = 600
     // mainnet
-    const mark = bn("54107259509387202169693103509772902")
+    const mark = bn("33386195447973052066185155743837667")
     const k = 8
     const oracle = ethers.utils.hexZeroPad(
         bn(qti).shl(255).add(bn(windowTime).shl(256 - 64)).add(pairETHTOSHI).toHexString(),
         32,
     )
-    const dailyFundingRate = (0.03 * k) / 100
-    const halfLife = Math.round(
-        SECONDS_PER_DAY /
-        Math.log2(1 / (1 - dailyFundingRate)))
+    const DAILY_INTEREST_RATE = (0.03 * k) / 100
+    const DAILY_PREMIUM_RATE = (0.5 * k) / 100
 
     const addressPath = path.join(__dirname, `./json/${process.env.addr}.json`)
     const addressList = JSON.parse(fs.readFileSync(addressPath, 'utf8'))
-
-    const premiumHL = bn(1).shl(128).div(2);
 
     const param = {
         FETCHER: AddressZero,
@@ -67,8 +63,8 @@ async function main() {
         TOKEN_R: weth,
         MARK: mark,
         K: k,
-        INTEREST_HL: halfLife,
-        PREMIUM_HL: premiumHL,
+        INTEREST_HL: toHalfLife(DAILY_INTEREST_RATE),
+        PREMIUM_HL: toHalfLife(DAILY_PREMIUM_RATE),
         MATURITY: 60 * 60 * 24,
         MATURITY_VEST: 60 * 60 * 4,
         MATURITY_RATE: bn(97).shl(128).div(100),
@@ -83,7 +79,7 @@ async function main() {
     const receipt = await tx.wait()
     const poolAddress = ethers.utils.getAddress('0x' + receipt.logs[0].data.slice(-40))
     console.log(`pool: ${poolAddress}`)
-    addressList["pool-TOSHI^4-1"] = poolAddress
+    addressList["pool-TOSHI^4-2"] = poolAddress
     exportData(addressList)
 }
 

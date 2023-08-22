@@ -258,6 +258,11 @@ function feeToOpenRate(fee) {
     return bn(((1-fee)*10000).toFixed(0)).mul(Q128).div(10000)
 }
 
+function toHalfLife(dailyRate) {
+    const SECONDS_PER_DAY = 60 * 60 * 24
+    return Math.round(dailyRate == 0 ? 0 : SECONDS_PER_DAY / Math.log2(1 / (1 - dailyRate)))
+}
+
 function paramToConfig(param) {
     return {
         TOKEN: param.token,
@@ -291,5 +296,6 @@ module.exports = {
     feeToOpenRate,
     paramToConfig,
     swapToSetPriceMock,
-    getSqrtPriceFromPrice
+    getSqrtPriceFromPrice,
+    toHalfLife
 }

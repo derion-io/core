@@ -43,7 +43,7 @@ async function main(hre) {
     const config = {
         ORACLE: "0x000000000000025800000000e6e16fa8f4c2b9f56a3378b227bede63940a657c",
         K: bn(8),
-        MARK: bn("54107259509387202169693103509772902")
+        MARK: bn("33386195447973052066185155743837667")
     }
     const state = await calculateInitParams(config, fetchPrice, amountInit)
 
@@ -57,13 +57,13 @@ async function main(hre) {
     console.log(payment)
     
     const poolABI = require("../artifacts/contracts/PoolBase.sol/PoolBase.json").abi
-    const pool = new ethers.Contract(addressList["pool-TOSHI^4-1"], poolABI, provider)
+    const pool = new ethers.Contract(addressList["pool-TOSHI^4-2"], poolABI, provider)
     const wethABI = require("canonical-weth/build/contracts/WETH9.json").abi
     const weth = new ethers.Contract(wethAddress, wethABI, provider)
 
     // await weth.connect(wallet).deposit({value: amountInit})
     // await weth.connect(wallet).approve(pool.address, amountInit)
-    await pool.connect(wallet).init(state, payment)
+    // await pool.connect(wallet).init(state, payment)
 }
 
 // We recommend this pattern to be able to use async/await everywhere
