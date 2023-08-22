@@ -5,33 +5,43 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
 import "@uniswap/lib/contracts/libraries/TransferHelper.sol";
 import '@uniswap/v3-core/contracts/libraries/FullMath.sol';
+import "@uniswap/v3-core/contracts/libraries/TickMath.sol";
 import "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 import "solidity-bytes-utils/contracts/BytesLib.sol";
 
 import "@derivable/erc1155-maturity/contracts/token/ERC1155/IERC1155Supply.sol";
+
+import "@derivable/utr/contracts/interfaces/IUniversalTokenRouter.sol";
+import '@uniswap/v3-core/contracts/libraries/SafeCast.sol';
 
 import "../subs/Constants.sol";
 import "../interfaces/IHelper.sol";
 import "../interfaces/IPool.sol";
 import "../interfaces/IPoolFactory.sol";
 import "../interfaces/IWeth.sol";
+import "hardhat/console.sol";
 
 
 contract Helper is Constants, IHelper, ERC1155Holder {
+    using BytesLib for bytes;
+
     uint256 internal constant Q254 = 1 << 254;
     uint256 internal constant Q254M = Q254 - 1;
     uint256 internal constant SIDE_NATIVE = 0x01;
     address internal immutable TOKEN;
     address internal immutable WETH;
+    address internal immutable UTR;
 
-    constructor(address token, address weth) {
+    constructor(address token, address weth, address utr) {
         TOKEN = token;
         WETH = weth;
+        UTR = utr;
     }
 
     // INDEX_R == 0: priceR = 0
     // INDEX_R == Q254 | uint253(p): priceR = p
     // otherwise: priceR = _fetch(INDEX_R)
+    
     struct SwapParams {
         uint256 sideIn;
         address poolIn;
@@ -310,5 +320,110 @@ contract Helper is Constants, IHelper, ERC1155Holder {
 
         state1.a = _v(__.xk, rA1, state1.R);
         state1.b = _v(Q256M/__.xk, rB1, state1.R);
+    }
+
+    struct ExactInputSingleParams {
+        address tokenIn;
+        address tokenOut;
+        address pool;
+        address recipient;
+        address payer;
+        uint256 deadline;
+        uint256 amountIn;
+        uint256 amountOutMinimum;
+        uint160 sqrtPriceLimitX96;
+    }
+
+    function exactInputSingle(ExactInputSingleParams calldata params)
+        external
+        payable
+        checkDeadline(params.deadline)
+        returns (uint256 amountOut)
+    {
+        amountOut = exactInputInternal(
+            params.amountIn,
+            params.recipient,
+            params.sqrtPriceLimitX96,
+            SwapCallbackData({path: abi.encodePacked(params.tokenIn, params.tokenOut, params.pool), payer: params.payer})
+        );
+        require(amountOut >= params.amountOutMinimum, 'Too little received');
+    }
+
+    function exactInputInternal(
+        uint256 amountIn,
+        address recipient,
+        uint160 sqrtPriceLimitX96,
+        SwapCallbackData memory data
+    ) private returns (uint256 amountOut) {
+        // allow swapping to the router address with address 0
+        if (recipient == address(0)) recipient = address(this);
+
+        address tokenIn = data.path.toAddress(0);
+        address tokenOut = data.path.toAddress(20);
+        address pool = data.path.toAddress(40);
+        console.log(tokenIn, tokenOut, pool);
+        bool zeroForOne = tokenIn < tokenOut;
+
+        (int256 amount0, int256 amount1) =
+            IUniswapV3Pool(pool).swap(
+                recipient,
+                zeroForOne,
+                SafeCast.toInt256(amountIn),
+                sqrtPriceLimitX96 == 0
+                    ? (zeroForOne ? TickMath.MIN_SQRT_RATIO + 1 : TickMath.MAX_SQRT_RATIO - 1)
+                    : sqrtPriceLimitX96,
+                abi.encode(data)
+            );
+
+        return uint256(-(zeroForOne ? amount1 : amount0));
+    }
+
+    struct SwapCallbackData {
+        bytes path;
+        address payer;
+    }
+
+    function uniswapV3SwapCallback(
+        int256 amount0Delta,
+        int256 amount1Delta,
+        bytes calldata _data
+    ) external {
+        require(amount0Delta > 0 || amount1Delta > 0); // swaps entirely within 0-liquidity regions are not supported
+        SwapCallbackData memory data = abi.decode(_data, (SwapCallbackData));
+        address tokenIn = data.path.toAddress(0);
+        address tokenOut = data.path.toAddress(20);
+        // TODO: Do we need to verify data, sender?
+
+        (bool isExactInput, uint256 amountToPay) =
+            amount0Delta > 0
+                ? (tokenIn < tokenOut, uint256(amount0Delta))
+                : (tokenOut < tokenIn, uint256(amount1Delta));
+        if (isExactInput) {
+            pay(tokenIn, data.payer, msg.sender, amountToPay);
+        } 
+    }
+
+    function pay(
+        address token,
+        address payer,
+        address recipient,
+        uint256 value
+    ) internal {
+        if (token == WETH && address(this).balance >= value) {
+            // pay with WETH9
+            IWeth(WETH).deposit{value: value}(); // wrap only what is needed to pay
+            IWeth(WETH).transfer(recipient, value);
+        } else if (payer == address(this)) {
+            // pay with tokens already in the contract (for the exact input multihop case)
+            TransferHelper.safeTransfer(token, recipient, value);
+        } else {
+            // pull payment
+            IUniversalTokenRouter(UTR).pay(payer, recipient, 20, token, 0, value);
+        }
+    }
+
+    modifier checkDeadline(uint256 deadline) {
+        require(block.timestamp <= deadline, 'Transaction too old');
+        _;
     }
 }

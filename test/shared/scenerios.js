@@ -130,7 +130,8 @@ function loadFixtureFromParams (arrParams, options={}) {
     const StateCalHelper = await ethers.getContractFactory("contracts/support/Helper.sol:Helper")
     const stateCalHelper = await StateCalHelper.deploy(
       derivable1155.address,
-      weth.address
+      weth.address,
+      utr.address
     )
     await stateCalHelper.deployed()
 
