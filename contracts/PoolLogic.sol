@@ -129,20 +129,8 @@ contract PoolLogic is PoolBase, Fetcher {
         uint256 sideIn = param.sideIn;
         uint256 sideOut = param.sideOut;
         require(sideIn != sideOut, 'PoolLogic: SAME_SIDE');
-        require(
-            sideIn == SIDE_R ||
-            sideIn == SIDE_A ||
-            sideIn == SIDE_B ||
-            sideIn == SIDE_C,
-            'PoolLogic: INVALID_SIDE_IN'
-        );
-        require(
-            sideOut == SIDE_R ||
-            sideOut == SIDE_A ||
-            sideOut == SIDE_B ||
-            sideOut == SIDE_C,
-            'PoolLogic: INVALID_SIDE_OUT'
-        );
+        require(sideIn / 0x10 <= 3,'PoolLogic: INVALID_SIDE_IN');
+        require(sideOut / 0x10 <= 3,'PoolLogic: INVALID_SIDE_OUT');
         State memory state = State(_reserve(config.TOKEN_R), s_a, s_b);
         // [PRICE SELECTION]
         uint256 xk; uint256 rA; uint256 rB;
@@ -212,8 +200,7 @@ contract PoolLogic is PoolBase, Fetcher {
                 require(rA1 >= rA, "PoolLogic: INVALID_STATE1_NA");
                 if (sideIn == SIDE_B) {
                     result.amountIn = FullMath.mulDivRoundingUp(s, rB - rB1, rB);
-                }
-                if (sideIn == SIDE_C) {
+                } else {
                     require(rB1 >= rB, "PoolLogic: INVALID_STATE1_NB");
                     uint256 rC = state.R - rA - rB;
                     uint256 rC1 = state1.R - rA1 - rB1;
@@ -237,8 +224,7 @@ contract PoolLogic is PoolBase, Fetcher {
                 if (sideOut == SIDE_A) {
                     require(rA1 >= MINIMUM_RESERVE, 'PoolLogic: MINIMUM_RESERVE_A');
                     result.amountOut = FullMath.mulDiv(_supply(sideOut), rA1 - rA, rA);
-                }
-                if (sideOut == SIDE_B) {
+                } else {
                     require(rB1 >= MINIMUM_RESERVE, 'PoolLogic: MINIMUM_RESERVE_B');
                     result.amountOut = FullMath.mulDiv(_supply(sideOut), rB1 - rB, rB);
                 }
