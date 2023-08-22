@@ -355,9 +355,9 @@ describe("Protocol", function () {
             const receipt = await tx.wait()
             const poolAddress = ethers.utils.getAddress('0x' + receipt.logs[0].data.slice(-40))
             const initParams = {
-                R: numberToWei(0.005),
-                a: numberToWei(0.001),
-                b: numberToWei(0.001),
+                R: 5000,
+                a: 2000,
+                b: 2000,
             }
             const payment = {
                 utr: utr.address,
@@ -373,7 +373,7 @@ describe("Protocol", function () {
                     eip: 20,
                     token: weth.address,
                     id: 0,
-                    amountIn: numberToWei(0.005),
+                    amountIn: 5000,
                     recipient: poolAddress,
                 }],
                 flags: 0,
