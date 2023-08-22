@@ -320,14 +320,13 @@ describe("Revert", function () {
         }
       )).to.be.revertedWith("STATE1_OVERFLOW_B")
 
-      const SIDE_D = 0x40
       await expect(pool.swap(
         SIDE_R,
-        SIDE_D,
+        0x40,
         numberToWei(5),
       )).to.be.revertedWith("INVALID_SIDE_OUT")
       await expect(pool.swap(
-        SIDE_D,
+        0x01,
         SIDE_R,
         numberToWei(5),
       )).to.be.revertedWith("INVALID_SIDE_IN")

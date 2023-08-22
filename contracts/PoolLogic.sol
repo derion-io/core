@@ -212,8 +212,7 @@ contract PoolLogic is PoolBase, Fetcher {
                 require(rA1 >= rA, "PoolLogic: INVALID_STATE1_NA");
                 if (sideIn == SIDE_B) {
                     result.amountIn = FullMath.mulDivRoundingUp(s, rB - rB1, rB);
-                }
-                if (sideIn == SIDE_C) {
+                } else {
                     require(rB1 >= rB, "PoolLogic: INVALID_STATE1_NB");
                     uint256 rC = state.R - rA - rB;
                     uint256 rC1 = state1.R - rA1 - rB1;
@@ -237,8 +236,7 @@ contract PoolLogic is PoolBase, Fetcher {
                 if (sideOut == SIDE_A) {
                     require(rA1 >= MINIMUM_RESERVE, 'PoolLogic: MINIMUM_RESERVE_A');
                     result.amountOut = FullMath.mulDiv(_supply(sideOut), rA1 - rA, rA);
-                }
-                if (sideOut == SIDE_B) {
+                } else {
                     require(rB1 >= MINIMUM_RESERVE, 'PoolLogic: MINIMUM_RESERVE_B');
                     result.amountOut = FullMath.mulDiv(_supply(sideOut), rB1 - rB, rB);
                 }
