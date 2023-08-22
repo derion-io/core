@@ -111,12 +111,23 @@ abstract contract PoolBase is IPool, ERC1155Holder, Storage, Constants {
             uint256 idIn = _packID(address(this), param.sideIn);
             uint256 inputMaturity;
             if (payment.payer != address(0)) {
-                inputMaturity = IToken(TOKEN).maturityOf(payment.payer, idIn);
-                uint256 expectedSupply = IERC1155Supply(TOKEN).totalSupply(idIn) - amountIn;
+                // clear the pool first to prevent maturity griefing attacks
+                uint256 balance = IERC1155Supply(TOKEN).balanceOf(address(this), idIn);
+                if (balance > 0) {
+                    IToken(TOKEN).burn(address(this), idIn, balance);
+                }
+                // pull payment
                 IUniversalTokenRouter(payment.utr).pay(payment.payer, address(this), 1155, TOKEN, idIn, amountIn);
-                require(IERC1155Supply(TOKEN).totalSupply(idIn) <= expectedSupply, 'PoolBase: INSUFFICIENT_PAYMENT');
+                balance = IERC1155Supply(TOKEN).balanceOf(address(this), idIn);
+                require(amountIn <= balance, "PoolBase: INSUFFICIENT_PAYMENT");
+                // query the maturity first before burning
+                inputMaturity = IToken(TOKEN).maturityOf(address(this), idIn);
+                // burn the 1155 token
+                IToken(TOKEN).burn(address(this), idIn, balance);
             } else {
+                // query the maturity first before burning
                 inputMaturity = IToken(TOKEN).maturityOf(msg.sender, idIn);
+                // burn the 1155 token directly from msg.sender
                 IToken(TOKEN).burn(msg.sender, idIn, amountIn);
                 payment.payer = msg.sender;
             }

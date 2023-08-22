@@ -92,19 +92,4 @@ contract Token is ShadowFactory {
      function isApprovedForAll(address account, address operator) public view virtual override(ERC1155Maturity, IERC1155) returns (bool) {
         return operator == UTR || super.isApprovedForAll(account, operator);
     }
-
-    function _safeTransferFrom(
-        address from,
-        address to,
-        uint256 id,
-        uint256 amount,
-        bytes memory data
-    ) internal virtual override {
-        if (to == address(uint160(id))) {
-            // save a myriad of cold storage access by burning all token transferred to its pool
-            super._burn(from, id, amount);
-        } else {
-            super._safeTransferFrom(from, to, id, amount, data);
-        }
-    }
 }
