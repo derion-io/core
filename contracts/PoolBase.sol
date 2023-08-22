@@ -63,6 +63,11 @@ abstract contract PoolBase is IPool, ERC1155Holder, Storage, Constants {
         require(R > 0 && a > 0 && b > 0, "PoolBase: ZERO_PARAM");
         require(a <= R >> 1 && b <= R >> 1, "PoolBase: INVALID_PARAM");
 
+        s_lastInterestTime = uint32(block.timestamp);
+        s_a = uint224(a);
+        s_lastPremiumTime = uint32(block.timestamp & F_MASK);
+        s_b = uint224(b);
+
         Config memory config = loadConfig();
 
         if (payment.payer != address(0)) {
@@ -72,11 +77,6 @@ abstract contract PoolBase is IPool, ERC1155Holder, Storage, Constants {
         } else {
             TransferHelper.safeTransferFrom(config.TOKEN_R, msg.sender, address(this), R);
         }
-
-        s_lastInterestTime = uint32(block.timestamp);
-        s_a = uint224(a);
-        s_lastPremiumTime = uint32(block.timestamp & F_MASK);
-        s_b = uint224(b);
 
         uint256 idA = _packID(address(this), SIDE_A);
         uint256 idB = _packID(address(this), SIDE_B);
