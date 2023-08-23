@@ -433,6 +433,43 @@ describe("Protocol", function () {
                 ], opts)
         })
 
+        it("clear the pool first", async function () {
+            const { owner, weth, derivablePools, utr, derivable1155 } = await loadFixture(fixture)
+            await derivable1155.setApprovalForAll(utr.address, true);
+            await derivable1155.safeTransferFrom(
+                owner.address,
+                derivablePools[0].contract.address,
+                packId(SIDE_A, derivablePools[0].contract.address),
+                10,
+                "0x00"
+            )
+            const pTx = await derivablePools[0].swap(
+                SIDE_A,
+                SIDE_R,
+                1000,
+                {
+                    populateTransaction: true,
+                    recipient: owner.address,
+                    payer: owner.address
+                }
+            )
+            await utr.exec([],
+                [
+                    {
+                        inputs: [{
+                            mode: PAYMENT,
+                            eip: 1155,
+                            token: derivable1155.address,
+                            id: packId(SIDE_A, derivablePools[0].contract.address),
+                            amountIn: 1000,
+                            recipient: derivablePools[0].contract.address,
+                        }],
+                        code: derivablePools[0].contract.address,
+                        data: pTx.data,
+                    }
+                ], opts)
+        })
+
         async function testRIn(sideIn, amountIn, sideOut, isUseUTR) {
             const { owner, weth, derivablePools, utr } = await loadFixture(fixture)
             
