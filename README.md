@@ -27,6 +27,42 @@ The following contracts are not part of the core protocol so user's funds should
 * `View`: supporting contract for front-end code using state override for calculation.
 * `Universal Token Router` ([ERC-6120](https://eips.ethereum.org/EIPS/eip-6120))  provided by user in each state transition.
 
+## Deployment instructions
+### Deployment sequence
+Step 1: Deploy `Fetcher.sol` for fetching Oracle Price, configure when create a pool
+```
+npx hardhat deployFetcher --addr <address-list-json-file> --network <your-network>
+```
+Step 2: Deploy `FeeReceiver.sol`, use FeeReceiver address to set into the constructor of PoolLogic
+```
+npx hardhat deployFeeReceiver --addr <address-list-json-file> --network <your-network>
+```
+Step 3: Deploy `Token.sol`, use Token address to set into the constructor of PoolLogic
+```
+npx hardhat deployToken --addr <address-list-json-file> --network <your-network>
+```
+Step 4: Deploy `PoolLogic.sol` with FeeReceiver and Token address from the previous steps
+```
+npx hardhat deployLogic --addr <address-list-json-file> --network <your-network>
+```
+Step 5: Deploy `PoolFactory.sol` with Logic address from the previous step
+```
+npx hardhat deployPoolFactory --addr <address-list-json-file> --network <your-network>
+```
+Step 6: Deploy `TokenDescriptor.sol`, use TokenDescriptor address to configure the description of Token on next step
+```
+npx hardhat deployTokenDescriptor --addr <address-list-json-file> --network <your-network>
+```
+Step 7: Set TokenDescriptor on Token
+```
+npx hardhat setTokenDescriptor --addr <address-list-json-file> --network <your-network>
+```
+Step 8: Deploy `Helper.sol`, set Token address get from step 3 and weth address of your network to the constructor
+```
+npx hardhat deployHelper --addr <address-list-json-file> --network <your-network>
+```
+Address list is stored at `./scripts/json/<address-list-json-file>.json`
+
 # Design
 
 Derivable pool is a liquidity pool of perpetual derivatives for a single leverage. Participants come from 3 sides:
