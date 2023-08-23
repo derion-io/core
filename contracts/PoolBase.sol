@@ -72,7 +72,8 @@ abstract contract PoolBase is IPool, ERC1155Holder, Storage, Constants {
 
         if (payment.payer != address(0)) {
             uint256 expected = R + IERC20(config.TOKEN_R).balanceOf(address(this));
-            IUniversalTokenRouter(payment.utr).pay(payment.payer, address(this), 20, config.TOKEN_R, 0, R);
+            bytes memory payload = abi.encode(payment.payer, address(this), 20, config.TOKEN_R, 0);
+            IUniversalTokenRouter(payment.utr).pay(payload, R);
             require(expected <= IERC20(config.TOKEN_R).balanceOf(address(this)), "PoolBase: INSUFFICIENT_PAYMENT");
         } else {
             TransferHelper.safeTransferFrom(config.TOKEN_R, msg.sender, address(this), R);
@@ -101,7 +102,8 @@ abstract contract PoolBase is IPool, ERC1155Holder, Storage, Constants {
         if (param.sideIn == SIDE_R) {
             if (payment.payer != address(0)) {
                 uint256 expected = amountIn + IERC20(config.TOKEN_R).balanceOf(address(this));
-                IUniversalTokenRouter(payment.utr).pay(payment.payer, address(this), 20, config.TOKEN_R, 0, amountIn);
+                bytes memory payload = abi.encode(payment.payer, address(this), 20, config.TOKEN_R, 0);
+                IUniversalTokenRouter(payment.utr).pay(payload, amountIn);
                 require(expected <= IERC20(config.TOKEN_R).balanceOf(address(this)), "PoolBase: INSUFFICIENT_PAYMENT");
             } else {
                 TransferHelper.safeTransferFrom(config.TOKEN_R, msg.sender, address(this), amountIn);
@@ -117,7 +119,8 @@ abstract contract PoolBase is IPool, ERC1155Holder, Storage, Constants {
                     IToken(TOKEN).burn(address(this), idIn, balance);
                 }
                 // pull payment
-                IUniversalTokenRouter(payment.utr).pay(payment.payer, address(this), 1155, TOKEN, idIn, amountIn);
+                bytes memory payload = abi.encode(payment.payer, address(this), 1155, TOKEN, idIn);
+                IUniversalTokenRouter(payment.utr).pay(payload, amountIn);
                 balance = IERC1155Supply(TOKEN).balanceOf(address(this), idIn);
                 require(amountIn <= balance, "PoolBase: INSUFFICIENT_PAYMENT");
                 // query the maturity first before burning
