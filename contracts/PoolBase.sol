@@ -5,6 +5,7 @@ import "@openzeppelin/contracts/utils/math/Math.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
 import "@uniswap/lib/contracts/libraries/TransferHelper.sol";
+import "solidity-bytes-utils/contracts/BytesLib.sol";
 
 import "@derivable/utr/contracts/interfaces/IUniversalTokenRouter.sol";
 
@@ -70,10 +71,13 @@ abstract contract PoolBase is IPool, ERC1155Holder, Storage, Constants {
 
         Config memory config = loadConfig();
 
-        if (payment.payer != address(0)) {
+        if (payment.utr != address(0)) {
             uint256 expected = R + IERC20(config.TOKEN_R).balanceOf(address(this));
-            bytes memory payload = abi.encode(payment.payer, address(this), 20, config.TOKEN_R, 0);
-            IUniversalTokenRouter(payment.utr).pay(payload, R);
+            if (payment.payer.length == 20) {
+                address payer = BytesLib.toAddress(payment.payer, 0);
+                payment.payer = abi.encode(payer, address(this), 20, config.TOKEN_R, 0);
+            }
+            IUniversalTokenRouter(payment.utr).pay(payment.payer, R);
             require(expected <= IERC20(config.TOKEN_R).balanceOf(address(this)), "PoolBase: INSUFFICIENT_PAYMENT");
         } else {
             TransferHelper.safeTransferFrom(config.TOKEN_R, msg.sender, address(this), R);
@@ -97,30 +101,46 @@ abstract contract PoolBase is IPool, ERC1155Holder, Storage, Constants {
     ) external override nonReentrant returns (uint256 amountIn, uint256 amountOut, uint256 price) {
         Config memory config = loadConfig();
 
+        address payer;
+        if (payment.payer.length == 20) {
+            payer = BytesLib.toAddress(payment.payer, 0);
+        }
+
         Result memory result = _swap(config, param);
         (amountIn, amountOut, price) = (result.amountIn, result.amountOut, result.price);
         if (param.sideIn == SIDE_R) {
-            if (payment.payer != address(0)) {
+            if (payer != address(0) || payment.payer.length > 20) {
+                // prepare the utr payload
+                if (payment.payer.length == 20) {
+                    payment.payer = abi.encode(payer, address(this), 20, config.TOKEN_R, 0);
+                } else {
+                    payer = tx.origin; // only for event index
+                }
                 uint256 expected = amountIn + IERC20(config.TOKEN_R).balanceOf(address(this));
-                bytes memory payload = abi.encode(payment.payer, address(this), 20, config.TOKEN_R, 0);
-                IUniversalTokenRouter(payment.utr).pay(payload, amountIn);
+                // pull payment
+                IUniversalTokenRouter(payment.utr).pay(payment.payer, amountIn);
                 require(expected <= IERC20(config.TOKEN_R).balanceOf(address(this)), "PoolBase: INSUFFICIENT_PAYMENT");
             } else {
                 TransferHelper.safeTransferFrom(config.TOKEN_R, msg.sender, address(this), amountIn);
-                payment.payer = msg.sender;
+                payer = msg.sender;
             }
         } else {
             uint256 idIn = _packID(address(this), param.sideIn);
             uint256 inputMaturity;
-            if (payment.payer != address(0)) {
+            if (payer != address(0) || payment.payer.length > 20) {
                 // clear the pool first to prevent maturity griefing attacks
                 uint256 balance = IERC1155Supply(TOKEN).balanceOf(address(this), idIn);
                 if (balance > 0) {
                     IToken(TOKEN).burn(address(this), idIn, balance);
                 }
+                // prepare the utr payload
+                if (payment.payer.length == 20) {
+                    payment.payer = abi.encode(payer, address(this), 1155, TOKEN, idIn);
+                } else {
+                    payer = tx.origin; // only for event index
+                }
                 // pull payment
-                bytes memory payload = abi.encode(payment.payer, address(this), 1155, TOKEN, idIn);
-                IUniversalTokenRouter(payment.utr).pay(payload, amountIn);
+                IUniversalTokenRouter(payment.utr).pay(payment.payer, amountIn);
                 balance = IERC1155Supply(TOKEN).balanceOf(address(this), idIn);
                 require(amountIn <= balance, "PoolBase: INSUFFICIENT_PAYMENT");
                 // query the maturity first before burning
@@ -132,7 +152,7 @@ abstract contract PoolBase is IPool, ERC1155Holder, Storage, Constants {
                 inputMaturity = IToken(TOKEN).maturityOf(msg.sender, idIn);
                 // burn the 1155 token directly from msg.sender
                 IToken(TOKEN).burn(msg.sender, idIn, amountIn);
-                payment.payer = msg.sender;
+                payer = msg.sender;
             }
             amountOut = _maturityPayoff(config, inputMaturity, amountOut);
         }
@@ -147,7 +167,7 @@ abstract contract PoolBase is IPool, ERC1155Holder, Storage, Constants {
         }
 
         emit Swap(
-            payment.payer,
+            payer,
             payment.recipient,
             Math.max(param.sideIn, param.sideOut),
             param.sideIn,

@@ -21,7 +21,7 @@ contract FlashloanAttack {
     uint160 spotPrice,
     address deriToken,
     Param calldata swapParam,
-    address payer,
+    bytes calldata payer,
     address recipient
   ) public {
     IERC1155(deriToken).setApprovalForAll(POOL, true);
