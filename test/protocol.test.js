@@ -9,7 +9,7 @@ const { loadFixtureFromParams } = require("./shared/scenerios")
 chai.use(solidity)
 const expect = chai.expect
 const { AddressZero, MaxUint256 } = ethers.constants
-const { bn, swapToSetPriceMock, packId, numberToWei } = require("./shared/utilities")
+const { bn, swapToSetPriceMock, packId, numberToWei, encodePayment } = require("./shared/utilities")
 
 const fe = (x) => Number(ethers.utils.formatEther(x))
 const pe = (x) => ethers.utils.parseEther(String(x))
@@ -151,7 +151,7 @@ describe("Protocol", function () {
             }
             const payment = {
                 utr: utr.address,
-                payer: owner.address,
+                payer: encodePayment(owner.address, poolAddress, 20, weth.address, 0),
                 recipient: owner.address,
             }
             const pool = await ethers.getContractAt("PoolBase", poolAddress)
@@ -472,8 +472,7 @@ describe("Protocol", function () {
 
         async function testRIn(sideIn, amountIn, sideOut, isUseUTR) {
             const { owner, weth, derivablePools, utr } = await loadFixture(fixture)
-            
-            const payer = isUseUTR ? owner.address : []
+            const payer = isUseUTR ? encodePayment(owner.address, derivablePools[0].contract.address, 20, weth.address, 0) : []
             const wethBefore = await weth.balanceOf(owner.address)
             if (isUseUTR) {
                 const pTx = await derivablePools[0].swap(
@@ -536,7 +535,9 @@ describe("Protocol", function () {
         async function testROut(sideIn, amountIn, sideOut, isUseUTR) {
             const { owner, weth, derivablePools, derivable1155, utr } = await loadFixture(fixture)
             const convertedId = convertId(sideIn, derivablePools[0].contract.address)
-            const payer = isUseUTR ? owner.address : []
+            const payer = isUseUTR 
+                ? encodePayment(owner.address, derivablePools[0].contract.address, 1155, derivable1155.address, convertedId)
+                : []
             
             const tokenBefore = await derivable1155.balanceOf(owner.address, convertedId)
             if (amountIn == null) {

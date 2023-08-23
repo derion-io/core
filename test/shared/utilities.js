@@ -276,6 +276,13 @@ function paramToConfig(param) {
     }
 }
 
+function encodePayment(...args) {
+    return ethers.utils.defaultAbiCoder.encode(
+        ["address", "address", "uint256", "address", "uint256"],
+        [...args],
+    )
+}
+
 
 module.exports = {
     stringToBytes32,
@@ -297,5 +304,6 @@ module.exports = {
     paramToConfig,
     swapToSetPriceMock,
     getSqrtPriceFromPrice,
-    toHalfLife
+    toHalfLife,
+    encodePayment
 }
