@@ -101,10 +101,10 @@ abstract contract PoolBase is IPool, ERC1155Holder, Storage, Constants {
     ) external override nonReentrant returns (uint256 amountIn, uint256 amountOut, uint256 price) {
         Config memory config = loadConfig();
 
-        address payer;
-
         Result memory result = _swap(config, param);
         (amountIn, amountOut, price) = (result.amountIn, result.amountOut, result.price);
+
+        address payer;
         if (param.sideIn == SIDE_R) {
             if (payment.payer.length > 0) {
                 // prepare the utr payload
