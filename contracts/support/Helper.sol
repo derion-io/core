@@ -19,7 +19,6 @@ import "../interfaces/IHelper.sol";
 import "../interfaces/IPool.sol";
 import "../interfaces/IPoolFactory.sol";
 import "../interfaces/IWeth.sol";
-import "hardhat/console.sol";
 
 
 contract Helper is Constants, IHelper, ERC1155Holder {
@@ -328,18 +327,59 @@ contract Helper is Constants, IHelper, ERC1155Holder {
         address pool;
         address recipient;
         address payer;
-        uint256 deadline;
         uint256 amountIn;
         uint256 amountOutMinimum;
         uint160 sqrtPriceLimitX96;
     }
 
-    function exactInputSingle(ExactInputSingleParams calldata params)
-        external
+    function swapAndOpen (
+        SwapParams memory params,
+        address tokenIn,
+        address pool
+    ) external returns (uint256 amountOut) {
+        require(params.poolIn == params.poolOut && params.sideIn == SIDE_R, 'Invalid params');
+        Config memory config = IPool(params.poolIn).loadConfig();
+        amountOut = exactInputSingle(ExactInputSingleParams({
+            tokenIn: tokenIn,
+            tokenOut: config.TOKEN_R,
+            pool: pool,
+            recipient: address(this),
+            payer: BytesLib.toAddress(params.payer, 0),
+            amountIn: params.amountIn,
+            amountOutMinimum: 0,
+            sqrtPriceLimitX96: 0
+        }));
+        TransferHelper.safeApprove(config.TOKEN_R, params.poolIn, amountOut);
+
+        Payment memory payment = Payment(
+            msg.sender, // UTR
+            bytes(''),
+            params.recipient
+        );
+
+        bytes memory payload = abi.encode(
+            params.sideIn,
+            params.sideOut,
+            amountOut
+        );
+
+        (, amountOut,) = IPool(params.poolIn).swap(
+            Param(
+                params.sideIn,
+                params.sideOut,
+                address(this),
+                payload
+            ),
+            payment
+        );
+    }
+
+    function exactInputSingle(ExactInputSingleParams memory params)
+        public
         payable
-        checkDeadline(params.deadline)
         returns (uint256 amountOut)
     {
+        console.log(params.payer);
         amountOut = exactInputInternal(
             params.amountIn,
             params.recipient,
@@ -361,7 +401,6 @@ contract Helper is Constants, IHelper, ERC1155Holder {
         address tokenIn = data.path.toAddress(0);
         address tokenOut = data.path.toAddress(20);
         address pool = data.path.toAddress(40);
-        console.log(tokenIn, tokenOut, pool);
         bool zeroForOne = tokenIn < tokenOut;
 
         (int256 amount0, int256 amount1) =
@@ -409,21 +448,7 @@ contract Helper is Constants, IHelper, ERC1155Holder {
         address recipient,
         uint256 value
     ) internal {
-        if (token == WETH && address(this).balance >= value) {
-            // pay with WETH9
-            IWeth(WETH).deposit{value: value}(); // wrap only what is needed to pay
-            IWeth(WETH).transfer(recipient, value);
-        } else if (payer == address(this)) {
-            // pay with tokens already in the contract (for the exact input multihop case)
-            TransferHelper.safeTransfer(token, recipient, value);
-        } else {
-            // pull payment
-            IUniversalTokenRouter(UTR).pay(payer, recipient, 20, token, 0, value);
-        }
-    }
-
-    modifier checkDeadline(uint256 deadline) {
-        require(block.timestamp <= deadline, 'Transaction too old');
-        _;
+        bytes memory payload = abi.encode(payer, recipient, 20, token, 0);
+        IUniversalTokenRouter(UTR).pay(payload, value);
     }
 }
