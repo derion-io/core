@@ -84,7 +84,7 @@
 
 "@derivable/utr@https://github.com/derivable-labs/utr.git#payload":
   version "1.0.0"
-  resolved "https://github.com/derivable-labs/utr.git#87397d7a47cc83c5f5cc4dfcbf6d38cf2dcf4d85"
+  resolved "https://github.com/derivable-labs/utr.git#28d0d1e4ad09e7cd888b7ea2b1be1769801b98c2"
   dependencies:
     "@atixlabs/hardhat-time-n-mine" "^0.0.5"
     "@uniswap/lib" "^4.0.1-alpha"
