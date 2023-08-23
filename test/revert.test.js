@@ -212,7 +212,7 @@ describe("Revert", function () {
       }
       const paymentParams = {
         utr: utr.address,
-        payer: AddressZero,
+        payer: [],
         recipient: reentrancyAttack.address
       }
       await weth.transfer(reentrancyAttack.address, numberToWei(5))

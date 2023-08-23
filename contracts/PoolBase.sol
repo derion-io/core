@@ -71,7 +71,7 @@ abstract contract PoolBase is IPool, ERC1155Holder, Storage, Constants {
 
         Config memory config = loadConfig();
 
-        if (payment.utr != address(0)) {
+        if (payment.payer.length > 0) {
             uint256 expected = R + IERC20(config.TOKEN_R).balanceOf(address(this));
             if (payment.payer.length == 20) {
                 address payer = BytesLib.toAddress(payment.payer, 0);
@@ -102,16 +102,14 @@ abstract contract PoolBase is IPool, ERC1155Holder, Storage, Constants {
         Config memory config = loadConfig();
 
         address payer;
-        if (payment.payer.length == 20) {
-            payer = BytesLib.toAddress(payment.payer, 0);
-        }
 
         Result memory result = _swap(config, param);
         (amountIn, amountOut, price) = (result.amountIn, result.amountOut, result.price);
         if (param.sideIn == SIDE_R) {
-            if (payer != address(0) || payment.payer.length > 20) {
+            if (payment.payer.length > 0) {
                 // prepare the utr payload
                 if (payment.payer.length == 20) {
+                    payer = BytesLib.toAddress(payment.payer, 0);
                     payment.payer = abi.encode(payer, address(this), 20, config.TOKEN_R, 0);
                 } else {
                     payer = tx.origin; // only for event index
@@ -127,7 +125,7 @@ abstract contract PoolBase is IPool, ERC1155Holder, Storage, Constants {
         } else {
             uint256 idIn = _packID(address(this), param.sideIn);
             uint256 inputMaturity;
-            if (payer != address(0) || payment.payer.length > 20) {
+            if (payment.payer.length > 0) {
                 // clear the pool first to prevent maturity griefing attacks
                 uint256 balance = IERC1155Supply(TOKEN).balanceOf(address(this), idIn);
                 if (balance > 0) {
@@ -135,6 +133,7 @@ abstract contract PoolBase is IPool, ERC1155Holder, Storage, Constants {
                 }
                 // prepare the utr payload
                 if (payment.payer.length == 20) {
+                    payer = BytesLib.toAddress(payment.payer, 0);
                     payment.payer = abi.encode(payer, address(this), 1155, TOKEN, idIn);
                 } else {
                     payer = tx.origin; // only for event index

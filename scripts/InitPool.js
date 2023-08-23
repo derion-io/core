@@ -49,7 +49,7 @@ async function main(hre) {
 
     const payment = {
         utr: AddressZero,
-        payer: AddressZero,
+        payer: [],
         recipient,
     }
 

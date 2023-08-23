@@ -191,7 +191,7 @@ function loadFixtureFromParams (arrParams, options={}) {
       // }
       const payment = {
         utr: AddressZero,
-        payer: AddressZero,
+        payer: [],
         recipient: owner.address,
       }
       await pool.contract.init(initParams, payment)

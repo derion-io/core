@@ -294,7 +294,7 @@ describe("Protocol", function () {
                         data: (await maturityPoolTestHelper.populateTransaction.swapInAll(
                             SIDE_A,
                             SIDE_R,
-                            ethers.constants.AddressZero,
+                            [],
                             owner.address
                         )).data,
                     }
@@ -426,7 +426,7 @@ describe("Protocol", function () {
                         data: (await testHelper.populateTransaction.swapInAll(
                             SIDE_A,
                             SIDE_R,
-                            AddressZero,
+                            [],
                             owner.address
                         )).data,
                     }
@@ -473,7 +473,7 @@ describe("Protocol", function () {
         async function testRIn(sideIn, amountIn, sideOut, isUseUTR) {
             const { owner, weth, derivablePools, utr } = await loadFixture(fixture)
             
-            const payer = isUseUTR ? owner.address : AddressZero
+            const payer = isUseUTR ? owner.address : []
             const wethBefore = await weth.balanceOf(owner.address)
             if (isUseUTR) {
                 const pTx = await derivablePools[0].swap(
@@ -536,7 +536,7 @@ describe("Protocol", function () {
         async function testROut(sideIn, amountIn, sideOut, isUseUTR) {
             const { owner, weth, derivablePools, derivable1155, utr } = await loadFixture(fixture)
             const convertedId = convertId(sideIn, derivablePools[0].contract.address)
-            const payer = isUseUTR ? owner.address : AddressZero
+            const payer = isUseUTR ? owner.address : []
             
             const tokenBefore = await derivable1155.balanceOf(owner.address, convertedId)
             if (amountIn == null) {
@@ -644,7 +644,7 @@ describe("Protocol", function () {
                         data: (await derivableHelper.populateTransaction.swapInAll(
                             side,
                             SIDE_R,
-                            AddressZero,
+                            [],
                             owner.address,
                         )).data,
                     }
@@ -746,7 +746,7 @@ describe("Protocol", function () {
                 isLong ? SIDE_A : SIDE_B,
                 pe(wethAmountIn),
                 {
-                    payer: AddressZero,
+                    payer: [],
                     recipient: owner.address
                 }
             )
@@ -766,7 +766,7 @@ describe("Protocol", function () {
                 SIDE_R,
                 tokenAfter.sub(tokenBefore),
                 {
-                    payer: AddressZero,
+                    payer: [],
                     recipient: owner.address,
                 }
             )
@@ -843,7 +843,7 @@ describe("Protocol", function () {
                     side,
                     pe(amountIn),
                     {
-                        payer: AddressZero,
+                        payer: [],
                         recipient: owner.address,
                     }
                 )
@@ -882,7 +882,7 @@ describe("Protocol", function () {
                         SIDE_R,
                         tokenAfter.sub(tokenBefore),
                         {
-                            payer: AddressZero,
+                            payer: [],
                             recipient: owner.address,
                         }
                     ), `side(${side}) -> R`).to.be.reverted
@@ -893,7 +893,7 @@ describe("Protocol", function () {
                         SIDE_R,
                         tokenAfter.sub(tokenBefore),
                         {
-                            payer: AddressZero,
+                            payer: [],
                             recipient: owner.address,
                         }
                     )
@@ -919,7 +919,7 @@ describe("Protocol", function () {
                     SIDE_A,
                     pe(longIn),
                     {
-                        payer: AddressZero,
+                        payer: [],
                         recipient: accountA.address,
                     }
                 )
@@ -932,7 +932,7 @@ describe("Protocol", function () {
                     SIDE_B,
                     pe(shortIn),
                     {
-                        payer: AddressZero,
+                        payer: [],
                         recipient: accountB.address,
                     }
                 )
@@ -945,7 +945,7 @@ describe("Protocol", function () {
                     SIDE_C,
                     pe(cIn),
                     {
-                        payer: AddressZero,
+                        payer: [],
                         recipient: owner.address,
                     }
                 )
@@ -977,7 +977,7 @@ describe("Protocol", function () {
                         SIDE_R,
                         longTokenAfter.sub(longTokenBefore),
                         {
-                            payer: AddressZero,
+                            payer: [],
                             recipient: accountA.address,
                         }
                     )).to.be.reverted
@@ -987,7 +987,7 @@ describe("Protocol", function () {
                         SIDE_R,
                         longTokenAfter.sub(longTokenBefore),
                         {
-                            payer: AddressZero,
+                            payer: [],
                             recipient: accountA.address,
                         }
                     )
@@ -1000,7 +1000,7 @@ describe("Protocol", function () {
                         SIDE_R,
                         shortTokenAfter.sub(shortTokenBefore),
                         {
-                            payer: AddressZero,
+                            payer: [],
                             recipient: accountB.address,
                         }
                     )).to.be.reverted
@@ -1011,7 +1011,7 @@ describe("Protocol", function () {
                         SIDE_R,
                         shortTokenAfter.sub(shortTokenBefore),
                         {
-                            payer: AddressZero,
+                            payer: [],
                             recipient: accountB.address,
                         }
                     )
@@ -1023,7 +1023,7 @@ describe("Protocol", function () {
                     SIDE_R,
                     tokenAfter.sub(tokenBefore),
                     {
-                        payer: AddressZero,
+                        payer: [],
                         recipient: owner.address,
                     }
                 )
