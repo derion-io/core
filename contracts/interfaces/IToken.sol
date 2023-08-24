@@ -4,7 +4,7 @@ pragma solidity 0.8.20;
 import "@derivable/shadow-token/contracts/interfaces/IShadowFactory.sol";
 
 interface IToken is IShadowFactory {
-    function mintLock(
+    function mint(
         address to,
         uint256 id,
         uint256 amount,

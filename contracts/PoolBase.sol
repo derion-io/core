@@ -93,9 +93,9 @@ abstract contract PoolBase is IPool, ERC1155Holder, Storage, Constants {
         // mint tokens to recipient
         uint256 R3 = R / 3;
         uint32 maturity = uint32(block.timestamp + config.MATURITY);
-        IToken(TOKEN).mintLock(payment.recipient, idA, R3, maturity, "");
-        IToken(TOKEN).mintLock(payment.recipient, idB, R3, maturity, "");
-        IToken(TOKEN).mintLock(payment.recipient, idC, R - (R3 << 1), maturity, "");
+        IToken(TOKEN).mint(payment.recipient, idA, R3, maturity, "");
+        IToken(TOKEN).mint(payment.recipient, idB, R3, maturity, "");
+        IToken(TOKEN).mint(payment.recipient, idC, R - (R3 << 1), maturity, "");
     }
 
     function swap(
@@ -165,7 +165,7 @@ abstract contract PoolBase is IPool, ERC1155Holder, Storage, Constants {
         } else {
             uint256 idOut = _packID(address(this), param.sideOut);
             maturity = uint32(block.timestamp) + config.MATURITY;
-            IToken(TOKEN).mintLock(payment.recipient, idOut, amountOut, uint32(maturity), "");
+            IToken(TOKEN).mint(payment.recipient, idOut, amountOut, uint32(maturity), "");
         }
 
         emit Swap(

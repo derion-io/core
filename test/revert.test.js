@@ -479,7 +479,7 @@ describe("Revert", function () {
     it("onlyItsPool: UNAUTHORIZED_MINT_BURN", async function () {
       const { derivable1155, owner } = await loadFixture(fixture)
       await expect(
-        derivable1155.mintLock(owner.address, 1, 1, 0, "0x00")
+        derivable1155.mint(owner.address, 1, 1, 0, "0x00")
       ).to.be.revertedWith("UNAUTHORIZED_MINT_BURN")
       await expect(
         derivable1155.burn(owner.address, 1, 1)
