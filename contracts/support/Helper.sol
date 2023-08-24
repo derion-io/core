@@ -24,12 +24,10 @@ contract Helper is Constants, IHelper, ERC1155Holder {
     uint256 internal constant SIDE_NATIVE = 0x01;
     address internal immutable TOKEN;
     address internal immutable WETH;
-    address internal immutable UTR;
 
-    constructor(address token, address weth, address utr) {
+    constructor(address token, address weth) {
         TOKEN = token;
         WETH = weth;
-        UTR = utr;
     }
 
     // INDEX_R == 0: priceR = 0
@@ -226,11 +224,24 @@ contract Helper is Constants, IHelper, ERC1155Holder {
             params.recipient
         );
 
-        // de-dusting only possible with pre-configured UTR
-        if (msg.sender == UTR) {
+        // de-dust all-in tx
+        if (params.payer.length > 0) {
+            address payer = BytesLib.toAddress(params.payer, 0);
+            // if (params.payer.length == 20) {
+            //     payer = BytesLib.toAddress(params.payer, 0);
+            // } else {
+            //     (payer,,,,) = abi.decode(params.payer, (address, address, uint256, address, uint256));
+            // }
             uint256 idIn = _packID(params.poolIn, params.sideIn);
-            bool allIn = params.amountIn == IERC1155(TOKEN).balanceOf(params.payer, idIn);
-            if (allIn) {
+            uint256 balance = IERC1155(TOKEN).balanceOf(payer, idIn);
+            if (params.amountIn == balance) {
+                // wrap the original payload along with utr and balance
+                params.payer = abi.encode(
+                    params.payer,
+                    payment.utr,
+                    balance
+                );
+                // redirect the pay call to this contract
                 payment.utr = address(this);
             }
         }
@@ -277,18 +288,16 @@ contract Helper is Constants, IHelper, ERC1155Holder {
     }
 
     function pay(
-        address sender,
-        address recipient,
-        uint256 eip,
-        address token,
-        uint256 id,
+        bytes calldata payment,
         uint256 amount
     ) external {
-        uint256 balance = IERC1155(token).balanceOf(sender, id);
+        // unwrap
+        (bytes memory payload, address utr, uint256 balance) = abi.decode(payment, (bytes, address, uint256));
         if (balance - amount < amount / 100) {
-            amount = balance - 1; // don't clear the storage
+            amount = balance;
         }
-        IUniversalTokenRouter(UTR).pay(sender, recipient, eip, token, id, amount);
+        // forward the original payload
+        IUniversalTokenRouter(utr).pay(payload, amount);
     }
 
     function sweep(
