@@ -30,110 +30,6 @@ contract PoolLogic is PoolBase, Fetcher {
         FEE_RATE = feeRate;
     }
 
-    function _powu(uint256 x, uint256 y) internal pure returns (uint256 z) {
-        // Calculate the first iteration of the loop in advance.
-        z = y & 1 > 0 ? x : Q128;
-        // Equivalent to "for(y /= 2; y > 0; y /= 2)" but faster.
-        for (y >>= 1; y > 0; y >>= 1) {
-            x = FullMath.mulDiv(x, x, Q128);
-            // Equivalent to "y % 2 == 1" but faster.
-            if (y & 1 > 0) {
-                z = FullMath.mulDiv(z, x, Q128);
-            }
-        }
-    }
-
-    function _fetch(address fetcher, uint256 ORACLE) internal view returns (uint256 twap, uint256 spot) {
-        if (fetcher == address(0)) {
-            return fetch(ORACLE);
-        } else {
-            return Fetcher(fetcher).fetch(ORACLE);
-        }
-    }
-
-    // r(v)
-    function _r(uint256 xk, uint256 v, uint256 R) internal pure returns (uint256 r) {
-        r = FullMath.mulDiv(v, xk, Q128);
-        if (r > R >> 1) {
-            uint256 denominator = FullMath.mulDiv(v, xk << 2, Q128);
-            uint256 minuend = FullMath.mulDiv(R, R, denominator);
-            r = R - minuend;
-        }
-    }
-
-    function _supply(uint256 side) internal view returns (uint256 s) {
-        return IERC1155Supply(TOKEN).totalSupply(_packID(address(this), side));
-    }
-
-    function _reserve(address TOKEN_R) internal view returns (uint256 R) {
-        return IERC20(TOKEN_R).balanceOf(address(this));
-    }
-
-    function _evaluate(uint256 xk, State memory state) internal pure returns (uint256 rA, uint256 rB) {
-        rA = _r(xk, state.a, state.R);
-        rB = _r(Q256M/xk, state.b, state.R);
-    }
-
-    function _maturityPayoff(
-        Config memory config, uint256 maturity, uint256 amountOut
-    ) internal view override returns (uint256) {
-        unchecked {
-            if (maturity <= block.timestamp) {
-                return amountOut;
-            }
-            uint256 remain = maturity - block.timestamp;
-            if (config.MATURITY <= remain) {
-                return 0;
-            }
-            uint256 elapsed = config.MATURITY - remain;
-            if (elapsed < config.MATURITY_VEST) {
-                amountOut = amountOut * elapsed / config.MATURITY_VEST;
-            }
-            return FullMath.mulDiv(amountOut, config.MATURITY_RATE, Q128);
-        }
-    }
-
-    function _expRate (
-        uint256 elapsed,
-        uint256 halfLife
-    ) internal pure returns (uint256 rateX64) {
-        if (halfLife == 0) {
-            return Q64;
-        }
-        int128 rate = ABDKMath64x64.exp_2(int128(int((elapsed << 64) / halfLife)));
-        return uint256(int(rate));
-    }
-
-    function _xk(Config memory config, uint256 price) internal pure returns (uint256 xk) {
-        xk = _powu(FullMath.mulDiv(Q128, price, config.MARK), config.K);
-    }
-
-    function _selectPrice(
-        Config memory config,
-        State memory state,
-        uint256 sideIn,
-        uint256 sideOut
-    ) internal view returns (uint256 xk, uint256 rA, uint256 rB, uint256 price) {
-        (uint256 min, uint256 max) = _fetch(config.FETCHER, uint256(config.ORACLE));
-        if (min > max) {
-            (min, max) = (max, min);
-        }
-        if (sideOut == SIDE_A || sideIn == SIDE_B) {
-            xk = _xk(config, price = max);
-            (rA, rB) = _evaluate(xk, state);
-        } else if (sideOut == SIDE_B || sideIn == SIDE_A) {
-            xk = _xk(config, price = min);
-            (rA, rB) = _evaluate(xk, state);
-        } else {
-            xk = _xk(config, price = min);
-            (rA, rB) = _evaluate(xk, state);
-            if ((sideIn == SIDE_R) == rB > rA) {
-                xk = _xk(config, price = max);
-                (rA, rB) = _evaluate(xk, state);
-            }
-        }
-    }
-
     function _swap(
         Config memory config,
         Param memory param
@@ -259,5 +155,108 @@ contract PoolLogic is PoolBase, Fetcher {
         }
         s_a = uint224(state1.a);
         s_b = uint224(state1.b);
+    }
+
+    function _maturityPayoff(
+        Config memory config, uint256 maturity, uint256 amountOut
+    ) internal view override returns (uint256) {
+        unchecked {
+            if (maturity <= block.timestamp) {
+                return amountOut;
+            }
+            uint256 remain = maturity - block.timestamp;
+            if (config.MATURITY <= remain) {
+                return 0;
+            }
+            uint256 elapsed = config.MATURITY - remain;
+            if (elapsed < config.MATURITY_VEST) {
+                amountOut = amountOut * elapsed / config.MATURITY_VEST;
+            }
+            return FullMath.mulDiv(amountOut, config.MATURITY_RATE, Q128);
+        }
+    }
+
+    function _selectPrice(
+        Config memory config,
+        State memory state,
+        uint256 sideIn,
+        uint256 sideOut
+    ) internal view returns (uint256 xk, uint256 rA, uint256 rB, uint256 price) {
+        (uint256 min, uint256 max) = _fetch(config.FETCHER, uint256(config.ORACLE));
+        if (min > max) {
+            (min, max) = (max, min);
+        }
+        if (sideOut == SIDE_A || sideIn == SIDE_B) {
+            xk = _xk(config, price = max);
+            (rA, rB) = _evaluate(xk, state);
+        } else if (sideOut == SIDE_B || sideIn == SIDE_A) {
+            xk = _xk(config, price = min);
+            (rA, rB) = _evaluate(xk, state);
+        } else {
+            xk = _xk(config, price = min);
+            (rA, rB) = _evaluate(xk, state);
+            if ((sideIn == SIDE_R) == rB > rA) {
+                xk = _xk(config, price = max);
+                (rA, rB) = _evaluate(xk, state);
+            }
+        }
+    }
+
+    function _fetch(address fetcher, uint256 ORACLE) internal view returns (uint256 twap, uint256 spot) {
+        if (fetcher == address(0)) {
+            return fetch(ORACLE);
+        } else {
+            return Fetcher(fetcher).fetch(ORACLE);
+        }
+    }
+
+    function _supply(uint256 side) internal view returns (uint256 s) {
+        return IERC1155Supply(TOKEN).totalSupply(_packID(address(this), side));
+    }
+
+    function _reserve(address TOKEN_R) internal view returns (uint256 R) {
+        return IERC20(TOKEN_R).balanceOf(address(this));
+    }
+
+    function _expRate (
+        uint256 elapsed,
+        uint256 halfLife
+    ) internal pure returns (uint256 rateX64) {
+        if (halfLife == 0) {
+            return Q64;
+        }
+        int128 rate = ABDKMath64x64.exp_2(int128(int((elapsed << 64) / halfLife)));
+        return uint256(int(rate));
+    }
+
+    function _xk(Config memory config, uint256 price) internal pure returns (uint256 xk) {
+        xk = _powu(FullMath.mulDiv(Q128, price, config.MARK), config.K);
+    }
+
+    function _powu(uint256 x, uint256 y) internal pure returns (uint256 z) {
+        // Calculate the first iteration of the loop in advance.
+        z = y & 1 > 0 ? x : Q128;
+        // Equivalent to "for(y /= 2; y > 0; y /= 2)" but faster.
+        for (y >>= 1; y > 0; y >>= 1) {
+            x = FullMath.mulDiv(x, x, Q128);
+            // Equivalent to "y % 2 == 1" but faster.
+            if (y & 1 > 0) {
+                z = FullMath.mulDiv(z, x, Q128);
+            }
+        }
+    }
+
+    function _evaluate(uint256 xk, State memory state) internal pure returns (uint256 rA, uint256 rB) {
+        rA = _r(xk, state.a, state.R);
+        rB = _r(Q256M/xk, state.b, state.R);
+    }
+
+    function _r(uint256 xk, uint256 v, uint256 R) internal pure returns (uint256 r) {
+        r = FullMath.mulDiv(v, xk, Q128);
+        if (r > R >> 1) {
+            uint256 denominator = FullMath.mulDiv(v, xk << 2, Q128);
+            uint256 minuend = FullMath.mulDiv(R, R, denominator);
+            r = R - minuend;
+        }
     }
 }
