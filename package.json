@@ -15,7 +15,7 @@
   "devDependencies": {
     "@atixlabs/hardhat-time-n-mine": "^0.0.5",
     "@derivable/shadow-token": "https://github.com/derivable-labs/shadow-token.git",
-    "@derivable/utr": "https://github.com/derivable-labs/utr.git#payload",
+    "@derivable/utr": "https://github.com/derivable-labs/utr.git",
     "@nomicfoundation/hardhat-chai-matchers": "^1.0.0",
     "@nomicfoundation/hardhat-network-helpers": "^1.0.0",
     "@nomiclabs/hardhat-ethers": "^2.1.0",

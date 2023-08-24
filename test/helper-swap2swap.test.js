@@ -3,7 +3,7 @@ const {
   time,
 } = require("@nomicfoundation/hardhat-network-helpers");
 const { loadFixtureFromParams } = require("./shared/scenerios");
-const { numberToWei, encodeSqrtX96 } = require("./shared/utilities");
+const { numberToWei, encodeSqrtX96, packId } = require("./shared/utilities");
 const { MaxUint256 } = require("@ethersproject/constants");
 const { baseParams } = require("./shared/baseParams");
 const { SIDE_R, SIDE_A } = require("./shared/constant");
@@ -98,7 +98,7 @@ describe("Helper swap2swap", function () {
     }
   );
 
-  it("Test", async function () {
+  it("Swap and open", async function () {
     const {
       utr,
       uniswapPairFee500,
@@ -108,7 +108,6 @@ describe("Helper swap2swap", function () {
       derivablePools,
     } = await loadFixture(fixture);
     const pool = derivablePools[0];
-    console.log('owner', owner.address)
     await usdc.approve(utr.address, MaxUint256);
     await utr.exec(
       [],
@@ -134,6 +133,57 @@ describe("Helper swap2swap", function () {
                 poolIn: pool.contract.address,
                 poolOut: pool.contract.address,
                 amountIn: numberToWei(5),
+                recipient: owner.address,
+                payer: owner.address,
+                INDEX_R: 0
+              },
+              usdc.address,
+              uniswapPairFee500.address
+            )
+          ).data,
+        },
+      ]
+    );
+  });
+
+  it("Close and swap", async function () {
+    const {
+      utr,
+      uniswapPairFee500,
+      stateCalHelper,
+      derivable1155,
+      usdc,
+      owner,
+      derivablePools,
+    } = await loadFixture(fixture);
+    const pool = derivablePools[0];
+    const tokenId = packId(SIDE_A, pool.contract.address)
+    await derivable1155.setApprovalForAll(utr.address, true)
+    await usdc.approve(utr.address, MaxUint256);
+    await utr.exec(
+      [],
+      [
+        {
+          inputs: [
+            {
+              mode: PAYMENT,
+              eip: 1155,
+              token: derivable1155.address,
+              id: tokenId,
+              amountIn: '10000000000',
+              recipient: pool.contract.address,
+            },
+          ],
+          flags: 0,
+          code: stateCalHelper.address,
+          data: (
+            await stateCalHelper.populateTransaction.closeAndSwap(
+              {
+                sideIn: SIDE_A,
+                sideOut: SIDE_R,
+                poolIn: pool.contract.address,
+                poolOut: pool.contract.address,
+                amountIn: '10000000000',
                 recipient: owner.address,
                 payer: owner.address,
                 INDEX_R: 0

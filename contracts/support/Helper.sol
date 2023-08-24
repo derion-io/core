@@ -72,6 +72,25 @@ contract Helper is Constants, IHelper, ERC1155Holder {
         uint256 priceR
     );
 
+    // UniswapV3 struct
+    struct SwapCallbackData {
+        bytes path;
+        address payer;
+        address utr;
+    }
+
+    struct ExactInputSingleParams {
+        address tokenIn;
+        address tokenOut;
+        address pool;
+        address recipient;
+        address payer;
+        address utr;
+        uint256 amountIn;
+        uint256 amountOutMinimum;
+        uint160 sqrtPriceLimitX96;
+    }
+
     // accepting ETH for WETH.withdraw
     receive() external payable {}
 
@@ -321,16 +340,6 @@ contract Helper is Constants, IHelper, ERC1155Holder {
         state1.b = _v(Q256M/__.xk, rB1, state1.R);
     }
 
-    struct ExactInputSingleParams {
-        address tokenIn;
-        address tokenOut;
-        address pool;
-        address recipient;
-        address payer;
-        uint256 amountIn;
-        uint256 amountOutMinimum;
-        uint160 sqrtPriceLimitX96;
-    }
 
     function swapAndOpen (
         SwapParams memory params,
@@ -345,6 +354,7 @@ contract Helper is Constants, IHelper, ERC1155Holder {
             pool: pool,
             recipient: address(this),
             payer: BytesLib.toAddress(params.payer, 0),
+            utr: msg.sender,
             amountIn: params.amountIn,
             amountOutMinimum: 0,
             sqrtPriceLimitX96: 0
@@ -374,17 +384,63 @@ contract Helper is Constants, IHelper, ERC1155Holder {
         );
     }
 
+    function closeAndSwap (
+        SwapParams memory params,
+        address tokenOut,
+        address pool
+    ) external returns (uint256 amountOut) {
+        require(params.poolIn == params.poolOut && params.sideOut == SIDE_R, 'Invalid params');
+        Config memory config = IPool(params.poolIn).loadConfig();
+
+        Payment memory payment = Payment(
+            msg.sender, // UTR
+            params.payer,
+            address(this)
+        );
+
+        bytes memory payload = abi.encode(
+            params.sideIn,
+            params.sideOut,
+            params.amountIn
+        );
+
+        (, amountOut,) = IPool(params.poolIn).swap(
+            Param(
+                params.sideIn,
+                params.sideOut,
+                address(this),
+                payload
+            ),
+            payment
+        );
+
+        amountOut = exactInputSingle(ExactInputSingleParams({
+            tokenIn: config.TOKEN_R,
+            tokenOut: tokenOut,
+            pool: pool,
+            recipient: params.recipient,
+            payer: address(this),
+            utr: address(0),
+            amountIn: amountOut,
+            amountOutMinimum: 0,
+            sqrtPriceLimitX96: 0
+        }));
+    }
+
     function exactInputSingle(ExactInputSingleParams memory params)
         public
         payable
         returns (uint256 amountOut)
     {
-        console.log(params.payer);
         amountOut = exactInputInternal(
             params.amountIn,
             params.recipient,
             params.sqrtPriceLimitX96,
-            SwapCallbackData({path: abi.encodePacked(params.tokenIn, params.tokenOut, params.pool), payer: params.payer})
+            SwapCallbackData({
+                path: abi.encodePacked(params.tokenIn, params.tokenOut, params.pool), 
+                payer: params.payer,
+                utr: params.utr
+            })
         );
         require(amountOut >= params.amountOutMinimum, 'Too little received');
     }
@@ -417,10 +473,6 @@ contract Helper is Constants, IHelper, ERC1155Holder {
         return uint256(-(zeroForOne ? amount1 : amount0));
     }
 
-    struct SwapCallbackData {
-        bytes path;
-        address payer;
-    }
 
     function uniswapV3SwapCallback(
         int256 amount0Delta,
@@ -438,17 +490,22 @@ contract Helper is Constants, IHelper, ERC1155Holder {
                 ? (tokenIn < tokenOut, uint256(amount0Delta))
                 : (tokenOut < tokenIn, uint256(amount1Delta));
         if (isExactInput) {
-            pay(tokenIn, data.payer, msg.sender, amountToPay);
+            pay(data.utr, tokenIn, data.payer, msg.sender, amountToPay);
         } 
     }
 
     function pay(
+        address utr,
         address token,
         address payer,
         address recipient,
         uint256 value
     ) internal {
-        bytes memory payload = abi.encode(payer, recipient, 20, token, 0);
-        IUniversalTokenRouter(UTR).pay(payload, value);
+        if (utr == address(0)) {
+            TransferHelper.safeTransfer(token, recipient, value);
+        } else {
+            bytes memory payload = abi.encode(payer, recipient, 20, token, 0);
+            IUniversalTokenRouter(UTR).pay(payload, value);
+        }
     }
 }
