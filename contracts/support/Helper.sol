@@ -24,10 +24,12 @@ contract Helper is Constants, IHelper, ERC1155Holder {
     uint256 internal constant SIDE_NATIVE = 0x01;
     address internal immutable TOKEN;
     address internal immutable WETH;
+    address internal immutable UTR;
 
-    constructor(address token, address weth) {
+    constructor(address token, address weth, address utr) {
         TOKEN = token;
         WETH = weth;
+        UTR = utr;
     }
 
     // INDEX_R == 0: priceR = 0
@@ -218,6 +220,21 @@ contract Helper is Constants, IHelper, ERC1155Holder {
             params.recipient = address(this);
         }
 
+        Payment memory payment = Payment(
+            msg.sender, // UTR
+            params.payer,
+            params.recipient
+        );
+
+        // de-dusting only possible with pre-configured UTR
+        if (msg.sender == UTR) {
+            uint256 idIn = _packID(params.poolIn, params.sideIn);
+            bool allIn = params.amountIn == IERC1155(TOKEN).balanceOf(params.payer, idIn);
+            if (allIn) {
+                payment.utr = address(this);
+            }
+        }
+
         uint256 price;
         bytes memory payload = abi.encode(
             params.sideIn,
@@ -225,31 +242,15 @@ contract Helper is Constants, IHelper, ERC1155Holder {
             params.amountIn
         );
 
-        uint amountIn;
-        (amountIn, amountOut, price) = IPool(params.poolIn).swap(
+        (, amountOut, price) = IPool(params.poolIn).swap(
             Param(
                 params.sideIn,
                 params.sideOut,
                 address(this),
                 payload
             ),
-            Payment(
-                msg.sender, // UTR
-                params.payer,
-                params.recipient
-            )
+            payment
         );
-
-        // donate 1155 dust balance
-        if (params.amountIn > amountIn && params.sideIn >= SIDE_A) {
-            uint remain = params.amountIn - amountIn;
-            if (remain <= params.amountIn / 100) {
-                uint idIn = _packID(params.poolIn, params.sideIn);
-                if (remain == IERC1155(TOKEN).balanceOf(params.payer, idIn)) {
-                    IUniversalTokenRouter(msg.sender).pay(params.payer, params.poolIn, 1155, TOKEN, idIn, remain);
-                }
-            }
-        }
 
         if (__.sideOut == SIDE_NATIVE) {
             require(TOKEN_R == WETH, 'Reserve token is not Wrapped');
@@ -273,6 +274,21 @@ contract Helper is Constants, IHelper, ERC1155Holder {
             price,
             priceR
         );
+    }
+
+    function pay(
+        address sender,
+        address recipient,
+        uint256 eip,
+        address token,
+        uint256 id,
+        uint256 amount
+    ) external {
+        uint256 balance = IERC1155(token).balanceOf(sender, id);
+        if (balance - amount < amount / 100) {
+            amount = balance;
+        }
+        IUniversalTokenRouter(UTR).pay(sender, recipient, eip, token, id, amount);
     }
 
     function sweep(
