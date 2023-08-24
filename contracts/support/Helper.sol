@@ -232,7 +232,7 @@ contract Helper is Constants, IHelper, ERC1155Holder {
             uint256 idIn = _packID(params.poolIn, params.sideIn);
             uint256 balance = IERC1155(TOKEN).balanceOf(__.payer, idIn);
             if (params.amountIn == balance) {
-                // wrap the original payload along with utr and balance
+                // construct the full utr.pay payment if necessary
                 if (payment.payer.length == 20) {
                     payment.payer = abi.encode(
                         __.payer,
@@ -244,6 +244,7 @@ contract Helper is Constants, IHelper, ERC1155Holder {
                 } else {
                     __.payer = tx.origin; // only for event index
                 }
+                // wrap the original payment along with utr and balance
                 payment.payer = abi.encode(
                     params.payer,
                     payment.utr,
