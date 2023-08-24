@@ -160,9 +160,9 @@
   dependencies:
     "@derivable/erc1155-maturity" "https://github.com/derivable-labs/erc1155-maturity.git"
 
-"@derivable/utr@https://github.com/derivable-labs/utr.git#payload":
+"@derivable/utr@https://github.com/derivable-labs/utr.git":
   version "1.0.0"
-  resolved "https://github.com/derivable-labs/utr.git#28d0d1e4ad09e7cd888b7ea2b1be1769801b98c2"
+  resolved "https://github.com/derivable-labs/utr.git#6b80487c0446d0566417459b6235bf2d8b5ef177"
   dependencies:
     "@atixlabs/hardhat-time-n-mine" "^0.0.5"
     "@uniswap/lib" "^4.0.1-alpha"
