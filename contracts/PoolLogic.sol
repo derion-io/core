@@ -74,7 +74,9 @@ contract PoolLogic is PoolBase, Fetcher {
         rB = _r(Q256M/xk, state.b, state.R);
     }
 
-    function _maturityPayoff(Config memory config, uint256 maturity, uint256 amountOut) internal view override returns (uint256) {
+    function _maturityPayoff(
+        Config memory config, uint256 maturity, uint256 amountOut
+    ) internal view override returns (uint256) {
         unchecked {
             if (maturity <= block.timestamp) {
                 return amountOut;

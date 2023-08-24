@@ -14,7 +14,9 @@ library MetaProxyFactory {
 
   /// @dev Creates a new proxy for `targetContract` with metadata from memory starting at `offset` and `length` bytes.
   /// @return addr A non-zero address if successful.
-  function metaProxyFromMemory (address targetContract, uint256 offset, uint256 length) internal returns (address addr) {
+  function metaProxyFromMemory (
+    address targetContract, uint256 offset, uint256 length
+  ) internal returns (address addr) {
     // the following assembly code (init code + contract code) constructs a metaproxy.
     assembly {
       // load free memory pointer as per solidity convention

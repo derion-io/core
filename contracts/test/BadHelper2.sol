@@ -80,7 +80,9 @@ contract BadHelper2 is Constants, IHelper {
         return uint256(int(rate));
     }
 
-    function createPool(Config memory config, State memory state, address factory) external payable returns (address pool) {
+    function createPool(
+        Config memory config, State memory state, address factory
+    ) external payable returns (address pool) {
         pool = IPoolFactory(factory).createPool(config);
         IWeth(WETH).deposit{value : msg.value}();
         uint256 amount = IWeth(WETH).balanceOf(address(this));

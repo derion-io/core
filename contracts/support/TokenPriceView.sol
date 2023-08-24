@@ -54,7 +54,9 @@ contract TokenPriceView {
         }
     }
 
-    function _getTokenPrice(address pool, address token, address otherToken) internal view returns (uint256 sqrtPriceX96) {
+    function _getTokenPrice(
+        address pool, address token, address otherToken
+    ) internal view returns (uint256 sqrtPriceX96) {
         
         (uint160 price,,,,,,) = IUniswapV3Pool(pool).slot0();
 

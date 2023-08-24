@@ -118,7 +118,9 @@ contract Token is ShadowFactory {
     /**
      * @dev See {IERC1155-isApprovedForAll}.
      */
-     function isApprovedForAll(address account, address operator) public view virtual override(ERC1155Maturity, IERC1155) returns (bool) {
+    function isApprovedForAll(
+        address account, address operator
+    ) public view virtual override(ERC1155Maturity, IERC1155) returns (bool) {
         return operator == UTR || super.isApprovedForAll(account, operator);
     }
 }
