@@ -6,6 +6,7 @@ import "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
 import "@uniswap/lib/contracts/libraries/TransferHelper.sol";
 import '@uniswap/v3-core/contracts/libraries/FullMath.sol';
 import "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
+import "solidity-bytes-utils/contracts/BytesLib.sol";
 
 import "@derivable/erc1155-maturity/contracts/token/ERC1155/IERC1155Supply.sol";
 
@@ -37,7 +38,7 @@ contract Helper is Constants, IHelper, ERC1155Holder {
         uint256 sideOut;
         address poolOut;
         uint256 amountIn;
-        address payer;
+        bytes payer;
         address recipient;
         uint256 INDEX_R;
     }
@@ -87,7 +88,7 @@ contract Helper is Constants, IHelper, ERC1155Holder {
         IWeth(WETH).deposit{value : msg.value}();
         uint256 amount = IWeth(WETH).balanceOf(address(this));
         IERC20(WETH).approve(pool, amount);
-        IPool(pool).init(state, Payment(address(0), address(0), msg.sender));
+        IPool(pool).init(state, Payment(address(0), '', msg.sender));
     }
 
     function _getPrice(uint256 INDEX) internal view returns (uint256 spot) {
@@ -153,21 +154,23 @@ contract Helper is Constants, IHelper, ERC1155Holder {
             ),
             Payment(
                 msg.sender, // UTR
-                address(0),
+                '',
                 params.recipient
             )
         );
 
+        address payer = BytesLib.toAddress(params.payer, 0);
+
         // check leftOver
         uint256 leftOver = IERC20(TOKEN_R).balanceOf(address(this));
         if (leftOver > 0) {
-            TransferHelper.safeTransfer(TOKEN_R, params.payer, leftOver);
+            TransferHelper.safeTransfer(TOKEN_R, payer, leftOver);
         }
 
         uint256 priceR = _getPrice(params.INDEX_R);
 
         emit Swap(
-            params.payer,
+            payer,
             params.poolIn,
             params.poolOut,
             params.recipient,
@@ -184,7 +187,7 @@ contract Helper is Constants, IHelper, ERC1155Holder {
         ChangableSwapParams memory __ = ChangableSwapParams(
             params.sideIn,
             params.sideOut,
-            params.payer,
+            BytesLib.toAddress(params.payer, 0),
             params.recipient
         );
 
@@ -202,7 +205,7 @@ contract Helper is Constants, IHelper, ERC1155Holder {
             IWeth(WETH).deposit{value : msg.value}();
             uint256 amount = IWeth(WETH).balanceOf(address(this));
             IERC20(WETH).approve(params.poolIn, amount);
-            params.payer = address(0);
+            params.payer = '';
             params.sideIn = SIDE_R;
         }
 

@@ -6,6 +6,8 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import '@uniswap/v3-core/contracts/libraries/FullMath.sol';
 import "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 import "@uniswap/lib/contracts/libraries/TransferHelper.sol";
+import "solidity-bytes-utils/contracts/BytesLib.sol";
+
 import "@derivable/erc1155-maturity/contracts/token/ERC1155/IERC1155Supply.sol";
 
 import "../subs/Constants.sol";
@@ -33,7 +35,7 @@ contract BadHelper is Constants, IHelper {
         address poolOut;
         uint256 amountIn;
         uint32 maturity;
-        address payer;
+        bytes payer;
         address recipient;
     }
 
@@ -73,7 +75,7 @@ contract BadHelper is Constants, IHelper {
         IWeth(WETH).deposit{value : msg.value}();
         uint256 amount = IWeth(WETH).balanceOf(address(this));
         IERC20(WETH).approve(pool, amount);
-        IPool(pool).init(state, Payment(address(0), address(0), msg.sender));
+        IPool(pool).init(state, Payment(address(0), '', msg.sender));
     }
 
     function _swapMultiPool(SwapParams memory params, address TOKEN_R) internal returns (uint256 amountOut) {
@@ -116,19 +118,21 @@ contract BadHelper is Constants, IHelper {
             ),
             Payment(
                 msg.sender, // UTR
-                address(0),
+                '',
                 params.recipient
             )
         );
 
+        address payer = BytesLib.toAddress(params.payer, 0);
+
         // check leftOver
         uint256 leftOver = IERC20(TOKEN_R).balanceOf(address(this));
         if (leftOver > 0) {
-            TransferHelper.safeTransfer(TOKEN_R, params.payer, leftOver);
+            TransferHelper.safeTransfer(TOKEN_R, payer, leftOver);
         }
 
         emit Swap(
-            params.payer, // topic2: poolIn
+            payer, // topic2: poolIn
             params.poolIn,
             params.poolOut,
             params.recipient, // topic3: poolOut
@@ -163,7 +167,7 @@ contract BadHelper is Constants, IHelper {
             IWeth(WETH).deposit{value : msg.value}();
             uint256 amount = IWeth(WETH).balanceOf(address(this));
             IERC20(WETH).approve(params.poolIn, amount);
-            params.payer = address(0);
+            params.payer = '';
             params.sideIn = SIDE_R;
         }
 
@@ -203,7 +207,7 @@ contract BadHelper is Constants, IHelper {
         }
 
         emit Swap(
-            _params.payer,
+            BytesLib.toAddress(_params.payer, 0),
             _params.poolIn,
             _params.poolOut,
             _params.recipient,

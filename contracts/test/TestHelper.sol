@@ -42,7 +42,7 @@ contract TestHelper {
     function swapInAll(
         uint256 sideIn,
         uint256 sideOut,
-        address payer,
+        bytes memory payer,
         address recipient
     ) external returns (uint256, uint256, uint256) {
         IERC1155(TOKEN).setApprovalForAll(POOL, true);

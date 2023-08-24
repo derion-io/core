@@ -24,7 +24,7 @@ struct Param {
 
 struct Payment {
     address utr;
-    address payer;
+    bytes payer;
     address recipient;
 }
 

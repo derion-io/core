@@ -202,7 +202,7 @@ HLs.forEach(HALF_LIFE => {
                 data: (await derivableHelper.populateTransaction.swapInAll(
                   SIDE_A,
                   SIDE_R,
-                  ethers.constants.AddressZero,
+                  [],
                   accountA.address
                 )).data,
               }
@@ -244,7 +244,7 @@ HLs.forEach(HALF_LIFE => {
                 data: (await derivableHelper.populateTransaction.swapInAll(
                   SIDE_B,
                   SIDE_R,
-                  ethers.constants.AddressZero,
+                  [],
                   accountB.address
                 )).data,
               }
@@ -311,7 +311,7 @@ HLs.forEach(HALF_LIFE => {
                 data: (await derivableHelper.populateTransaction.swapInAll(
                   SIDE_A,
                   SIDE_R,
-                  ethers.constants.AddressZero,
+                  [],
                   accountA.address
                 )).data,
               },
@@ -321,7 +321,7 @@ HLs.forEach(HALF_LIFE => {
                 data: (await derivableHelper.populateTransaction.swapInAll(
                   SIDE_B,
                   SIDE_R,
-                  ethers.constants.AddressZero,
+                  [],
                   accountB.address
                 )).data,
               }

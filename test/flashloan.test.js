@@ -95,7 +95,7 @@ describe("Flashloan spec", function () {
             positionAmount,
             {}
           ),
-          AddressZero,
+          [],
           owner.address,
         )
         const wethAfter = await weth.balanceOf(owner.address)
@@ -144,7 +144,7 @@ describe("Flashloan spec", function () {
             positionAmount,
             {}
           ),
-          AddressZero,
+          [],
           owner.address,
         )
         const wethAfter = await weth.balanceOf(owner.address)

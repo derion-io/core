@@ -45,6 +45,7 @@
     "prettier-plugin-solidity": "^1.0.0-dev.23",
     "seedrandom": "^3.0.5",
     "solhint": "^3.3.7",
+    "solidity-bytes-utils": "^0.8.0",
     "solidity-coverage": "^0.8.4"
   }
 }
