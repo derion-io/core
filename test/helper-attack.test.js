@@ -352,6 +352,8 @@ describe("Helper Attacks", function () {
             }], opts)
 
             const balanceInAfter = await derivable1155.balanceOf(owner.address, packId(sideIn, derivablePools[0].contract.address))
+            expect(balanceInAfter, 'input balance must be exhausted').equal(0)
+
             const balanceOutAfter = await owner.provider.getBalance(owner.address)
 
             expect(balanceOutAfter.gt(balanceOutBefore)).equal(true)

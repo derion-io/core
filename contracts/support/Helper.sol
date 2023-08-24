@@ -9,6 +9,7 @@ import "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 import "solidity-bytes-utils/contracts/BytesLib.sol";
 
 import "@derivable/erc1155-maturity/contracts/token/ERC1155/IERC1155Supply.sol";
+import "@derivable/utr/contracts/interfaces/IUniversalTokenRouter.sol";
 
 import "../subs/Constants.sol";
 import "../interfaces/IHelper.sol";
@@ -224,7 +225,8 @@ contract Helper is Constants, IHelper, ERC1155Holder {
             params.amountIn
         );
 
-        (, amountOut, price) = IPool(params.poolIn).swap(
+        uint amountIn;
+        (amountIn, amountOut, price) = IPool(params.poolIn).swap(
             Param(
                 params.sideIn,
                 params.sideOut,
@@ -237,6 +239,17 @@ contract Helper is Constants, IHelper, ERC1155Holder {
                 params.recipient
             )
         );
+
+        // donate 1155 dust balance
+        if (params.amountIn > amountIn && params.sideIn >= SIDE_A) {
+            uint remain = params.amountIn - amountIn;
+            if (remain <= params.amountIn / 100) {
+                uint idIn = _packID(params.poolIn, params.sideIn);
+                if (remain == IERC1155(TOKEN).balanceOf(params.payer, idIn)) {
+                    IUniversalTokenRouter(msg.sender).pay(params.payer, params.poolIn, 1155, TOKEN, idIn, remain);
+                }
+            }
+        }
 
         if (__.sideOut == SIDE_NATIVE) {
             require(TOKEN_R == WETH, 'Reserve token is not Wrapped');
