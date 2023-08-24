@@ -5,6 +5,8 @@ import "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 import "@uniswap/v3-periphery/contracts/libraries/OracleLibrary.sol";
 import "./subs/Constants.sol";
 
+/// @title The default Fetcher code for UniswapV3 Oracle
+/// @author Derivable Labs
 contract Fetcher is Constants {
     function fetch(uint256 ORACLE) public view returns (uint256 twap, uint256 spot) {
         address pool = address(uint160(ORACLE));

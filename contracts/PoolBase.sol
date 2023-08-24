@@ -15,6 +15,9 @@ import "./interfaces/IPool.sol";
 import "./subs/Constants.sol";
 import "./subs/Storage.sol";
 
+/// @title The base logic code for state initialization and token payment. 
+/// @author Derivable Labs
+/// @notice PoolBase is extended by PoolLogic to form the Pool contract.
 abstract contract PoolBase is IPool, ERC1155Holder, Storage, Constants {
     struct Result {
         uint256 amountIn;

@@ -5,6 +5,12 @@ import "@derivable/shadow-token/contracts/ShadowFactory.sol";
 import "./interfaces/IPool.sol";
 import "./interfaces/ITokenDescriptor.sol";
 
+/// @title A single ERC-1155 token shared by all Derivable pools
+/// @author Derivable Labs
+/// @notice An ShadowFactory and ERC1155-Maturity is used by all Derivable pools
+///         for their derivative tokens, but also open to any EOA or contract by
+///         rule: any EOA or contract of <address>, can mint and burn all its
+///         ids that end with <address>.
 contract Token is ShadowFactory {
     // Immutables
     address internal immutable UTR;
