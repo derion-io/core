@@ -186,7 +186,10 @@ contract Helper is Constants, IHelper, ERC1155Holder {
         );
     }
 
-    function swap(SwapParams memory params) public payable returns (uint256 amountOut){
+    function swap(SwapParams memory params) public payable returns (uint256 amountOut) {
+        require(params.amountIn > 0, 'Zero amountIn');
+        require(params.payer.length >= 20, 'Payer missing');
+
         ChangableSwapParams memory __ = ChangableSwapParams(
             params.sideIn,
             params.sideOut,
@@ -225,18 +228,23 @@ contract Helper is Constants, IHelper, ERC1155Holder {
         );
 
         // de-dust all-in tx
-        if (params.payer.length > 0) {
-            address payer = BytesLib.toAddress(params.payer, 0);
-            // if (params.payer.length == 20) {
-            //     payer = BytesLib.toAddress(params.payer, 0);
-            // } else {
-            //     (payer,,,,) = abi.decode(params.payer, (address, address, uint256, address, uint256));
-            // }
+        if (payment.payer.length > 0) {
             uint256 idIn = _packID(params.poolIn, params.sideIn);
-            uint256 balance = IERC1155(TOKEN).balanceOf(payer, idIn);
+            uint256 balance = IERC1155(TOKEN).balanceOf(__.payer, idIn);
             if (params.amountIn == balance) {
                 // wrap the original payload along with utr and balance
-                params.payer = abi.encode(
+                if (payment.payer.length == 20) {
+                    payment.payer = abi.encode(
+                        __.payer,
+                        params.poolIn,
+                        1155,
+                        TOKEN,
+                        idIn
+                    );
+                } else {
+                    __.payer = tx.origin; // only for event index
+                }
+                payment.payer = abi.encode(
                     params.payer,
                     payment.utr,
                     balance
