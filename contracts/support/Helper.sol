@@ -286,7 +286,7 @@ contract Helper is Constants, IHelper, ERC1155Holder {
     ) external {
         uint256 balance = IERC1155(token).balanceOf(sender, id);
         if (balance - amount < amount / 100) {
-            amount = balance;
+            amount = balance - 1; // don't clear the storage
         }
         IUniversalTokenRouter(UTR).pay(sender, recipient, eip, token, id, amount);
     }
