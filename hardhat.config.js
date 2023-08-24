@@ -3,6 +3,7 @@ const dotenv = require("dotenv");
 dotenv.config({ path: __dirname + "/.env" });
 
 require("@nomiclabs/hardhat-ethers");
+require("@nomiclabs/hardhat-solhint");
 require("hardhat-contract-sizer");
 require("hardhat-gas-reporter");
 require('hardhat-dependency-compiler');

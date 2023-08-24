@@ -2,7 +2,9 @@
 pragma solidity 0.8.20;
 
 library MetaProxyView {
-  function computeBytecodeHash(address targetContract, bytes memory metadata) internal pure returns (bytes32 bytecodeHash) {
+  function computeBytecodeHash(
+    address targetContract, bytes memory metadata
+  ) internal pure returns (bytes32 bytecodeHash) {
     uint256 offset;
     uint256 length = metadata.length;
     assembly {

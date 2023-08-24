@@ -243,5 +243,7 @@ abstract contract PoolBase is IPool, ERC1155Holder, Storage, Constants {
     }
 
     function _swap(Config memory config, Param memory param) internal virtual returns (Result memory);
-    function _maturityPayoff(Config memory config, uint256 maturity, uint256 amountOut) internal view virtual returns (uint256);
+    function _maturityPayoff(
+        Config memory config, uint256 maturity, uint256 amountOut
+    ) internal view virtual returns (uint256);
 }
