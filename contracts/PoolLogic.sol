@@ -17,6 +17,9 @@ contract PoolLogic is PoolBase, Fetcher {
     address immutable internal FEE_TO;
     uint256 immutable internal FEE_RATE;
 
+    /// @param token ERC-1155 Token for pool derivatives
+    /// @param feeTo fee recipient address
+    /// @param feeRate fee rate
     constructor(
         address token,
         address feeTo,
