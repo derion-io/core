@@ -48,7 +48,7 @@ describe("Shadow metadata spec", function () {
 
             // mint fake token
             const fakeID = packId(SIDE_A, fakePool.address)
-            await fakePool.mintLock(owner.address, fakeID, 1, 0, '0x00')
+            await fakePool.mint(owner.address, fakeID, 1, 0, '0x00')
             await expect(derivable1155.getShadowName(fakeID)).to.be.revertedWith('NOT_A_DERIVABLE_TOKEN')
         })
 
@@ -72,7 +72,7 @@ describe("Shadow metadata spec", function () {
 
             // mint fake token
             const fakeID = packId(SIDE_A, fakePool.address)
-            await fakePool.mintLock(owner.address, fakeID, 1, 0, '0x00')
+            await fakePool.mint(owner.address, fakeID, 1, 0, '0x00')
             await expect(derivable1155.getShadowSymbol(fakeID)).to.be.revertedWith('NOT_A_DERIVABLE_TOKEN')
         })
 
@@ -96,7 +96,7 @@ describe("Shadow metadata spec", function () {
 
             // mint fake token
             const fakeID = packId(SIDE_A, fakePool.address)
-            await fakePool.mintLock(owner.address, fakeID, 1, 0, '0x00')
+            await fakePool.mint(owner.address, fakeID, 1, 0, '0x00')
             await expect(derivable1155.getShadowDecimals(fakeID)).to.be.revertedWith('NOT_A_DERIVABLE_TOKEN')
         })
 
@@ -149,7 +149,7 @@ describe("Shadow metadata spec", function () {
 
             // mint fake token
             const fakeID = packId(SIDE_A, fakePool.address)
-            await fakePool.mintLock(owner.address, fakeID, 1, 0, '0x00')
+            await fakePool.mint(owner.address, fakeID, 1, 0, '0x00')
             await expect(derivable1155.uri(fakeID)).to.be.revertedWith('NOT_A_DERIVABLE_TOKEN')
         })
 

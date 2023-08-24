@@ -317,13 +317,6 @@ describe("Protocol", function () {
                 owner.address,
                 5
             )).revertedWith('PoolBase: ZERO_ADDRESS')
-            // Token
-            const Token = await ethers.getContractFactory("Token")
-            await expect(Token.deploy(
-                AddressZero,
-                owner.address,
-                AddressZero
-            )).revertedWith('Token: ZERO_ADDRESS')
             // PoolFactory
             const PoolFactory = await ethers.getContractFactory('PoolFactory')
             await expect(PoolFactory.deploy(

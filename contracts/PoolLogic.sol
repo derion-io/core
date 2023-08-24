@@ -6,10 +6,20 @@ import "./PoolBase.sol";
 import "./interfaces/IHelper.sol";
 import "./Fetcher.sol";
 
+/// @title Mathematic and finance logic of Derivable pool.
+/// @author Derivable Labs
+/// @notice Defines the state transistion calculation. The main logic is
+///         implemented in _swap function which defines a single direction state
+///         transistion (1 side in and 1 side out).
+///         A Helper contract is used for target (after) state calculation.
+///         This contract call is trustless, and provided by user.
 contract PoolLogic is PoolBase, Fetcher {
     address immutable internal FEE_TO;
     uint256 immutable internal FEE_RATE;
 
+    /// @param token ERC-1155 Token for pool derivatives
+    /// @param feeTo fee recipient address
+    /// @param feeRate fee rate
     constructor(
         address token,
         address feeTo,

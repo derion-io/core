@@ -11,14 +11,14 @@ contract FakePool is IPool{
         TOKEN = token;
     }
 
-    function mintLock(
+    function mint(
         address to,
         uint256 id,
         uint256 amount,
         uint32 maturity,
         bytes memory data
     ) public {
-        IToken(TOKEN).mintLock(to, id, amount, maturity, data);
+        IToken(TOKEN).mint(to, id, amount, maturity, data);
     }
 
     function loadConfig() pure external returns (Config memory config) {

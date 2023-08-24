@@ -5,7 +5,13 @@ import "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 import "@uniswap/v3-periphery/contracts/libraries/OracleLibrary.sol";
 import "./subs/Constants.sol";
 
+/// @title The default Fetcher code for UniswapV3 Oracle
+/// @author Derivable Labs
 contract Fetcher is Constants {
+    /// fetch the price from ORACLE config
+    /// @param ORACLE 1bit QTI, 31bit reserve, 32bit WINDOW, ... PAIR ADDRESS
+    /// @return twap the time-weighted average price of the oracle
+    /// @return spot the latest price of the oracle
     function fetch(uint256 ORACLE) public view returns (uint256 twap, uint256 spot) {
         address pool = address(uint160(ORACLE));
         (uint160 sqrtSpotX96,,,,,,) = IUniswapV3Pool(pool).slot0();

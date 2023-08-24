@@ -5,9 +5,12 @@ import "@openzeppelin/contracts/utils/Create2.sol";
 import "./libs/MetaProxyFactory.sol";
 import "./interfaces/IPoolFactory.sol";
 
+/// @title Factory contract to deploy Derivable pool using ERC-3448.
+/// @author Derivable Labs
 contract PoolFactory is IPoolFactory {
     bytes32 constant internal ORACLE_MASK = bytes32((1 << 255) | type(uint160).max);
 
+    /// @notice PoolLogic contract
     address immutable public LOGIC;
 
     // events
@@ -18,11 +21,14 @@ contract PoolFactory is IPoolFactory {
         bytes data
     );
 
+    /// @param logic PoolLogic contract address
     constructor(address logic) {
         require(logic != address(0), "PoolFactory: ZERO_ADDRESS");
         LOGIC = logic;
     }
 
+    /// deploy a new Pool using MetaProxy
+    /// @param config immutable configs for the pool
     function createPool(
         Config memory config
     ) external returns (address pool) {

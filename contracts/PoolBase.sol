@@ -15,6 +15,9 @@ import "./interfaces/IPool.sol";
 import "./subs/Constants.sol";
 import "./subs/Storage.sol";
 
+/// @title The base logic code for state initialization and token payment. 
+/// @author Derivable Labs
+/// @notice PoolBase is extended by PoolLogic to form the Pool contract.
 abstract contract PoolBase is IPool, ERC1155Holder, Storage, Constants {
     struct Result {
         uint256 amountIn;
@@ -25,6 +28,8 @@ abstract contract PoolBase is IPool, ERC1155Holder, Storage, Constants {
     uint32 constant internal F_MASK = ~uint32(1);
     address immutable internal TOKEN;
 
+    /// Swap event for each state transistion
+    /// @param sideMax the most significant side of sideIn and sideOut
     event Swap(
         address indexed payer,
         address indexed recipient,
@@ -51,11 +56,15 @@ abstract contract PoolBase is IPool, ERC1155Holder, Storage, Constants {
         s_lastPremiumTime &= F_MASK;
     }
 
+    /// @param token Token 1155 for pool's derivatives
     constructor(address token) {
         require(token != address(0), "PoolBase: ZERO_ADDRESS");
         TOKEN = token;
     }
 
+    /// Initializes the pool state before any interaction can be made.
+    /// @param state initial state of the pool
+    /// @param payment payment info
     function init(State memory state, Payment memory payment) external {
         require(s_lastInterestTime == 0, "PoolBase: ALREADY_INITIALIZED");
         uint256 R = state.R;
@@ -90,11 +99,17 @@ abstract contract PoolBase is IPool, ERC1155Holder, Storage, Constants {
         // mint tokens to recipient
         uint256 R3 = R / 3;
         uint32 maturity = uint32(block.timestamp + config.MATURITY);
-        IToken(TOKEN).mintLock(payment.recipient, idA, R3, maturity, "");
-        IToken(TOKEN).mintLock(payment.recipient, idB, R3, maturity, "");
-        IToken(TOKEN).mintLock(payment.recipient, idC, R - (R3 << 1), maturity, "");
+        IToken(TOKEN).mint(payment.recipient, idA, R3, maturity, "");
+        IToken(TOKEN).mint(payment.recipient, idB, R3, maturity, "");
+        IToken(TOKEN).mint(payment.recipient, idC, R - (R3 << 1), maturity, "");
     }
 
+    /// Performs single direction (1 side in, 1 side out) state transistion
+    /// @param param swap param
+    /// @param payment payment param
+    /// @return amountIn the actual amount in
+    /// @return amountOut the actual amount out
+    /// @return price the price fetched and selected from oracle
     function swap(
         Param memory param,
         Payment memory payment
@@ -162,7 +177,7 @@ abstract contract PoolBase is IPool, ERC1155Holder, Storage, Constants {
         } else {
             uint256 idOut = _packID(address(this), param.sideOut);
             maturity = uint32(block.timestamp) + config.MATURITY;
-            IToken(TOKEN).mintLock(payment.recipient, idOut, amountOut, uint32(maturity), "");
+            IToken(TOKEN).mint(payment.recipient, idOut, amountOut, uint32(maturity), "");
         }
 
         emit Swap(
@@ -178,6 +193,11 @@ abstract contract PoolBase is IPool, ERC1155Holder, Storage, Constants {
         );
     }
 
+    /// @return R pool reserve
+    /// @return a LONG coefficient
+    /// @return b SHORT coefficient
+    /// @return i lastInterestTime
+    /// @return f lastPremiumTime
     function getStates()
         external
         view

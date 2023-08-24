@@ -30,19 +30,19 @@ contract PoolLogicMock is PoolLogic {
     if (sA < curSA) {
       IToken(TOKEN).burn(msg.sender, _packID(address(this), SIDE_A), curSA - sA);
     } else {
-      IToken(TOKEN).mintLock(msg.sender, _packID(address(this), SIDE_A), sA - curSA, uint32(config.MATURITY), "");
+      IToken(TOKEN).mint(msg.sender, _packID(address(this), SIDE_A), sA - curSA, uint32(config.MATURITY), "");
     }
 
     if (sB < curSB) {
       IToken(TOKEN).burn(msg.sender, _packID(address(this), SIDE_B), curSB - sB);
     } else {
-      IToken(TOKEN).mintLock(msg.sender, _packID(address(this), SIDE_B), sB - curSB, uint32(config.MATURITY), "");
+      IToken(TOKEN).mint(msg.sender, _packID(address(this), SIDE_B), sB - curSB, uint32(config.MATURITY), "");
     }
 
     if (sC < curSC) {
       IToken(TOKEN).burn(msg.sender, _packID(address(this), SIDE_C), curSC - sC);
     } else {
-      IToken(TOKEN).mintLock(msg.sender, _packID(address(this), SIDE_C), sC - curSC, uint32(config.MATURITY), "");
+      IToken(TOKEN).mint(msg.sender, _packID(address(this), SIDE_C), sC - curSC, uint32(config.MATURITY), "");
     }
   }
 }
