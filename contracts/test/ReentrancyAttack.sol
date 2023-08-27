@@ -6,7 +6,6 @@ import "../PoolBase.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract ReentrancyAttack {
-
     PoolBase p;
     address internal immutable POOL;
     address internal immutable WETH;
@@ -23,6 +22,10 @@ contract ReentrancyAttack {
         p = PoolBase(pool);
     }
 
+    fallback() external {
+        p.swap(PARAM, PAYMENT);
+    }
+
     function attack(
         uint256 amount,
         Param memory param,
@@ -32,9 +35,5 @@ contract ReentrancyAttack {
         PAYMENT = payment;
         IERC20(WETH).approve(POOL, amount);
         p.swap(param, payment);
-    }
-
-    fallback() external {
-        p.swap(PARAM, PAYMENT);
     }
 }

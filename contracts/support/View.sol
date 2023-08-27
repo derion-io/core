@@ -4,12 +4,6 @@ pragma solidity 0.8.20;
 import "../PoolLogic.sol";
 
 contract View is PoolLogic {
-    constructor(
-        address token,
-        address feeTo,
-        uint256 feeRate
-    ) PoolLogic(token, feeTo, feeRate) {}
-
     struct StateView {
         Config config;
         State state;
@@ -22,6 +16,12 @@ contract View is PoolLogic {
         uint256 twap;
         uint256 spot;
     }
+
+    constructor(
+        address token,
+        address feeTo,
+        uint256 feeRate
+    ) PoolLogic(token, feeTo, feeRate) {}
 
     function compute(
         address TOKEN

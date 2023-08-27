@@ -2,6 +2,7 @@
 pragma solidity >=0.6.2;
 pragma experimental ABIEncoderV2;
 
+
 contract PairDetailsV3 {
     uint256 constant TOKEN_SYMBOL      = 0x1;
     uint256 constant TOKEN_NAME        = 0x10;

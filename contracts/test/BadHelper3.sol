@@ -18,15 +18,6 @@ import "../interfaces/IWeth.sol";
 
 
 contract BadHelper3 is Constants, IHelper {
-    uint256 internal constant SIDE_NATIVE = 0x01;
-    address internal immutable TOKEN;
-    address internal immutable WETH;
-
-    constructor(address token, address weth) {
-        TOKEN = token;
-        WETH = weth;
-    }
-
     struct SwapParams {
         uint256 sideIn;
         address poolIn;
@@ -37,6 +28,10 @@ contract BadHelper3 is Constants, IHelper {
         bytes payer;
         address recipient;
     }
+
+    uint256 internal constant SIDE_NATIVE = 0x01;
+    address internal immutable TOKEN;
+    address internal immutable WETH;
 
     event Swap(
         address indexed payer,
@@ -49,36 +44,13 @@ contract BadHelper3 is Constants, IHelper {
         uint256 amountOut
     );
 
+    constructor(address token, address weth) {
+        TOKEN = token;
+        WETH = weth;
+    }
+
     // accepting ETH for WETH.withdraw
     receive() external payable {}
-
-    function _packID(address pool, uint256 side) internal pure returns (uint256 id) {
-        id = (side << 160) + uint160(pool);
-    }
-
-    // v(r)
-    function _v(uint256 xk, uint256 r, uint256 R) internal pure returns (uint256 v) {
-        if (r <= R >> 1) {
-            return FullMath.mulDivRoundingUp(r, Q128, xk);
-        }
-        uint256 denominator = FullMath.mulDivRoundingUp(R - r, xk << 2, Q128);
-        return FullMath.mulDivRoundingUp(R, R, denominator);
-    }
-
-    function _supply(uint256 side) internal view returns (uint256 s) {
-        return IERC1155Supply(TOKEN).totalSupply(_packID(msg.sender, side));
-    }
-
-    function _decayRate (
-        uint256 elapsed,
-        uint256 halfLife
-    ) internal pure returns (uint256 rateX64) {
-        if (halfLife == 0) {
-            return Q64;
-        }
-        int128 rate = ABDKMath64x64.exp_2(int128(int((elapsed << 64) / halfLife)));
-        return uint256(int(rate));
-    }
 
     function createPool(
         Config memory config, State memory state, address factory
@@ -274,5 +246,33 @@ contract BadHelper3 is Constants, IHelper {
         state1.a = _v(__.xk, rA1, state1.R);
         // test require STATE1_OVERFLOW_B
         state1.b = 2 ** 224 + 1;
+    }
+
+    function _supply(uint256 side) internal view returns (uint256 s) {
+        return IERC1155Supply(TOKEN).totalSupply(_packID(msg.sender, side));
+    }
+
+    function _decayRate (
+        uint256 elapsed,
+        uint256 halfLife
+    ) internal pure returns (uint256 rateX64) {
+        if (halfLife == 0) {
+            return Q64;
+        }
+        int128 rate = ABDKMath64x64.exp_2(int128(int((elapsed << 64) / halfLife)));
+        return uint256(int(rate));
+    }
+
+    function _packID(address pool, uint256 side) internal pure returns (uint256 id) {
+        id = (side << 160) + uint160(pool);
+    }
+
+    // v(r)
+    function _v(uint256 xk, uint256 r, uint256 R) internal pure returns (uint256 v) {
+        if (r <= R >> 1) {
+            return FullMath.mulDivRoundingUp(r, Q128, xk);
+        }
+        uint256 denominator = FullMath.mulDivRoundingUp(R - r, xk << 2, Q128);
+        return FullMath.mulDivRoundingUp(R, R, denominator);
     }
 }

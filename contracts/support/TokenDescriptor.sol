@@ -18,14 +18,14 @@ contract TokenDescriptor is ITokenDescriptor {
 
     address internal immutable POOL_FACTORY;
 
-    constructor(address poolFactory) {
-        POOL_FACTORY = poolFactory;
-    }
-
     modifier onlyDerivableToken(uint256 id) {
         address pool = address(uint160(id));
         require(_computePoolAddress(IPool(pool).loadConfig()) == pool, "NOT_A_DERIVABLE_TOKEN");
         _;
+    }
+
+    constructor(address poolFactory) {
+        POOL_FACTORY = poolFactory;
     }
 
     function getName(uint256 id) public view virtual override onlyDerivableToken(id) returns (string memory) {
@@ -132,12 +132,6 @@ contract TokenDescriptor is ITokenDescriptor {
         );
     }
 
-    function _getPower(uint256 k) internal pure returns (string memory) {
-        return (k % 2 == 0) ?
-            Strings.toString(k / 2) :
-            string(abi.encodePacked(Strings.toString(k / 2), ".5"));
-    }
-
     function _getSymbol(address base, address quote, address pool, uint256 side) internal view returns (string memory) {
         Config memory config = IPool(pool).loadConfig();
         string memory sideStr = "(LP)";
@@ -164,6 +158,13 @@ contract TokenDescriptor is ITokenDescriptor {
         quote = (qti == 0) ? IUniswapV3Pool(pair).token0() : IUniswapV3Pool(pair).token1();
     }
 
+    function _getPower(uint256 k) internal pure returns (string memory) {
+        return (k % 2 == 0) ?
+            Strings.toString(k / 2) :
+            string(abi.encodePacked(Strings.toString(k / 2), ".5"));
+    }
+
+    
     function _getImage() internal pure returns (string memory svg) {
         return
             string(

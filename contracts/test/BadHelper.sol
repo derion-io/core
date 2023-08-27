@@ -18,16 +18,6 @@ import "../interfaces/IWeth.sol";
 
 
 contract BadHelper is Constants, IHelper {
-    uint256 internal constant SIDE_NATIVE = 0x01;
-    uint256 constant MAX_IN = 0;
-    address internal immutable TOKEN;
-    address internal immutable WETH;
-
-    constructor(address token, address weth) {
-        TOKEN = token;
-        WETH = weth;
-    }
-
     struct SwapParams {
         uint256 sideIn;
         address poolIn;
@@ -38,6 +28,11 @@ contract BadHelper is Constants, IHelper {
         bytes payer;
         address recipient;
     }
+
+    uint256 internal constant SIDE_NATIVE = 0x01;
+    uint256 constant MAX_IN = 0;
+    address internal immutable TOKEN;
+    address internal immutable WETH;
 
     event Swap(
         address indexed payer,
@@ -50,25 +45,13 @@ contract BadHelper is Constants, IHelper {
         uint256 amountOut
     );
 
+    constructor(address token, address weth) {
+        TOKEN = token;
+        WETH = weth;
+    }
+
     // accepting ETH for WETH.withdraw
     receive() external payable {}
-
-    function _packID(address pool, uint256 side) internal pure returns (uint256 id) {
-        id = (side << 160) + uint160(pool);
-    }
-
-    // v(r)
-    function _v(uint256 xk, uint256 r, uint256 R) internal pure returns (uint256 v) {
-        if (r <= R >> 1) {
-            return FullMath.mulDivRoundingUp(r, Q128, xk);
-        }
-        uint256 denominator = FullMath.mulDivRoundingUp(R - r, xk << 2, Q128);
-        return FullMath.mulDivRoundingUp(R, R, denominator);
-    }
-
-    function _supply(uint256 side) internal view returns (uint256 s) {
-        return IERC1155Supply(TOKEN).totalSupply(_packID(msg.sender, side));
-    }
 
     function createPool(
         Config memory config, State memory state, address factory
@@ -78,71 +61,6 @@ contract BadHelper is Constants, IHelper {
         uint256 amount = IWeth(WETH).balanceOf(address(this));
         IERC20(WETH).approve(pool, amount);
         IPool(pool).init(state, Payment(address(0), '', msg.sender));
-    }
-
-    function _swapMultiPool(SwapParams memory params, address TOKEN_R) internal returns (uint256 amountOut) {
-        // swap poolIn/sideIn to poolIn/R
-        bytes memory payload = abi.encode(
-            params.sideIn,
-            SIDE_R,
-            params.amountIn
-        );
-
-        (, amountOut, ) = IPool(params.poolIn).swap(
-            Param(
-                params.sideIn,
-                SIDE_R,
-                address(this),
-                payload
-            ),
-            Payment(
-                msg.sender, // UTR
-                params.payer,
-                address(this)
-            )
-        );
-
-        // TOKEN_R approve poolOut
-        IERC20(TOKEN_R).approve(params.poolOut, amountOut);
-
-        // swap (poolIn|PoolOut)/R to poolOut/SideOut
-        payload = abi.encode(
-            SIDE_R,
-            params.sideOut,
-            amountOut
-        );
-        (, amountOut, ) = IPool(params.poolOut).swap(
-            Param(
-                SIDE_R,
-                params.sideOut,
-                address(this),
-                payload
-            ),
-            Payment(
-                msg.sender, // UTR
-                '',
-                params.recipient
-            )
-        );
-
-        address payer = BytesLib.toAddress(params.payer, 0);
-
-        // check leftOver
-        uint256 leftOver = IERC20(TOKEN_R).balanceOf(address(this));
-        if (leftOver > 0) {
-            TransferHelper.safeTransfer(TOKEN_R, payer, leftOver);
-        }
-
-        emit Swap(
-            payer, // topic2: poolIn
-            params.poolIn,
-            params.poolOut,
-            params.recipient, // topic3: poolOut
-            params.sideIn,
-            params.sideOut,
-            params.amountIn,
-            amountOut
-        );
     }
 
     function swap(SwapParams memory params) external payable returns (uint256 amountOut){
@@ -220,12 +138,6 @@ contract BadHelper is Constants, IHelper {
         );
     }
 
-    function unpackId(uint256 id) pure public returns (uint256, address) {
-        uint256 k = id >> 160;
-        address p = address(uint160(uint256(id - k)));
-        return (k, p);
-    }
-
     function swapToState(
         Slippable calldata __,
         bytes calldata payload
@@ -264,4 +176,91 @@ contract BadHelper is Constants, IHelper {
         state1.b = _v(Q256M/__.xk, rB1, state1.R);
     }
 
+    function unpackId(uint256 id) pure public returns (uint256, address) {
+        uint256 k = id >> 160;
+        address p = address(uint160(uint256(id - k)));
+        return (k, p);
+    }
+    
+    function _swapMultiPool(SwapParams memory params, address TOKEN_R) internal returns (uint256 amountOut) {
+        // swap poolIn/sideIn to poolIn/R
+        bytes memory payload = abi.encode(
+            params.sideIn,
+            SIDE_R,
+            params.amountIn
+        );
+
+        (, amountOut, ) = IPool(params.poolIn).swap(
+            Param(
+                params.sideIn,
+                SIDE_R,
+                address(this),
+                payload
+            ),
+            Payment(
+                msg.sender, // UTR
+                params.payer,
+                address(this)
+            )
+        );
+
+        // TOKEN_R approve poolOut
+        IERC20(TOKEN_R).approve(params.poolOut, amountOut);
+
+        // swap (poolIn|PoolOut)/R to poolOut/SideOut
+        payload = abi.encode(
+            SIDE_R,
+            params.sideOut,
+            amountOut
+        );
+        (, amountOut, ) = IPool(params.poolOut).swap(
+            Param(
+                SIDE_R,
+                params.sideOut,
+                address(this),
+                payload
+            ),
+            Payment(
+                msg.sender, // UTR
+                '',
+                params.recipient
+            )
+        );
+
+        address payer = BytesLib.toAddress(params.payer, 0);
+
+        // check leftOver
+        uint256 leftOver = IERC20(TOKEN_R).balanceOf(address(this));
+        if (leftOver > 0) {
+            TransferHelper.safeTransfer(TOKEN_R, payer, leftOver);
+        }
+
+        emit Swap(
+            payer, // topic2: poolIn
+            params.poolIn,
+            params.poolOut,
+            params.recipient, // topic3: poolOut
+            params.sideIn,
+            params.sideOut,
+            params.amountIn,
+            amountOut
+        );
+    }
+
+    function _supply(uint256 side) internal view returns (uint256 s) {
+        return IERC1155Supply(TOKEN).totalSupply(_packID(msg.sender, side));
+    }
+
+    function _packID(address pool, uint256 side) internal pure returns (uint256 id) {
+        id = (side << 160) + uint160(pool);
+    }
+
+    // v(r)
+    function _v(uint256 xk, uint256 r, uint256 R) internal pure returns (uint256 v) {
+        if (r <= R >> 1) {
+            return FullMath.mulDivRoundingUp(r, Q128, xk);
+        }
+        uint256 denominator = FullMath.mulDivRoundingUp(R - r, xk << 2, Q128);
+        return FullMath.mulDivRoundingUp(R, R, denominator);
+    }
 }

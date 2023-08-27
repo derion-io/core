@@ -11,6 +11,10 @@ contract FakePool is IPool{
         TOKEN = token;
     }
 
+    function init(State memory state, Payment memory payment) external {
+        // do nothing
+    }
+
     function mint(
         address to,
         uint256 id,
@@ -23,10 +27,6 @@ contract FakePool is IPool{
 
     function loadConfig() pure external returns (Config memory config) {
         config.ORACLE = "FAKE";
-    }
-
-    function init(State memory state, Payment memory payment) external {
-        // do nothing
     }
 
     function swap(

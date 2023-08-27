@@ -39,6 +39,8 @@ contract TokenInfo {
         uint256 totalSupply;
     }
 
+    bytes16 private constant _HEX_SYMBOLS = "0123456789abcdef";
+
     function getTokenInfo(
         address[] calldata tokens
     ) external view returns (Info[] memory infos) {
@@ -61,15 +63,13 @@ contract TokenInfo {
     }
 
     function _revertByContract(address adr, string memory reason) pure internal {
-        revert(string(abi.encodePacked(toHexString(uint256(uint160(adr)), 20), ": ", reason)));
+        revert(string(abi.encodePacked(_toHexString(uint256(uint160(adr)), 20), ": ", reason)));
     }
-
-    bytes16 private constant _HEX_SYMBOLS = "0123456789abcdef";
 
     /**
      * @dev Converts a `uint256` to its ASCII `string` hexadecimal representation with fixed length.
      */
-    function toHexString(uint256 value, uint256 length) internal pure returns (string memory) {
+    function _toHexString(uint256 value, uint256 length) internal pure returns (string memory) {
         bytes memory buffer = new bytes(2 * length + 2);
         buffer[0] = "0";
         buffer[1] = "x";
