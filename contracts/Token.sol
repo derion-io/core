@@ -94,17 +94,23 @@ contract Token is ShadowFactory {
     }
 
     /// get the name for each shadow token
-    function getShadowName(uint256 id) public view override virtual returns (string memory) {
+    function getShadowName(
+        uint256 id
+    ) public view virtual override returns (string memory) {
         return ITokenDescriptor(s_descriptor).getName(id);
     }
 
     /// get the symbol for each shadow token
-    function getShadowSymbol(uint256 id) public view override virtual returns (string memory) {
+    function getShadowSymbol(
+        uint256 id
+    ) public view virtual override returns (string memory) {
         return ITokenDescriptor(s_descriptor).getSymbol(id);
     }
 
     /// get the decimals for each shadow token
-    function getShadowDecimals(uint256 id) public view override virtual returns (uint8) {
+    function getShadowDecimals(
+        uint256 id
+    ) public view virtual override returns (uint8) {
         return ITokenDescriptor(s_descriptor).getDecimals(id);
     }
 
@@ -119,7 +125,8 @@ contract Token is ShadowFactory {
      * @dev See {IERC1155-isApprovedForAll}.
      */
     function isApprovedForAll(
-        address account, address operator
+        address account,
+        address operator
     ) public view virtual override(ERC1155Maturity, IERC1155) returns (bool) {
         return operator == UTR || super.isApprovedForAll(account, operator);
     }

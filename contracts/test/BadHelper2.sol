@@ -3,7 +3,7 @@ pragma solidity 0.8.20;
 
 import "@openzeppelin/contracts/utils/math/Math.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import '@uniswap/v3-core/contracts/libraries/FullMath.sol';
+import "@uniswap/v3-core/contracts/libraries/FullMath.sol";
 import "@uniswap/lib/contracts/libraries/TransferHelper.sol";
 import "abdk-libraries-solidity/ABDKMath64x64.sol";
 import "solidity-bytes-utils/contracts/BytesLib.sol";
@@ -15,7 +15,6 @@ import "../interfaces/IHelper.sol";
 import "../interfaces/IPool.sol";
 import "../interfaces/IPoolFactory.sol";
 import "../interfaces/IWeth.sol";
-
 
 contract BadHelper2 is Constants, IHelper {
     struct SwapParams {
@@ -51,18 +50,22 @@ contract BadHelper2 is Constants, IHelper {
 
     // accepting ETH for WETH.withdraw
     receive() external payable {}
-    
+
     function createPool(
-        Config memory config, State memory state, address factory
+        Config memory config,
+        State memory state,
+        address factory
     ) external payable returns (address pool) {
         pool = IPoolFactory(factory).createPool(config);
-        IWeth(WETH).deposit{value : msg.value}();
+        IWeth(WETH).deposit{value: msg.value}();
         uint256 amount = IWeth(WETH).balanceOf(address(this));
         IERC20(WETH).approve(pool, amount);
-        IPool(pool).init(state, Payment(address(0), '', msg.sender));
+        IPool(pool).init(state, Payment(address(0), "", msg.sender));
     }
 
-    function swap(SwapParams memory params) external payable returns (uint256 amountOut){
+    function swap(
+        SwapParams memory params
+    ) external payable returns (uint256 amountOut) {
         SwapParams memory _params = SwapParams(
             params.sideIn,
             params.poolIn,
@@ -82,17 +85,17 @@ contract BadHelper2 is Constants, IHelper {
         }
 
         if (params.sideIn == SIDE_NATIVE) {
-            require(TOKEN_R == WETH, 'Reserve token is not Wrapped');
-            require(msg.value != 0, 'Value need > 0');
-            IWeth(WETH).deposit{value : msg.value}();
+            require(TOKEN_R == WETH, "Reserve token is not Wrapped");
+            require(msg.value != 0, "Value need > 0");
+            IWeth(WETH).deposit{value: msg.value}();
             uint256 amount = IWeth(WETH).balanceOf(address(this));
             IERC20(WETH).approve(params.poolIn, amount);
-            params.payer = '';
+            params.payer = "";
             params.sideIn = SIDE_R;
         }
 
         if (params.sideOut == SIDE_NATIVE) {
-            require(TOKEN_R == WETH, 'Reserve token is not Wrapped');
+            require(TOKEN_R == WETH, "Reserve token is not Wrapped");
             params.sideOut = SIDE_R;
             params.recipient = address(this);
         }
@@ -104,12 +107,7 @@ contract BadHelper2 is Constants, IHelper {
         );
 
         (, amountOut, ) = IPool(params.poolIn).swap(
-            Param(
-                params.sideIn,
-                params.sideOut,
-                address(this),
-                payload
-            ),
+            Param(params.sideIn, params.sideOut, address(this), payload),
             Payment(
                 msg.sender, // UTR
                 params.payer,
@@ -118,9 +116,9 @@ contract BadHelper2 is Constants, IHelper {
         );
 
         if (_params.sideOut == SIDE_NATIVE) {
-            require(TOKEN_R == WETH, 'Reserve token is not Wrapped');
+            require(TOKEN_R == WETH, "Reserve token is not Wrapped");
             amountOut = IERC20(WETH).balanceOf(address(this));
-            require(amountOut > 0, 'Do not have ETH to transfer');
+            require(amountOut > 0, "Do not have ETH to transfer");
             IWeth(WETH).withdraw(amountOut);
             payable(_params.recipient).transfer(amountOut);
         }
@@ -141,11 +139,10 @@ contract BadHelper2 is Constants, IHelper {
         Slippable calldata __,
         bytes calldata payload
     ) external view override returns (State memory state1) {
-        (
-            uint256 sideIn,
-            uint256 sideOut,
-            uint256 amount
-        ) = abi.decode(payload, (uint256, uint256, uint256));
+        (uint256 sideIn, uint256 sideOut, uint256 amount) = abi.decode(
+            payload,
+            (uint256, uint256, uint256)
+        );
 
         state1.R = __.R;
         (uint256 rA1, uint256 rB1) = (__.rA, __.rB);
@@ -160,10 +157,12 @@ contract BadHelper2 is Constants, IHelper {
             } else if (sideIn == SIDE_B) {
                 amount = FullMath.mulDiv(amount, __.rB, s);
                 rB1 -= amount;
-            } else /*if (sideIn == SIDE_C)*/ {
+            }
+            /*if (sideIn == SIDE_C)*/
+            else {
                 uint256 rC = __.R - __.rA - __.rB;
                 // rounding: A+1, B+1, C-2
-                amount = FullMath.mulDiv(amount, rC-2, s+1);
+                amount = FullMath.mulDiv(amount, rC - 2, s + 1);
             }
         }
 
@@ -177,12 +176,15 @@ contract BadHelper2 is Constants, IHelper {
 
         // test require STATE1_OVERFLOW_A
         state1.a = 2 ** 224 + 1;
-        state1.b = _v(Q256M/__.xk, rB1, state1.R);
+        state1.b = _v(Q256M / __.xk, rB1, state1.R);
     }
 
     // TODO: pass the config in from client instead of contract call
     // TODO: handle OPEN_RATE
-    function _swapMultiPool(SwapParams memory params, address TOKEN_R) internal returns (uint256 amountOut) {
+    function _swapMultiPool(
+        SwapParams memory params,
+        address TOKEN_R
+    ) internal returns (uint256 amountOut) {
         // swap poolIn/sideIn to poolIn/R
         bytes memory payload = abi.encode(
             params.sideIn,
@@ -191,12 +193,7 @@ contract BadHelper2 is Constants, IHelper {
         );
 
         (, amountOut, ) = IPool(params.poolIn).swap(
-            Param(
-                params.sideIn,
-                SIDE_R,
-                address(this),
-                payload
-            ),
+            Param(params.sideIn, SIDE_R, address(this), payload),
             Payment(
                 msg.sender, // UTR
                 params.payer,
@@ -208,21 +205,12 @@ contract BadHelper2 is Constants, IHelper {
         IERC20(TOKEN_R).approve(params.poolOut, amountOut);
 
         // swap (poolIn|PoolOut)/R to poolOut/SideOut
-        payload = abi.encode(
-            SIDE_R,
-            params.sideOut,
-            amountOut
-        );
+        payload = abi.encode(SIDE_R, params.sideOut, amountOut);
         (, amountOut, ) = IPool(params.poolOut).swap(
-            Param(
-                SIDE_R,
-                params.sideOut,
-                address(this),
-                payload
-            ),
+            Param(SIDE_R, params.sideOut, address(this), payload),
             Payment(
                 msg.sender, // UTR
-                '',
+                "",
                 params.recipient
             )
         );
@@ -251,12 +239,19 @@ contract BadHelper2 is Constants, IHelper {
         return IERC1155Supply(TOKEN).totalSupply(_packID(msg.sender, side));
     }
 
-    function _packID(address pool, uint256 side) internal pure returns (uint256 id) {
+    function _packID(
+        address pool,
+        uint256 side
+    ) internal pure returns (uint256 id) {
         id = (side << 160) + uint160(pool);
     }
 
     // v(r)
-    function _v(uint256 xk, uint256 r, uint256 R) internal pure returns (uint256 v) {
+    function _v(
+        uint256 xk,
+        uint256 r,
+        uint256 R
+    ) internal pure returns (uint256 v) {
         if (r <= R >> 1) {
             return FullMath.mulDivRoundingUp(r, Q128, xk);
         }
@@ -264,14 +259,16 @@ contract BadHelper2 is Constants, IHelper {
         return FullMath.mulDivRoundingUp(R, R, denominator);
     }
 
-    function _decayRate (
+    function _decayRate(
         uint256 elapsed,
         uint256 halfLife
     ) internal pure returns (uint256 rateX64) {
         if (halfLife == 0) {
             return Q64;
         }
-        int128 rate = ABDKMath64x64.exp_2(int128(int((elapsed << 64) / halfLife)));
+        int128 rate = ABDKMath64x64.exp_2(
+            int128(int((elapsed << 64) / halfLife))
+        );
         return uint256(int(rate));
     }
 }

@@ -29,7 +29,10 @@ contract View is PoolLogic {
         Config memory config = loadConfig();
         State memory state = State(_reserve(config.TOKEN_R), s_a, s_b);
 
-        (uint256 twap, uint256 spot) = _fetch(config.FETCHER, uint256(config.ORACLE));
+        (uint256 twap, uint256 spot) = _fetch(
+            config.FETCHER,
+            uint256(config.ORACLE)
+        );
         (uint256 rAt, uint256 rBt) = _evaluate(_xk(config, twap), state);
         (uint256 rAs, uint256 rBs) = _evaluate(_xk(config, spot), state);
 
@@ -55,7 +58,10 @@ contract View is PoolLogic {
         stateView.state = state;
     }
 
-    function _supply(address TOKEN, uint256 side) internal view returns (uint256 s) {
+    function _supply(
+        address TOKEN,
+        uint256 side
+    ) internal view returns (uint256 s) {
         return IERC1155Supply(TOKEN).totalSupply(_packID(address(this), side));
     }
 
@@ -81,7 +87,9 @@ contract View is PoolLogic {
                 (rA, rB) = (rAF, rBF);
             }
         }
-        elapsed = uint32(block.timestamp & F_MASK) - (s_lastPremiumTime & F_MASK);
+        elapsed =
+            uint32(block.timestamp & F_MASK) -
+            (s_lastPremiumTime & F_MASK);
         if (elapsed > 0) {
             uint256 rate = _expRate(elapsed, config.PREMIUM_HL);
             if (rate > Q64) {

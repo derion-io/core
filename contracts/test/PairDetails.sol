@@ -1,23 +1,31 @@
 /**
  *Submitted for verification at BscScan.com on 2021-10-27
-*/
+ */
 
 // SPDX-License-Identifier: BSL-1.1
 pragma solidity >=0.6.2;
 pragma experimental ABIEncoderV2;
 
-
 interface IUniswapV2Pair {
     function factory() external view returns (address);
+
     function token0() external view returns (address);
+
     function token1() external view returns (address);
-    function getReserves() external view returns (uint112 reserve0, uint112 reserve1, uint32 blockTimestampLast);
+
+    function getReserves()
+        external
+        view
+        returns (uint112 reserve0, uint112 reserve1, uint32 blockTimestampLast);
 }
 
 interface IERC20 {
     function name() external view returns (string memory);
+
     function symbol() external view returns (string memory);
+
     function decimals() external view returns (uint8);
+
     function totalSupply() external view returns (uint256);
 }
 
@@ -41,21 +49,28 @@ contract PairDetails {
         Token token1;
     }
 
-    uint256 constant TOKEN_SYMBOL      = 0x1;
-    uint256 constant TOKEN_NAME        = 0x10;
-    uint256 constant TOKEN_DECIMAlS    = 0x100;
-    uint256 constant TOKEN_SUPPLY      = 0x1000;
+    uint256 constant TOKEN_SYMBOL = 0x1;
+    uint256 constant TOKEN_NAME = 0x10;
+    uint256 constant TOKEN_DECIMAlS = 0x100;
+    uint256 constant TOKEN_SUPPLY = 0x1000;
 
-    uint256 constant PAIR_SUPPLY       = 0x10000000000000000000000000000000000000000000000000000000000;
-    uint256 constant PAIR_RESERVES     = 0x100000000000000000000000000000000000000000000000000000000000;
-    uint256 constant PAIR_FACTORY      = 0x1000000000000000000000000000000000000000000000000000000000000;
-    uint256 constant PAIR_DECIMALS     = 0x10000000000000000000000000000000000000000000000000000000000000;
-    uint256 constant PAIR_NAME         = 0x100000000000000000000000000000000000000000000000000000000000000;
-    uint256 constant PAIR_SYMBOL       = 0x1000000000000000000000000000000000000000000000000000000000000000;
+    uint256 constant PAIR_SUPPLY =
+        0x10000000000000000000000000000000000000000000000000000000000;
+    uint256 constant PAIR_RESERVES =
+        0x100000000000000000000000000000000000000000000000000000000000;
+    uint256 constant PAIR_FACTORY =
+        0x1000000000000000000000000000000000000000000000000000000000000;
+    uint256 constant PAIR_DECIMALS =
+        0x10000000000000000000000000000000000000000000000000000000000000;
+    uint256 constant PAIR_NAME =
+        0x100000000000000000000000000000000000000000000000000000000000000;
+    uint256 constant PAIR_SYMBOL =
+        0x1000000000000000000000000000000000000000000000000000000000000000;
 
-    function query(address[] calldata pairs, uint256 flags) external view returns (
-        PairDetail[] memory details
-    ) {
+    function query(
+        address[] calldata pairs,
+        uint256 flags
+    ) external view returns (PairDetail[] memory details) {
         details = new PairDetail[](pairs.length);
         for (uint256 i = 0; i < pairs.length; ++i) {
             IERC20 lp = IERC20(pairs[i]);
@@ -77,7 +92,8 @@ contract PairDetails {
                 details[i].factory = pair.factory();
             }
             if (flags & PAIR_RESERVES > 0) {
-                (details[i].token0.reserve, details[i].token1.reserve, ) = pair.getReserves();
+                (details[i].token0.reserve, details[i].token1.reserve, ) = pair
+                    .getReserves();
             }
             IERC20 token0 = IERC20(details[i].token0.adr = pair.token0());
             IERC20 token1 = IERC20(details[i].token1.adr = pair.token1());

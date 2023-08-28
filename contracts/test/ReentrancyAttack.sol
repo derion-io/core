@@ -13,10 +13,7 @@ contract ReentrancyAttack {
     Param PARAM;
     Payment PAYMENT;
 
-    constructor(
-      address pool,
-      address weth
-    ) {
+    constructor(address pool, address weth) {
         POOL = pool;
         WETH = weth;
         p = PoolBase(pool);

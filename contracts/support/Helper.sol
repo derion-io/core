@@ -313,5 +313,4 @@ contract Helper is Constants, IHelper, ERC1155Holder {
         uint256 denominator = FullMath.mulDivRoundingUp(R - r, xk << 2, Q128);
         return FullMath.mulDivRoundingUp(R, R, denominator);
     }
-
 }

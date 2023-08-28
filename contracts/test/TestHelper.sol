@@ -27,19 +27,15 @@ contract TestHelper {
             sideOut,
             IERC1155(TOKEN).balanceOf(address(this), _packID(POOL, sideIn))
         );
-        return IPool(POOL).swap(
-            Param(
-                sideIn,
-                sideOut,
-                HELPER,
-                payload
-            ),
-            Payment(
-                msg.sender, // UTR
-                payer,
-                recipient
-            )
-        );
+        return
+            IPool(POOL).swap(
+                Param(sideIn, sideOut, HELPER, payload),
+                Payment(
+                    msg.sender, // UTR
+                    payer,
+                    recipient
+                )
+            );
     }
 
     function onERC1155Received(
@@ -61,8 +57,11 @@ contract TestHelper {
     ) public virtual returns (bytes4) {
         return this.onERC1155BatchReceived.selector;
     }
-    
-    function _packID(address pool, uint256 side) internal pure returns (uint256 id) {
+
+    function _packID(
+        address pool,
+        uint256 side
+    ) internal pure returns (uint256 id) {
         id = (side << 160) + uint160(pool);
     }
 }
