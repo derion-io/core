@@ -1,0 +1,8 @@
+{
+  "extends": "solhint:default",
+  "rules": {
+    "ordering": "warn",
+    "visibility-modifier-order": "warn",
+    "imports-on-top": "warn"
+  }
+}

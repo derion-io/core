@@ -62,73 +62,6 @@ contract BadHelper3 is Constants, IHelper {
         IPool(pool).init(state, Payment(address(0), '', msg.sender));
     }
 
-    // TODO: pass the config in from client instead of contract call
-    // TODO: handle OPEN_RATE
-    function _swapMultiPool(SwapParams memory params, address TOKEN_R) internal returns (uint256 amountOut) {
-        // swap poolIn/sideIn to poolIn/R
-        bytes memory payload = abi.encode(
-            params.sideIn,
-            SIDE_R,
-            params.amountIn
-        );
-
-        (, amountOut, ) = IPool(params.poolIn).swap(
-            Param(
-                params.sideIn,
-                SIDE_R,
-                address(this),
-                payload
-            ),
-            Payment(
-                msg.sender, // UTR
-                params.payer,
-                address(this)
-            )
-        );
-
-        // TOKEN_R approve poolOut
-        IERC20(TOKEN_R).approve(params.poolOut, amountOut);
-
-        // swap (poolIn|PoolOut)/R to poolOut/SideOut
-        payload = abi.encode(
-            SIDE_R,
-            params.sideOut,
-            amountOut
-        );
-        (, amountOut, ) = IPool(params.poolOut).swap(
-            Param(
-                SIDE_R,
-                params.sideOut,
-                address(this),
-                payload
-            ),
-            Payment(
-                msg.sender, // UTR
-                '',
-                params.recipient
-            )
-        );
-
-        address payer = BytesLib.toAddress(params.payer, 0);
-
-        // check leftOver
-        uint256 leftOver = IERC20(TOKEN_R).balanceOf(address(this));
-        if (leftOver > 0) {
-            TransferHelper.safeTransfer(TOKEN_R, payer, leftOver);
-        }
-
-        emit Swap(
-            payer,
-            params.poolIn,
-            params.poolOut,
-            params.recipient,
-            params.sideIn,
-            params.sideOut,
-            params.amountIn,
-            amountOut
-        );
-    }
-
     function swap(SwapParams memory params) external payable returns (uint256 amountOut){
         SwapParams memory _params = SwapParams(
             params.sideIn,
@@ -246,6 +179,73 @@ contract BadHelper3 is Constants, IHelper {
         state1.a = _v(__.xk, rA1, state1.R);
         // test require STATE1_OVERFLOW_B
         state1.b = 2 ** 224 + 1;
+    }
+
+    // TODO: pass the config in from client instead of contract call
+    // TODO: handle OPEN_RATE
+    function _swapMultiPool(SwapParams memory params, address TOKEN_R) internal returns (uint256 amountOut) {
+        // swap poolIn/sideIn to poolIn/R
+        bytes memory payload = abi.encode(
+            params.sideIn,
+            SIDE_R,
+            params.amountIn
+        );
+
+        (, amountOut, ) = IPool(params.poolIn).swap(
+            Param(
+                params.sideIn,
+                SIDE_R,
+                address(this),
+                payload
+            ),
+            Payment(
+                msg.sender, // UTR
+                params.payer,
+                address(this)
+            )
+        );
+
+        // TOKEN_R approve poolOut
+        IERC20(TOKEN_R).approve(params.poolOut, amountOut);
+
+        // swap (poolIn|PoolOut)/R to poolOut/SideOut
+        payload = abi.encode(
+            SIDE_R,
+            params.sideOut,
+            amountOut
+        );
+        (, amountOut, ) = IPool(params.poolOut).swap(
+            Param(
+                SIDE_R,
+                params.sideOut,
+                address(this),
+                payload
+            ),
+            Payment(
+                msg.sender, // UTR
+                '',
+                params.recipient
+            )
+        );
+
+        address payer = BytesLib.toAddress(params.payer, 0);
+
+        // check leftOver
+        uint256 leftOver = IERC20(TOKEN_R).balanceOf(address(this));
+        if (leftOver > 0) {
+            TransferHelper.safeTransfer(TOKEN_R, payer, leftOver);
+        }
+
+        emit Swap(
+            payer,
+            params.poolIn,
+            params.poolOut,
+            params.recipient,
+            params.sideIn,
+            params.sideOut,
+            params.amountIn,
+            amountOut
+        );
     }
 
     function _supply(uint256 side) internal view returns (uint256 s) {

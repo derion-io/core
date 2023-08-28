@@ -8,32 +8,36 @@ contract FeeReceiver {
     address internal s_setter;
     address internal s_collector;
 
-    modifier onlySetter {
+    modifier onlySetter() {
         require(msg.sender == s_setter, "FeeReciever: NOT_SETTER");
         _;
     }
 
-    modifier onlyCollector {
+    modifier onlyCollector() {
         require(msg.sender == s_collector, "FeeReciever: NOT_COLLECTOR");
         _;
     }
-
-    // accepting ETH
-    receive() external payable {}
 
     constructor(address setter) {
         s_setter = setter;
     }
 
-    function setSetter(address setter) onlySetter external {
+    // accepting ETH
+    receive() external payable {}
+
+    function setSetter(address setter) external onlySetter {
         s_setter = setter;
     }
-    
-    function setCollector(address collector) onlySetter external {
+
+    function setCollector(address collector) external onlySetter {
         s_collector = collector;
     }
 
-    function collect(address token, address recipient, uint256 amount) onlyCollector external {
+    function collect(
+        address token,
+        address recipient,
+        uint256 amount
+    ) external onlyCollector {
         if (token == address(0)) {
             TransferHelper.safeTransferETH(recipient, amount);
         } else {

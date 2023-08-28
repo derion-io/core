@@ -3,7 +3,7 @@ pragma solidity 0.8.20;
 
 import "@openzeppelin/contracts/utils/math/Math.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import '@uniswap/v3-core/contracts/libraries/FullMath.sol';
+import "@uniswap/v3-core/contracts/libraries/FullMath.sol";
 import "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 import "@uniswap/lib/contracts/libraries/TransferHelper.sol";
 import "solidity-bytes-utils/contracts/BytesLib.sol";
@@ -15,7 +15,6 @@ import "../interfaces/IHelper.sol";
 import "../interfaces/IPool.sol";
 import "../interfaces/IPoolFactory.sol";
 import "../interfaces/IWeth.sol";
-
 
 contract BadHelper is Constants, IHelper {
     struct SwapParams {
@@ -54,16 +53,20 @@ contract BadHelper is Constants, IHelper {
     receive() external payable {}
 
     function createPool(
-        Config memory config, State memory state, address factory
+        Config memory config,
+        State memory state,
+        address factory
     ) external payable returns (address pool) {
         pool = IPoolFactory(factory).createPool(config);
-        IWeth(WETH).deposit{value : msg.value}();
+        IWeth(WETH).deposit{value: msg.value}();
         uint256 amount = IWeth(WETH).balanceOf(address(this));
         IERC20(WETH).approve(pool, amount);
-        IPool(pool).init(state, Payment(address(0), '', msg.sender));
+        IPool(pool).init(state, Payment(address(0), "", msg.sender));
     }
 
-    function swap(SwapParams memory params) external payable returns (uint256 amountOut){
+    function swap(
+        SwapParams memory params
+    ) external payable returns (uint256 amountOut) {
         SwapParams memory _params = SwapParams(
             params.sideIn,
             params.poolIn,
@@ -82,17 +85,17 @@ contract BadHelper is Constants, IHelper {
         }
 
         if (params.sideIn == SIDE_NATIVE) {
-            require(TOKEN_R == WETH, 'Reserve token is not Wrapped');
-            require(msg.value != 0, 'Value need > 0');
-            IWeth(WETH).deposit{value : msg.value}();
+            require(TOKEN_R == WETH, "Reserve token is not Wrapped");
+            require(msg.value != 0, "Value need > 0");
+            IWeth(WETH).deposit{value: msg.value}();
             uint256 amount = IWeth(WETH).balanceOf(address(this));
             IERC20(WETH).approve(params.poolIn, amount);
-            params.payer = '';
+            params.payer = "";
             params.sideIn = SIDE_R;
         }
 
         if (params.sideOut == SIDE_NATIVE) {
-            require(TOKEN_R == WETH, 'Reserve token is not Wrapped');
+            require(TOKEN_R == WETH, "Reserve token is not Wrapped");
             params.sideOut = SIDE_R;
             params.recipient = address(this);
         }
@@ -103,14 +106,8 @@ contract BadHelper is Constants, IHelper {
             params.amountIn
         );
 
-
         (, amountOut, ) = IPool(params.poolIn).swap(
-            Param(
-                params.sideIn,
-                params.sideOut,
-                address(this),
-                payload
-            ),
+            Param(params.sideIn, params.sideOut, address(this), payload),
             Payment(
                 msg.sender, // UTR
                 params.payer,
@@ -119,9 +116,9 @@ contract BadHelper is Constants, IHelper {
         );
 
         if (_params.sideOut == SIDE_NATIVE) {
-            require(TOKEN_R == WETH, 'Reserve token is not Wrapped');
+            require(TOKEN_R == WETH, "Reserve token is not Wrapped");
             amountOut = IERC20(WETH).balanceOf(address(this));
-            require(amountOut > 0, 'Do not have ETH to transfer');
+            require(amountOut > 0, "Do not have ETH to transfer");
             IWeth(WETH).withdraw(amountOut);
             payable(_params.recipient).transfer(amountOut);
         }
@@ -142,11 +139,10 @@ contract BadHelper is Constants, IHelper {
         Slippable calldata __,
         bytes calldata payload
     ) external view override returns (State memory state1) {
-        (
-            uint256 sideIn,
-            uint256 sideOut,
-            uint256 amount
-        ) = abi.decode(payload, (uint256, uint256, uint256));
+        (uint256 sideIn, uint256 sideOut, uint256 amount) = abi.decode(
+            payload,
+            (uint256, uint256, uint256)
+        );
 
         state1.R = __.R;
         (uint256 rA1, uint256 rB1) = (__.rA, __.rB);
@@ -173,16 +169,19 @@ contract BadHelper is Constants, IHelper {
             }
         }
         state1.a = _v(__.xk, rA1, state1.R);
-        state1.b = _v(Q256M/__.xk, rB1, state1.R);
+        state1.b = _v(Q256M / __.xk, rB1, state1.R);
     }
 
-    function unpackId(uint256 id) pure public returns (uint256, address) {
+    function unpackId(uint256 id) public pure returns (uint256, address) {
         uint256 k = id >> 160;
         address p = address(uint160(uint256(id - k)));
         return (k, p);
     }
-    
-    function _swapMultiPool(SwapParams memory params, address TOKEN_R) internal returns (uint256 amountOut) {
+
+    function _swapMultiPool(
+        SwapParams memory params,
+        address TOKEN_R
+    ) internal returns (uint256 amountOut) {
         // swap poolIn/sideIn to poolIn/R
         bytes memory payload = abi.encode(
             params.sideIn,
@@ -191,12 +190,7 @@ contract BadHelper is Constants, IHelper {
         );
 
         (, amountOut, ) = IPool(params.poolIn).swap(
-            Param(
-                params.sideIn,
-                SIDE_R,
-                address(this),
-                payload
-            ),
+            Param(params.sideIn, SIDE_R, address(this), payload),
             Payment(
                 msg.sender, // UTR
                 params.payer,
@@ -208,21 +202,12 @@ contract BadHelper is Constants, IHelper {
         IERC20(TOKEN_R).approve(params.poolOut, amountOut);
 
         // swap (poolIn|PoolOut)/R to poolOut/SideOut
-        payload = abi.encode(
-            SIDE_R,
-            params.sideOut,
-            amountOut
-        );
+        payload = abi.encode(SIDE_R, params.sideOut, amountOut);
         (, amountOut, ) = IPool(params.poolOut).swap(
-            Param(
-                SIDE_R,
-                params.sideOut,
-                address(this),
-                payload
-            ),
+            Param(SIDE_R, params.sideOut, address(this), payload),
             Payment(
                 msg.sender, // UTR
-                '',
+                "",
                 params.recipient
             )
         );
@@ -251,12 +236,19 @@ contract BadHelper is Constants, IHelper {
         return IERC1155Supply(TOKEN).totalSupply(_packID(msg.sender, side));
     }
 
-    function _packID(address pool, uint256 side) internal pure returns (uint256 id) {
+    function _packID(
+        address pool,
+        uint256 side
+    ) internal pure returns (uint256 id) {
         id = (side << 160) + uint160(pool);
     }
 
     // v(r)
-    function _v(uint256 xk, uint256 r, uint256 R) internal pure returns (uint256 v) {
+    function _v(
+        uint256 xk,
+        uint256 r,
+        uint256 R
+    ) internal pure returns (uint256 v) {
         if (r <= R >> 1) {
             return FullMath.mulDivRoundingUp(r, Q128, xk);
         }

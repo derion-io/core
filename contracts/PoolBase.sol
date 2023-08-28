@@ -238,12 +238,13 @@ abstract contract PoolBase is IPool, ERC1155Holder, Storage, Constants {
         return abi.decode(data, (Config));
     }
 
-    function _packID(address pool, uint256 side) internal pure returns (uint256 id) {
-        id = (side << 160) | uint160(pool);
-    }
-
     function _swap(Config memory config, Param memory param) internal virtual returns (Result memory);
+
     function _maturityPayoff(
         Config memory config, uint256 maturity, uint256 amountOut
     ) internal view virtual returns (uint256);
+
+    function _packID(address pool, uint256 side) internal pure returns (uint256 id) {
+        id = (side << 160) | uint160(pool);
+    }
 }

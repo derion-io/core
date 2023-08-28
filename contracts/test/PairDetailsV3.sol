@@ -3,14 +3,20 @@ pragma solidity >=0.6.2;
 pragma experimental ABIEncoderV2;
 
 
+interface IUniswapV3Pair {
+    function factory() external view returns (address);
+    function token0() external view returns (address);
+    function token1() external view returns (address);
+}
+
+interface IERC20 {
+    function name() external view returns (string memory);
+    function symbol() external view returns (string memory);
+    function decimals() external view returns (uint8);
+    function totalSupply() external view returns (uint256);
+}
+
 contract PairDetailsV3 {
-    uint256 constant TOKEN_SYMBOL      = 0x1;
-    uint256 constant TOKEN_NAME        = 0x10;
-    uint256 constant TOKEN_DECIMAlS    = 0x100;
-    uint256 constant TOKEN_SUPPLY      = 0x1000;
-
-    uint256 constant PAIR_FACTORY      = 0x10000000000000000000000000000000000000000000000000000000000;
-
     struct Token {
         address adr;
         string symbol;
@@ -24,6 +30,13 @@ contract PairDetailsV3 {
         Token token0;
         Token token1;
     }
+
+    uint256 constant TOKEN_SYMBOL      = 0x1;
+    uint256 constant TOKEN_NAME        = 0x10;
+    uint256 constant TOKEN_DECIMAlS    = 0x100;
+    uint256 constant TOKEN_SUPPLY      = 0x1000;
+
+    uint256 constant PAIR_FACTORY      = 0x10000000000000000000000000000000000000000000000000000000000;
 
     function query(address[] calldata pairs, uint256 flags) external view returns (
         PairDetail[] memory details
@@ -55,17 +68,4 @@ contract PairDetailsV3 {
             }
         }
     }
-}
-
-interface IUniswapV3Pair {
-    function factory() external view returns (address);
-    function token0() external view returns (address);
-    function token1() external view returns (address);
-}
-
-interface IERC20 {
-    function name() external view returns (string memory);
-    function symbol() external view returns (string memory);
-    function decimals() external view returns (uint8);
-    function totalSupply() external view returns (uint256);
 }
