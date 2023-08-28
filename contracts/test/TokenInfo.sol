@@ -1,7 +1,7 @@
 /**
  *Submitted for verification at BscScan.com on 2022-05-16
  */
-
+// solhint-disable
 // File: contracts/interfaces/IERC20.sol
 
 pragma solidity >=0.5.0;

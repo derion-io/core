@@ -1,7 +1,7 @@
 /**
  *Submitted for verification at BscScan.com on 2022-04-29
 */
-
+// solhint-disable
 // File: contracts/interfaces/IERC20.sol
 
 interface IERC20 {
