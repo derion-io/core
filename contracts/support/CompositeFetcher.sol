@@ -14,22 +14,19 @@ contract CompositeFetcher is Constants {
     uint256 constant USDT_INDEX = 1;
     uint256 constant BTC_INDEX = 2;
 
-
-    constructor(
-        address weth_usdc,
-        address weth_usdt,
-        address weth_btc
-    ) {
+    constructor(address weth_usdc, address weth_usdt, address weth_btc) {
         WETH_USDC = weth_usdc;
         WETH_USDT = weth_usdt;
         WETH_BTC = weth_btc;
     }
 
     // QTI(1bit)|SQTI(1bit)|SPI(30bit)|WINDOW(32bit)|SWINDOW(32bit)|POOL(160bit)
-    function fetch(uint256 ORACLE) public view returns (uint256 twap, uint256 spot) {
+    function fetch(
+        uint256 ORACLE
+    ) public view returns (uint256 twap, uint256 spot) {
         (twap, spot) = _fetchPrice(
-            address(uint160(ORACLE)), 
-            ORACLE >> 255, 
+            address(uint160(ORACLE)),
+            ORACLE >> 255,
             uint32(ORACLE >> 192)
         );
         (uint256 sTwap, uint256 sSpot) = _fetchPrice(
@@ -41,9 +38,13 @@ contract CompositeFetcher is Constants {
         spot = FullMath.mulDiv(spot, sSpot, Q128);
     }
 
-    function _fetchPrice(address pool, uint256 qti, uint32 window) internal view returns (uint256 twap, uint256 spot) {
-        (uint160 sqrtSpotX96,,,,,,) = IUniswapV3Pool(pool).slot0();
-        (int24 arithmeticMeanTick,) = OracleLibrary.consult(pool, window);
+    function _fetchPrice(
+        address pool,
+        uint256 qti,
+        uint32 window
+    ) internal view returns (uint256 twap, uint256 spot) {
+        (uint160 sqrtSpotX96, , , , , , ) = IUniswapV3Pool(pool).slot0();
+        (int24 arithmeticMeanTick, ) = OracleLibrary.consult(pool, window);
         uint256 sqrtTwapX96 = TickMath.getSqrtRatioAtTick(arithmeticMeanTick);
 
         spot = sqrtSpotX96 << 32;

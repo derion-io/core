@@ -6,33 +6,29 @@ import "./Univ3PoolMock.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
 
-
 contract FlashloanAttack {
-  address immutable ROUTER;
-  address immutable POOL;
+    address immutable ROUTER;
+    address immutable POOL;
 
-  constructor(address router, address pool) {
-    ROUTER = router;
-    POOL = pool;
-  }
+    constructor(address router, address pool) {
+        ROUTER = router;
+        POOL = pool;
+    }
 
-  function attack(
-    uint160 twapPrice,
-    uint160 spotPrice,
-    address deriToken,
-    Param calldata swapParam,
-    bytes calldata payer,
-    address recipient
-  ) public {
-    IERC1155(deriToken).setApprovalForAll(POOL, true);
-    Univ3PoolMock(ROUTER).setPrice(twapPrice, spotPrice);
-    IPool(POOL).swap(
-      swapParam,
-      Payment(msg.sender, payer, recipient)
-    );
-  }
+    function attack(
+        uint160 twapPrice,
+        uint160 spotPrice,
+        address deriToken,
+        Param calldata swapParam,
+        bytes calldata payer,
+        address recipient
+    ) public {
+        IERC1155(deriToken).setApprovalForAll(POOL, true);
+        Univ3PoolMock(ROUTER).setPrice(twapPrice, spotPrice);
+        IPool(POOL).swap(swapParam, Payment(msg.sender, payer, recipient));
+    }
 
-   function onERC1155Received(
+    function onERC1155Received(
         address,
         address,
         uint256,

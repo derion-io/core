@@ -19,9 +19,5 @@ interface IToken is IShadowFactory {
         bytes memory data
     ) external;
 
-    function burn(
-        address from,
-        uint256 id,
-        uint256 amount
-    ) external;
+    function burn(address from, uint256 id, uint256 amount) external;
 }

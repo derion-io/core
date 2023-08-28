@@ -1,25 +1,43 @@
 /**
  *Submitted for verification at BscScan.com on 2022-05-16
-*/
-
+ */
+// solhint-disable
 // File: contracts/interfaces/IERC20.sol
 
 pragma solidity >=0.5.0;
 
 interface IERC20 {
-    event Approval(address indexed owner, address indexed spender, uint256 value);
+    event Approval(
+        address indexed owner,
+        address indexed spender,
+        uint256 value
+    );
     event Transfer(address indexed from, address indexed to, uint256 value);
 
-    function name() external view returns (string memory);
-    function symbol() external view returns (string memory);
-    function decimals() external view returns (uint8);
-    function totalSupply() external view returns (uint256);
-    function balanceOf(address owner) external view returns (uint256);
-    function allowance(address owner, address spender) external view returns (uint256);
-
     function approve(address spender, uint256 value) external returns (bool);
+
     function transfer(address to, uint256 value) external returns (bool);
-    function transferFrom(address from, address to, uint256 value) external returns (bool);
+
+    function transferFrom(
+        address from,
+        address to,
+        uint256 value
+    ) external returns (bool);
+
+    function name() external view returns (string memory);
+
+    function symbol() external view returns (string memory);
+
+    function decimals() external view returns (uint8);
+
+    function totalSupply() external view returns (uint256);
+
+    function balanceOf(address owner) external view returns (uint256);
+
+    function allowance(
+        address owner,
+        address spender
+    ) external view returns (uint256);
 }
 
 // File: contracts/TokenInfo.sol
@@ -38,6 +56,8 @@ contract TokenInfo {
         uint8 decimals;
         uint256 totalSupply;
     }
+
+    bytes16 private constant _HEX_SYMBOLS = "0123456789abcdef";
 
     function getTokenInfo(
         address[] calldata tokens
@@ -60,16 +80,28 @@ contract TokenInfo {
         }
     }
 
-    function _revertByContract(address adr, string memory reason) pure internal {
-        revert(string(abi.encodePacked(toHexString(uint256(uint160(adr)), 20), ": ", reason)));
+    function _revertByContract(
+        address adr,
+        string memory reason
+    ) internal pure {
+        revert(
+            string(
+                abi.encodePacked(
+                    _toHexString(uint256(uint160(adr)), 20),
+                    ": ",
+                    reason
+                )
+            )
+        );
     }
-
-    bytes16 private constant _HEX_SYMBOLS = "0123456789abcdef";
 
     /**
      * @dev Converts a `uint256` to its ASCII `string` hexadecimal representation with fixed length.
      */
-    function toHexString(uint256 value, uint256 length) internal pure returns (string memory) {
+    function _toHexString(
+        uint256 value,
+        uint256 length
+    ) internal pure returns (string memory) {
         bytes memory buffer = new bytes(2 * length + 2);
         buffer[0] = "0";
         buffer[1] = "x";

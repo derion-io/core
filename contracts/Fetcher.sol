@@ -12,11 +12,16 @@ contract Fetcher is Constants {
     /// @param ORACLE 1bit QTI, 31bit reserve, 32bit WINDOW, ... PAIR ADDRESS
     /// @return twap the time-weighted average price of the oracle
     /// @return spot the latest price of the oracle
-    function fetch(uint256 ORACLE) public view returns (uint256 twap, uint256 spot) {
+    function fetch(
+        uint256 ORACLE
+    ) public view returns (uint256 twap, uint256 spot) {
         address pool = address(uint160(ORACLE));
-        (uint160 sqrtSpotX96,,,,,,) = IUniswapV3Pool(pool).slot0();
+        (uint160 sqrtSpotX96, , , , , , ) = IUniswapV3Pool(pool).slot0();
 
-        (int24 arithmeticMeanTick,) = OracleLibrary.consult(pool, uint32(ORACLE >> 192));
+        (int24 arithmeticMeanTick, ) = OracleLibrary.consult(
+            pool,
+            uint32(ORACLE >> 192)
+        );
         uint256 sqrtTwapX96 = TickMath.getSqrtRatioAtTick(arithmeticMeanTick);
 
         spot = sqrtSpotX96 << 32;

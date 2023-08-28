@@ -15,6 +15,29 @@ contract TestHelper {
         HELPER = helper;
     }
 
+    function swapInAll(
+        uint256 sideIn,
+        uint256 sideOut,
+        bytes memory payer,
+        address recipient
+    ) external returns (uint256, uint256, uint256) {
+        IERC1155(TOKEN).setApprovalForAll(POOL, true);
+        bytes memory payload = abi.encode(
+            sideIn,
+            sideOut,
+            IERC1155(TOKEN).balanceOf(address(this), _packID(POOL, sideIn))
+        );
+        return
+            IPool(POOL).swap(
+                Param(sideIn, sideOut, HELPER, payload),
+                Payment(
+                    msg.sender, // UTR
+                    payer,
+                    recipient
+                )
+            );
+    }
+
     function onERC1155Received(
         address,
         address,
@@ -35,34 +58,10 @@ contract TestHelper {
         return this.onERC1155BatchReceived.selector;
     }
 
-    function _packID(address pool, uint256 side) internal pure returns (uint256 id) {
+    function _packID(
+        address pool,
+        uint256 side
+    ) internal pure returns (uint256 id) {
         id = (side << 160) + uint160(pool);
-    }
-
-    function swapInAll(
-        uint256 sideIn,
-        uint256 sideOut,
-        bytes memory payer,
-        address recipient
-    ) external returns (uint256, uint256, uint256) {
-        IERC1155(TOKEN).setApprovalForAll(POOL, true);
-        bytes memory payload = abi.encode(
-            sideIn,
-            sideOut,
-            IERC1155(TOKEN).balanceOf(address(this), _packID(POOL, sideIn))
-        );
-        return IPool(POOL).swap(
-            Param(
-                sideIn,
-                sideOut,
-                HELPER,
-                payload
-            ),
-            Payment(
-                msg.sender, // UTR
-                payer,
-                recipient
-            )
-        );
     }
 }
