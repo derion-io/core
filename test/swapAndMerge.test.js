@@ -39,7 +39,7 @@ maturities.forEach(maturity => describe(`Swap and merge maturity: ${maturity}`, 
         SIDE_R,
         SIDE_A,
         amountIn,
-      ), 'merge with maturity').revertedWith('Maturity: locktime order')
+      ), 'merge with maturity').revertedWith('MATURITY_ORDER')
     } else {
       const amountOut = await pool.connect(accountA).swap(
         SIDE_R,

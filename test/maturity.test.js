@@ -305,7 +305,7 @@ configs.forEach(config => describe(`Maturity - EXP = ${config.exp}, COEF ${confi
             SIDE_R,
             SIDE_A,
             numberToWei(1),
-        )).revertedWith('Maturity: locktime order')
+        )).revertedWith('MATURITY_ORDER')
     })
 
     it('User should not be able to open more Short directly', async function () {
@@ -326,7 +326,7 @@ configs.forEach(config => describe(`Maturity - EXP = ${config.exp}, COEF ${confi
             SIDE_R,
             SIDE_B,
             numberToWei(1),
-        )).revertedWith('Maturity: locktime order')
+        )).revertedWith('MATURITY_ORDER')
     })
 
     it('User should not be able to provide more LP directly', async function () {
@@ -347,7 +347,7 @@ configs.forEach(config => describe(`Maturity - EXP = ${config.exp}, COEF ${confi
             SIDE_R,
             SIDE_C,
             numberToWei(1),
-        )).revertedWith('Maturity: locktime order')
+        )).revertedWith('MATURITY_ORDER')
     })
 
     if (exp !== 8 || coef !== 1)
