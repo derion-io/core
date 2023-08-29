@@ -22,6 +22,9 @@ module.exports = {
                     optimizer: {
                         enabled: true,
                         runs: 1000000,
+                        details: {
+                            yul: false
+                        }
                     },
                 },
             },
