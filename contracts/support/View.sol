@@ -93,7 +93,9 @@ contract View is PoolLogic {
         if (elapsed > 0) {
             uint256 rate = _expRate(elapsed, config.PREMIUM_HL);
             if (rate > Q64) {
-                uint256 premium = rA > rB ? rA - rB : rB - rA;
+                uint256 premium = rA > rB
+                    ? FullMath.mulDiv(rA - rB, rA, R)
+                    : FullMath.mulDiv(rB - rA, rB, R);
                 premium -= FullMath.mulDivRoundingUp(premium, Q64, rate);
                 if (premium > 0) {
                     if (rA > rB) {
