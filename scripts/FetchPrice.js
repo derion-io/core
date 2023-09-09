@@ -41,9 +41,11 @@ async function main() {
     const qti = 0
     const windowTime = 600
     const pairETHTOSHI = "0xE6E16fA8f4C2b9f56A3378b227bEdE63940a657C"
+    const pairETHBALD = "0x9E37cb775a047Ae99FC5A24dDED834127c4180cD"
+    const pairETHGOLD = "0x6d03360cE4764E862Ed81660c1f76CC2711b14B6"
 
     const oracle = ethers.utils.hexZeroPad(
-        bn(qti).shl(255).add(bn(windowTime).shl(256 - 64)).add(pairETHTOSHI).toHexString(),
+        bn(qti).shl(255).add(bn(windowTime).shl(256 - 64)).add(pairETHGOLD).toHexString(),
         32,
     )
     

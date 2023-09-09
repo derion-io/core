@@ -35,6 +35,8 @@ async function main() {
     // base mainnet
     const weth = "0x4200000000000000000000000000000000000006"
     const pairETHTOSHI = "0xE6E16fA8f4C2b9f56A3378b227bEdE63940a657C"
+    const pairETHBALD = "0x9E37cb775a047Ae99FC5A24dDED834127c4180cD"
+    const pairETHGOLD = "0x6d03360cE4764E862Ed81660c1f76CC2711b14B6"
 
     // // ganache
     // const utr = "0x4F1111145AB659CF9BBB45442F54A5D427783DaA"
@@ -45,10 +47,10 @@ async function main() {
     const qti = 0
     const windowTime = 600
     // mainnet
-    const mark = bn("33386195447973052066185155743837667")
-    const k = 8
+    const mark = bn("25749232743142286765615296200967951798")
+    const k = 20
     const oracle = ethers.utils.hexZeroPad(
-        bn(qti).shl(255).add(bn(windowTime).shl(256 - 64)).add(pairETHTOSHI).toHexString(),
+        bn(qti).shl(255).add(bn(windowTime).shl(256 - 64)).add(pairETHGOLD).toHexString(),
         32,
     )
     const DAILY_INTEREST_RATE = (0.03 * k) / 100
@@ -79,7 +81,7 @@ async function main() {
     const receipt = await tx.wait()
     const poolAddress = ethers.utils.getAddress('0x' + receipt.logs[0].data.slice(-40))
     console.log(`pool: ${poolAddress}`)
-    addressList["pool-TOSHI^4-2"] = poolAddress
+    addressList["pool-GOLD^10-1"] = poolAddress
     exportData(addressList)
 }
 

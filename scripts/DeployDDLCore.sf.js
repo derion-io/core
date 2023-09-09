@@ -17,7 +17,7 @@ const opts = {
 
 // mainnet base
 const weth = '0x4200000000000000000000000000000000000006'
-const utr = '0xb29647dd03F9De2a9Fe9e32DF431dA5015c60353'
+const utr = '0x0e690e6667D48b9E61D9C6eECcb064b8Cb3e3a54'
 const admin = '0xFf6a4D6C03750c0d6449cCF3fF21e1E085c8f26b'
 
 // testnet base
@@ -378,11 +378,11 @@ task('deployFetcher', 'Use SingletonFatory to deploy Fetcher contract')
     .setAction(
         async (taskArgs, hre) => {
             // deploy fetchPrice factory
-            const addressList = {
-                "fetchPrice": ""
-            }
             const Fetcher = await ethers.getContractFactory("Fetcher")
-            const fetcher = await Fetcher.deploy(opts)
+            const fetcher = await Fetcher.deploy()
+            await fetcher.deployed()
+            const addressPath = path.join(__dirname, `./json/${taskArgs.addr}.json`)
+            const addressList = JSON.parse(fs.readFileSync(addressPath, 'utf8'))
             console.log('fetchPrice: ', fetcher.address)
             addressList["fetchPrice"] = fetcher.address
             exportData(addressList, taskArgs.addr)
