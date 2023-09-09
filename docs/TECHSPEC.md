@@ -56,7 +56,7 @@ Derivable has the following features (for everyone):
    * When the price of `FOO/ETH` decreases by 1%, he expects to receive 2.0402 `ETH` upon closing the position, resulting in a net profit of 2.01% due to the effect of compounding leverage.
    * In the event that the price of `FOO/ETH` increases to infinity, he expects to receive some small `ETH` back upon closing the position, without being liquidated, thanks to the effect of compounding leverage.
 
-3. Alice and Bob leveraged positions are only possible when the `FOO/ETH` is in perfect balance between the 2 sides, for any difference between the 2 sides, additional liquidity is required. Charlie want to earns some interest and premium by providing additional liquidity to `FOO/ETH` pool. Charlie provide 1.0 `ETH` as pool liquidity.
+3. Alice and Bob leveraged positions are only possible when the `FOO/ETH` pool is in perfect balance between the 2 sides, for any difference between the 2 sides, additional liquidity is required. Charlie want to earns some interest and premium by providing additional liquidity to `FOO/ETH` pool. Charlie provide 1.0 `ETH` as pool liquidity.
     * When the price of `FOO/ETH` does not change , Charlie expects to receive more than 1.0 ETH upon removing the liquidity position due to the interest he earned for the time he provided the liquidity. 
     * The longer he keeps the liquidity in the pool, the more interest he earns.
 
@@ -123,25 +123,20 @@ In the project folder, the following structure is found:
 Start with README.md to find all basic information about project structure
 and scripts that are required to test and deploy the contracts.
 
-In the ./tests folder, *.ts provides the tests of the
-different methods of the main contract, in Typescript. In shared, different
-test helpers are found.
+In the ./tests folder, *.ts provides the tests of the different methods of the main contract, in Typescript. In shared, different test helpers are found.
 
-The main contract can be deployed using various scripts in ./scripts. In
-order to do so, .env.example must be renamed .env, and all required data must
-be provided.
+The main contract can be deployed using various scripts in ./scripts. In order to do so, .env.example must be renamed .env, and all required data must be provided.
 
 The project configuration is found in hardhat.config.ts, where dependencies
 are indicated. Mind the relationship of this file with .env. A basic
-configuration of Polygon’s Mumbai testnet is described in order to deploy the
-contract. And an etherscan key is set to to configure its different
+configuration of Arbitrum One and Base network are described in order to deploy the contract. And an etherscan key is set to to configure its different
 functionalities directly from the repo. More information about this file’s
 configuration can be found in the Hardhat Documentation.
 
 Finally, this document can be found in ./docs.
 
 ### 2.1. Architecture Overview
-The following chart provides a general view of the TokenVesting contract
+The following chart provides a general view of the Derivable contracts
 structure and interactions between different functions.
 
 ![Architecture](architecture.png)
@@ -152,7 +147,7 @@ and events) about the contracts used in the project.
 
 #### 2.2.1. Token
 
-An ShadowFactory and ERC1155-Maturity is used by all Derivable pools for their derivative tokens, but also open to any EOA or contract by rule: any EOA or contract of `<address>`, can mint and burn all its ids that end with `<address>`.
+An ShadowFactory and ERC1155-Maturity is used by all Derivable pools for their derivative tokens, but also open to any EOA or contract by the following rule: any EOA or contract of `<address>`, can mint and burn all its ids that end with `<address>`.
 
 #### 2.2.2. PoolFactory
 
