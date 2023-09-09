@@ -157,27 +157,28 @@ In state transistions, all core calculation is peformed one side (from state to 
 6. Apply Premium rate to current payoff $p_0'$ ⇒ $p_0''$
 7. Call `Helper.swapToState` with input `payload` to calculate the target state ($s_1$)
 8. Calculate target payoff: $p_1 = 〈R_1, r_{A1}, r_{B1}〉$
-9. Verify that there's only one side in.
+9. Verify that there's only one side in. (Multiple sides out are not verified as they only hurt the transitioner, not the pool.)
 10. Calculate the payoff deltas from $p_0''$ to $p_1$ to get the `amountIn` and `amountOut` values.
 11. Increase the `amountIn` for open rate, decrease the `amountOut`  for maturity payoff rate.
 12. Update the pool state storage to $s_1$
 13. Transfer the `amountIn` in, and transfer the `amountOut` out.
 
-## Decay Rate
+## Decay Rates
 
 ### Interest Rate
 Interest Rate is charged from both Long and Short sides to the LP side, by applying the decay rate to the 2 payoff value $r_{A0}$ and $r_{B0}$. The interest decay does not produce any token transfer, and the total pool reserve is unaffected.
 
 With $t$ is the elapsed time, $I$ is *INTEREST_HL* config, we have:
 
-* $interest = (r_{A0} + r_{B0}) \times (1-2^{-t\over{I}})$
-* $r_{A0}' = r_{A0} \times 2^{-t\over{I}}$
-* $r_{B0}' = r_{B0} \times 2^{-t\over{I}}$
+* $r_{A0}' = \lceil r_{A0} \times 2^{-t\over{I}} \rceil$
+* $r_{B0}' = \lceil r_{B0} \times 2^{-t\over{I}} \rceil$
+* $interest = r_{A0} + r_{B0} - r_{A0}' - r_{B0}'$
 
 ### Protocol Fee
 Protocol fee is cut from the interest by a fixed ratio, and produce an token transfer to `FeeReceiver` and directly reduce the pool reserve in each transaction.
 
-$$fee = interest \div 5$$
+* $fee = interest \div 5$
+* $R_0' = R_0 - fee$
 
 <div align=center>
 <img alt="Interest and Fee" width=600px src="https://github.com/derivable-labs/derivable-core/assets/37166829/8d4826ef-9a1a-42ec-bd5e-b791b033b369"/>
@@ -186,7 +187,7 @@ $$fee = interest \div 5$$
 ### Premium Rate
 Premium Rate is charged from the larger side of Long and Short, and pay to the other two sides, pro-rata, give them the chance of negative funding rates. With $t$ is the elapsed time, $P$ is *PREMIUM_HL* config, we have:
 
-* $premium = |r_{A0}' - r_{B0}'| \times (1-2^{-t\over{P}})$
+* $premium = |r_{A0}' - r_{B0}'| \times (1-2^{-t\over{P}}) \times \dfrac{max(r_{A0}', r_{B0}')}{R_0'}$
 
 If $r_{A0}' > r_{B0}'$, the premium is applied as:
 * $r_{A0}'' = r_{A0}' - premium$
@@ -198,7 +199,7 @@ If $r_{B0}' > r_{A0}'$, the premium is applied as:
 * $r_{A0}'' = r_{A0}' + premium \times{\dfrac{r_{A0}'}{r_{A0}'+r_{C0}'}}$
 * $r_{C0}'' = r_{C0}' + premium \times {\dfrac{r_{C0}'}{r_{A0}'+r_{C0}'}}$ (effectively)
 
-## Transition Rate
+## Transition Rates
 
 ### Open Rate
 Open Rate is a percentage-based rate to charge fee on Long and Short position opening.
