@@ -8,6 +8,7 @@ require("hardhat-contract-sizer");
 require("hardhat-gas-reporter");
 require('hardhat-dependency-compiler');
 require("solidity-coverage");
+require("@nomicfoundation/hardhat-verify");
 
 require("./scripts/DeployDDLCore.sf");
 require("./scripts/utilities");
