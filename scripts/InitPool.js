@@ -42,10 +42,15 @@ async function main(hre) {
     const fetchPrice = new ethers.Contract(addressList["fetchPrice"], fetchPriceABI, provider)
     const config = {
         ORACLE: "0x0000000000000258000000006d03360ce4764e862ed81660c1f76cc2711b14b6",
-        K: bn(20),
-        MARK: bn("25749232743142286765615296200967951798")
+        K: bn(12),
+        MARK: bn("23858931712913708623624001054981381503")
     }
     const state = await calculateInitParams(config, fetchPrice, amountInit)
+    // const state = {
+    //     R: bn("1000000000000000"),
+    //     a: bn("300000000000000"),
+    //     b: bn("300000000000000")
+    // }
 
     const payment = {
         utr: AddressZero,
@@ -57,7 +62,7 @@ async function main(hre) {
     console.log(payment)
     
     const poolABI = require("../artifacts/contracts/PoolBase.sol/PoolBase.json").abi
-    const pool = new ethers.Contract(addressList["pool-GOLD^10-1"], poolABI, provider)
+    const pool = new ethers.Contract(addressList["pool-GOLD^6-1"], poolABI, provider)
     const wethABI = require("canonical-weth/build/contracts/WETH9.json").abi
     const weth = new ethers.Contract(wethAddress, wethABI, provider)
 
