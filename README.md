@@ -187,14 +187,14 @@ Protocol fee is cut from the interest by a fixed ratio, and produce an token tra
 ### Premium Rate
 Premium Rate is charged from the larger side of Long and Short, and pay to the other two sides, pro-rata, give them the chance of negative funding rates. With $t$ is the elapsed time, $P$ is *PREMIUM_HL* config, we have:
 
-* $premium = |r_{A0}' - r_{B0}'| \times (1-2^{-t\over{P}}) \times \dfrac{max(r_{A0}', r_{B0}')}{R_0'}$
-
 If $r_{A0}' > r_{B0}'$, the premium is applied as:
+* $premium = r_{A0}' \times (1-2^{-t\over{P}}) \times \dfrac{r_{A0}' - r_{B0}'}{R_0'}$
 * $r_{A0}'' = r_{A0}' - premium$
 * $r_{B0}'' = r_{B0}' + premium \times {\dfrac{r_{B0}'}{r_{B0}'+r_{C0}'}}$
 * $r_{C0}'' = r_{C0}' + premium \times {\dfrac{r_{C0}'}{r_{B0}'+r_{C0}'}}$ (effectively)
 
 If $r_{B0}' > r_{A0}'$, the premium is applied as:
+* $premium = r_{B0}' \times (1-2^{-t\over{P}}) \times \dfrac{r_{B0}' - r_{A0}'}{R_0'}$
 * $r_{B0}'' = r_{B0}' - premium$
 * $r_{A0}'' = r_{A0}' + premium \times{\dfrac{r_{A0}'}{r_{A0}'+r_{C0}'}}$
 * $r_{C0}'' = r_{C0}' + premium \times {\dfrac{r_{C0}'}{r_{A0}'+r_{C0}'}}$ (effectively)
