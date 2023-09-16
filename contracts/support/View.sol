@@ -24,7 +24,8 @@ contract View is PoolLogic {
     ) PoolLogic(token, feeTo, feeRate) {}
 
     function compute(
-        address TOKEN
+        address TOKEN,
+        uint256 FEE_RATE
     ) external view returns (StateView memory stateView) {
         Config memory config = loadConfig();
         State memory state = State(_reserve(config.TOKEN_R), s_a, s_b);
@@ -38,8 +39,8 @@ contract View is PoolLogic {
 
         // [INTEREST & FEE]
         uint256 Rt;
-        (Rt, rAt, rBt) = _applyRate(config, state.R, rAt, rBt);
-        (state.R, rAs, rBs) = _applyRate(config, state.R, rAs, rBs);
+        (Rt, rAt, rBt) = _applyRate(FEE_RATE, config, state.R, rAt, rBt);
+        (state.R, rAs, rBs) = _applyRate(FEE_RATE, config, state.R, rAs, rBs);
 
         stateView.rA = Math.min(rAt, rAs);
         stateView.rB = Math.min(rBt, rBs);
@@ -66,6 +67,7 @@ contract View is PoolLogic {
     }
 
     function _applyRate(
+        uint256 FEE_RATE,
         Config memory config,
         uint256 R,
         uint256 rA,
@@ -73,18 +75,20 @@ contract View is PoolLogic {
     ) internal view returns (uint256, uint256, uint256) {
         uint32 elapsed = uint32(block.timestamp) - s_lastInterestTime;
         if (elapsed > 0) {
-            uint256 feeRateX64 = _expRate(elapsed, config.INTEREST_HL);
-            uint256 rAF = FullMath.mulDivRoundingUp(rA, Q64, feeRateX64);
-            uint256 rBF = FullMath.mulDivRoundingUp(rB, Q64, feeRateX64);
-            uint256 interest = rA + rB - rAF - rBF;
-            if (FEE_RATE > 0) {
-                interest /= FEE_RATE;
-            }
-            if (interest > 0) {
+            uint256 rate = _expRate(elapsed, config.INTEREST_HL);
+            if (rate > Q64) {
+                uint256 rAF = FullMath.mulDivRoundingUp(rA, Q64, rate);
+                uint256 rBF = FullMath.mulDivRoundingUp(rB, Q64, rate);
+                uint256 interest = rA + rB - rAF - rBF;
                 if (FEE_RATE > 0) {
-                    R -= interest;
+                    interest /= FEE_RATE;
                 }
-                (rA, rB) = (rAF, rBF);
+                if (interest > 0) {
+                    if (FEE_RATE > 0) {
+                        R -= interest;
+                    }
+                    (rA, rB) = (rAF, rBF);
+                }
             }
         }
         elapsed =

@@ -37,7 +37,7 @@ describe("View", function () {
 
   describe("compute", function () {
     async function testCompute(side, price, closeTo = false) {
-      const { owner, derivablePools, derivable1155, usdc, weth, uniswapPair } = await loadFixture(fixture)
+      const { owner, derivablePools, derivable1155, usdc, weth, uniswapPair, feeRate } = await loadFixture(fixture)
       const pool = derivablePools[0]
 
       if (price)
@@ -61,7 +61,7 @@ describe("View", function () {
 
       await time.increase(ELLAPSED_TIME)
 
-      const { rA, sA, rB, sB, rC, sC } = await pool.contract.compute(derivable1155.address)
+      const { rA, sA, rB, sB, rC, sC } = await pool.contract.compute(derivable1155.address, feeRate)
 
       let r = rB
       let s = sB

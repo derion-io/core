@@ -68,11 +68,12 @@ function loadFixtureFromParams (arrParams, options={}) {
     await feeReceiver.deployed()
 
     // logic
+    const feeRate = options.feeRate ?? 0
     const Logic = await ethers.getContractFactory(LogicName)
     const logic = await Logic.deploy(
       derivable1155.address,
       feeReceiver.address,
-      options.feeRate ?? 0,
+      feeRate,
     )
     await logic.deployed()
 
@@ -227,7 +228,8 @@ function loadFixtureFromParams (arrParams, options={}) {
       uniswapPair,
       oracleLibrary,
       params: returnParams,
-      fetchPrice
+      fetchPrice,
+      feeRate,
     }
 
     if (options.callback) {
