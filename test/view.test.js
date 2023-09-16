@@ -85,6 +85,37 @@ describe("View", function () {
         expect(amountIn.mul(r).div(s)).gte(amountOut.sub(2)).lte(amountOut.add(2))
     }
 
+    it("Compute long time with no tx", async function () {
+      const {
+        accountA,
+        derivablePools,
+        derivable1155,
+        feeRate,
+      } = await loadFixture(fixture);
+      const pool = derivablePools[0].connect(accountA);
+      await pool.swap(SIDE_R, SIDE_A, numberToWei(1));
+      await pool.swap(SIDE_R, SIDE_B, numberToWei(1));
+      const balanceA = await derivable1155.balanceOf(
+        accountA.address,
+        packId(SIDE_A, pool.contract.address)
+      );
+      const balanceB = await derivable1155.balanceOf(
+        accountA.address,
+        packId(SIDE_B, pool.contract.address)
+      );
+
+      await time.increase(365 * 86400)
+
+      const [{ rA, sA, rB, sB }, amountOutA, amountOutB] = await Promise.all([
+        pool.contract.compute(derivable1155.address, feeRate),
+        pool.swap(SIDE_A, SIDE_R, balanceA, { static: true }),
+        pool.swap(SIDE_B, SIDE_R, balanceB, { static: true }),
+      ]);
+
+      expect(balanceA.mul(rA).div(sA)).to.eq(amountOutA);
+      expect(balanceB.mul(rB).div(sB)).to.eq(amountOutB);
+    });
+
     it("Short, twap == spot", async function () {
       await testCompute(SIDE_B, null)
     })
