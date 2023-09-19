@@ -28,7 +28,7 @@ describe("View", function () {
   {
     ...baseParams,
     halfLife: bn(toHalfLife(0.03)),
-    premiumHL: bn(toHalfLife(0.01)),
+    premiumHL: bn(toHalfLife(0.1)),
   }], {
     logicName: "View",
     feeRate: 5,
@@ -97,59 +97,6 @@ describe("View", function () {
         expect(amountIn.mul(r).div(s)).gte(amountOut.sub(2)).lte(amountOut.add(2))
     }
 
-    describe('Compute long time with no tx', function () {
-      async function openWaitClose(pid, price) {
-        const {
-          weth,
-          usdc,
-          uniswapPair,
-          accountA,
-          derivablePools,
-          derivable1155,
-          feeRate,
-        } = await loadFixture(fixture);
-        const pool = derivablePools[pid].connect(accountA);
-        await pool.swap(SIDE_R, SIDE_A, numberToWei(1));
-        await pool.swap(SIDE_R, SIDE_B, numberToWei(1));
-        const balanceA = await derivable1155.balanceOf(
-          accountA.address,
-          packId(SIDE_A, pool.contract.address)
-        );
-        const balanceB = await derivable1155.balanceOf(
-          accountA.address,
-          packId(SIDE_B, pool.contract.address)
-        );
-  
-        await time.increase(365 * 86400)
-  
-        if (price != null)
-          await swapToSetPriceMock({
-            quoteToken: usdc,
-            baseToken: weth,
-            uniswapPair,
-            targetSpot: 2000,
-            targetTwap: 2000
-          })
-  
-        const [{ rA, sA, rB, sB }, amountOutA, amountOutB] = await Promise.all([
-          pool.contract.compute(derivable1155.address, feeRate),
-          pool.swap(SIDE_A, SIDE_R, balanceA, { static: true }),
-          pool.swap(SIDE_B, SIDE_R, balanceB, { static: true }),
-        ]);
-  
-        expect(balanceA.mul(rA).div(sA)).to.eq(amountOutA);
-        expect(balanceB.mul(rB).div(sB)).to.eq(amountOutB);
-      }
-
-      it("Compute long time with no tx: default", async function () {
-        await openWaitClose(0, null)
-      });
-
-      it("Compute long time with no tx: premium 1%, interest 3%, price 1500 -> 2000", async function () {
-        await openWaitClose(1, 2000)
-      });
-    })
-
     it("Short, twap == spot", async function () {
       await testCompute(SIDE_B, null)
     })
@@ -197,5 +144,58 @@ describe("View", function () {
     it("LP, deleverage short", async function () {
       await testCompute(SIDE_C, {spot: 150, twap: 150})
     })
+  })
+
+  describe('compute: after no activity', function () {
+    async function openWaitClose(pid, price) {
+      const {
+        weth,
+        usdc,
+        uniswapPair,
+        accountA,
+        derivablePools,
+        derivable1155,
+        feeRate,
+      } = await loadFixture(fixture);
+      const pool = derivablePools[pid].connect(accountA);
+      await pool.swap(SIDE_R, SIDE_A, numberToWei(1));
+      await pool.swap(SIDE_R, SIDE_B, numberToWei(1));
+      const balanceA = await derivable1155.balanceOf(
+        accountA.address,
+        packId(SIDE_A, pool.contract.address)
+      );
+      const balanceB = await derivable1155.balanceOf(
+        accountA.address,
+        packId(SIDE_B, pool.contract.address)
+      );
+
+      for (let i = 0; i < 10; ++i) {
+        await time.increase(365 * 86400 / 10)
+        await swapToSetPriceMock({
+          quoteToken: usdc,
+          baseToken: weth,
+          uniswapPair,
+          targetSpot: 1000 + 1000 * Math.random(),
+          targetTwap: 1000 + 1000 * Math.random(),
+        })
+      }
+
+      const [{ rA, sA, rB, sB }, amountOutA, amountOutB] = await Promise.all([
+        pool.contract.compute(derivable1155.address, feeRate),
+        pool.swap(SIDE_A, SIDE_R, balanceA, { static: true }),
+        pool.swap(SIDE_B, SIDE_R, balanceB, { static: true }),
+      ]);
+
+      expect(balanceA.mul(rA).div(sA)).to.eq(amountOutA);
+      expect(balanceB.mul(rB).div(sB)).to.eq(amountOutB);
+    }
+
+    it("Compute long time with no tx: default", async function () {
+      await openWaitClose(0, null)
+    });
+
+    it("Compute long time with no tx: premium 1%, interest 3%, price 1500 -> 2000", async function () {
+      await openWaitClose(1, 2000)
+    });
   })
 })
