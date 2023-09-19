@@ -56,22 +56,16 @@ contract PoolLogic is PoolBase, Fetcher {
         uint256 xk; uint256 rA; uint256 rB;
         (xk, rA, rB, result.price) = _selectPrice(config, state, sideIn, sideOut);
         unchecked {
-            // [FEE & INTEREST]
+            // track the rC before interest and premium for fee calculation
+            uint256 rC = state.R - rA - rB;
+            // [INTEREST]
             uint32 elapsed = uint32(block.timestamp) - s_lastInterestTime;
             if (elapsed > 0) {
                 uint256 rate = _expRate(elapsed, config.INTEREST_HL);
                 if (rate > Q64) {
                     uint256 rAF = FullMath.mulDivRoundingUp(rA, Q64, rate);
                     uint256 rBF = FullMath.mulDivRoundingUp(rB, Q64, rate);
-                    uint256 interest = rA + rB - rAF - rBF;
-                    if (FEE_RATE > 0) {
-                        interest /= FEE_RATE;
-                    }
-                    if (interest > 0) {
-                        if (FEE_RATE > 0) {
-                            TransferHelper.safeTransfer(config.TOKEN_R, FEE_TO, interest);
-                            state.R -= interest;
-                        }
+                    if (rA + rB > rAF + rBF) {
                         (rA, rB) = (rAF, rBF);
                         s_lastInterestTime = uint32(block.timestamp);
                     }
@@ -96,6 +90,15 @@ contract PoolLogic is PoolBase, Fetcher {
                         }
                         s_lastPremiumTime += elapsed;
                     }
+                }
+            }
+            // [FEE]
+            if (FEE_RATE > 0) {
+                // rA and rB cannot be increased by interest and premium
+                uint256 fee = (state.R - rA - rB - rC) / FEE_RATE;
+                if (fee > 0) {
+                    TransferHelper.safeTransfer(config.TOKEN_R, FEE_TO, fee);
+                    state.R -= fee;
                 }
             }
         }

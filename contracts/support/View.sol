@@ -73,27 +73,22 @@ contract View is PoolLogic {
         uint256 rA,
         uint256 rB
     ) internal view returns (uint256, uint256, uint256) {
+        // track the rC before interest and premium for fee calculation
+        uint256 rC = R - rA - rB;
+        // [INTEREST]
         uint32 elapsed = uint32(block.timestamp) - s_lastInterestTime;
         if (elapsed > 0) {
             uint256 rate = _expRate(elapsed, config.INTEREST_HL);
             if (rate > Q64) {
                 uint256 rAF = FullMath.mulDivRoundingUp(rA, Q64, rate);
                 uint256 rBF = FullMath.mulDivRoundingUp(rB, Q64, rate);
-                uint256 interest = rA + rB - rAF - rBF;
-                if (FEE_RATE > 0) {
-                    interest /= FEE_RATE;
-                }
-                if (interest > 0) {
-                    if (FEE_RATE > 0) {
-                        R -= interest;
-                    }
+                if (rA + rB > rAF + rBF) {
                     (rA, rB) = (rAF, rBF);
                 }
             }
         }
-        elapsed =
-            uint32(block.timestamp & F_MASK) -
-            (s_lastPremiumTime & F_MASK);
+        // [PREMIUM]
+        elapsed = uint32(block.timestamp & F_MASK) - (s_lastPremiumTime & F_MASK);
         if (elapsed > 0) {
             uint256 rate = _expRate(elapsed, config.PREMIUM_HL);
             if (rate > Q64) {
@@ -110,6 +105,13 @@ contract View is PoolLogic {
                         rB -= premium;
                     }
                 }
+            }
+        }
+        // [FEE]
+        if (FEE_RATE > 0) {
+            uint256 fee = (R - rA - rB - rC) / FEE_RATE;
+            if (fee > 0) {
+                R -= fee;
             }
         }
         return (R, rA, rB);
