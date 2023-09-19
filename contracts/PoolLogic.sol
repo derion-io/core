@@ -59,12 +59,11 @@ contract PoolLogic is PoolBase, Fetcher {
             // [FEE & INTEREST]
             uint32 elapsed = uint32(block.timestamp) - s_lastInterestTime;
             if (elapsed > 0) {
-                uint256 interest;
                 uint256 rate = _expRate(elapsed, config.INTEREST_HL);
                 if (rate > Q64) {
                     uint256 rAF = FullMath.mulDivRoundingUp(rA, Q64, rate);
                     uint256 rBF = FullMath.mulDivRoundingUp(rB, Q64, rate);
-                    interest = rA + rB - rAF - rBF;
+                    uint256 interest = rA + rB - rAF - rBF;
                     if (FEE_RATE > 0) {
                         interest /= FEE_RATE;
                     }
