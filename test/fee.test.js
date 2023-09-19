@@ -34,11 +34,11 @@ function toHalfLife(dailyRate) {
 
 HLs.forEach(HALF_LIFE => {
   const dailyInterestRate = toDailyRate(HALF_LIFE)
-  describe(`Interest rate fee: Interest rate ${dailyInterestRate*100}%`, function () {
+  describe(`Interest rate fee: Interest rate ${dailyInterestRate*100}%, Fee rate ${FEE_RATE}`, function () {
     const fixture = loadFixtureFromParams([{
       ...baseParams,
       halfLife: bn(HALF_LIFE)
-    }], { feeRate: 12 })
+    }], { feeRate: FEE_RATE })
       
     async function getFeeFromSwap(side, amount, period) {
       const { derivablePools, oracleLibrary, params, feeReceiver, weth } = await loadFixture(fixture)
@@ -121,6 +121,31 @@ HLs.forEach(HALF_LIFE => {
 
     it("Charge fee: Open 1e LP - period 365 day", async function () {
       await getFeeFromSwap(SIDE_C, 1, 365)
+    })
+  })
+
+  describe(`Interest rate fee: Interest rate ${dailyInterestRate*100}%, Fee rate ${numberToWei(10000)}`, function () {
+    const fixture = loadFixtureFromParams([{
+      ...baseParams,
+      halfLife: bn(HALF_LIFE)
+    }], { feeRate: numberToWei(10000) })
+    
+    it('Fee should be zero', async function() {
+      const { derivablePools, feeReceiver, weth } = await loadFixture(fixture)
+
+      const pool = derivablePools[0]
+
+      await time.increase(365 * SECONDS_PER_DAY);
+
+      await pool.swap(
+        SIDE_R,
+        SIDE_A,
+        numberToWei(1),
+      )
+
+      const actualFee = await weth.balanceOf(feeReceiver.address)
+
+      expect(actualFee).to.be.eq(0)
     })
   })
 })
