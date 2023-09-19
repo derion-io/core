@@ -172,32 +172,32 @@ With $t$ is the elapsed time, $I$ is *INTEREST_HL* config, we have:
 
 * $r_{A0}' = \lceil r_{A0} \times 2^{-t\over{I}} \rceil$
 * $r_{B0}' = \lceil r_{B0} \times 2^{-t\over{I}} \rceil$
-* $interest = r_{A0} + r_{B0} - r_{A0}' - r_{B0}'$
-
-### Protocol Fee
-Protocol fee is cut from the interest by a fixed ratio, and produce an token transfer to `FeeReceiver` and directly reduce the pool reserve in each transaction.
-
-* $fee = interest \div 5$
-* $R_0' = R_0 - fee$
-
-<div align=center>
-<img alt="Interest and Fee" width=600px src="https://github.com/derivable-labs/derivable-core/assets/37166829/8d4826ef-9a1a-42ec-bd5e-b791b033b369"/>
-</div>
+* $r_{C0}' = R_0 - r_{A0}' - r_{B0}'$
 
 ### Premium Rate
 Premium Rate is charged from the larger side of Long and Short, and pay to the other two sides, pro-rata, give them the chance of negative funding rates. With $t$ is the elapsed time, $P$ is *PREMIUM_HL* config, we have:
 
 If $r_{A0}' > r_{B0}'$, the premium is applied as:
-* $premium = r_{A0}' \times (1-2^{-t\over{P}}) \times \dfrac{r_{A0}' - r_{B0}'}{R_0'}$
+* $premium = r_{A0}' \times (1-2^{-t\over{P}}) \times \dfrac{r_{A0}' - r_{B0}'}{R_0}$
 * $r_{A0}'' = r_{A0}' - premium$
 * $r_{B0}'' = r_{B0}' + premium \times {\dfrac{r_{B0}'}{r_{B0}'+r_{C0}'}}$
-* $r_{C0}'' = r_{C0}' + premium \times {\dfrac{r_{C0}'}{r_{B0}'+r_{C0}'}}$ (effectively)
+* $r_{C0}'' = r_{C0}' + premium \times {\dfrac{r_{C0}'}{r_{B0}'+r_{C0}'}}$
 
 If $r_{B0}' > r_{A0}'$, the premium is applied as:
-* $premium = r_{B0}' \times (1-2^{-t\over{P}}) \times \dfrac{r_{B0}' - r_{A0}'}{R_0'}$
+* $premium = r_{B0}' \times (1-2^{-t\over{P}}) \times \dfrac{r_{B0}' - r_{A0}'}{R_0}$
 * $r_{B0}'' = r_{B0}' - premium$
 * $r_{A0}'' = r_{A0}' + premium \times{\dfrac{r_{A0}'}{r_{A0}'+r_{C0}'}}$
-* $r_{C0}'' = r_{C0}' + premium \times {\dfrac{r_{C0}'}{r_{A0}'+r_{C0}'}}$ (effectively)
+* $r_{C0}'' = r_{C0}' + premium \times {\dfrac{r_{C0}'}{r_{A0}'+r_{C0}'}}$
+
+### Protocol Fee
+Protocol fee is cut from the interest and premium to LP (not Long and Short) by a fixed ratio, and produce an token transfer to `FeeReceiver` and directly reduce the pool reserve in each transaction.
+
+* $fee = (r_{C0}'' - r_{C0}) \div 5$
+* $R_0'' = R_0 - fee$
+
+<div align=center>
+<img alt="Interest and Fee" width=600px src="https://github.com/derivable-labs/derivable-core/assets/37166829/8d4826ef-9a1a-42ec-bd5e-b791b033b369"/>
+</div>
 
 ## Transition Rates
 
