@@ -3,7 +3,7 @@ require('dotenv').config()
 const { bn, feeToOpenRate, toHalfLife } = require("../test/shared/utilities")
 const { calculateInitParamsFromPrice } = require("../test/shared/AsymptoticPerpetual")
 const { AddressZero } = ethers.constants
-const uniV3Pool = require("./compiled/UniswapV3Pool.json");
+const abiUniswapV3Pool = require("./compiled/UniswapV3Pool.json");
 const { JsonRpcProvider } = ethers.providers
 
 const pe = (x) => ethers.utils.parseEther(String(x))
@@ -43,7 +43,7 @@ async function deploy(settings) {
 
     const provider = new JsonRpcProvider(configs.rpc, chainID)
     const deployer = new ethers.Wallet(process.env.DEPLOYER_KEY, provider);
-    const uniswapPair = new ethers.Contract(settings.pairAddress, uniV3Pool.abi, provider)
+    const uniswapPair = new ethers.Contract(settings.pairAddress, abiUniswapV3Pool.abi, provider)
 
     const [
         token0,
@@ -93,6 +93,15 @@ async function deploy(settings) {
     const txFreq = EPOCH / logs.length
     const WINDOW = Math.ceil(Math.sqrt(txFreq / 60)) * 60
     console.log('WINDOW', WINDOW / 60, 'min(s)')
+
+    try {
+        await uniswapPair.callStatic.observe([0, WINDOW])
+    } catch(err) {
+        if (err.reason == 'OLD') {
+            throw new Error('WINDOW too long')
+        }
+        throw err
+    }
 
     const ORACLE = ethers.utils.hexZeroPad(
         bn(QTI).shl(255).add(bn(WINDOW).shl(256 - 64)).add(settings.pairAddress).toHexString(),
@@ -145,12 +154,20 @@ async function deploy(settings) {
 
     const helper = await ethers.getContractAt("contracts/support/Helper.sol:Helper", configs.derivable.helper ?? configs.derivable.stateCalHelper, deployer)
 
-    const gas = await helper.estimateGas.createPool(
-        config,
-        state,
-        configs.derivable.poolFactory,
-        { value: R },
-    )
+    let gas
+    try {
+        gas = await helper.estimateGas.createPool(
+            config,
+            state,
+            configs.derivable.poolFactory,
+            { value: R },
+        )
+    } catch(err) {
+        if (err.reason != null) {
+            throw new Error(err.reason)
+        }
+        throw err
+    }
 
     console.log('Estimated Gas:', gas.toNumber().toLocaleString())
 
