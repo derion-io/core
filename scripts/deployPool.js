@@ -147,8 +147,9 @@ async function deploy(settings) {
     }
     if (PRICE.lt(Q256M)) {
         console.log('MARK', 10000 / Q256M.mul(10000).div(PRICE).toNumber())
+    } else {
+        console.log('MARK', PRICE.mul(10000).div(Q256M).toNumber() / 10000)
     }
-    console.log('MARK', PRICE.mul(10000).div(Q256M).toNumber() / 10000)
 
     const DAILY_INTEREST_RATE = compoundRate(settings.interestRate, settings.power)
     const DAILY_PREMIUM_RATE = compoundRate(settings.premiumRate, settings.power)
