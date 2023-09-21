@@ -255,7 +255,7 @@ function getSqrtPriceFromPrice(quoteToken, baseToken, price, denominator = 1) {
 }
 
 function feeToOpenRate(fee) {
-    return bn(((1-fee)*10000).toFixed(0)).mul(Q128).div(10000)
+    return bn(((1-fee)*10000).toFixed(0)).shl(128).div(10000)
 }
 
 function toHalfLife(dailyRate) {

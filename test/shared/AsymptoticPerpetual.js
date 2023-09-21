@@ -1,7 +1,3 @@
-const {
-  time,
-  loadFixture,
-} = require("@nomicfoundation/hardhat-network-helpers");
 const { ethers } = require("hardhat");
 const { ZERO, Q128, Q64, Q256M, SIDE_A, SIDE_B, SIDE_C, SIDE_R } = require("./constant");
 const { mulDivRoundingUp } = require("./FullMath");
@@ -258,6 +254,13 @@ async function calculateInitParams(config, oracleLibrary, R) {
   return {R, a, b}
 }
 
+function calculateInitParamsFromPrice(config, price, R) {
+  const market = _market(config.K, config.MARK, Q64, price)
+  const a = _v(market.xkA, R.div(3), R)
+  const b = _v(market.xkB, R.div(3), R)
+  return {R, a, b}
+}
+
 async function _swap(
   sideIn, 
   sideOut,
@@ -314,6 +317,7 @@ module.exports = {
   _init,
   _swap,
   calculateInitParams,
+  calculateInitParamsFromPrice,
   _xk,
   _r
 }
