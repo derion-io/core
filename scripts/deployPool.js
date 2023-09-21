@@ -15,7 +15,11 @@ const SECONDS_PER_DAY = SECONDS_PER_HOUR * 24
 const Q256M = bn(1).shl(256).sub(1)
 
 function compoundRate(r, k) {
-    return 1-((1-r)**k)
+    return 1 - (1-r)**k
+}
+
+function decompoundRate(c, k) {
+    return 1 - (1-c)**(1/k)
 }
 
 const chainID = 42161
@@ -29,11 +33,11 @@ const settings = {
     power: 10,
     interestRate: 0.03/100,
     premiumRate: 10/100,
-    reserveToken: undefined, // use the WETH
     MATURITY: 60 * 60 * 12,
     vesting: 60,
     closingFeeDuration: 24*60*60,
     closingFee: 0.3/100,
+    // reserveToken: undefined, // use the WETH
     // openingFee: 0/100,
     // R: 0.0001, // init liquidity
 }
