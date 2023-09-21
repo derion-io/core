@@ -3,7 +3,8 @@ require('dotenv').config()
 const { bn, feeToOpenRate, toHalfLife } = require("../test/shared/utilities")
 const { calculateInitParamsFromPrice } = require("../test/shared/AsymptoticPerpetual")
 const { AddressZero } = ethers.constants
-const abiUniswapV3Pool = require("./compiled/UniswapV3Pool.json");
+const jsonUniswapV3Pool = require("./compiled/UniswapV3Pool.json");
+const jsonERC20 = require("../artifacts/@openzeppelin/contracts/token/ERC20/ERC20.sol/ERC20.json")
 const { JsonRpcProvider } = ethers.providers
 
 const pe = (x) => ethers.utils.parseEther(String(x))
@@ -43,7 +44,7 @@ async function deploy(settings) {
 
     const provider = new JsonRpcProvider(configs.rpc, chainID)
     const deployer = new ethers.Wallet(process.env.DEPLOYER_KEY, provider);
-    const uniswapPair = new ethers.Contract(settings.pairAddress, abiUniswapV3Pool.abi, provider)
+    const uniswapPair = new ethers.Contract(settings.pairAddress, jsonUniswapV3Pool.abi, provider)
 
     const [
         token0,
@@ -113,12 +114,25 @@ async function deploy(settings) {
         MARK = Q256M.div(MARK)
     }
 
-    // TODO: get token0 and token1 decimals
-    const PRICE = MARK.mul(MARK)
-    if (PRICE.lt(Q256M)) {
-        console.log('MARK', 1 / Q256M.div(PRICE).toNumber())
+    const [
+        decimals0,
+        decimals1,
+    ] = await Promise.all([
+        new ethers.Contract(token0, jsonERC20.abi, provider).callStatic.decimals(),
+        new ethers.Contract(token1, jsonERC20.abi, provider).callStatic.decimals(),
+    ])
+    const decDiff = decimals0 - decimals1
+
+    let PRICE = MARK.mul(MARK)
+    if (decDiff > 0)  {
+        PRICE = PRICE.mul(10**decDiff)
+    } else if (decDiff < 0) {
+        PRICE = PRICE.div(10**decDiff)
     }
-    console.log('MARK', PRICE.div(Q256M).toNumber())
+    if (PRICE.lt(Q256M)) {
+        console.log('MARK', 10000 / Q256M.mul(10000).div(PRICE).toNumber())
+    }
+    console.log('MARK', PRICE.mul(10000).div(Q256M).toNumber() / 10000)
 
     const DAILY_INTEREST_RATE = compoundRate(settings.interestRate, settings.power)
     const DAILY_PREMIUM_RATE = compoundRate(settings.premiumRate, settings.power)
