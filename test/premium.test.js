@@ -294,3 +294,32 @@ describe("Premium", function () {
        await compareWithInterest(pool, derivable1155)
     })
 })
+
+describe("Apply premium R too big", function () {
+    const fixture = loadFixtureFromParams([{
+        ...baseParams,
+        halfLife: bn(toHalfLife(DAILY_INTEREST)),
+        premiumHL: bn(toHalfLife(DAILY_PREMIUM)),
+        mark: bn('13179171373343029902768196957842336318319'),
+        a: bn('1000'),
+        b: bn('1001'),
+    }], {
+        logicName: 'View',
+        initReserved: 3,
+        feeRate: 0
+    })
+    
+    it("Test", async function () {
+        const { derivablePools, derivable1155} = await loadFixture(fixture)
+
+        const pool = derivablePools[0]
+
+        await time.increase(SECONDS_PER_DAY * 365)
+
+        await pool.swap(
+            SIDE_R,
+            SIDE_C,
+            numberToWei(1)
+        )
+    })
+})
