@@ -34,6 +34,7 @@ const settings = {
     vesting: 60,
     closingFeeDuration: 24*60*60,
     closingFee: 0.3/100,
+    // openingFee: 0/100,
     // R: 0.0001, // init liquidity
 }
 
@@ -94,7 +95,7 @@ async function deploy(settings) {
         throw new Error('unable to detect QTI')
     }
 
-    console.log('INDEX', QTI == 1 ? `${symbol0}/${symbol1}` : `${symbol1}/${symbol0}`)
+    console.log('INDEX', QTI == 1 ? `${symbol0}/${symbol1}` : `${symbol1}/${symbol0}`, 'x'+settings.power)
 
     // detect WINDOW
     // get the block a day before
