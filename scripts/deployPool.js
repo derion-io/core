@@ -56,8 +56,28 @@ async function deploy(settings) {
         uniswapPair.callStatic.slot0(),
     ])
 
+    const ct0 = new ethers.Contract(token0, jsonERC20.abi, provider)
+    const ct1 = new ethers.Contract(token1, jsonERC20.abi, provider)
+    const [
+        decimals0,
+        decimals1,
+        symbol0,
+        symbol1,
+    ] = await Promise.all([
+        ct0.callStatic.decimals(),
+        ct1.callStatic.decimals(),
+        ct0.callStatic.symbol(),
+        ct1.callStatic.symbol(),
+    ])
+
     // detect QTI
     let QTI
+    if (QTI == null && symbol0.includes('USD')) {
+        QTI = 0
+    }
+    if (QTI == null && symbol1.includes('USD')) {
+        QTI = 1
+    }
     if (QTI == null && configs.stablecoins.includes(token0)) {
         QTI = 0
     }
@@ -73,6 +93,8 @@ async function deploy(settings) {
     if (QTI == null) {
         throw new Error('unable to detect QTI')
     }
+
+    console.log('INDEX', QTI == 1 ? `${symbol0}/${symbol1}` : `${symbol1}/${symbol0}`)
 
     // detect WINDOW
     // get the block a day before
@@ -114,13 +136,6 @@ async function deploy(settings) {
         MARK = Q256M.div(MARK)
     }
 
-    const [
-        decimals0,
-        decimals1,
-    ] = await Promise.all([
-        new ethers.Contract(token0, jsonERC20.abi, provider).callStatic.decimals(),
-        new ethers.Contract(token1, jsonERC20.abi, provider).callStatic.decimals(),
-    ])
     const decDiff = decimals0 - decimals1
 
     let PRICE = MARK.mul(MARK)
