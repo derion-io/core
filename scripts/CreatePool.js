@@ -12,6 +12,10 @@ const opts = {
 
 const SECONDS_PER_DAY = 60 * 60 * 24
 
+function compoundRate(r, k) {
+    return 1-((1-r)**k)
+}
+
 async function main() {
     // arb mainnet
     // const utr = "0xbc9a257e43f7b3b1a03aEBE909f15e95A4928834"
@@ -54,8 +58,8 @@ async function main() {
         bn(qti).shl(255).add(bn(windowTime).shl(256 - 64)).add(pairETHGOLD).toHexString(),
         32,
     )
-    const DAILY_INTEREST_RATE = (0.03 * k) / 100
-    const DAILY_PREMIUM_RATE = (0.5 * k) / 100
+    const DAILY_INTEREST_RATE = compoundRate(0.03/100, k/2)
+    const DAILY_PREMIUM_RATE = compoundRate(10/100, k/2)
 
     const addressPath = path.join(__dirname, `./json/${process.env.addr}.json`)
     const addressList = JSON.parse(fs.readFileSync(addressPath, 'utf8'))
