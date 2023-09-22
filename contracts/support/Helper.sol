@@ -91,7 +91,7 @@ contract Helper is Constants, IHelper, ERC1155Holder {
         uint256 price,
         uint256 priceR
     );
-    
+
     constructor(address token, address weth) {
         TOKEN = token;
         WETH = weth;
@@ -124,6 +124,8 @@ contract Helper is Constants, IHelper, ERC1155Holder {
         SwapAndSwapParams memory params
     ) external returns (uint256 amountOut) {
         Config memory config = IPool(params.deriPool).loadConfig();
+        uint256 price;
+
         amountOut = exactInputSingle(ExactInputSingleParams({
             tokenIn: params.token,
             tokenOut: config.TOKEN_R,
@@ -133,8 +135,9 @@ contract Helper is Constants, IHelper, ERC1155Holder {
             utr: msg.sender,
             amountIn: params.amount,
             amountOutMinimum: 0,
-            sqrtPriceLimitX96: 0
+                sqrtPriceLimitX96: 0
         }));
+        uint amountInR = amountOut;
         TransferHelper.safeApprove(config.TOKEN_R, params.deriPool, amountOut);
 
         Payment memory payment = Payment(
@@ -149,7 +152,7 @@ contract Helper is Constants, IHelper, ERC1155Holder {
             amountOut
         );
 
-        (, amountOut,) = IPool(params.deriPool).swap(
+        (, amountOut, price) = IPool(params.deriPool).swap(
             Param(
                 SIDE_R,
                 params.side,
@@ -162,12 +165,28 @@ contract Helper is Constants, IHelper, ERC1155Holder {
         if (IERC20(config.TOKEN_R).allowance(address(this), params.deriPool) > 0) {
             TransferHelper.safeApprove(config.TOKEN_R, params.deriPool, 0);
         }
+
+        uint256 priceR = _getPrice(params.INDEX_R);
+
+        emit Swap(
+            BytesLib.toAddress(params.payer, 0),
+            params.deriPool,
+            params.deriPool,
+            params.recipient,
+            SIDE_R,
+            params.side,
+            amountInR,
+            amountOut,
+            price,
+            priceR
+        );
     }
 
     function closeAndSwap (
         SwapAndSwapParams memory params
     ) external returns (uint256 amountOut) {
         Config memory config = IPool(params.deriPool).loadConfig();
+        uint256 price;
 
         Payment memory payment = Payment(
             msg.sender, // UTR
@@ -181,7 +200,7 @@ contract Helper is Constants, IHelper, ERC1155Holder {
             params.amount
         );
 
-        (, amountOut,) = IPool(params.deriPool).swap(
+        (, amountOut, price) = IPool(params.deriPool).swap(
             Param(
                 params.side,
                 SIDE_R,
@@ -190,6 +209,7 @@ contract Helper is Constants, IHelper, ERC1155Holder {
             ),
             payment
         );
+        uint256 amountOutR = amountOut;
 
         amountOut = exactInputSingle(ExactInputSingleParams({
             tokenIn: config.TOKEN_R,
@@ -202,6 +222,21 @@ contract Helper is Constants, IHelper, ERC1155Holder {
             amountOutMinimum: 0,
             sqrtPriceLimitX96: 0
         }));
+
+        uint256 priceR = _getPrice(params.INDEX_R);
+
+        emit Swap(
+            BytesLib.toAddress(params.payer, 0),
+            params.deriPool,
+            params.deriPool,
+            params.recipient,
+            params.side,
+            SIDE_R,
+            params.amount,
+            amountOutR,
+            price,
+            priceR
+        );
     }
 
     function uniswapV3SwapCallback(
@@ -221,7 +256,7 @@ contract Helper is Constants, IHelper, ERC1155Holder {
                 : (tokenOut < tokenIn, uint256(amount1Delta));
         if (isExactInput) {
             _pay(data.utr, tokenIn, data.payer, msg.sender, amountToPay);
-        } 
+        }
     }
 
     function swapToState(
@@ -276,7 +311,7 @@ contract Helper is Constants, IHelper, ERC1155Holder {
             params.recipient,
             params.sqrtPriceLimitX96,
             SwapCallbackData({
-                path: abi.encodePacked(params.tokenIn, params.tokenOut, params.pool), 
+                path: abi.encodePacked(params.tokenIn, params.tokenOut, params.pool),
                 payer: params.payer,
                 utr: params.utr
             })
