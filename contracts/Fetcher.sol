@@ -3,11 +3,12 @@ pragma solidity 0.8.20;
 
 import "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 import "@uniswap/v3-periphery/contracts/libraries/OracleLibrary.sol";
+import "./interfaces/IFetcher.sol";
 import "./subs/Constants.sol";
 
 /// @title The default Fetcher code for UniswapV3 Oracle
 /// @author Derivable Labs
-contract Fetcher is Constants {
+contract Fetcher is Constants, IFetcher {
     /// fetch the price from ORACLE config
     /// @param ORACLE 1bit QTI, 31bit reserve, 32bit WINDOW, ... PAIR ADDRESS
     /// @return twap the time-weighted average price of the oracle
