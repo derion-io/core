@@ -73,7 +73,7 @@ describe("View", function () {
 
       await time.increase(ELLAPSED_TIME)
 
-      const { rA, sA, rB, sB, rC, sC } = await pool.contract.compute(derivable1155.address, feeRate)
+      const { rA, sA, rB, sB, rC, sC } = await pool.contract.callStatic.compute(derivable1155.address, feeRate)
 
       let r = rB
       let s = sB
@@ -181,7 +181,7 @@ describe("View", function () {
       }
 
       const [{ rA, sA, rB, sB }, amountOutA, amountOutB] = await Promise.all([
-        pool.contract.compute(derivable1155.address, feeRate),
+        pool.contract.callStatic.compute(derivable1155.address, feeRate),
         pool.swap(SIDE_A, SIDE_R, balanceA, { static: true }),
         pool.swap(SIDE_B, SIDE_R, balanceB, { static: true }),
       ]);

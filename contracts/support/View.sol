@@ -26,7 +26,7 @@ contract View is PoolLogic {
     function compute(
         address TOKEN,
         uint256 FEE_RATE
-    ) external view returns (StateView memory stateView) {
+    ) external returns (StateView memory stateView) {
         Config memory config = loadConfig();
         State memory state = State(_reserve(config.TOKEN_R), s_a, s_b);
 

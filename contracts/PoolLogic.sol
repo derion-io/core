@@ -2,9 +2,10 @@
 pragma solidity 0.8.20;
 
 import "abdk-libraries-solidity/ABDKMath64x64.sol";
-import "./PoolBase.sol";
 import "./interfaces/IHelper.sol";
+import "./interfaces/IFetcher.sol";
 import "./Fetcher.sol";
+import "./PoolBase.sol";
 
 /// @title Mathematic and finance logic of Derivable pool.
 /// @author Derivable Labs
@@ -161,31 +162,12 @@ contract PoolLogic is PoolBase, Fetcher {
         s_b = uint224(state1.b);
     }
 
-    function _maturityPayoff(
-        Config memory config, uint256 maturity, uint256 amountOut
-    ) internal view override returns (uint256) {
-        unchecked {
-            if (maturity <= block.timestamp) {
-                return amountOut;
-            }
-            uint256 remain = maturity - block.timestamp;
-            if (config.MATURITY <= remain) {
-                return 0;
-            }
-            uint256 elapsed = config.MATURITY - remain;
-            if (elapsed < config.MATURITY_VEST) {
-                amountOut = amountOut * elapsed / config.MATURITY_VEST;
-            }
-            return FullMath.mulDiv(amountOut, config.MATURITY_RATE, Q128);
-        }
-    }
-
     function _selectPrice(
         Config memory config,
         State memory state,
         uint256 sideIn,
         uint256 sideOut
-    ) internal view returns (uint256 xk, uint256 rA, uint256 rB, uint256 price) {
+    ) internal returns (uint256 xk, uint256 rA, uint256 rB, uint256 price) {
         (uint256 min, uint256 max) = _fetch(config.FETCHER, uint256(config.ORACLE));
         if (min > max) {
             (min, max) = (max, min);
@@ -206,11 +188,30 @@ contract PoolLogic is PoolBase, Fetcher {
         }
     }
 
-    function _fetch(address fetcher, uint256 ORACLE) internal view returns (uint256 twap, uint256 spot) {
+    function _fetch(address fetcher, uint256 ORACLE) internal returns (uint256 twap, uint256 spot) {
         if (fetcher == address(0)) {
             return fetch(ORACLE);
         } else {
-            return Fetcher(fetcher).fetch(ORACLE);
+            return IFetcher(fetcher).fetch(ORACLE);
+        }
+    }
+
+    function _maturityPayoff(
+        Config memory config, uint256 maturity, uint256 amountOut
+    ) internal view override returns (uint256) {
+        unchecked {
+            if (maturity <= block.timestamp) {
+                return amountOut;
+            }
+            uint256 remain = maturity - block.timestamp;
+            if (config.MATURITY <= remain) {
+                return 0;
+            }
+            uint256 elapsed = config.MATURITY - remain;
+            if (elapsed < config.MATURITY_VEST) {
+                amountOut = amountOut * elapsed / config.MATURITY_VEST;
+            }
+            return FullMath.mulDiv(amountOut, config.MATURITY_RATE, Q128);
         }
     }
 

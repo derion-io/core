@@ -37,10 +37,10 @@ describe("Premium", function () {
     })
 
     async function compare(pool, derivable1155, dailyInterest = 0, feeRate = 0) {
-        let {rA, rB, rC, state} = await pool.contract.compute(derivable1155.address, feeRate)
+        let {rA, rB, rC, state} = await pool.contract.callStatic.compute(derivable1155.address, feeRate)
         await time.increase(SECONDS_PER_DAY)
         await pool.swap(SIDE_R, SIDE_C, 1)
-        const {rA: rA1, rB: rB1, rC: rC1, state: state1} = await pool.contract.compute(derivable1155.address, feeRate)
+        const {rA: rA1, rB: rB1, rC: rC1, state: state1} = await pool.contract.callStatic.compute(derivable1155.address, feeRate)
 
         if (dailyInterest > 0) {
             rA = rA.sub(rA.mul(UNIT*dailyInterest).div(UNIT))
@@ -75,7 +75,7 @@ describe("Premium", function () {
     }
 
     async function compareWithInterest(pool, derivable1155, feeRate = 0) {
-        const {rA, rB, rC, state} = await pool.contract.compute(derivable1155.address, feeRate)
+        const {rA, rB, rC, state} = await pool.contract.callStatic.compute(derivable1155.address, feeRate)
         const rANum = Number(weiToNumber(rA))
         const rBNum = Number(weiToNumber(rB))
         const rCNum = Number(weiToNumber(rC))
@@ -92,7 +92,7 @@ describe("Premium", function () {
             1
         )
 
-        const {rA: rA1, rB: rB1, rC: rC1} = await pool.contract.compute(derivable1155.address, feeRate)
+        const {rA: rA1, rB: rB1, rC: rC1} = await pool.contract.callStatic.compute(derivable1155.address, feeRate)
         const rA1Num = Number(weiToNumber(rA1))
         const rB1Num = Number(weiToNumber(rB1))
         const rC1Num = Number(weiToNumber(rC1))
