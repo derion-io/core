@@ -5,10 +5,13 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
 import "@uniswap/lib/contracts/libraries/TransferHelper.sol";
 import '@uniswap/v3-core/contracts/libraries/FullMath.sol';
+import "@uniswap/v3-core/contracts/libraries/TickMath.sol";
 import "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
+import '@uniswap/v3-core/contracts/libraries/SafeCast.sol';
 import "solidity-bytes-utils/contracts/BytesLib.sol";
 
 import "@derivable/erc1155-maturity/contracts/token/ERC1155/IERC1155Supply.sol";
+import "@derivable/utr/contracts/interfaces/IUniversalTokenRouter.sol";
 
 import "../subs/Constants.sol";
 import "../interfaces/IHelper.sol";
@@ -17,6 +20,7 @@ import "../interfaces/IPoolFactory.sol";
 import "../interfaces/IWeth.sol";
 
 contract Helper is Constants, IHelper, ERC1155Holder {
+    using BytesLib for bytes;
 
     // INDEX_R == 0: priceR = 0
     // INDEX_R == Q254 | uint253(p): priceR = p
@@ -37,6 +41,25 @@ contract Helper is Constants, IHelper, ERC1155Holder {
         uint256 sideOut;
         address payer;
         address recipient;
+    }
+
+    // UniswapV3 struct
+    struct SwapCallbackData {
+        bytes path;
+        address payer;
+        address utr;
+    }
+
+    struct ExactInputSingleParams {
+        address tokenIn;
+        address tokenOut;
+        address pool;
+        address recipient;
+        address payer;
+        address utr;
+        uint256 amountIn;
+        uint256 amountOutMinimum;
+        uint160 sqrtPriceLimitX96;
     }
 
     uint256 internal constant Q254 = 1 << 254;
@@ -86,6 +109,116 @@ contract Helper is Constants, IHelper, ERC1155Holder {
         }
     }
 
+    function swapAndOpen (
+        SwapParams memory params,
+        address tokenIn,
+        address pool
+    ) external returns (uint256 amountOut) {
+        require(params.poolIn == params.poolOut && params.sideIn == SIDE_R, 'Invalid params');
+        Config memory config = IPool(params.poolIn).loadConfig();
+        amountOut = exactInputSingle(ExactInputSingleParams({
+            tokenIn: tokenIn,
+            tokenOut: config.TOKEN_R,
+            pool: pool,
+            recipient: address(this),
+            payer: BytesLib.toAddress(params.payer, 0),
+            utr: msg.sender,
+            amountIn: params.amountIn,
+            amountOutMinimum: 0,
+            sqrtPriceLimitX96: 0
+        }));
+        TransferHelper.safeApprove(config.TOKEN_R, params.poolIn, amountOut);
+
+        Payment memory payment = Payment(
+            msg.sender, // UTR
+            bytes(''),
+            params.recipient
+        );
+
+        bytes memory payload = abi.encode(
+            params.sideIn,
+            params.sideOut,
+            amountOut
+        );
+
+        (, amountOut,) = IPool(params.poolIn).swap(
+            Param(
+                params.sideIn,
+                params.sideOut,
+                address(this),
+                payload
+            ),
+            payment
+        );
+
+        if (IERC20(config.TOKEN_R).allowance(address(this), params.poolIn) > 0) {
+            TransferHelper.safeApprove(config.TOKEN_R, params.poolIn, 0);
+        }
+    }
+
+    function closeAndSwap (
+        SwapParams memory params,
+        address tokenOut,
+        address pool
+    ) external returns (uint256 amountOut) {
+        require(params.poolIn == params.poolOut && params.sideOut == SIDE_R, 'Invalid params');
+        Config memory config = IPool(params.poolIn).loadConfig();
+
+        Payment memory payment = Payment(
+            msg.sender, // UTR
+            params.payer,
+            address(this)
+        );
+
+        bytes memory payload = abi.encode(
+            params.sideIn,
+            params.sideOut,
+            params.amountIn
+        );
+
+        (, amountOut,) = IPool(params.poolIn).swap(
+            Param(
+                params.sideIn,
+                params.sideOut,
+                address(this),
+                payload
+            ),
+            payment
+        );
+
+        amountOut = exactInputSingle(ExactInputSingleParams({
+            tokenIn: config.TOKEN_R,
+            tokenOut: tokenOut,
+            pool: pool,
+            recipient: params.recipient,
+            payer: address(this),
+            utr: address(0),
+            amountIn: amountOut,
+            amountOutMinimum: 0,
+            sqrtPriceLimitX96: 0
+        }));
+    }
+
+    function uniswapV3SwapCallback(
+        int256 amount0Delta,
+        int256 amount1Delta,
+        bytes calldata _data
+    ) external {
+        require(amount0Delta > 0 || amount1Delta > 0); // swaps entirely within 0-liquidity regions are not supported
+        SwapCallbackData memory data = abi.decode(_data, (SwapCallbackData));
+        address tokenIn = data.path.toAddress(0);
+        address tokenOut = data.path.toAddress(20);
+        // TODO: Do we need to verify data, sender?
+
+        (bool isExactInput, uint256 amountToPay) =
+            amount0Delta > 0
+                ? (tokenIn < tokenOut, uint256(amount0Delta))
+                : (tokenOut < tokenIn, uint256(amount1Delta));
+        if (isExactInput) {
+            _pay(data.utr, tokenIn, data.payer, msg.sender, amountToPay);
+        } 
+    }
+
     function swapToState(
         Slippable calldata __,
         bytes calldata payload
@@ -126,6 +259,24 @@ contract Helper is Constants, IHelper, ERC1155Holder {
 
         state1.a = _v(__.xk, rA1, state1.R);
         state1.b = _v(Q256M/__.xk, rB1, state1.R);
+    }
+
+    function exactInputSingle(ExactInputSingleParams memory params)
+        public
+        payable
+        returns (uint256 amountOut)
+    {
+        amountOut = _exactInputInternal(
+            params.amountIn,
+            params.recipient,
+            params.sqrtPriceLimitX96,
+            SwapCallbackData({
+                path: abi.encodePacked(params.tokenIn, params.tokenOut, params.pool), 
+                payer: params.payer,
+                utr: params.utr
+            })
+        );
+        require(amountOut >= params.amountOutMinimum, 'Too little received');
     }
 
     function swap(SwapParams memory params) public payable returns (uint256 amountOut){
@@ -276,6 +427,21 @@ contract Helper is Constants, IHelper, ERC1155Holder {
         );
     }
 
+    function _pay(
+        address utr,
+        address token,
+        address payer,
+        address recipient,
+        uint256 value
+    ) internal {
+        if (utr == address(0)) {
+            TransferHelper.safeTransfer(token, recipient, value);
+        } else {
+            bytes memory payload = abi.encode(payer, recipient, 20, token, 0);
+            IUniversalTokenRouter(utr).pay(payload, value);
+        }
+    }
+
     function _getPrice(uint256 INDEX) internal view returns (uint256 spot) {
         if (INDEX == 0) {
             return 0;
@@ -312,5 +478,33 @@ contract Helper is Constants, IHelper, ERC1155Holder {
         }
         uint256 denominator = FullMath.mulDivRoundingUp(R - r, xk << 2, Q128);
         return FullMath.mulDivRoundingUp(R, R, denominator);
+    }
+
+    function _exactInputInternal(
+        uint256 amountIn,
+        address recipient,
+        uint160 sqrtPriceLimitX96,
+        SwapCallbackData memory data
+    ) private returns (uint256 amountOut) {
+        // allow swapping to the router address with address 0
+        if (recipient == address(0)) recipient = address(this);
+
+        address tokenIn = data.path.toAddress(0);
+        address tokenOut = data.path.toAddress(20);
+        address pool = data.path.toAddress(40);
+        bool zeroForOne = tokenIn < tokenOut;
+
+        (int256 amount0, int256 amount1) =
+            IUniswapV3Pool(pool).swap(
+                recipient,
+                zeroForOne,
+                SafeCast.toInt256(amountIn),
+                sqrtPriceLimitX96 == 0
+                    ? (zeroForOne ? TickMath.MIN_SQRT_RATIO + 1 : TickMath.MAX_SQRT_RATIO - 1)
+                    : sqrtPriceLimitX96,
+                abi.encode(data)
+            );
+
+        return uint256(-(zeroForOne ? amount1 : amount0));
     }
 }
