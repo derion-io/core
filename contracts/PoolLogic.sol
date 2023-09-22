@@ -161,25 +161,6 @@ contract PoolLogic is PoolBase, Fetcher {
         s_b = uint224(state1.b);
     }
 
-    function _maturityPayoff(
-        Config memory config, uint256 maturity, uint256 amountOut
-    ) internal view override returns (uint256) {
-        unchecked {
-            if (maturity <= block.timestamp) {
-                return amountOut;
-            }
-            uint256 remain = maturity - block.timestamp;
-            if (config.MATURITY <= remain) {
-                return 0;
-            }
-            uint256 elapsed = config.MATURITY - remain;
-            if (elapsed < config.MATURITY_VEST) {
-                amountOut = amountOut * elapsed / config.MATURITY_VEST;
-            }
-            return FullMath.mulDiv(amountOut, config.MATURITY_RATE, Q128);
-        }
-    }
-
     function _selectPrice(
         Config memory config,
         State memory state,
@@ -211,6 +192,25 @@ contract PoolLogic is PoolBase, Fetcher {
             return fetch(ORACLE);
         } else {
             return Fetcher(fetcher).fetch(ORACLE);
+        }
+    }
+
+    function _maturityPayoff(
+        Config memory config, uint256 maturity, uint256 amountOut
+    ) internal view override returns (uint256) {
+        unchecked {
+            if (maturity <= block.timestamp) {
+                return amountOut;
+            }
+            uint256 remain = maturity - block.timestamp;
+            if (config.MATURITY <= remain) {
+                return 0;
+            }
+            uint256 elapsed = config.MATURITY - remain;
+            if (elapsed < config.MATURITY_VEST) {
+                amountOut = amountOut * elapsed / config.MATURITY_VEST;
+            }
+            return FullMath.mulDiv(amountOut, config.MATURITY_RATE, Q128);
         }
     }
 
