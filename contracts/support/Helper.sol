@@ -43,6 +43,17 @@ contract Helper is Constants, IHelper, ERC1155Holder {
         address recipient;
     }
 
+    struct SwapAndSwapParams {
+        uint256 side;
+        address deriPool;
+        address uniPool;
+        address token;
+        uint256 amount;
+        bytes payer;
+        address recipient;
+        uint256 INDEX_R;
+    }
+
     // UniswapV3 struct
     struct SwapCallbackData {
         bytes path;
@@ -110,24 +121,21 @@ contract Helper is Constants, IHelper, ERC1155Holder {
     }
 
     function swapAndOpen (
-        SwapParams memory params,
-        address tokenIn,
-        address pool
+        SwapAndSwapParams memory params
     ) external returns (uint256 amountOut) {
-        require(params.poolIn == params.poolOut && params.sideIn == SIDE_R, 'Invalid params');
-        Config memory config = IPool(params.poolIn).loadConfig();
+        Config memory config = IPool(params.deriPool).loadConfig();
         amountOut = exactInputSingle(ExactInputSingleParams({
-            tokenIn: tokenIn,
+            tokenIn: params.token,
             tokenOut: config.TOKEN_R,
-            pool: pool,
+            pool: params.uniPool,
             recipient: address(this),
             payer: BytesLib.toAddress(params.payer, 0),
             utr: msg.sender,
-            amountIn: params.amountIn,
+            amountIn: params.amount,
             amountOutMinimum: 0,
             sqrtPriceLimitX96: 0
         }));
-        TransferHelper.safeApprove(config.TOKEN_R, params.poolIn, amountOut);
+        TransferHelper.safeApprove(config.TOKEN_R, params.deriPool, amountOut);
 
         Payment memory payment = Payment(
             msg.sender, // UTR
@@ -136,33 +144,30 @@ contract Helper is Constants, IHelper, ERC1155Holder {
         );
 
         bytes memory payload = abi.encode(
-            params.sideIn,
-            params.sideOut,
+            SIDE_R,
+            params.side,
             amountOut
         );
 
-        (, amountOut,) = IPool(params.poolIn).swap(
+        (, amountOut,) = IPool(params.deriPool).swap(
             Param(
-                params.sideIn,
-                params.sideOut,
+                SIDE_R,
+                params.side,
                 address(this),
                 payload
             ),
             payment
         );
 
-        if (IERC20(config.TOKEN_R).allowance(address(this), params.poolIn) > 0) {
-            TransferHelper.safeApprove(config.TOKEN_R, params.poolIn, 0);
+        if (IERC20(config.TOKEN_R).allowance(address(this), params.deriPool) > 0) {
+            TransferHelper.safeApprove(config.TOKEN_R, params.deriPool, 0);
         }
     }
 
     function closeAndSwap (
-        SwapParams memory params,
-        address tokenOut,
-        address pool
+        SwapAndSwapParams memory params
     ) external returns (uint256 amountOut) {
-        require(params.poolIn == params.poolOut && params.sideOut == SIDE_R, 'Invalid params');
-        Config memory config = IPool(params.poolIn).loadConfig();
+        Config memory config = IPool(params.deriPool).loadConfig();
 
         Payment memory payment = Payment(
             msg.sender, // UTR
@@ -171,15 +176,15 @@ contract Helper is Constants, IHelper, ERC1155Holder {
         );
 
         bytes memory payload = abi.encode(
-            params.sideIn,
-            params.sideOut,
-            params.amountIn
+            params.side,
+            SIDE_R,
+            params.amount
         );
 
-        (, amountOut,) = IPool(params.poolIn).swap(
+        (, amountOut,) = IPool(params.deriPool).swap(
             Param(
-                params.sideIn,
-                params.sideOut,
+                params.side,
+                SIDE_R,
                 address(this),
                 payload
             ),
@@ -188,8 +193,8 @@ contract Helper is Constants, IHelper, ERC1155Holder {
 
         amountOut = exactInputSingle(ExactInputSingleParams({
             tokenIn: config.TOKEN_R,
-            tokenOut: tokenOut,
-            pool: pool,
+            tokenOut: params.token,
+            pool: params.uniPool,
             recipient: params.recipient,
             payer: address(this),
             utr: address(0),

@@ -126,17 +126,15 @@ const {
             data: (
               await stateCalHelper.populateTransaction.swapAndOpen(
                 {
-                  sideIn: SIDE_R,
-                  sideOut: SIDE_A,
-                  poolIn: pool.contract.address,
-                  poolOut: pool.contract.address,
-                  amountIn: numberToWei(5),
+                  side: SIDE_A,
+                  deriPool: pool.contract.address,
+                  uniPool: uniswapPairFee500.address,
+                  token: usdc.address,
+                  amount: numberToWei(5),
                   recipient: owner.address,
                   payer: owner.address,
                   INDEX_R: 0
-                },
-                usdc.address,
-                uniswapPairFee500.address
+                }
               )
             ).data,
           },
@@ -177,17 +175,15 @@ const {
             data: (
               await stateCalHelper.populateTransaction.closeAndSwap(
                 {
-                  sideIn: SIDE_A,
-                  sideOut: SIDE_R,
-                  poolIn: pool.contract.address,
-                  poolOut: pool.contract.address,
-                  amountIn: '10000000000',
+                  side: SIDE_A,
+                  deriPool: pool.contract.address,
+                  uniPool: uniswapPairFee500.address,
+                  token: usdc.address,
+                  amount: '10000000000',
                   recipient: owner.address,
                   payer: owner.address,
                   INDEX_R: 0
-                },
-                usdc.address,
-                uniswapPairFee500.address
+                }
               )
             ).data,
           },
