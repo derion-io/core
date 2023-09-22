@@ -53,7 +53,7 @@ configs.forEach(config => {
         })
 
         async function compareWithInterest(pool, derivable1155) {
-            const { rA, rB, rC } = await pool.contract.compute(derivable1155.address)
+            const { rA, rB, rC } = await pool.contract.callStatic.compute(derivable1155.address)
             const rANum = Number(weiToNumber(rA))
             const rBNum = Number(weiToNumber(rB))
             const rCNum = Number(weiToNumber(rC))
@@ -69,7 +69,7 @@ configs.forEach(config => {
                 1
             )
     
-            const { rA: rA1, rB: rB1, rC: rC1 } = await pool.contract.compute(derivable1155.address)
+            const { rA: rA1, rB: rB1, rC: rC1 } = await pool.contract.callStatic.compute(derivable1155.address)
             const rA1Num = Number(weiToNumber(rA1))
             const rB1Num = Number(weiToNumber(rB1))
             const rC1Num = Number(weiToNumber(rC1))
@@ -116,7 +116,7 @@ configs.forEach(config => {
                 numberToWei(99)
             )
 
-            const { rA, rB, rC } = await pool.contract.compute(derivable1155.address)
+            const { rA, rB, rC } = await pool.contract.callStatic.compute(derivable1155.address)
             const rANum = Number(weiToNumber(rA))
             const rBNum = Number(weiToNumber(rB))
             const rCNum = Number(weiToNumber(rC))
@@ -193,7 +193,7 @@ configs.forEach(config => {
             const rBDecayed = rBNum * interestRate
             const rCDecayed = rCNum + (rANum + rBNum) * (1 - interestRate)
 
-            const { rA: rA1, rB: rB1, rC: rC1 } = await pool.contract.compute(derivable1155.address)
+            const { rA: rA1, rB: rB1, rC: rC1 } = await pool.contract.callStatic.compute(derivable1155.address)
             const rA1Num = Number(weiToNumber(rA1))
             const rB1Num = Number(weiToNumber(rB1))
             const rC1Num = Number(weiToNumber(rC1))
@@ -242,7 +242,7 @@ configs.forEach(config => {
                 numberToWei(99)
             )
 
-            const { rA, rB, rC } = await pool.contract.compute(derivable1155.address)
+            const { rA, rB, rC } = await pool.contract.callStatic.compute(derivable1155.address)
             const rANum = Number(weiToNumber(rA))
             const rBNum = Number(weiToNumber(rB))
             const rCNum = Number(weiToNumber(rC))
@@ -343,7 +343,7 @@ configs.forEach(config => {
                 1
             )
 
-            const { rA: rA1, rB: rB1, rC: rC1 } = await pool.contract.compute(derivable1155.address)
+            const { rA: rA1, rB: rB1, rC: rC1 } = await pool.contract.callStatic.compute(derivable1155.address)
             const rA1Num = Number(weiToNumber(rA1))
             const rB1Num = Number(weiToNumber(rB1))
             const rC1Num = Number(weiToNumber(rC1))
