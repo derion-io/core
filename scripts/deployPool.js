@@ -107,11 +107,11 @@ async function deploy(settings) {
     const EPOCH = 500 * 60
     const anEpochAgo = now - EPOCH
     const blockEpochAgo = await fetch(
-        `${configs.scanAPI}?module=block&action=getblocknobytime&timestamp=${anEpochAgo}&closest=before&apikey=${SCAN_API_KEY[chainID]}`
+        `${configs.scanApi}?module=block&action=getblocknobytime&timestamp=${anEpochAgo}&closest=before&apikey=${SCAN_API_KEY[chainID]}`
     ).then(x => x.json()).then(x => Number(x?.result))
 
     const logs = await fetch(
-        `${configs.scanAPI}?module=logs&action=getLogs&address=${settings.pairAddress}&topic0=0xc42079f94a6350d7e6235f29174924f928cc2ac818eb64fed8004e115fbcca67&fromBlock=${blockEpochAgo}&apikey=${SCAN_API_KEY[chainID]}`
+        `${configs.scanApi}?module=logs&action=getLogs&address=${settings.pairAddress}&topic0=0xc42079f94a6350d7e6235f29174924f928cc2ac818eb64fed8004e115fbcca67&fromBlock=${blockEpochAgo}&apikey=${SCAN_API_KEY[chainID]}`
     ).then(x => x.json()).then(x => x?.result)
 
     if (!logs?.length) {
