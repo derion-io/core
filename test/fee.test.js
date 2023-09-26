@@ -29,7 +29,7 @@ function toDailyRate(HALF_LIFE, precision = 4) {
 }
 
 function toHalfLife(dailyRate) {
-  return dailyRate == 0 ? 0 : SECONDS_PER_DAY / Math.log2(1 / (1 - dailyRate))
+  return Math.round(dailyRate == 0 ? 0 : SECONDS_PER_DAY / Math.log2(1 / (1 - dailyRate)))
 }
 
 HLs.forEach(HALF_LIFE => {
@@ -146,6 +146,58 @@ HLs.forEach(HALF_LIFE => {
       const actualFee = await weth.balanceOf(feeReceiver.address)
 
       expect(actualFee).to.be.eq(0)
+    })
+  })
+
+  const dailyPremiumRate = 0.004
+  describe(`Interest rate ${dailyInterestRate*100}% - Premium rate ${dailyPremiumRate*100}% - Fee rate ${FEE_RATE}`, function () {
+    const fixture = loadFixtureFromParams([{
+      ...baseParams,
+      halfLife: bn(HALF_LIFE),
+      premiumHL: bn(toHalfLife(dailyPremiumRate))
+    }], { 
+      feeRate: FEE_RATE,
+      logicName: 'View'
+    })
+
+    it('Test', async function() {
+      const { derivablePools, derivable1155, feeReceiver, weth } = await loadFixture(fixture)
+
+      const pool = derivablePools[0]
+      const UNIT = 10000
+
+      await pool.swap(
+        SIDE_R,
+        SIDE_A,
+        numberToWei(1),
+      )
+
+      const {rA, rB, state} = await pool.contract.compute(derivable1155.address, FEE_RATE)
+
+      const interestRate = Math.round(((1 - dailyInterestRate)**365)*UNIT)/UNIT
+
+      const rAAfter = rA.mul(Math.round(UNIT * interestRate)).div(UNIT)
+      const rBAfter = rB.mul(Math.round(UNIT * interestRate)).div(UNIT)
+      const interest = rA.add(rB).sub(rAAfter).sub(rBAfter)
+
+      const premiumRate = Math.round((1 - (1 - dailyPremiumRate)**365)*UNIT)/UNIT
+      let premium = rAAfter.gt(rBAfter) ? rAAfter.sub(rBAfter).mul(rAAfter) : rBAfter.sub(rAAfter).mul(rBAfter)
+      premium = premium.mul(Math.round(UNIT * premiumRate)).div(UNIT).div(state.R)
+
+      const expectedFee = Number(weiToNumber(interest.add(premium).div(FEE_RATE)))
+      
+      const balanceBefore = await weth.balanceOf(feeReceiver.address)
+
+      await time.increase(365 * SECONDS_PER_DAY);
+
+      await pool.swap(
+        SIDE_R,
+        SIDE_A,
+        bn(1),
+      )
+
+      const actualFee = Number(weiToNumber((await weth.balanceOf(feeReceiver.address)).sub(balanceBefore)))
+      expect(expectedFee/actualFee).to.closeTo(1, 0.1)
     })
   })
 })
