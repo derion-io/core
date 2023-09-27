@@ -71,8 +71,8 @@ const {
           await weth.approve(uniswapPositionManager.address, MaxUint256);
           await uniswapPositionManager.mint(
             {
-              token0: usdc.address,
-              token1: weth.address,
+              token0: quoteTokenIndex ? weth.address : usdc.address,
+              token1: quoteTokenIndex ? usdc.address : weth.address,
               fee: 500,
               tickLower: Math.ceil(-887272 / 10) * 10,
               tickUpper: Math.floor(887272 / 10) * 10,
