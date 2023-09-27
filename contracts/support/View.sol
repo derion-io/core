@@ -78,10 +78,10 @@ contract View is PoolLogic {
         // [INTEREST]
         uint32 elapsed = uint32(block.timestamp) - s_lastInterestTime;
         if (elapsed > 0) {
-            uint256 rate = _expRate(elapsed, config.INTEREST_HL);
-            if (rate > Q64) {
-                uint256 rAF = FullMath.mulDivRoundingUp(rA, Q64, rate);
-                uint256 rBF = FullMath.mulDivRoundingUp(rB, Q64, rate);
+            uint256 rate = _decayRate(elapsed, config.INTEREST_HL);
+            if (rate < Q64) {
+                uint256 rAF = FullMath.mulDivRoundingUp(rA, rate, Q64);
+                uint256 rBF = FullMath.mulDivRoundingUp(rB, rate, Q64);
                 if (rA + rB > rAF + rBF) {
                     (rA, rB) = (rAF, rBF);
                 }
@@ -90,12 +90,12 @@ contract View is PoolLogic {
         // [PREMIUM]
         elapsed = uint32(block.timestamp & F_MASK) - (s_lastPremiumTime & F_MASK);
         if (elapsed > 0) {
-            uint256 rate = _expRate(elapsed, config.PREMIUM_HL);
-            if (rate > Q64) {
+            uint256 rate = _decayRate(elapsed, config.PREMIUM_HL);
+            if (rate < Q64) {
                 uint256 premium = rA > rB
                     ? FullMath.mulDiv(rA - rB, rA, R)
                     : FullMath.mulDiv(rB - rA, rB, R);
-                premium -= FullMath.mulDivRoundingUp(premium, Q64, rate);
+                premium -= FullMath.mulDivRoundingUp(premium, rate, Q64);
                 if (premium > 0) {
                     if (rA > rB) {
                         rB += FullMath.mulDivRoundingUp(premium, rB, R - rA);
