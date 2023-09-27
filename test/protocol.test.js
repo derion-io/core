@@ -864,33 +864,15 @@ describe("Protocol", function () {
                     await time.increase(1000);
                 }
     
-                // swap back
-                if ((
-                    ((priceChange == ZERO2) && (side == SIDE_A)) ||
-                    ((priceChange == INFI2) && (side == SIDE_B))
-                ) &&
-                    !waitRecover
-                ) {
-                    await expect(derivablePools[0].swap(
-                        side,
-                        SIDE_R,
-                        tokenAfter.sub(tokenBefore),
-                        {
-                            payer: [],
-                            recipient: owner.address,
-                        }
-                    ), `side(${side}) -> R`).to.be.reverted
-                }
-                else
-                    await derivablePools[0].swap(
-                        side,
-                        SIDE_R,
-                        tokenAfter.sub(tokenBefore),
-                        {
-                            payer: [],
-                            recipient: owner.address,
-                        }
-                    )
+                await derivablePools[0].swap(
+                    side,
+                    SIDE_R,
+                    tokenAfter.sub(tokenBefore),
+                    {
+                        payer: [],
+                        recipient: owner.address,
+                    }
+                )
             }
     
             async function testMultiPositonPriceChangeDrastically(longIn, shortIn, cIn, priceChange, waitRecover) {
@@ -965,51 +947,26 @@ describe("Protocol", function () {
                     await time.increase(1000);
                 }
                 // swap back long -> weth
-                if ((priceChange == ZERO2) && (!waitRecover)) {
-                    await expect(derivablePools[0].connect(accountA).swap(
-                        SIDE_A,
-                        SIDE_R,
-                        longTokenAfter.sub(longTokenBefore),
-                        {
-                            payer: [],
-                            recipient: accountA.address,
-                        }
-                    )).to.be.reverted
-                } else {
-                    await derivablePools[0].connect(accountA).swap(
-                        SIDE_A,
-                        SIDE_R,
-                        longTokenAfter.sub(longTokenBefore),
-                        {
-                            payer: [],
-                            recipient: accountA.address,
-                        }
-                    )
-                }
+                await derivablePools[0].connect(accountA).swap(
+                    SIDE_A,
+                    SIDE_R,
+                    longTokenAfter.sub(longTokenBefore),
+                    {
+                        payer: [],
+                        recipient: accountA.address,
+                    }
+                )
                 const aWethAfter = await weth.balanceOf(accountA.address)
                 // swap back short -> weth
-                if ((priceChange == INFI2) && (!waitRecover)) {
-                    await expect(derivablePools[0].connect(accountB).swap(
-                        SIDE_B,
-                        SIDE_R,
-                        shortTokenAfter.sub(shortTokenBefore),
-                        {
-                            payer: [],
-                            recipient: accountB.address,
-                        }
-                    )).to.be.reverted
-                }
-                else {
-                    await derivablePools[0].connect(accountB).swap(
-                        SIDE_B,
-                        SIDE_R,
-                        shortTokenAfter.sub(shortTokenBefore),
-                        {
-                            payer: [],
-                            recipient: accountB.address,
-                        }
-                    )
-                }
+                await derivablePools[0].connect(accountB).swap(
+                    SIDE_B,
+                    SIDE_R,
+                    shortTokenAfter.sub(shortTokenBefore),
+                    {
+                        payer: [],
+                        recipient: accountB.address,
+                    }
+                )
                 const bWethAfter = await weth.balanceOf(accountB.address)
                 // swap back c -> weth
                 await derivablePools[0].swap(
@@ -1048,25 +1005,24 @@ describe("Protocol", function () {
                     await testSinglePositionPriceChangeDrastically(SIDE_C, 1, ZERO1, false)
                 })
 
-                // TODO: Solve this later
-                // it("Long 1e - price ~zero2 - wait price recover", async function () {
-                //     await testSinglePositionPriceChangeDrastically(SIDE_A, 1, ZERO2, true)
-                // })
-                // it("Long 1e - price ~zero2", async function () {
-                //     await testSinglePositionPriceChangeDrastically(SIDE_A, 1, ZERO2, false)
-                // })
-                // it("Short 1e - price ~zero2 - wait price recover", async function () {
-                //     await testSinglePositionPriceChangeDrastically(SIDE_B, 1, ZERO2, true)
-                // })
-                // it("Short 1e - price ~zero2", async function () {
-                //     await testSinglePositionPriceChangeDrastically(SIDE_B, 1, ZERO2, false)
-                // })
-                // it("C 1e - price ~zero2 - wait price recover", async function () {
-                //     await testSinglePositionPriceChangeDrastically(SIDE_C, 1, ZERO2, true)
-                // })
-                // it("C 1e - price ~zero2", async function () {
-                //     await testSinglePositionPriceChangeDrastically(SIDE_C, 1, ZERO2, false)
-                // })
+                it("Long 1e - price ~zero2 - wait price recover", async function () {
+                    await testSinglePositionPriceChangeDrastically(SIDE_A, 1, ZERO2, true)
+                })
+                it("Long 1e - price ~zero2", async function () {
+                    await testSinglePositionPriceChangeDrastically(SIDE_A, 1, ZERO2, false)
+                })
+                it("Short 1e - price ~zero2 - wait price recover", async function () {
+                    await testSinglePositionPriceChangeDrastically(SIDE_B, 1, ZERO2, true)
+                })
+                it("Short 1e - price ~zero2", async function () {
+                    await testSinglePositionPriceChangeDrastically(SIDE_B, 1, ZERO2, false)
+                })
+                it("C 1e - price ~zero2 - wait price recover", async function () {
+                    await testSinglePositionPriceChangeDrastically(SIDE_C, 1, ZERO2, true)
+                })
+                it("C 1e - price ~zero2", async function () {
+                    await testSinglePositionPriceChangeDrastically(SIDE_C, 1, ZERO2, false)
+                })
     
                 it("Long 1e - price ~infi1 - wait price recover", async function () {
                     await testSinglePositionPriceChangeDrastically(SIDE_A, 1, INFI1, true)
@@ -1087,16 +1043,15 @@ describe("Protocol", function () {
                     await testSinglePositionPriceChangeDrastically(SIDE_C, 1, INFI1, false)
                 })
                
-                // TODO: Solve this later
-                // it("Long 1e - price ~infi2", async function () {
-                //     await testSinglePositionPriceChangeDrastically(SIDE_A, 1, INFI2, false)
-                // })
-                // it("Short 1e - price ~infi2", async function () {
-                //     await testSinglePositionPriceChangeDrastically(SIDE_B, 1, INFI2, false)
-                // })
-                // it("C 1e - price ~infi2", async function () {
-                //     await testSinglePositionPriceChangeDrastically(SIDE_C, 1, INFI2, false)
-                // })
+                it("Long 1e - price ~infi2", async function () {
+                    await testSinglePositionPriceChangeDrastically(SIDE_A, 1, INFI2, false)
+                })
+                it("Short 1e - price ~infi2", async function () {
+                    await testSinglePositionPriceChangeDrastically(SIDE_B, 1, INFI2, false)
+                })
+                it("C 1e - price ~infi2", async function () {
+                    await testSinglePositionPriceChangeDrastically(SIDE_C, 1, INFI2, false)
+                })
             })
     
             describe("Multi position", function () {
@@ -1125,31 +1080,30 @@ describe("Protocol", function () {
                     await testMultiPositonPriceChangeDrastically(0.1, 0.1, 100, ZERO1, false)
                 })
 
-                // TODO: Solve this later
-                // it("Long 1e - short 1e - c 1e - price ~zero2 - wait price recover", async function () {
-                //     await testMultiPositonPriceChangeDrastically(1, 1, 1, ZERO2, true)
-                // })
-                // it("Long 0.1e - short 1e - c 0.1e - price ~zero2 - wait price recover", async function () {
-                //     await testMultiPositonPriceChangeDrastically(0.1, 1, 0.1, ZERO2, true)
-                // })
-                // it("Long 1e - short 0.1e - c 0.1e - price ~zero2 - wait price recover", async function () {
-                //     await testMultiPositonPriceChangeDrastically(1, 0.1, 0.1, ZERO2, true)
-                // })
-                // it("Long 0.1e - short 0.1e - c 100e - price ~zero2 - wait price recover", async function () {
-                //     await testMultiPositonPriceChangeDrastically(0.1, 0.1, 100, ZERO2, true)
-                // })
-                // it("Long 1e - short 1e - c 1e - price ~zero2", async function () {
-                //     await testMultiPositonPriceChangeDrastically(1, 1, 1, ZERO2, false)
-                // })
-                // it("Long 0.1e - short 1e - c 0.1e - price ~zero2", async function () {
-                //     await testMultiPositonPriceChangeDrastically(0.1, 1, 0.1, ZERO2, false)
-                // })
-                // it("Long 1e - short 0.1e - c 0.1e - price ~zero2", async function () {
-                //     await testMultiPositonPriceChangeDrastically(1, 0.1, 0.1, ZERO2, false)
-                // })
-                // it("Long 0.1e - short 0.1e - c 100e - price ~zero2", async function () {
-                //     await testMultiPositonPriceChangeDrastically(0.1, 0.1, 100, ZERO2, false)
-                // })
+                it("Long 1e - short 1e - c 1e - price ~zero2 - wait price recover", async function () {
+                    await testMultiPositonPriceChangeDrastically(1, 1, 1, ZERO2, true)
+                })
+                it("Long 0.1e - short 1e - c 0.1e - price ~zero2 - wait price recover", async function () {
+                    await testMultiPositonPriceChangeDrastically(0.1, 1, 0.1, ZERO2, true)
+                })
+                it("Long 1e - short 0.1e - c 0.1e - price ~zero2 - wait price recover", async function () {
+                    await testMultiPositonPriceChangeDrastically(1, 0.1, 0.1, ZERO2, true)
+                })
+                it("Long 0.1e - short 0.1e - c 100e - price ~zero2 - wait price recover", async function () {
+                    await testMultiPositonPriceChangeDrastically(0.1, 0.1, 100, ZERO2, true)
+                })
+                it("Long 1e - short 1e - c 1e - price ~zero2", async function () {
+                    await testMultiPositonPriceChangeDrastically(1, 1, 1, ZERO2, false)
+                })
+                it("Long 0.1e - short 1e - c 0.1e - price ~zero2", async function () {
+                    await testMultiPositonPriceChangeDrastically(0.1, 1, 0.1, ZERO2, false)
+                })
+                it("Long 1e - short 0.1e - c 0.1e - price ~zero2", async function () {
+                    await testMultiPositonPriceChangeDrastically(1, 0.1, 0.1, ZERO2, false)
+                })
+                it("Long 0.1e - short 0.1e - c 100e - price ~zero2", async function () {
+                    await testMultiPositonPriceChangeDrastically(0.1, 0.1, 100, ZERO2, false)
+                })
     
                 it("Long 1e - short 1e - c 1e - price ~infi1 - wait price recover", async function () {
                     await testMultiPositonPriceChangeDrastically(1, 1, 1, INFI1, true)
@@ -1176,31 +1130,30 @@ describe("Protocol", function () {
                     await testMultiPositonPriceChangeDrastically(0.1, 0.1, 100, INFI1, false)
                 })
 
-                // TODO: Solve this later
-                // it("Long 1e - short 1e - c 1e - price ~infi2 - wait price recover", async function () {
-                //     await testMultiPositonPriceChangeDrastically(1, 1, 1, INFI2, true)
-                // })
-                // it("Long 0.1e - short 1e - c 0.1e - price ~infi2 - wait price recover", async function () {
-                //     await testMultiPositonPriceChangeDrastically(0.1, 1, 0.1, INFI2, true)
-                // })
-                // it("Long 1e - short 0.1e - c 0.1e - price ~infi2 - wait price recover", async function () {
-                //     await testMultiPositonPriceChangeDrastically(1, 0.1, 0.1, INFI2, true)
-                // })
-                // it("Long 0.1e - short 0.1e - c 100e - price ~infi2 - wait price recover", async function () {
-                //     await testMultiPositonPriceChangeDrastically(0.1, 0.1, 100, INFI2, true)
-                // })
-                // it("Long 1e - short 1e - c 1e - price ~infi2", async function () {
-                //     await testMultiPositonPriceChangeDrastically(1, 1, 1, INFI2, false)
-                // })
-                // it("Long 0.1e - short 1e - c 0.1e - price ~infi2", async function () {
-                //     await testMultiPositonPriceChangeDrastically(0.1, 1, 0.1, INFI2, false)
-                // })
-                // it("Long 1e - short 0.1e - c 0.1e - price ~infi2", async function () {
-                //     await testMultiPositonPriceChangeDrastically(1, 0.1, 0.1, INFI2, false)
-                // })
-                // it("Long 0.1e - short 0.1e - c 100e - price ~infi2", async function () {
-                //     await testMultiPositonPriceChangeDrastically(0.1, 0.1, 100, INFI2, false)
-                // })
+                it("Long 1e - short 1e - c 1e - price ~infi2 - wait price recover", async function () {
+                    await testMultiPositonPriceChangeDrastically(1, 1, 1, INFI2, true)
+                })
+                it("Long 0.1e - short 1e - c 0.1e - price ~infi2 - wait price recover", async function () {
+                    await testMultiPositonPriceChangeDrastically(0.1, 1, 0.1, INFI2, true)
+                })
+                it("Long 1e - short 0.1e - c 0.1e - price ~infi2 - wait price recover", async function () {
+                    await testMultiPositonPriceChangeDrastically(1, 0.1, 0.1, INFI2, true)
+                })
+                it("Long 0.1e - short 0.1e - c 100e - price ~infi2 - wait price recover", async function () {
+                    await testMultiPositonPriceChangeDrastically(0.1, 0.1, 100, INFI2, true)
+                })
+                it("Long 1e - short 1e - c 1e - price ~infi2", async function () {
+                    await testMultiPositonPriceChangeDrastically(1, 1, 1, INFI2, false)
+                })
+                it("Long 0.1e - short 1e - c 0.1e - price ~infi2", async function () {
+                    await testMultiPositonPriceChangeDrastically(0.1, 1, 0.1, INFI2, false)
+                })
+                it("Long 1e - short 0.1e - c 0.1e - price ~infi2", async function () {
+                    await testMultiPositonPriceChangeDrastically(1, 0.1, 0.1, INFI2, false)
+                })
+                it("Long 0.1e - short 0.1e - c 100e - price ~infi2", async function () {
+                    await testMultiPositonPriceChangeDrastically(0.1, 0.1, 100, INFI2, false)
+                })
             })
         })
     })

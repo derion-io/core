@@ -62,10 +62,10 @@ contract PoolLogic is PoolBase, Fetcher {
             // [INTEREST]
             uint32 elapsed = uint32(block.timestamp) - s_lastInterestTime;
             if (elapsed > 0) {
-                uint256 rate = _expRate(elapsed, config.INTEREST_HL);
-                if (rate > Q64) {
-                    uint256 rAF = FullMath.mulDivRoundingUp(rA, Q64, rate);
-                    uint256 rBF = FullMath.mulDivRoundingUp(rB, Q64, rate);
+                uint256 rate = _decayRate(elapsed, config.INTEREST_HL);
+                if (rate < Q64) {
+                    uint256 rAF = FullMath.mulDivRoundingUp(rA, rate, Q64);
+                    uint256 rBF = FullMath.mulDivRoundingUp(rB, rate, Q64);
                     if (rA + rB > rAF + rBF) {
                         (rA, rB) = (rAF, rBF);
                         s_lastInterestTime = uint32(block.timestamp);
@@ -75,12 +75,12 @@ contract PoolLogic is PoolBase, Fetcher {
             // [PREMIUM]
             elapsed = uint32(block.timestamp & F_MASK) - (s_lastPremiumTime & F_MASK);
             if (elapsed > 0) {
-                uint256 rate = _expRate(elapsed, config.PREMIUM_HL);
-                if (rate > Q64) {
+                uint256 rate = _decayRate(elapsed, config.PREMIUM_HL);
+                if (rate < Q64) {
                     uint256 premium = rA > rB
                         ? FullMath.mulDiv(rA - rB, rA, state.R)
                         : FullMath.mulDiv(rB - rA, rB, state.R);
-                    premium -= FullMath.mulDivRoundingUp(premium, Q64, rate);
+                    premium -= FullMath.mulDivRoundingUp(premium, rate, Q64);
                     if (premium > 0) {
                         if (rA > rB) {
                             rB += FullMath.mulDivRoundingUp(premium, rB, state.R - rA);
@@ -101,6 +101,21 @@ contract PoolLogic is PoolBase, Fetcher {
                     TransferHelper.safeTransfer(config.TOKEN_R, FEE_TO, fee);
                     state.R -= fee;
                 }
+            }
+        }
+        // [SANITIZATION]
+        unchecked {
+            uint256 rAB = rA + rB;
+            uint256 half = rAB >> 1;
+            if (half < MINIMUM_RESERVE) {
+                rA = half;
+                rB = rAB - rA;
+            } else if (rA < MINIMUM_RESERVE) {
+                rA = MINIMUM_RESERVE;
+                rB = rAB - rA;
+            } else if (rB < MINIMUM_RESERVE) {
+                rB = MINIMUM_RESERVE;
+                rA = rAB - rB;
             }
         }
         // [CALCULATION]
@@ -223,14 +238,14 @@ contract PoolLogic is PoolBase, Fetcher {
         return IERC20(TOKEN_R).balanceOf(address(this));
     }
 
-    function _expRate (
+    function _decayRate (
         uint256 elapsed,
         uint256 halfLife
     ) internal pure returns (uint256 rateX64) {
         if (halfLife == 0) {
             return Q64;
         }
-        int128 rate = ABDKMath64x64.exp_2(int128(int((elapsed << 64) / halfLife)));
+        int128 rate = ABDKMath64x64.exp_2(-int128(int((elapsed << 64) / halfLife)));
         return uint256(int(rate));
     }
 
