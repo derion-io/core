@@ -197,7 +197,7 @@ HLs.forEach(HALF_LIFE => {
       )
 
       const actualFee = Number(weiToNumber((await weth.balanceOf(feeReceiver.address)).sub(balanceBefore)))
-      expect(expectedFee/actualFee).to.closeTo(1, 0.1)
+      expect(expectedFee/actualFee).to.closeTo(1, 0.001)
     })
   })
 })
