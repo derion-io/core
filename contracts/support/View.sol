@@ -114,6 +114,21 @@ contract View is PoolLogic {
                 R -= fee;
             }
         }
+        // [SANITIZATION]
+        unchecked {
+            uint256 rAB = rA + rB;
+            uint256 half = rAB >> 1;
+            if (half < MINIMUM_RESERVE) {
+                rA = half;
+                rB = rAB - rA;
+            } else if (rA < MINIMUM_RESERVE) {
+                rA = MINIMUM_RESERVE;
+                rB = rAB - rA;
+            } else if (rB < MINIMUM_RESERVE) {
+                rB = MINIMUM_RESERVE;
+                rA = rAB - rB;
+            }
+        }
         return (R, rA, rB);
     }
 }
