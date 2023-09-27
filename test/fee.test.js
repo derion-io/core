@@ -160,7 +160,7 @@ HLs.forEach(HALF_LIFE => {
       logicName: 'View'
     })
 
-    it('Test', async function() {
+    it('Fee for all', async function() {
       const { derivablePools, derivable1155, feeReceiver, weth } = await loadFixture(fixture)
 
       const pool = derivablePools[0]
