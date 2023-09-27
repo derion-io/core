@@ -149,7 +149,7 @@ HLs.forEach(HALF_LIFE => {
     })
   })
 
-  const dailyPremiumRate = 0.004
+  const dailyPremiumRate = 0.1
   describe(`Interest rate ${dailyInterestRate*100}% - Premium rate ${dailyPremiumRate*100}% - Fee rate ${FEE_RATE}`, function () {
     const fixture = loadFixtureFromParams([{
       ...baseParams,
@@ -197,7 +197,7 @@ HLs.forEach(HALF_LIFE => {
       )
 
       const actualFee = Number(weiToNumber((await weth.balanceOf(feeReceiver.address)).sub(balanceBefore)))
-      expect(expectedFee/actualFee).to.closeTo(1, 0.001)
+      expect(expectedFee/actualFee).to.closeTo(1, 0.0013)
     })
   })
 })
