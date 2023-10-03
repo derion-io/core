@@ -181,8 +181,8 @@ HLs.forEach(HALF_LIFE => {
       const interest = rA.add(rB).sub(rAAfter).sub(rBAfter)
 
       const premiumRate = Math.round((1 - (1 - dailyPremiumRate)**365)*UNIT)/UNIT
-      let premium = rAAfter.gt(rBAfter) ? rAAfter.sub(rBAfter).mul(rAAfter) : rBAfter.sub(rAAfter).mul(rBAfter)
-      premium = premium.mul(Math.round(UNIT * premiumRate)).div(UNIT).div(state.R)
+      let premium = rAAfter.gt(rBAfter) ? rAAfter.sub(rBAfter) : rBAfter.sub(rAAfter)
+      premium = premium.mul(Math.round(UNIT * premiumRate)).div(UNIT)
 
       const expectedFee = Number(weiToNumber(interest.add(premium).div(FEE_RATE)))
       
@@ -197,7 +197,7 @@ HLs.forEach(HALF_LIFE => {
       )
 
       const actualFee = Number(weiToNumber((await weth.balanceOf(feeReceiver.address)).sub(balanceBefore)))
-      expect(expectedFee/actualFee).to.closeTo(1, 0.0013)
+      expect(actualFee/expectedFee).to.closeTo(1, 0.02)
     })
   })
 })

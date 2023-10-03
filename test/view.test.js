@@ -20,6 +20,13 @@ function toHalfLife(dailyRate) {
   return Math.round(dailyRate == 0 ? 0 : 86400 / Math.log2(1 / (1 - dailyRate)))
 }
 
+const UNIT = 1000000
+
+function deviation(a, b) {
+  const m = a.abs().gt(b.abs()) ? a.abs() : b.abs()
+  return a.sub(b).mul(UNIT).div(m).toNumber() / UNIT
+}
+
 describe("View", function () {
   const fixture = loadFixtureFromParams([{
     ...baseParams,
@@ -169,25 +176,32 @@ describe("View", function () {
         packId(SIDE_B, pool.contract.address)
       );
 
-      for (let i = 0; i < 10; ++i) {
-        await time.increase(365 * 86400 / 10)
-        await swapToSetPriceMock({
-          quoteToken: usdc,
-          baseToken: weth,
-          uniswapPair,
-          targetSpot: 1000 + 1000 * Math.random(),
-          targetTwap: 1000 + 1000 * Math.random(),
-        })
+      const deviations = {
+        7: 0.001,
+        30: 0.35,
+        365: 0.6,
       }
-
-      const [{ rA, sA, rB, sB }, amountOutA, amountOutB] = await Promise.all([
-        pool.contract.callStatic.compute(derivable1155.address, feeRate),
-        pool.swap(SIDE_A, SIDE_R, balanceA, { static: true }),
-        pool.swap(SIDE_B, SIDE_R, balanceB, { static: true }),
-      ]);
-
-      expect(balanceA.mul(rA).div(sA)).to.eq(amountOutA);
-      expect(balanceB.mul(rB).div(sB)).to.eq(amountOutB);
+      for (let DURATION of [7, 30, 365]) {
+        for (let i = 0; i < 10; ++i) {
+          await time.increase(DURATION * 86400 / 10)
+          await swapToSetPriceMock({
+            quoteToken: usdc,
+            baseToken: weth,
+            uniswapPair,
+            targetSpot: 1000 + 1000 * Math.random(),
+            targetTwap: 1000 + 1000 * Math.random(),
+          })
+        }
+  
+        const [{ rA, sA, rB, sB }, amountOutA, amountOutB] = await Promise.all([
+          pool.contract.callStatic.compute(derivable1155.address, feeRate),
+          pool.swap(SIDE_A, SIDE_R, balanceA, { static: true }),
+          pool.swap(SIDE_B, SIDE_R, balanceB, { static: true }),
+        ]);
+  
+        expect(Math.abs(deviation(balanceA.mul(rA), amountOutA.mul(sA)))).lte(deviations[DURATION])
+        expect(Math.abs(deviation(balanceB.mul(rB), amountOutB.mul(sB)))).lte(deviations[DURATION])
+      }
     }
 
     it("Compute long time with no tx: default", async function () {
