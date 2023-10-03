@@ -1,6 +1,6 @@
 const ethers = require('ethers')
-const { AddressZero } = require("@ethersproject/constants");
 const { SIDE_A, SIDE_B, Q128 } = require('./constant');
+const { bn } = require("./utilities")
 const abiCoder = new ethers.utils.AbiCoder()
 
 module.exports = class Pool {
@@ -52,7 +52,7 @@ module.exports = class Pool {
 
   getSwapParam(sideIn, sideOut, amount, options={}) {
     if (sideOut == SIDE_A || sideOut == SIDE_B) {
-      amount = amount.mul(this.config.openRate).div(Q128) // apply open rate
+      amount = bn(amount).mul(this.config.openRate).div(Q128) // apply open rate
     }
     const payload = abiCoder.encode(
       ["uint", "uint", "uint"],

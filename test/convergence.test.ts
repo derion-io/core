@@ -49,7 +49,10 @@ INTEREST_HLS.forEach(INTEREST_HL => {
               owner.address,
               packId(side, pool.contract.address)
             )
-            const amount = balance.mul(Math.round(PRECISION*(1-p))).div(PRECISION)
+            let amount = balance.mul(Math.round(PRECISION*(1-p))).div(PRECISION)
+            // if (balance.sub(amount).lt(1000)) {
+            //   amount = balance.sub(1000)
+            // }
             return pool.swap(side, SIDE_R, amount)
           }
   
@@ -77,7 +80,14 @@ INTEREST_HLS.forEach(INTEREST_HL => {
               }
               await time.increaseTo(nextTime)
               if (swap) {
-                await pool.swap(SIDE_R, SIDE_C, 1)
+                const { rA, rB, rC } = await pool.contract.callStatic.compute(derivable1155.address, feeRate)
+                if (rA.gte(rB) && rA.gte(rC)) {
+                  await pool.swap(SIDE_R, SIDE_A, 1)
+                } else if (rB.gte(rA) && rB.gte(rC)) {
+                  await pool.swap(SIDE_R, SIDE_B, 1)
+                } else {
+                  await pool.swap(SIDE_R, SIDE_C, 1)
+                }
               }
             }
             const { rA, rB, rC } = await pool.contract.callStatic.compute(derivable1155.address, feeRate)
@@ -119,8 +129,8 @@ INTEREST_HLS.forEach(INTEREST_HL => {
           })
         }
 
-        testConvergence(0, 1, 0)
         testConvergence(0, 0, 1)
+        testConvergence(0, 1, 0)
         testConvergence(0.5, 1, 0.5)
         testConvergence(1, 1, 0)
         testConvergence(0, 0.5, 1)

@@ -102,7 +102,10 @@ contract View is PoolLogic {
                     diff = rB - rA;
                     premium = rB - FullMath.mulDiv(R, rA, R - diff);
                 }
+                // diff cannot be zero because rA != rB
                 uint256 premiumHL = FullMath.mulDivRoundingUp(config.PREMIUM_HL, premium, diff);
+                // make sure the premiumHL is not zero
+                premiumHL = Math.max(1, premiumHL);
                 uint256 rate = _decayRate(elapsed, premiumHL);
                 if (rate < Q64) {
                     premium -= FullMath.mulDivRoundingUp(premium, rate, Q64);
