@@ -68,7 +68,7 @@ INTEREST_HLS.forEach(INTEREST_HL => {
               const nextTime = anchor + (PREMIUM_HL << i)
               if (i == 1) {
                 await time.increaseTo(anchor+10)
-                const { rA, rB, rC } = await pool.contract.callStatic.compute(derivable1155.address, feeRate)
+                const { rA, rB } = await pool.contract.callStatic.compute(derivable1155.address, feeRate)
                 if (pa > pb) {
                   rate = res[0].rA.sub(rA).mul(PRECISION).div(res[0].rA.sub(res[0].rB)).toNumber() / (PRECISION << i)
                 } else {
@@ -90,14 +90,6 @@ INTEREST_HLS.forEach(INTEREST_HL => {
           return [res, rate]
         }
 
-        function expectClose(a, b, msg) {
-          let tolerance = b.add(999).div(1000)
-          if (tolerance.lt(64)) {
-            tolerance = 64
-          }
-          expect(a.sub(b).abs(), `${msg}: ${a.toString()} == ${b.toString()}`).lte(tolerance)
-        }
-
         function deviation(a, b) {
           const m = a.gt(b) ? a : b
           return a.sub(b).mul(PRECISION).div(m).toNumber() / PRECISION
@@ -106,7 +98,7 @@ INTEREST_HLS.forEach(INTEREST_HL => {
         async function testConvergence(a, b, c) {
           it(`convergence ${a}  ${b}  ${c}`, async function () {
             const [view, viewRate] = await converge(a, b, c);
-            console.log(view.length, viewRate*100, '%')
+            // console.log(view.length, viewRate*100, '%')
 
             const [swap, swapRate] = await converge(a, b, c, true);
             // expect(view.length).eq(swap.length)
@@ -122,7 +114,7 @@ INTEREST_HLS.forEach(INTEREST_HL => {
               totalDeviation += deviation(view[i].rB, swap[i].rB)
               totalDeviation += deviation(view[i].rC, swap[i].rC)
             }
-            console.log('deviation', totalDeviation / n, 1.5/Math.log(PREMIUM_HL))
+            // console.log('deviation', totalDeviation / n, 1.5/Math.log(PREMIUM_HL))
             expect(Math.abs(totalDeviation) / n).lte(1.7/Math.log(PREMIUM_HL), `avg deviation too high`)
           })
         }
