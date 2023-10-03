@@ -76,33 +76,47 @@ contract View is PoolLogic {
         // track the rC before interest and premium for fee calculation
         uint256 rC = R - rA - rB;
         // [INTEREST]
-        uint32 elapsed = uint32(block.timestamp) - s_lastInterestTime;
-        if (elapsed > 0) {
-            uint256 rate = _decayRate(elapsed, config.INTEREST_HL);
-            if (rate < Q64) {
-                uint256 rAF = FullMath.mulDivRoundingUp(rA, rate, Q64);
-                uint256 rBF = FullMath.mulDivRoundingUp(rB, rate, Q64);
-                if (rA + rB > rAF + rBF) {
-                    (rA, rB) = (rAF, rBF);
+        if (config.INTEREST_HL > 0) {
+            uint256 elapsed = uint32(block.timestamp) - s_lastInterestTime;
+            if (elapsed > 0) {
+                uint256 rate = _decayRate(elapsed, config.INTEREST_HL);
+                if (rate < Q64) {
+                    uint256 rAF = FullMath.mulDivRoundingUp(rA, rate, Q64);
+                    uint256 rBF = FullMath.mulDivRoundingUp(rB, rate, Q64);
+                    if (rA + rB > rAF + rBF) {
+                        (rA, rB) = (rAF, rBF);
+                    }
                 }
             }
         }
         // [PREMIUM]
-        elapsed = uint32(block.timestamp & F_MASK) - (s_lastPremiumTime & F_MASK);
-        if (elapsed > 0) {
-            uint256 rate = _decayRate(elapsed, config.PREMIUM_HL);
-            if (rate < Q64) {
-                uint256 premium = rA > rB
-                    ? FullMath.mulDiv(rA - rB, rA, R)
-                    : FullMath.mulDiv(rB - rA, rB, R);
-                premium -= FullMath.mulDivRoundingUp(premium, rate, Q64);
-                if (premium > 0) {
-                    if (rA > rB) {
-                        rB += FullMath.mulDivRoundingUp(premium, rB, R - rA);
-                        rA -= premium;
-                    } else {
-                        rA += FullMath.mulDivRoundingUp(premium, rA, R - rB);
-                        rB -= premium;
+        if (config.PREMIUM_HL > 0 && rA != rB) {
+            uint256 elapsed = uint32(block.timestamp & F_MASK) - (s_lastPremiumTime & F_MASK);
+            if (elapsed > 0) {
+                uint256 premium;
+                uint256 diff;
+                if (rA > rB) {
+                    diff = rA - rB;
+                    premium = rA - FullMath.mulDiv(R, rB, R - diff);
+                } else {
+                    diff = rB - rA;
+                    premium = rB - FullMath.mulDiv(R, rA, R - diff);
+                }
+                // diff cannot be zero because rA != rB
+                uint256 premiumHL = FullMath.mulDivRoundingUp(config.PREMIUM_HL, premium, diff);
+                // make sure the premiumHL is not zero
+                premiumHL = Math.max(1, premiumHL);
+                uint256 rate = _decayRate(elapsed, premiumHL);
+                if (rate < Q64) {
+                    premium -= FullMath.mulDivRoundingUp(premium, rate, Q64);
+                    if (premium > 0) {
+                        if (rA > rB) {
+                            rB += FullMath.mulDiv(premium, rB, R - rA);
+                            rA -= premium;
+                        } else {
+                            rA += FullMath.mulDiv(premium, rA, R - rB);
+                            rB -= premium;
+                        }
                     }
                 }
             }
@@ -115,19 +129,11 @@ contract View is PoolLogic {
             }
         }
         // [SANITIZATION]
-        unchecked {
-            uint256 rAB = rA + rB;
-            uint256 half = rAB >> 1;
-            if (half < MINIMUM_RESERVE) {
-                rA = half;
-                rB = rAB - rA;
-            } else if (rA < MINIMUM_RESERVE) {
-                rA = MINIMUM_RESERVE;
-                rB = rAB - rA;
-            } else if (rB < MINIMUM_RESERVE) {
-                rB = MINIMUM_RESERVE;
-                rA = rAB - rB;
-            }
+        if (rA < 1) {
+            rA = 1;
+        }
+        if (rB < 1) {
+            rB = 1;
         }
         return (R, rA, rB);
     }

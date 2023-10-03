@@ -1,3 +1,4 @@
+// @ts-nocheck
 const {
   time,
   loadFixture,
@@ -14,8 +15,8 @@ const {
   packId,
 } = require("./shared/utilities");
 
-const INTEREST_HLS = [0, 1, 60, 60 * 60, 1024]
-const PREMIUM_HLS = [0, 1, 60, 60 * 60, 1024]
+const INTEREST_HLS = [0, 1, 60, 60 * 60, 1024, 60*60*24*365*1000000]
+const PREMIUM_HLS = [0, 1, 60, 60 * 60, 1024, 60*60*24*365*10]
 
 INTEREST_HLS.forEach(INTEREST_HL => {
   PREMIUM_HLS.forEach(PREMIUM_HL => {
@@ -55,6 +56,10 @@ INTEREST_HLS.forEach(INTEREST_HL => {
 
         it("Open LP and close: 1e - 1 day", async function () {
           await openAndClosePosition(SIDE_C, 1, 86400);
+        });
+
+        it("Open LP and close: 1e - 1 second", async function () {
+          await openAndClosePosition(SIDE_C, 1, 1);
         });
       });
     });
