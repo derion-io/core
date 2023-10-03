@@ -115,13 +115,11 @@ contract PoolLogic is PoolBase, Fetcher {
             }
         }
         // [SANITIZATION]
-        unchecked {
-            if (rA < 1) {
-                rA = 1;
-            }
-            if (rB < 1) {
-                rB = 1;
-            }
+        if (rA < 1) {
+            rA = 1;
+        }
+        if (rB < 1) {
+            rB = 1;
         }
         // [CALCULATION]
         State memory state1 = IHelper(param.helper).swapToState(

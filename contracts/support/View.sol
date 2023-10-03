@@ -129,13 +129,11 @@ contract View is PoolLogic {
             }
         }
         // [SANITIZATION]
-        unchecked {
-            if (rA < 1) {
-                rA = 1;
-            }
-            if (rB < 1) {
-                rB = 1;
-            }
+        if (rA < 1) {
+            rA = 1;
+        }
+        if (rB < 1) {
+            rB = 1;
         }
         return (R, rA, rB);
     }
