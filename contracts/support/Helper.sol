@@ -135,7 +135,7 @@ contract Helper is Constants, IHelper, ERC1155Holder {
             utr: msg.sender,
             amountIn: params.amount,
             amountOutMinimum: 0,
-                sqrtPriceLimitX96: 0
+            sqrtPriceLimitX96: 0
         }));
         uint amountInR = amountOut;
         TransferHelper.safeApprove(config.TOKEN_R, params.deriPool, amountOut);
@@ -284,8 +284,7 @@ contract Helper is Constants, IHelper, ERC1155Holder {
                 rB1 -= amount;
             } else /*if (sideIn == SIDE_C)*/ {
                 uint256 rC = __.R - __.rA - __.rB;
-                // rounding: A+1, B+1, C-2
-                amount = FullMath.mulDiv(amount, rC-2, s+1);
+                amount = FullMath.mulDiv(rC-1, amount, s);
             }
         }
 

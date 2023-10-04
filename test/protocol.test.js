@@ -18,6 +18,8 @@ const opts = {
     gasLimit: 30000000
 }
 
+const MINIMUM_SUPPLY = 1000
+
 const SIDE_R = 0x00
 const SIDE_A = 0x10
 const SIDE_B = 0x20
@@ -537,6 +539,11 @@ describe("Protocol", function () {
                 amountIn = tokenBefore
             } else {
                 amountIn = pe(amountIn)
+            }
+            const supply = await derivable1155.totalSupply(convertedId)
+            const amountInMax = supply.sub(MINIMUM_SUPPLY)
+            if (amountIn.gt(amountInMax)) {
+                amountIn = amountInMax
             }
             if (isUseUTR) {
                 const pTx = await derivablePools[0].swap(
