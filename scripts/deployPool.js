@@ -11,6 +11,7 @@ const pe = (x) => ethers.utils.parseEther(String(x))
 
 const SECONDS_PER_HOUR = 60 * 60
 const SECONDS_PER_DAY = SECONDS_PER_HOUR * 24
+const PAYMENT = 0
 
 const Q256M = bn(1).shl(256).sub(1)
 const Q128 = bn(1).shl(128)
@@ -33,7 +34,8 @@ const FETCHER_UNI_V3 = AddressZero
 const settings = {
     // pairAddress: '0xC31E54c7a869B9FcBEcc14363CF510d1c41fa443',
     // pairAddress: '0x8d76e9c2bd1adde00a3dcdc315fcb2774cb3d1d6',
-    pairAddress: '0xBFC41D69e3e828718b39ddC448B1050A82f84105',
+    utr: '0x2222C5F0999E74D8D88F7bbfE300147d34c22222',
+    pairAddress: ['0xC31E54c7a869B9FcBEcc14363CF510d1c41fa443'],
     power: 10,
     interestRate: 0.03 / 100,
     premiumRate: 10 / 100,
@@ -41,7 +43,7 @@ const settings = {
     vesting: 60,
     closingFeeDuration: 24 * 60 * 60,
     closingFee: 0.3 / 100,
-    // reserveToken: undefined, // use the WETH
+    reserveToken: '0x912CE59144191C1204E64559FE8253a0e49E6548', // use the WETH
     // openingFee: 0/100,
     // R: 0.0001, // init liquidity
 }
@@ -55,8 +57,7 @@ async function deploy(settings) {
 
     const provider = new JsonRpcProvider(configs.rpc, chainID)
     const deployer = new ethers.Wallet(process.env.DEPLOYER_KEY, provider);
-
-    let uniswapPair = new ethers.Contract(settings.pairAddress, jsonUniswapV3Pool.abi, provider)
+    let uniswapPair = new ethers.Contract(settings.pairAddress[0], jsonUniswapV3Pool.abi, provider)
 
     let token0, token1, slot0
 
@@ -72,7 +73,7 @@ async function deploy(settings) {
         ])
     } catch (error) {
         uniswapVersion = 'v2'
-        uniswapPair = new ethers.Contract(settings.pairAddress, require("@uniswap/v2-core/build/UniswapV2Pair.json").abi, provider)
+        uniswapPair = new ethers.Contract(settings.pairAddress[0], require("@uniswap/v2-core/build/UniswapV2Pair.json").abi, provider)
         token0 = await uniswapPair.callStatic.token0()
         token1 = await uniswapPair.callStatic.token1()
     }
@@ -126,7 +127,7 @@ async function deploy(settings) {
     ).then(x => x.json()).then(x => Number(x?.result))
 
     const logs = await fetch(
-        `${configs.scanApi}?module=logs&action=getLogs&address=${settings.pairAddress}` +
+        `${configs.scanApi}?module=logs&action=getLogs&address=${settings.pairAddress[0]}` +
         `&topic0=${uniswapVersion === 'v2' ? '0xd78ad95fa46c994b6551d0da85fc275fe613ce37657fb8d5e3d130840159d822' : '0xc42079f94a6350d7e6235f29174924f928cc2ac818eb64fed8004e115fbcca67'}` +
         `&fromBlock=${blockEpochAgo}&apikey=${SCAN_API_KEY[chainID]}`
     ).then(x => x.json()).then(x => x?.result)
@@ -156,7 +157,7 @@ async function deploy(settings) {
     }
 
     const ORACLE = ethers.utils.hexZeroPad(
-        bn(QTI).shl(255).add(bn(WINDOW).shl(256 - 64)).add(settings.pairAddress).toHexString(),
+        bn(QTI).shl(255).add(bn(WINDOW).shl(256 - 64)).add(settings.pairAddress[0]).toHexString(),
         32,
     )
     
@@ -228,28 +229,83 @@ async function deploy(settings) {
     // console.log(config)
 
     // Create Pool
-    // const poolFactory = await ethers.getContractAt("contracts/PoolFactory.sol:PoolFactory", configs.derivable.poolFactory, deployer)
-    // const poolAddress = await poolFactory.callStatic.createPool(config)
+    const poolFactory = await ethers.getContractAt("contracts/PoolFactory.sol:PoolFactory", configs.derivable.poolFactory, deployer)
 
     // init the pool
     const R = pe(settings.R ?? 0.0001)
     const state = await calculateInitParamsFromPrice(config, MARK, R)
+    const payment = {
+        utr: settings.utr,
+        payer: deployer.address,
+        recipient: deployer.address,
+    }
 
+    const utr = new ethers.Contract(settings.utr, require("@derivable/utr/build/UniversalTokenRouter.json").abi, provider)
     const helper = await ethers.getContractAt("contracts/support/Helper.sol:Helper", configs.derivable.helper ?? configs.derivable.stateCalHelper, deployer)
 
+    // get pool address
+    const poolAddress = await poolFactory.callStatic.createPool(config)
+    const pool = await ethers.getContractAt("PoolBase", poolAddress)
+
     let gas
-    try {
-        gas = await helper.estimateGas.createPool(
-            config,
-            state,
-            configs.derivable.poolFactory,
-            { value: R },
-        )
-    } catch (err) {
-        if (err.reason != null) {
-            throw new Error(err.reason)
+    if (settings.reserveToken !== undefined) {
+        try {
+            const rERC20 = new ethers.Contract(settings.reserveToken, require("@uniswap/v2-core/build/ERC20.json").abi, provider)
+            const rAllowance = await rERC20.allowance(deployer.address, settings.utr)
+            if (rAllowance.gte(R)) {
+                console.log(config)
+                // utr exec
+                gas = await utr.estimateGas.exec([],
+                    [
+                        {
+                            inputs: [],
+                            flags: 0,
+                            code: configs.derivable.poolFactory,
+                            data: (await poolFactory.populateTransaction.createPool(
+                                config
+                            )).data,
+                        },
+                        {
+                            inputs: [{
+                                mode: PAYMENT,
+                                eip: 20,
+                                token: settings.reserveToken,
+                                id: 0,
+                                amountIn: state.R,
+                                recipient: poolAddress,
+                            }],
+                            flags: 0,
+                            code: poolAddress,
+                            data: (await pool.populateTransaction.init(
+                                state,
+                                payment
+                            )).data,
+                        }
+                    ]
+                )
+            } else {
+                throw new Error("!!! Token reserve approval required !!!")
+            }
+        } catch (err) {
+            if (err.reason != null) {
+                throw new Error(err.reason)
+            }
+            throw err
         }
-        throw err
+    } else {
+        try {
+            gas = await helper.estimateGas.createPool(
+                config,
+                state,
+                configs.derivable.poolFactory,
+                { value: R },
+            )
+        } catch (err) {
+            if (err.reason != null) {
+                throw new Error(err.reason)
+            }
+            throw err
+        }
     }
 
     console.log('Estimated Gas:', gas.toNumber().toLocaleString())
@@ -261,7 +317,6 @@ async function deploy(settings) {
         { value: R, gasLimit: gas.mul(3).div(2) },
     ]
 
-    const poolAddress = await helper.callStatic.createPool(...params)
     console.log('New Pool Address:', poolAddress)
 
     console.log(`> Enter [Y] to deploy, [Ctrl-C] to stop.`);
@@ -270,13 +325,49 @@ async function deploy(settings) {
 
     console.log('Sending tx...')
 
-    const tx = await helper.createPool(...params)
+    if (settings.reserveToken !== undefined) {
+        const tx = await helper.createPool(...params)
 
-    console.log('Waiting for tx receipt...', tx.hash)
+        console.log('Waiting for tx receipt...', tx.hash)
 
-    const rec = await tx.wait()
+        const rec = await tx.wait()
 
-    console.log(rec)
+        console.log(rec)
+    } else {
+        const tx = await utr.exec([],
+            [
+                {
+                    inputs: [],
+                    flags: 0,
+                    code: configs.derivable.poolFactory,
+                    data: (await poolFactory.populateTransaction.createPool(
+                        config
+                    )).data,
+                },
+                {
+                    inputs: [{
+                        mode: PAYMENT,
+                        eip: 20,
+                        token: settings.reserveToken,
+                        id: 0,
+                        amountIn: state.R,
+                        recipient: poolAddress,
+                    }],
+                    flags: 0,
+                    code: poolAddress,
+                    data: (await pool.populateTransaction.init(
+                        state,
+                        payment
+                    )).data,
+                }
+            ]
+        )
+        console.log('Waiting for tx receipt...', tx.hash)
+
+        const rec = await tx.wait()
+
+        console.log(rec)
+    }
 }
 
 function waitForKey(keyCode = 10) {
