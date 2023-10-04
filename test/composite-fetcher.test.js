@@ -204,12 +204,14 @@ describe("Pool with CompositeFetcher", function () {
         )
 
         const usdcWethQti = weth.address.toLowerCase() < usdc.address.toLowerCase() ? 1 : 0
-        const oracle = bn(wethPepeQti).shl(255)
+        const oracle = ethers.utils.hexZeroPad(bn(wethPepeQti).shl(255)
             .add(bn(usdcWethQti).shl(254))
             .add(bn(0).shl(224))
             .add(bn(300).shl(192))
             .add(bn(300).shl(160))
-            .add(pepeWeth.address)
+            .add(pepeWeth.address).toHexString(),
+            32
+        )
 
         const config = {
             FETCHER: fetcher.address,
