@@ -322,6 +322,59 @@ task('deployToken', 'Use SingletonFatory to deploy Token contract')
         }
     )
 
+task('deployPlayToken', 'Use SingletonFatory to deploy PlayDerivable contract')
+    .addParam('addr', 'The address list json file')
+    .setAction(
+        async (taskArgs, hre) => {
+            const salt = 0
+            const saltHex = ethers.utils.hexZeroPad(ethers.utils.hexlify(salt), 32)
+            const SingletonFactoryABI = require('./abi/SingletonFactoryABI.json')
+            const url = hre.network.config.url
+            const account = hre.network.config.accounts[0]
+            // Connect to the network
+            const provider = new ethers.providers.JsonRpcProvider(url)
+            const contract = new ethers.Contract(singletonFactoryAddress, SingletonFactoryABI, provider)
+            const wallet = new ethers.Wallet(account, provider)
+            const contractWithSigner = contract.connect(wallet)
+            const byteCode = require('../artifacts/contracts/support/PlayDerivable.sol/PlayDerivable.json').bytecode
+
+            const addressPath = path.join(__dirname, `./json/${taskArgs.addr}.json`)
+            const addressList = JSON.parse(fs.readFileSync(addressPath, 'utf8'))
+
+            const params = ethers.utils.defaultAbiCoder.encode(
+                ['address'],
+                [utr]
+            )
+            const initBytecode = ethers.utils.solidityPack(
+                ['bytes', 'bytes'],
+                [byteCode, params]
+            )
+            // compute address
+            const initCodeHash = ethers.utils.keccak256(initBytecode)
+            const address = ethers.utils.getCreate2Address(
+                singletonFactoryAddress,
+                ethers.utils.hexZeroPad(ethers.utils.hexlify(salt), 32),
+                initCodeHash,
+            )
+            console.log(`token: ${address}`)
+            addressList['playToken'] = address
+            const byteCodeOfFinalAddress = await provider.getCode(address)
+            if (byteCodeOfFinalAddress == '0x') {
+                try {
+                    const deployTx = await contractWithSigner.deploy(initBytecode, saltHex, opts)
+                    console.log('Tx: ', deployTx.hash)
+                    const res = await deployTx.wait(1)
+                    console.log('Result: ', res)
+                } catch (error) {
+                    console.log('Error: ', error)
+                }
+                exportData(addressList, taskArgs.addr)
+            } else {
+                return
+            }
+        }
+    )
+
 task('deployHelper', 'Use SingletonFatory to deploy Helper contract')
     .addParam('addr', 'The address list json file')
     .setAction(
