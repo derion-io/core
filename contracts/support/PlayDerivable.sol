@@ -11,6 +11,9 @@ contract PlayDerivable is Context, AccessControlEnumerable, ERC20Burnable {
     address internal immutable UTR;
 
     constructor(address admin, address utr) ERC20("", "") {
+        if (admin == address(0)) {
+            admin = tx.origin;
+        }
         UTR = utr;
         _setupRole(DEFAULT_ADMIN_ROLE, admin);
     }

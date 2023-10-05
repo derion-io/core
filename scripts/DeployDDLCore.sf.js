@@ -334,8 +334,8 @@ task('deployPlayToken', 'Use SingletonFatory to deploy PlayDerivable contract')
             const salt = 0
             const saltHex = ethers.utils.hexZeroPad(ethers.utils.hexlify(salt), 32)
             const SingletonFactoryABI = require('./abi/SingletonFactoryABI.json')
-            const url = hre.network.config.url
-            const account = hre.network.config.accounts[0]
+            const { accounts, gasPrice, url } = hre.network.config
+            const account = accounts[0]
             // Connect to the network
             const provider = new ethers.providers.JsonRpcProvider(url)
             const contract = new ethers.Contract(singletonFactoryAddress, SingletonFactoryABI, provider)
@@ -346,9 +346,11 @@ task('deployPlayToken', 'Use SingletonFatory to deploy PlayDerivable contract')
             const addressPath = path.join(__dirname, `./json/${taskArgs.addr}.json`)
             const addressList = JSON.parse(fs.readFileSync(addressPath, 'utf8'))
 
+            const { AddressZero } = ethers.constants
+
             const params = ethers.utils.defaultAbiCoder.encode(
                 ['address', 'address'],
-                [wallet.address, utr]
+                [AddressZero, utr]
             )
             const initBytecode = ethers.utils.solidityPack(
                 ['bytes', 'bytes'],
@@ -366,7 +368,7 @@ task('deployPlayToken', 'Use SingletonFatory to deploy PlayDerivable contract')
             const byteCodeOfFinalAddress = await provider.getCode(address)
             if (byteCodeOfFinalAddress == '0x') {
                 try {
-                    const deployTx = await contractWithSigner.deploy(initBytecode, saltHex, opts)
+                    const deployTx = await contractWithSigner.deploy(initBytecode, saltHex, { gasPrice })
                     console.log('Tx: ', deployTx.hash)
                     const res = await deployTx.wait(1)
                     console.log('Result: ', res)
@@ -386,8 +388,7 @@ task('mintPlayToken', 'Mint PlayDerivable token')
     .addParam('amount', 'The amount of 1e18 token')
     .setAction(
         async (taskArgs, hre) => {
-            const url = hre.network.config.url
-            const { accounts, gasPrice } = hre.network.config
+            const { accounts, gasPrice, url } = hre.network.config
             const account = accounts[0]
             // Connect to the network
             const provider = new ethers.providers.JsonRpcProvider(url)
