@@ -28,8 +28,6 @@ describe("Play Token", function () {
         // deploy PlayDerivable
         const PlayDerivable = await ethers.getContractFactory("PlayDerivable")
         const playToken = await PlayDerivable.deploy(
-            'PlayDerivable',
-            'pDERI',
             utr.address
         )
         await playToken.deployed()
@@ -125,8 +123,6 @@ describe("Play Token", function () {
         // deploy PlayDerivable
         const PlayDerivable = await ethers.getContractFactory("PlayDerivable")
         const playToken = await PlayDerivable.deploy(
-            'PlayDerivable',
-            'pDERI',
             utr.address
         )
         await playToken.deployed()

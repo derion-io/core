@@ -13,11 +13,19 @@ contract PlayDerivable is Context, AccessControlEnumerable, ERC20Burnable {
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
     bytes32 public constant BURNER_ROLE = keccak256("BURNER_ROLE");
 
-    constructor(string memory name, string memory symbol, address utr) ERC20(name, symbol) {
+    constructor(address utr) ERC20("", "") {
         UTR = utr;
         _setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
         _setupRole(MINTER_ROLE, _msgSender());
         _setupRole(BURNER_ROLE, _msgSender());
+    }
+
+    function name() public view virtual override returns (string memory) {
+        return "Play Derivable";
+    }
+
+    function symbol() public view virtual override returns (string memory) {
+        return "PLD";
     }
 
     function mint(address to, uint256 amount) public virtual {
