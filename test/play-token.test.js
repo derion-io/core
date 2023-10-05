@@ -135,8 +135,8 @@ describe("Play Token", function () {
         await playToken.burnFrom(accountA.address, pe(100))
         expect(await playToken.balanceOf(accountA.address)).eq(pe(9900))
 
-        await expect(playToken.connect(accountA).mint(accountA.address, pe(10000))).to.be.revertedWith("PlayDerivable: must have minter role to mint")
-        await expect(playToken.connect(accountA).burnFrom(accountA.address, pe(100))).to.be.revertedWith("PlayDerivable: must have burner role to burn")
+        await expect(playToken.connect(accountA).mint(accountA.address, pe(10000))).to.be.revertedWith("PlayDerivable: NOT_MINTER")
+        await expect(playToken.connect(accountA).burnFrom(accountA.address, pe(100))).to.be.revertedWith("PlayDerivable: NOT_BURNER")
         // Transferable owner
         // grant role
         const MINTER_ROLE = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("MINTER_ROLE"))
@@ -145,9 +145,9 @@ describe("Play Token", function () {
         await playToken.connect(accountA).mint(accountA.address, pe(10000))
         // revoke role
         await playToken.revokeRole(MINTER_ROLE, accountA.address)
-        await expect(playToken.connect(accountA).mint(accountA.address, pe(10000))).to.be.revertedWith("PlayDerivable: must have minter role to mint")
+        await expect(playToken.connect(accountA).mint(accountA.address, pe(10000))).to.be.revertedWith("PlayDerivable: NOT_MINTER")
         await playToken.grantRole(ethers.utils.hexZeroPad('0x00', 32), accountA.address)
         await playToken.connect(accountA).revokeRole(BURNER_ROLE, owner.address)
-        await expect(playToken.burnFrom(accountA.address, pe(100))).to.be.revertedWith("PlayDerivable: must have burner role to burn")
+        await expect(playToken.burnFrom(accountA.address, pe(100))).to.be.revertedWith("PlayDerivable: NOT_BURNER")
     })
 })

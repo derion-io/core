@@ -29,12 +29,12 @@ contract PlayDerivable is Context, AccessControlEnumerable, ERC20Burnable {
     }
 
     function mint(address to, uint256 amount) public virtual {
-        require(hasRole(MINTER_ROLE, _msgSender()), "PlayDerivable: must have minter role to mint");
+        require(hasRole(MINTER_ROLE, _msgSender()), "PlayDerivable: NOT_MINTER");
         _mint(to, amount);
     }
 
     function burnFrom(address account, uint256 amount) public virtual override {
-        require(hasRole(BURNER_ROLE, _msgSender()), "PlayDerivable: must have burner role to burn");
+        require(hasRole(BURNER_ROLE, _msgSender()), "PlayDerivable: NOT_BURNER");
         _burn(account, amount);
     }
 
