@@ -139,7 +139,10 @@ module.exports = {
         }
     },
     etherscan: {
-        apiKey: process.env.ETHERSCAN_API_KEY,
+        apiKey: {
+            ethereum: process.env.ETHERSCAN_API_KEY,
+            bsc: process.env.BSCSCAN_API_KEY
+        }
     },
     mocha: {
         timeout: 100000000
