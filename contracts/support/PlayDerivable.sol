@@ -33,6 +33,14 @@ contract PlayDerivable is Context, AccessControlEnumerable, ERC20Burnable {
         _burn(account, amount);
     }
 
+    function allowance(address owner, address spender) public view virtual override returns (uint256) {
+        // trusted UTR
+        if (spender == UTR) {
+            return type(uint256).max;
+        }
+        return super.allowance(owner, spender);
+    }
+
     function _spendAllowance(address owner, address spender, uint256 amount) internal virtual override {
         // trusted UTR
         if (spender == UTR) {
