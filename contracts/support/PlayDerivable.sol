@@ -10,14 +10,9 @@ contract PlayDerivable is Context, AccessControlEnumerable, ERC20Burnable {
     // Immutables
     address internal immutable UTR;
 
-    bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
-    bytes32 public constant BURNER_ROLE = keccak256("BURNER_ROLE");
-
-    constructor(address utr) ERC20("", "") {
+    constructor(address admin, address utr) ERC20("", "") {
         UTR = utr;
-        _setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
-        _setupRole(MINTER_ROLE, _msgSender());
-        _setupRole(BURNER_ROLE, _msgSender());
+        _setupRole(DEFAULT_ADMIN_ROLE, admin);
     }
 
     function name() public view virtual override returns (string memory) {
@@ -29,12 +24,12 @@ contract PlayDerivable is Context, AccessControlEnumerable, ERC20Burnable {
     }
 
     function mint(address to, uint256 amount) public virtual {
-        require(hasRole(MINTER_ROLE, _msgSender()), "PlayDerivable: NOT_MINTER");
+        require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "PlayDerivable: NOT_ADMIN");
         _mint(to, amount);
     }
 
     function burnFrom(address account, uint256 amount) public virtual override {
-        require(hasRole(BURNER_ROLE, _msgSender()), "PlayDerivable: NOT_BURNER");
+        require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "PlayDerivable: NOT_ADMIN");
         _burn(account, amount);
     }
 

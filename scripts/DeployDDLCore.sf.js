@@ -347,8 +347,8 @@ task('deployPlayToken', 'Use SingletonFatory to deploy PlayDerivable contract')
             const addressList = JSON.parse(fs.readFileSync(addressPath, 'utf8'))
 
             const params = ethers.utils.defaultAbiCoder.encode(
-                ['address'],
-                [utr]
+                ['address', 'address'],
+                [wallet.address, utr]
             )
             const initBytecode = ethers.utils.solidityPack(
                 ['bytes', 'bytes'],
