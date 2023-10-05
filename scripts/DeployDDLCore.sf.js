@@ -380,6 +380,37 @@ task('deployPlayToken', 'Use SingletonFatory to deploy PlayDerivable contract')
         }
     )
 
+task('mintPlayToken', 'Mint PlayDerivable token')
+    .addParam('addr', 'The address list json file')
+    .addParam('to', 'The recipient address')
+    .addParam('amount', 'The amount of 1e18 token')
+    .setAction(
+        async (taskArgs, hre) => {
+            const url = hre.network.config.url
+            const { accounts, gasPrice } = hre.network.config
+            const account = accounts[0]
+            // Connect to the network
+            const provider = new ethers.providers.JsonRpcProvider(url)
+            const wallet = new ethers.Wallet(account, provider)
+            const abi = require('../artifacts/contracts/support/PlayDerivable.sol/PlayDerivable.json').abi
+
+            const addressPath = path.join(__dirname, `./json/${taskArgs.addr}.json`)
+            const addressList = JSON.parse(fs.readFileSync(addressPath, 'utf8'))
+
+            const playToken = (new ethers.Contract(addressList.playToken, abi, provider)).connect(wallet)
+            try {
+                const tx = await playToken.mint(
+                    taskArgs.to,
+                    ethers.utils.parseEther(taskArgs.amount),
+                    { gasPrice },
+                )
+                console.log(tx)
+            } catch (err) {
+                console.error(err.error ?? err)
+            }
+        }
+    )
+
 task('deployHelper', 'Use SingletonFatory to deploy Helper contract')
     .addParam('addr', 'The address list json file')
     .setAction(
