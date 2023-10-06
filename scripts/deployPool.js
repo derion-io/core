@@ -1,11 +1,11 @@
 const { ethers } = require("hardhat")
 require('dotenv').config()
-const { bn, feeToOpenRate, toHalfLife } = require("../test/shared/utilities")
+const { bn, feeToOpenRate } = require("../test/shared/utilities")
 const { calculateInitParamsFromPrice } = require("../test/shared/AsymptoticPerpetual")
 const { AddressZero } = ethers.constants
 const jsonUniswapV3Pool = require("./compiled/UniswapV3Pool.json");
 const jsonERC20 = require("../artifacts/@openzeppelin/contracts/token/ERC20/ERC20.sol/ERC20.json")
-const { JsonRpcProvider } = ethers.providers
+const { JsonRpcProvider } = require("@ethersproject/providers");
 
 const pe = (x) => ethers.utils.parseEther(String(x))
 
@@ -16,34 +16,42 @@ const PAYMENT = 0
 const Q256M = bn(1).shl(256).sub(1)
 const Q128 = bn(1).shl(128)
 
-function compoundRate(r, k) {
-    return 1 - (1 - r) ** k
+const PRECISION = 1000000
+
+function rateToHL(r, k, DURATION = SECONDS_PER_DAY) {
+    return Math.ceil(DURATION * Math.LN2 / r / k / k)
 }
 
-function decompoundRate(c, k) {
-    return 1 - (1 - c) ** (1 / k)
+function rateFromHL(HL, k, DURATION = SECONDS_PER_DAY) {
+    return DURATION * Math.LN2 / HL / k / k
 }
 
-const chainID = 42161
+const chainID = 56
 const SCAN_API_KEY = {
-    42161: process.env.SCAN_API_KEY_42161,
+    42161: process.env.ABISCAN_API_KEY,
+    56: process.env.BSCSCAN_API_KEY,
 }
 const FETCHER_UNI_V2 = AddressZero
 const FETCHER_UNI_V3 = AddressZero
 
+const gasPrices = {
+    56: 3e9,
+}
+
+const gasPrice = gasPrices[chainID]
+
 const settings = {
     // pairAddress: '0xC31E54c7a869B9FcBEcc14363CF510d1c41fa443',
     // pairAddress: '0x8d76e9c2bd1adde00a3dcdc315fcb2774cb3d1d6',
-    utr: '0x2222C5F0999E74D8D88F7bbfE300147d34c22222',
-    pairAddress: ['0xC31E54c7a869B9FcBEcc14363CF510d1c41fa443'],
+    pairAddress: ['0x7fe20c1b2c726b2384f44dde3ca91ee430650d09'],
     power: 10,
     interestRate: 0.03 / 100,
-    premiumRate: 10 / 100,
+    premiumRate: 0.3 / 100,
     MATURITY: 60 * 60 * 12,
     vesting: 60,
     closingFeeDuration: 24 * 60 * 60,
     closingFee: 0.3 / 100,
-    reserveToken: '0x912CE59144191C1204E64559FE8253a0e49E6548', // use the WETH
+    reserveToken: '0xa70926b457618DD7F7a181a5B1b964208159fdD6', // PlayDerivable
     // openingFee: 0/100,
     // R: 0.0001, // init liquidity
 }
@@ -56,7 +64,7 @@ async function deploy(settings) {
     ).then(res => res.json())
 
     const provider = new JsonRpcProvider(configs.rpc, chainID)
-    const deployer = new ethers.Wallet(process.env.DEPLOYER_KEY, provider);
+    const deployer = new ethers.Wallet(process.env.MAINNET_DEPLOYER, provider);
     let uniswapPair = new ethers.Contract(settings.pairAddress[0], jsonUniswapV3Pool.abi, provider)
 
     let token0, token1, slot0
@@ -204,10 +212,8 @@ async function deploy(settings) {
         }
     }
 
-    const DAILY_INTEREST_RATE = compoundRate(settings.interestRate, settings.power)
-    const DAILY_PREMIUM_RATE = compoundRate(settings.premiumRate, settings.power)
-    const INTEREST_HL = toHalfLife(DAILY_INTEREST_RATE)
-    const PREMIUM_HL = toHalfLife(DAILY_PREMIUM_RATE)
+    const INTEREST_HL = rateToHL(settings.interestRate, settings.power)
+    const PREMIUM_HL = rateToHL(settings.premiumRate, settings.power)
 
     console.log('INTEREST_HL', (INTEREST_HL / SECONDS_PER_DAY).toFixed(2), 'day(s)')
     console.log('PREMIUM_HL', (PREMIUM_HL / SECONDS_PER_DAY).toFixed(2), 'day(s)')
@@ -226,120 +232,44 @@ async function deploy(settings) {
         OPEN_RATE: feeToOpenRate(settings.openingFee ?? 0),
     }
 
-    // console.log(config)
+    console.log('MATURITY', (config.MATURITY / SECONDS_PER_HOUR).toFixed(2), 'hr(s)')
+    console.log('VESTING', (config.MATURITY_VEST / 60).toFixed(2), 'min(s)')
+    console.log('CLOSE_FEE', Q128.sub(config.MATURITY_RATE).mul(PRECISION*100).shr(128).toNumber() / PRECISION, '%')
+    console.log('OPEN_FEE', Q128.sub(config.OPEN_RATE).mul(PRECISION*100).shr(128).toNumber() / PRECISION, '%')
 
     // Create Pool
     const poolFactory = await ethers.getContractAt("contracts/PoolFactory.sol:PoolFactory", configs.derivable.poolFactory, deployer)
 
     // init the pool
     const R = pe(settings.R ?? 0.0001)
-    const state = await calculateInitParamsFromPrice(config, MARK, R)
+    const initParams = await calculateInitParamsFromPrice(config, MARK, R)
     const payment = {
-        utr: settings.utr,
+        utr: configs.helperContract.utr,
         payer: deployer.address,
         recipient: deployer.address,
     }
 
-    const utr = new ethers.Contract(settings.utr, require("@derivable/utr/build/UniversalTokenRouter.json").abi, provider)
+    const utr = new ethers.Contract(configs.helperContract.utr, require("@derivable/utr/build/UniversalTokenRouter.json").abi, deployer)
     const helper = await ethers.getContractAt("contracts/support/Helper.sol:Helper", configs.derivable.helper ?? configs.derivable.stateCalHelper, deployer)
 
     // get pool address
     const poolAddress = await poolFactory.callStatic.createPool(config)
     const pool = await ethers.getContractAt("PoolBase", poolAddress)
 
-    let gas
-    if (settings.reserveToken !== undefined) {
-        try {
-            const rERC20 = new ethers.Contract(settings.reserveToken, require("@uniswap/v2-core/build/ERC20.json").abi, provider)
-            const rAllowance = await rERC20.allowance(deployer.address, settings.utr)
-            if (rAllowance.gte(R)) {
-                console.log(config)
-                // utr exec
-                gas = await utr.estimateGas.exec([],
-                    [
-                        {
-                            inputs: [],
-                            flags: 0,
-                            code: configs.derivable.poolFactory,
-                            data: (await poolFactory.populateTransaction.createPool(
-                                config
-                            )).data,
-                        },
-                        {
-                            inputs: [{
-                                mode: PAYMENT,
-                                eip: 20,
-                                token: settings.reserveToken,
-                                id: 0,
-                                amountIn: state.R,
-                                recipient: poolAddress,
-                            }],
-                            flags: 0,
-                            code: poolAddress,
-                            data: (await pool.populateTransaction.init(
-                                state,
-                                payment
-                            )).data,
-                        }
-                    ]
-                )
-            } else {
-                throw new Error("!!! Token reserve approval required !!!")
-            }
-        } catch (err) {
-            if (err.reason != null) {
-                throw new Error(err.reason)
-            }
-            throw err
-        }
-    } else {
-        try {
-            gas = await helper.estimateGas.createPool(
-                config,
-                state,
-                configs.derivable.poolFactory,
-                { value: R },
-            )
-        } catch (err) {
-            if (err.reason != null) {
-                throw new Error(err.reason)
-            }
-            throw err
-        }
-    }
-
-    console.log('Estimated Gas:', gas.toNumber().toLocaleString())
-
-    const params = [
-        config,
-        state,
-        configs.derivable.poolFactory,
-        { value: R, gasLimit: gas.mul(3).div(2) },
-    ]
-
-    console.log('New Pool Address:', poolAddress)
-
-    console.log(`> Enter [Y] to deploy, [Ctrl-C] to stop.`);
-
-    await waitForKey(89)
-
-    console.log('Sending tx...')
+    let params
 
     if (settings.reserveToken !== undefined) {
-        const tx = await helper.createPool(...params)
-
-        console.log('Waiting for tx receipt...', tx.hash)
-
-        const rec = await tx.wait()
-
-        console.log(rec)
-    } else {
-        const tx = await utr.exec([],
+        const rERC20 = new ethers.Contract(settings.reserveToken, require("@uniswap/v2-core/build/ERC20.json").abi, provider)
+        const rAllowance = await rERC20.allowance(deployer.address, utr.address)
+        if (rAllowance.lt(R)) {
+            throw new Error("!!! Token reserve approval required !!!")
+        }
+        params = [
+            [],
             [
                 {
                     inputs: [],
-                    flags: 0,
-                    code: configs.derivable.poolFactory,
+                    code: poolFactory.address,
                     data: (await poolFactory.populateTransaction.createPool(
                         config
                     )).data,
@@ -350,23 +280,55 @@ async function deploy(settings) {
                         eip: 20,
                         token: settings.reserveToken,
                         id: 0,
-                        amountIn: state.R,
-                        recipient: poolAddress,
+                        amountIn: R,
+                        recipient: pool.address,
                     }],
-                    flags: 0,
                     code: poolAddress,
                     data: (await pool.populateTransaction.init(
-                        state,
+                        initParams,
                         payment
                     )).data,
                 }
-            ]
-        )
+            ],
+            { gasPrice },
+        ]
+    } else {
+        params = [
+            config,
+            initParams,
+            configs.derivable.poolFactory,
+            { value: R, gasPrice },
+        ]
+    }
+
+    const gasUsed = settings.reserveToken
+        ? await utr.estimateGas.exec(...params)
+        : await helper.estimateGas.createPool(...params)
+
+    console.log('Estimated Gas:', gasUsed.toNumber().toLocaleString())
+
+    params[params.length-1].gasLimit = gasUsed.mul(3).div(2)
+
+    console.log('New Pool Address:', poolAddress)
+
+    console.log(`> Enter [Y] to deploy, [Ctrl-C] to stop.`);
+
+    await waitForKey(89)
+
+    console.log('Sending tx...')
+
+    try {
+        const tx = settings.reserveToken
+            ? await utr.exec(...params)
+            : await helper.createPool(...params)
+        
         console.log('Waiting for tx receipt...', tx.hash)
 
         const rec = await tx.wait()
-
-        console.log(rec)
+        console.log('Gas Used:', rec.gasUsed.toNumber())
+        console.log('Logs:', rec.logs)
+    } catch (err) {
+        console.error(err.reason ?? err.error ?? err)
     }
 }
 
