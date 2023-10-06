@@ -17,6 +17,7 @@
     "@atixlabs/hardhat-time-n-mine": "^0.0.5",
     "@derivable/shadow-token": "https://github.com/derivable-labs/shadow-token.git",
     "@derivable/utr": "https://github.com/derivable-labs/utr.git",
+    "@ethersproject/providers": "https://gitpkg.now.sh/derivable-labs/ethers.js/packages/providers",
     "@nomicfoundation/hardhat-chai-matchers": "^1.0.0",
     "@nomicfoundation/hardhat-network-helpers": "^1.0.0",
     "@nomicfoundation/hardhat-verify": "^1.1.1",
