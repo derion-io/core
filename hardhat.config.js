@@ -61,22 +61,6 @@ module.exports = {
                 },
             ]
         },
-        mainnet: {
-            url: process.env.BSC_MAINNET_PROVIDER ?? 'https://bsc-dataseed3.binance.org/',
-            accounts: [
-                process.env.MAINNET_DEPLOYER ?? '0x0000000000000000000000000000000000000000000000000000000000000001',
-            ],
-            timeout: 900000,
-            chainId: 56
-        },
-        testnet: {
-            url: process.env.BSC_TESTNET_PROVIDER ?? '',
-            accounts: [
-                process.env.TESTNET_DEPLOYER ?? '0x0000000000000000000000000000000000000000000000000000000000000001',
-            ],
-            timeout: 20000,
-            chainId: 97
-        },
         arbmainnet: {
             url: process.env.ARB_MAINNET_PROVIDER ?? 'https://arb1.arbitrum.io/rpc',
             accounts: [
@@ -117,7 +101,7 @@ module.exports = {
             timeout: 20000,
             chainId: 8453
         },
-        bsc: {
+        bscmainnet: {
             url: process.env.BSC_MAINNET_PROVIDER ?? 'https://bsc-dataseed3.binance.org/',
             accounts: [
                 process.env.MAINNET_DEPLOYER ?? '0x0000000000000000000000000000000000000000000000000000000000000001',

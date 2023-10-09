@@ -31,8 +31,8 @@ const SCAN_API_KEY = {
     42161: process.env.ABISCAN_API_KEY,
     56: process.env.BSCSCAN_API_KEY,
 }
-const FETCHER_UNI_V2 = AddressZero
-const FETCHER_UNI_V3 = AddressZero
+let FETCHER_UNI_V2 = AddressZero
+let FETCHER_UNI_V3 = AddressZero
 
 const gasPrices = {
     56: 3e9,
@@ -43,8 +43,8 @@ const gasPrice = gasPrices[chainID]
 const settings = {
     // pairAddress: '0xC31E54c7a869B9FcBEcc14363CF510d1c41fa443',
     // pairAddress: '0x8d76e9c2bd1adde00a3dcdc315fcb2774cb3d1d6',
-    pairAddress: ['0x7fe20c1b2c726b2384f44dde3ca91ee430650d09'],
-    power: 10,
+    pairAddress: ['0x49B355Bb422dC456314D160C353416afBcAF2996'],
+    power: 5,
     interestRate: 0.03 / 100,
     premiumRate: 0.3 / 100,
     MATURITY: 60 * 60 * 12,
@@ -84,6 +84,7 @@ async function deploy(settings) {
         uniswapPair = new ethers.Contract(settings.pairAddress[0], require("@uniswap/v2-core/build/UniswapV2Pair.json").abi, provider)
         token0 = await uniswapPair.callStatic.token0()
         token1 = await uniswapPair.callStatic.token1()
+        FETCHER_UNI_V2 = configs.derivable.uniswapV2Fetcher
     }
     const ct0 = new ethers.Contract(token0, jsonERC20.abi, provider)
     const ct1 = new ethers.Contract(token1, jsonERC20.abi, provider)
