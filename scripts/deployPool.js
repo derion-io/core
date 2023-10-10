@@ -244,11 +244,6 @@ async function deploy(settings) {
     // init the pool
     const R = pe(settings.R ?? 0.0001)
     const initParams = await calculateInitParamsFromPrice(config, MARK, R)
-    const payment = {
-        utr: configs.helperContract.utr,
-        payer: deployer.address,
-        recipient: deployer.address,
-    }
 
     const utr = new ethers.Contract(configs.helperContract.utr, require("@derivable/utr/build/UniversalTokenRouter.json").abi, deployer)
     const helper = await ethers.getContractAt("contracts/support/Helper.sol:Helper", configs.derivable.helper ?? configs.derivable.stateCalHelper, deployer)
@@ -257,13 +252,20 @@ async function deploy(settings) {
     const poolAddress = await poolFactory.callStatic.createPool(config)
     const pool = await ethers.getContractAt("PoolBase", poolAddress)
 
+    console.log('New Pool Address:', poolAddress)
+
     let params
 
-    if (settings.reserveToken !== undefined) {
-        const rERC20 = new ethers.Contract(settings.reserveToken, require("@uniswap/v2-core/build/ERC20.json").abi, provider)
+    if (settings.reserveToken) {
+        const rERC20 = new ethers.Contract(settings.reserveToken, require("@uniswap/v2-core/build/ERC20.json").abi, deployer)
         const rAllowance = await rERC20.allowance(deployer.address, utr.address)
         if (rAllowance.lt(R)) {
             throw new Error("!!! Token reserve approval required !!!")
+        }
+        const payment = {
+            utr: utr.address,
+            payer: deployer.address,
+            recipient: deployer.address,
         }
         params = [
             [],
@@ -287,7 +289,7 @@ async function deploy(settings) {
                     code: poolAddress,
                     data: (await pool.populateTransaction.init(
                         initParams,
-                        payment
+                        payment,
                     )).data,
                 }
             ],
@@ -309,8 +311,6 @@ async function deploy(settings) {
     console.log('Estimated Gas:', gasUsed.toNumber().toLocaleString())
 
     params[params.length-1].gasLimit = gasUsed.mul(3).div(2)
-
-    console.log('New Pool Address:', poolAddress)
 
     console.log(`> Enter [Y] to deploy, [Ctrl-C] to stop.`);
 
