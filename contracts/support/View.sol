@@ -25,15 +25,16 @@ contract View is PoolLogic {
 
     function compute(
         address TOKEN,
-        uint256 FEE_RATE
+        uint256 FEE_RATE,
+        uint256 twap,
+        uint256 spot
     ) external returns (StateView memory stateView) {
         Config memory config = loadConfig();
         State memory state = State(_reserve(config.TOKEN_R), s_a, s_b);
 
-        (uint256 twap, uint256 spot) = _fetch(
-            config.FETCHER,
-            uint256(config.ORACLE)
-        );
+        if (twap == 0 && spot == 0) {
+            (twap, spot) = _fetch(config.FETCHER, uint256(config.ORACLE));
+        }
         (uint256 rAt, uint256 rBt) = _evaluate(_xk(config, twap), state);
         (uint256 rAs, uint256 rBs) = _evaluate(_xk(config, spot), state);
 
