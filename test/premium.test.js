@@ -42,11 +42,11 @@ describe("Premium", function () {
     })
 
     async function compare(pool, derivable1155, dailyInterest = 0, feeRate = 0, tolerance = 15) {
-        let {rA, rB, rC, state} = await pool.contract.callStatic.compute(derivable1155.address, feeRate)
+        let {rA, rB, rC, state} = await pool.contract.callStatic.compute(derivable1155.address, feeRate, 0, 0)
         const timeRate = 24*60
         await time.increase(SECONDS_PER_DAY / timeRate)
         await pool.swap(SIDE_R, SIDE_C, 1)
-        const {rA: rA1, rB: rB1, rC: rC1} = await pool.contract.callStatic.compute(derivable1155.address, feeRate)
+        const {rA: rA1, rB: rB1, rC: rC1} = await pool.contract.callStatic.compute(derivable1155.address, feeRate, 0, 0)
 
         if (dailyInterest > 0) {
             rA = rA.sub(rA.mul(UNIT*dailyInterest).div(UNIT*timeRate))

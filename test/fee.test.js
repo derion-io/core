@@ -172,7 +172,7 @@ HLs.forEach(HALF_LIFE => {
         numberToWei(1),
       )
 
-      const {rA, rB, state} = await pool.contract.callStatic.compute(derivable1155.address, FEE_RATE)
+      const {rA, rB, state} = await pool.contract.callStatic.compute(derivable1155.address, FEE_RATE, 0, 0)
 
       const interestRate = Math.round(((1 - dailyInterestRate)**365)*UNIT)/UNIT
 
