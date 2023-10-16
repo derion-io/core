@@ -57,7 +57,7 @@ const settings = {
 }
 
 async function deploy(settings) {
-    let uniswapVersion = 'v3'
+    let uniswapVersion = 3
 
     const configs = await fetch(
         `https://raw.githubusercontent.com/derivable-labs/configs/dev/${chainID}/network.json`
@@ -72,7 +72,7 @@ async function deploy(settings) {
     try {
         slot0 = await uniswapPair.callStatic.slot0()
     } catch (error) {
-        uniswapVersion = 'v2'
+        uniswapVersion = 2
         uniswapPair = new ethers.Contract(settings.pairAddress[0], require("@uniswap/v2-core/build/UniswapV2Pair.json").abi, provider)
         FETCHER_UNI_V2 = configs.derivable.uniswapV2Fetcher
     }
@@ -121,8 +121,8 @@ async function deploy(settings) {
         throw new Error('unable to detect QTI')
     }
 
-    const K = uniswapVersion == 'v3' ? settings.power * 2 : settings.power
-    const prefix = uniswapVersion == 'v3' ? '√' : ''
+    const K = uniswapVersion == 3 ? settings.power * 2 : settings.power
+    const prefix = uniswapVersion == 3 ? '√' : ''
 
     console.log(
         'INDEX',
@@ -141,7 +141,7 @@ async function deploy(settings) {
 
     const logs = await fetch(
         `${configs.scanApi}?module=logs&action=getLogs&address=${settings.pairAddress[0]}` +
-        `&topic0=${uniswapVersion === 'v2' ? '0xd78ad95fa46c994b6551d0da85fc275fe613ce37657fb8d5e3d130840159d822' : '0xc42079f94a6350d7e6235f29174924f928cc2ac818eb64fed8004e115fbcca67'}` +
+        `&topic0=${uniswapVersion === 2 ? '0xd78ad95fa46c994b6551d0da85fc275fe613ce37657fb8d5e3d130840159d822' : '0xc42079f94a6350d7e6235f29174924f928cc2ac818eb64fed8004e115fbcca67'}` +
         `&fromBlock=${blockEpochAgo}&apikey=${SCAN_API_KEY[chainID]}`
     ).then(x => x.json()).then(x => x?.result)
 
@@ -150,7 +150,7 @@ async function deploy(settings) {
     }
 
     let WINDOW
-    if (uniswapVersion === 'v3') {
+    if (uniswapVersion == 3) {
         const txFreq = EPOCH / logs.length
         WINDOW = Math.ceil(Math.sqrt(txFreq / 60)) * 60
         console.log('WINDOW', WINDOW / 60, 'min(s)')
@@ -162,7 +162,7 @@ async function deploy(settings) {
             }
             throw err
         }
-    } else if (uniswapVersion === 'v2') {
+    } else if (uniswapVersion == 2) {
         const range = logs[logs.length - 1].blockNumber - logs[0].blockNumber + 1
         const txFreq = range / logs.length
         WINDOW = Math.floor(txFreq / 5) * 10
@@ -177,7 +177,7 @@ async function deploy(settings) {
     )
     
     let MARK
-    if (uniswapVersion === 'v3') {
+    if (uniswapVersion == 3) {
         MARK = slot0.sqrtPriceX96.shl(32)
         if (QTI == 0) {
             MARK = Q256M.div(MARK)
@@ -196,7 +196,7 @@ async function deploy(settings) {
         } else {
             console.log('MARK', PRICE.mul(10000).div(Q256M).toNumber() / 10000)
         }
-    } else if (uniswapVersion === 'v2') {
+    } else if (uniswapVersion == 2) {
         const [r0, r1] = await uniswapPair.getReserves()
         if (QTI == 0) {
             MARK = r0.mul(Q128).div(r1)
@@ -226,7 +226,7 @@ async function deploy(settings) {
     console.log('PREMIUM_HL', (PREMIUM_HL / SECONDS_PER_DAY).toFixed(2), 'day(s)')
 
     const config = {
-        FETCHER: uniswapVersion === 'v3' ? FETCHER_UNI_V3 : FETCHER_UNI_V2,
+        FETCHER: uniswapVersion == 3 ? FETCHER_UNI_V3 : FETCHER_UNI_V2,
         ORACLE,
         TOKEN_R: settings.reserveToken ?? configs.wrappedTokenAddress,
         MARK,
