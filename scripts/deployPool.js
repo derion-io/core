@@ -67,25 +67,22 @@ async function deploy(settings) {
     const deployer = new ethers.Wallet(process.env.MAINNET_DEPLOYER, provider);
     let uniswapPair = new ethers.Contract(settings.pairAddress[0], jsonUniswapV3Pool.abi, provider)
 
-    let token0, token1, slot0
+    let slot0
 
     try {
-        [
-            token0,
-            token1,
-            slot0,
-        ] = await Promise.all([
-            uniswapPair.callStatic.token0(),
-            uniswapPair.callStatic.token1(),
-            uniswapPair.callStatic.slot0(),
-        ])
+        slot0 = await uniswapPair.callStatic.slot0()
     } catch (error) {
         uniswapVersion = 'v2'
         uniswapPair = new ethers.Contract(settings.pairAddress[0], require("@uniswap/v2-core/build/UniswapV2Pair.json").abi, provider)
-        token0 = await uniswapPair.callStatic.token0()
-        token1 = await uniswapPair.callStatic.token1()
         FETCHER_UNI_V2 = configs.derivable.uniswapV2Fetcher
     }
+    const [
+        token0,
+        token1,
+    ] = await Promise.all([
+        uniswapPair.callStatic.token0(),
+        uniswapPair.callStatic.token1(),
+    ])
     const ct0 = new ethers.Contract(token0, jsonERC20.abi, provider)
     const ct1 = new ethers.Contract(token1, jsonERC20.abi, provider)
     const [
@@ -124,7 +121,14 @@ async function deploy(settings) {
         throw new Error('unable to detect QTI')
     }
 
-    console.log('INDEX', QTI == 1 ? `${symbol0}/${symbol1}` : `${symbol1}/${symbol0}`, 'x' + settings.power)
+    const K = uniswapVersion == 'v3' ? settings.power * 2 : settings.power
+    const prefix = uniswapVersion == 'v3' ? '√' : ''
+
+    console.log(
+        'INDEX',
+        QTI == 1 ? `${prefix}${symbol0}/${symbol1}` : `${prefix}${symbol1}/${symbol0}`,
+        'x' + K,
+    )
 
     // detect WINDOW
     // get the block a day before
@@ -161,8 +165,10 @@ async function deploy(settings) {
     } else if (uniswapVersion === 'v2') {
         const range = logs[logs.length - 1].blockNumber - logs[0].blockNumber + 1
         const txFreq = range / logs.length
-        WINDOW = Math.ceil(Math.sqrt(txFreq))
-        console.log('WINDOW', WINDOW, 'blocks')
+        WINDOW = Math.floor(txFreq / 5) * 10
+        WINDOW = Math.max(WINDOW, 20)
+        WINDOW = Math.min(WINDOW, 256)
+        console.log('WINDOW', WINDOW, 'block(s)')
     }
 
     const ORACLE = ethers.utils.hexZeroPad(
@@ -224,7 +230,7 @@ async function deploy(settings) {
         ORACLE,
         TOKEN_R: settings.reserveToken ?? configs.wrappedTokenAddress,
         MARK,
-        K: bn(settings.power * 2),
+        K: bn(K),
         INTEREST_HL,
         PREMIUM_HL,
         MATURITY: settings.closingFeeDuration,
