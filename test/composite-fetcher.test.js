@@ -76,7 +76,7 @@ describe('Fetcher logic', function () {
 
         // FETCHER
         const Fetcher = await ethers.getContractFactory("CompositeFetcher")
-        const fetcher = await Fetcher.deploy(
+        const fetcherV3 = await Fetcher.deploy(
             usdcWeth.address,
             1,
             usdtWeth.address,
@@ -100,7 +100,7 @@ describe('Fetcher logic', function () {
             usdtWethQti,
             btcWethQti,
             wethPepeQti,
-            fetcher
+            fetcherV3
         }
     }
 
@@ -109,7 +109,7 @@ describe('Fetcher logic', function () {
             pepeWeth,
             btcWethQti,
             wethPepeQti,
-            fetcher
+            fetcherV3
         } = await loadFixture(fixture)
 
         const pepeBtcOracle = bn(wethPepeQti).shl(255)
@@ -120,7 +120,7 @@ describe('Fetcher logic', function () {
         .add(bn(300).shl(160))
         .add(pepeWeth.address)
 
-        const {spot, twap} = await fetcher.callStatic.fetch(pepeBtcOracle)
+        const {spot, twap} = await fetcherV3.callStatic.fetch(pepeBtcOracle)
         
         const expectedPrice = BTC_WETH * WETH_PEPE
         const actualSpot = (Number(weiToNumber(spot)) / Number(weiToNumber(bn(1).shl(128))))**2 * 10**12
@@ -135,7 +135,7 @@ describe('Fetcher logic', function () {
             pepeWeth,
             usdtWethQti,
             wethPepeQti,
-            fetcher
+            fetcherV3
         } = await loadFixture(fixture)
 
         const pepeUsdtOracle = bn(wethPepeQti).shl(255)
@@ -146,7 +146,7 @@ describe('Fetcher logic', function () {
         .add(bn(300).shl(160))
         .add(pepeWeth.address)
 
-        const {spot, twap} = await fetcher.callStatic.fetch(pepeUsdtOracle)
+        const {spot, twap} = await fetcherV3.callStatic.fetch(pepeUsdtOracle)
         
         const expectedPrice = USDT_WETH * WETH_PEPE
         const actualSpot = (Number(weiToNumber(spot)) / Number(weiToNumber(bn(1).shl(128))))**2
@@ -160,7 +160,7 @@ describe('Fetcher logic', function () {
             pepeWeth,
             usdcWethQti,
             wethPepeQti,
-            fetcher
+            fetcherV3
         } = await loadFixture(fixture)
 
         const pepeUsdcOracle = bn(wethPepeQti).shl(255)
@@ -171,7 +171,7 @@ describe('Fetcher logic', function () {
         .add(bn(300).shl(160))
         .add(pepeWeth.address)
 
-        const {spot, twap} = await fetcher.callStatic.fetch(pepeUsdcOracle)
+        const {spot, twap} = await fetcherV3.callStatic.fetch(pepeUsdcOracle)
         
         const expectedPrice = USDC_WETH * WETH_PEPE
         const actualSpot = (Number(weiToNumber(spot)) / Number(weiToNumber(bn(1).shl(128))))**2
@@ -204,7 +204,7 @@ describe("Pool with CompositeFetcher", function () {
 
         // FETCHER
         const Fetcher = await ethers.getContractFactory("CompositeFetcher")
-        const fetcher = await Fetcher.deploy(
+        const fetcherV3 = await Fetcher.deploy(
             uniswapPair.address,
             1,
             AddressZero,
@@ -226,7 +226,7 @@ describe("Pool with CompositeFetcher", function () {
         )
 
         const config = {
-            FETCHER: fetcher.address,
+            FETCHER: fetcherV3.address,
             ORACLE: oracle,
             TOKEN_R: weth.address,
             MARK: encodePriceSqrt(75, 10000).shl(32),
