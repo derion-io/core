@@ -1,13 +1,12 @@
-const { ethers } = require("hardhat")
 require('dotenv').config()
-const { bn, feeToOpenRate } = require("../test/shared/utilities")
-const { calculateInitParamsFromPrice } = require("../test/shared/AsymptoticPerpetual")
+const { ethers } = require("hardhat")
 const { AddressZero } = ethers.constants
-const jsonUniswapV3Pool = require("./compiled/UniswapV3Pool.json");
-const jsonERC20 = require("../artifacts/@openzeppelin/contracts/token/ERC20/ERC20.sol/ERC20.json")
+const { bn, feeToOpenRate, numberToWei } = require("../test/shared/utilities")
+const { calculateInitParamsFromPrice } = require("../test/shared/AsymptoticPerpetual")
 const { JsonRpcProvider } = require("@ethersproject/providers");
-
-const pe = (x) => ethers.utils.parseEther(String(x))
+const jsonUniswapV3Pool = require("./compiled/UniswapV3Pool.json")
+const jsonUniswapV2Pool = require("@uniswap/v2-core/build/UniswapV2Pair.json")
+const jsonERC20 = require("../artifacts/@openzeppelin/contracts/token/ERC20/ERC20.sol/ERC20.json")
 
 const SECONDS_PER_HOUR = 60 * 60
 const SECONDS_PER_DAY = SECONDS_PER_HOUR * 24
@@ -31,8 +30,11 @@ const SCAN_API_KEY = {
     42161: process.env.ABISCAN_API_KEY,
     56: process.env.BSCSCAN_API_KEY,
 }
-let FETCHER_UNI_V2 = AddressZero
-let FETCHER_UNI_V3 = AddressZero
+
+const SWAP_TOPIC = {
+    2: '0xd78ad95fa46c994b6551d0da85fc275fe613ce37657fb8d5e3d130840159d822',
+    3: '0xc42079f94a6350d7e6235f29174924f928cc2ac818eb64fed8004e115fbcca67',
+}
 
 const gasPrices = {
     56: 3e9,
@@ -57,8 +59,6 @@ const settings = {
 }
 
 async function deploy(settings) {
-    let uniswapVersion = 'v3'
-
     const configs = await fetch(
         `https://raw.githubusercontent.com/derivable-labs/configs/dev/${chainID}/network.json`
     ).then(res => res.json())
@@ -67,25 +67,22 @@ async function deploy(settings) {
     const deployer = new ethers.Wallet(process.env.MAINNET_DEPLOYER, provider);
     let uniswapPair = new ethers.Contract(settings.pairAddress[0], jsonUniswapV3Pool.abi, provider)
 
-    let token0, token1, slot0
+    let slot0
 
     try {
-        [
-            token0,
-            token1,
-            slot0,
-        ] = await Promise.all([
-            uniswapPair.callStatic.token0(),
-            uniswapPair.callStatic.token1(),
-            uniswapPair.callStatic.slot0(),
-        ])
+        slot0 = await uniswapPair.callStatic.slot0()
     } catch (error) {
-        uniswapVersion = 'v2'
-        uniswapPair = new ethers.Contract(settings.pairAddress[0], require("@uniswap/v2-core/build/UniswapV2Pair.json").abi, provider)
-        token0 = await uniswapPair.callStatic.token0()
-        token1 = await uniswapPair.callStatic.token1()
+        uniswapPair = new ethers.Contract(settings.pairAddress[0], jsonUniswapV2Pool.abi, provider)
         FETCHER_UNI_V2 = configs.derivable.uniswapV2Fetcher
     }
+
+    const [
+        token0,
+        token1,
+    ] = await Promise.all([
+        uniswapPair.callStatic.token0(),
+        uniswapPair.callStatic.token1(),
+    ])
     const ct0 = new ethers.Contract(token0, jsonERC20.abi, provider)
     const ct1 = new ethers.Contract(token1, jsonERC20.abi, provider)
     const [
@@ -124,7 +121,14 @@ async function deploy(settings) {
         throw new Error('unable to detect QTI')
     }
 
-    console.log('INDEX', QTI == 1 ? `${symbol0}/${symbol1}` : `${symbol1}/${symbol0}`, 'x' + settings.power)
+    const K = slot0 ? settings.power * 2 : settings.power
+    const prefix = slot0 ? '√' : ''
+
+    console.log(
+        'INDEX',
+        QTI == 1 ? `${prefix}${symbol0}/${symbol1}` : `${prefix}${symbol1}/${symbol0}`,
+        'x' + K,
+    )
 
     // detect WINDOW
     // get the block a day before
@@ -137,7 +141,7 @@ async function deploy(settings) {
 
     const logs = await fetch(
         `${configs.scanApi}?module=logs&action=getLogs&address=${settings.pairAddress[0]}` +
-        `&topic0=${uniswapVersion === 'v2' ? '0xd78ad95fa46c994b6551d0da85fc275fe613ce37657fb8d5e3d130840159d822' : '0xc42079f94a6350d7e6235f29174924f928cc2ac818eb64fed8004e115fbcca67'}` +
+        `&topic0=${SWAP_TOPIC[slot0 ? 3 : 2]}` +
         `&fromBlock=${blockEpochAgo}&apikey=${SCAN_API_KEY[chainID]}`
     ).then(x => x.json()).then(x => x?.result)
 
@@ -146,7 +150,7 @@ async function deploy(settings) {
     }
 
     let WINDOW
-    if (uniswapVersion === 'v3') {
+    if (slot0) {
         const txFreq = EPOCH / logs.length
         WINDOW = Math.ceil(Math.sqrt(txFreq / 60)) * 60
         console.log('WINDOW', WINDOW / 60, 'min(s)')
@@ -158,11 +162,13 @@ async function deploy(settings) {
             }
             throw err
         }
-    } else if (uniswapVersion === 'v2') {
+    } else {
         const range = logs[logs.length - 1].blockNumber - logs[0].blockNumber + 1
         const txFreq = range / logs.length
-        WINDOW = Math.ceil(Math.sqrt(txFreq))
-        console.log('WINDOW', WINDOW, 'blocks')
+        WINDOW = Math.floor(txFreq / 5) * 10
+        WINDOW = Math.max(WINDOW, 20)
+        WINDOW = Math.min(WINDOW, 256)
+        console.log('WINDOW', WINDOW, 'block(s)')
     }
 
     const ORACLE = ethers.utils.hexZeroPad(
@@ -171,7 +177,7 @@ async function deploy(settings) {
     )
     
     let MARK
-    if (uniswapVersion === 'v3') {
+    if (slot0) {
         MARK = slot0.sqrtPriceX96.shl(32)
         if (QTI == 0) {
             MARK = Q256M.div(MARK)
@@ -190,7 +196,7 @@ async function deploy(settings) {
         } else {
             console.log('MARK', PRICE.mul(10000).div(Q256M).toNumber() / 10000)
         }
-    } else if (uniswapVersion === 'v2') {
+    } else {
         const [r0, r1] = await uniswapPair.getReserves()
         if (QTI == 0) {
             MARK = r0.mul(Q128).div(r1)
@@ -220,11 +226,11 @@ async function deploy(settings) {
     console.log('PREMIUM_HL', (PREMIUM_HL / SECONDS_PER_DAY).toFixed(2), 'day(s)')
 
     const config = {
-        FETCHER: uniswapVersion === 'v3' ? FETCHER_UNI_V3 : FETCHER_UNI_V2,
+        FETCHER: slot0 ? AddressZero : configs.derivable.uniswapV2Fetcher,
         ORACLE,
         TOKEN_R: settings.reserveToken ?? configs.wrappedTokenAddress,
         MARK,
-        K: bn(settings.power * 2),
+        K: bn(K),
         INTEREST_HL,
         PREMIUM_HL,
         MATURITY: settings.closingFeeDuration,
@@ -242,7 +248,7 @@ async function deploy(settings) {
     const poolFactory = await ethers.getContractAt("contracts/PoolFactory.sol:PoolFactory", configs.derivable.poolFactory, deployer)
 
     // init the pool
-    const R = pe(settings.R ?? 0.0001)
+    const R = numberToWei(settings.R ?? 0.0001)
     const initParams = await calculateInitParamsFromPrice(config, MARK, R)
 
     const utr = new ethers.Contract(configs.helperContract.utr, require("@derivable/utr/build/UniversalTokenRouter.json").abi, deployer)
