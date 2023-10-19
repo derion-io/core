@@ -1,7 +1,7 @@
 require('dotenv').config()
 const { ethers } = require("hardhat")
 const { AddressZero } = ethers.constants
-const { bn, feeToOpenRate, numberToWei } = require("../test/shared/utilities")
+const { bn, feeToOpenRate } = require("../test/shared/utilities")
 const { calculateInitParamsFromPrice } = require("../test/shared/AsymptoticPerpetual")
 const { JsonRpcProvider } = require("@ethersproject/providers");
 const jsonUniswapV3Pool = require("./compiled/UniswapV3Pool.json")
@@ -165,7 +165,7 @@ async function deploy(settings) {
     } else {
         const range = logs[logs.length - 1].blockNumber - logs[0].blockNumber + 1
         const txFreq = range / logs.length
-        WINDOW = Math.floor(txFreq / 5) * 10
+        WINDOW = Math.floor(txFreq / 10) * 10
         WINDOW = Math.max(WINDOW, 20)
         WINDOW = Math.min(WINDOW, 256)
         console.log('WINDOW', WINDOW, 'block(s)')
@@ -248,7 +248,7 @@ async function deploy(settings) {
     const poolFactory = await ethers.getContractAt("contracts/PoolFactory.sol:PoolFactory", configs.derivable.poolFactory, deployer)
 
     // init the pool
-    const R = numberToWei(settings.R ?? 0.0001)
+    const R = ethers.utils.parseEther(String(settings.R ?? 0.0001))
     const initParams = await calculateInitParamsFromPrice(config, MARK, R)
 
     const utr = new ethers.Contract(configs.helperContract.utr, require("@derivable/utr/build/UniversalTokenRouter.json").abi, deployer)
