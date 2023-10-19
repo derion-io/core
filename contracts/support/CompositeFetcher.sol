@@ -4,41 +4,81 @@ pragma solidity 0.8.20;
 import "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 import "@uniswap/v3-periphery/contracts/libraries/OracleLibrary.sol";
 import "../subs/Constants.sol";
+import "../interfaces/IFetcher.sol";
 
 contract CompositeFetcher is Constants {
-    address internal immutable WETH_USDC;
-    address internal immutable WETH_USDT;
-    address internal immutable WETH_BTC;
+    address internal immutable PAIR_0;
+    address internal immutable PAIR_1;
+    address internal immutable PAIR_2;
+    address internal immutable FETCHER_V2;
 
-    uint256 constant USDC_INDEX = 0;
-    uint256 constant USDT_INDEX = 1;
-    uint256 constant BTC_INDEX = 2;
+    // 0: v2, 1: v3
+    uint256 internal immutable PAIR_0_TYPE;
+    uint256 internal immutable PAIR_1_TYPE;
+    uint256 internal immutable PAIR_2_TYPE;
 
-    constructor(address weth_usdc, address weth_usdt, address weth_btc) {
-        WETH_USDC = weth_usdc;
-        WETH_USDT = weth_usdt;
-        WETH_BTC = weth_btc;
+    uint256 constant PAIR0_INDEX = 0;
+    uint256 constant PAIR1_INDEX = 1;
+    uint256 constant PAIR2_INDEX = 2;
+
+    uint256 constant POOL_V2 = 0;
+    uint256 constant POOL_V3 = 1;
+
+    constructor(
+        address pair0,
+        uint256 pair0Type,
+        address pair1,
+        uint256 pair1Type,
+        address pair2,
+        uint256 pair2Type,
+        address fetcherV2
+    ) {
+        PAIR_0 = pair0;
+        PAIR_1 = pair1;
+        PAIR_2 = pair2;
+        PAIR_0_TYPE = pair0Type;
+        PAIR_1_TYPE = pair1Type;
+        PAIR_2_TYPE = pair2Type;
+        FETCHER_V2 = fetcherV2;
     }
 
-    // QTI(1bit)|SQTI(1bit)|SPI(30bit)|WINDOW(32bit)|SWINDOW(32bit)|POOL(160bit)
+    // QTI(1bit)|SQTI(1bit)|SPI(2bit)|PT(28bit)|WINDOW(32bit)|SWINDOW(32bit)|POOL(160bit)
     function fetch(
         uint256 ORACLE
-    ) public view returns (uint256 twap, uint256 spot) {
-        (twap, spot) = _fetchPrice(
-            address(uint160(ORACLE)),
-            ORACLE >> 255,
-            uint32(ORACLE >> 192)
-        );
-        (uint256 sTwap, uint256 sSpot) = _fetchPrice(
-            _indexToPool((ORACLE >> 224) % (1 << 30)),
-            (ORACLE >> 254) % 2,
-            uint32(ORACLE >> 160)
-        );
+    ) public returns (uint256 twap, uint256 spot) {
+        uint256 poolType = (ORACLE >> 224) % (1 << 28);
+        if (poolType == POOL_V3) {
+            (twap, spot) = _fetchV3Price(
+                address(uint160(ORACLE)),
+                ORACLE >> 255,
+                uint32(ORACLE >> 192)
+            );
+        } else if (poolType == POOL_V2) {
+            (twap, spot) = IFetcher(FETCHER_V2).fetch(ORACLE);
+        } else {
+            revert();
+        }
+
+        uint256 sTwap;
+        uint256 sSpot;
+        uint256 sPoolType = _detectSPoolType(_indexToPool((ORACLE >> 252) % 4));
+        if (sPoolType == POOL_V3) {
+            (sTwap, sSpot) = _fetchV3Price(
+                _indexToPool((ORACLE >> 252) % 4),
+                (ORACLE >> 254) % 2,
+                uint32(ORACLE >> 160)
+            );
+        } else if (poolType == POOL_V2) {
+            (sTwap, sSpot) = IFetcher(FETCHER_V2).fetch(ORACLE);
+        } else {
+            revert();
+        }
+        
         twap = FullMath.mulDiv(twap, sTwap, Q128);
         spot = FullMath.mulDiv(spot, sSpot, Q128);
     }
 
-    function _fetchPrice(
+    function _fetchV3Price(
         address pool,
         uint256 qti,
         uint32 window
@@ -56,13 +96,26 @@ contract CompositeFetcher is Constants {
         }
     }
 
+    // 0: v2, 1: v3
+    function _detectSPoolType(address pool) internal view returns (uint256) {
+        if (
+            (pool == PAIR_0 && PAIR_0_TYPE == 0) ||
+            (pool == PAIR_1 && PAIR_1_TYPE == 0) ||
+            (pool == PAIR_2 && PAIR_2_TYPE == 0)
+        ) {
+            return POOL_V2;
+        } else {
+            return POOL_V3;
+        }
+    }
+
     function _indexToPool(uint256 index) internal view returns (address) {
-        if (index == USDC_INDEX) {
-            return WETH_USDC;
+        if (index == PAIR0_INDEX) {
+            return PAIR_0;
         }
-        if (index == USDT_INDEX) {
-            return WETH_USDT;
+        if (index == PAIR1_INDEX) {
+            return PAIR_1;
         }
-        return WETH_BTC;
+        return PAIR_2;
     }
 }
