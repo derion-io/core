@@ -153,7 +153,7 @@ const unpackId = (id) => {
 }
 
 function encodeSqrtX96(reserve1, reserve0) {
-    return bn((Math.sqrt(reserve1 / reserve0) * 10 ** 12).toFixed(0))
+    return bn(Number((Math.sqrt(reserve1 / reserve0) * 10 ** 12).toFixed(0)).toLocaleString('fullwide', {useGrouping:false}))
         .mul(bn(2).pow(96))
         .div(10 ** 12)
 }
