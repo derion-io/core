@@ -250,7 +250,34 @@ contract PoolLogic is PoolBase, Fetcher {
     }
 
     function _xk(Config memory config, uint256 price) internal pure returns (uint256 xk) {
-        xk = _powu(FullMath.mulDiv(Q128, price, config.MARK), config.K);
+        uint256 MARK = config.MARK;
+        bool inverted = MARK < price;
+        if (inverted) {
+            // keep the price/MARK <= 1 to avoid overflow
+            (MARK, price) = (price, MARK);
+        }
+        xk = _powu(FullMath.mulDiv(Q128, price, MARK), config.K);
+        if (xk == 0) {
+            // de-power the pool on underflow
+            xk = _powUpTo(price, MARK, config.K);
+        }
+        if (inverted) {
+            xk = Q256M / xk;
+        }
+    }
+
+    /// find the largest number p in 0..y that (a/b)^p > 0,
+    /// and return (a/b)^p
+    function _powUpTo(uint256 a, uint256 b, uint256 y) internal pure returns (uint256 z) {
+        z = Q128;
+        while (y > 0) {
+            uint256 zx = FullMath.mulDiv(z, a, b);
+            if (zx == 0) {
+                return z;
+            }
+            z = zx;
+            --y;
+        }
     }
 
     function _powu(uint256 x, uint256 y) internal pure returns (uint256 z) {
