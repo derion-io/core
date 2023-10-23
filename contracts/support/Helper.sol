@@ -284,7 +284,10 @@ contract Helper is Constants, IHelper, ERC1155Holder {
                 rB1 -= amount;
             } else /*if (sideIn == SIDE_C)*/ {
                 uint256 rC = __.R - __.rA - __.rB;
-                amount = FullMath.mulDiv(rC-1, amount, s);
+                if (rC > 0) {
+                    rC -= 1;
+                }
+                amount = FullMath.mulDiv(rC, amount, s);
             }
         }
 
@@ -515,7 +518,7 @@ contract Helper is Constants, IHelper, ERC1155Holder {
         if (r <= R >> 1) {
             return FullMath.mulDivRoundingUp(r, Q128, xk);
         }
-        uint256 denominator = FullMath.mulDivRoundingUp(R - r, xk << 2, Q128);
+        uint256 denominator = FullMath.mulDiv(R - r, xk << 2, Q128);
         return FullMath.mulDivRoundingUp(R, R, denominator);
     }
 
