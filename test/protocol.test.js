@@ -74,20 +74,6 @@ describe("Protocol", function () {
             }
         }
     })
-    function convertId(side, poolAddress) {
-        switch (side) {
-            case SIDE_R:
-                return packId(SIDE_R, poolAddress)
-            case SIDE_A:
-                return packId(SIDE_A, poolAddress)
-            case SIDE_B:
-                return packId(SIDE_B, poolAddress)
-            case SIDE_C:
-                return packId(SIDE_C, poolAddress)
-            default:
-                return 0
-        }
-    }
 
     describe("Token", function () {
         it("isApprovedForAll", async function () {
@@ -117,10 +103,10 @@ describe("Protocol", function () {
         describe("ERC1155SupplyVirtual", function () {
             it("exists", async function () {
                 const { derivable1155, derivablePools} = await loadFixture(fixture)
-                expect(await derivable1155.totalSupply(convertId(SIDE_A, derivablePools[0].contract.address))).gt(0)
-                expect(await derivable1155.totalSupply(convertId(SIDE_B, derivablePools[0].contract.address))).gt(0)
-                expect(await derivable1155.totalSupply(convertId(SIDE_C, derivablePools[0].contract.address))).gt(0)
-                expect(await derivable1155.totalSupply(convertId(SIDE_R, derivablePools[0].contract.address))).equal(0)
+                expect(await derivable1155.totalSupply(packId(SIDE_A, derivablePools[0].contract.address))).gt(0)
+                expect(await derivable1155.totalSupply(packId(SIDE_B, derivablePools[0].contract.address))).gt(0)
+                expect(await derivable1155.totalSupply(packId(SIDE_C, derivablePools[0].contract.address))).gt(0)
+                expect(await derivable1155.totalSupply(packId(SIDE_R, derivablePools[0].contract.address))).equal(0)
                 expect(await derivable1155.totalSupply(0)).equal(0)
             })
         })
@@ -145,7 +131,7 @@ describe("Protocol", function () {
             const tx = await poolFactory.createPool(config)
             const receipt = await tx.wait()
             const poolAddress = ethers.utils.getAddress('0x' + receipt.logs[0].data.slice(-40))
-            expect(await derivable1155.balanceOf(owner.address, convertId(SIDE_A, poolAddress))).equal(0)
+            expect(await derivable1155.balanceOf(owner.address, packId(SIDE_A, poolAddress))).equal(0)
             const initParams = {
                 R: numberToWei(5),
                 a: numberToWei(1),
@@ -175,7 +161,7 @@ describe("Protocol", function () {
                     payment
                 )).data,
             }])
-            expect(await derivable1155.balanceOf(owner.address, convertId(SIDE_A, poolAddress))).gt(0)
+            expect(await derivable1155.balanceOf(owner.address, packId(SIDE_A, poolAddress))).gt(0)
         })
 
         it("Deploy Fetcher and Init Pool", async function () {
@@ -529,7 +515,7 @@ describe("Protocol", function () {
 
         async function testROut(sideIn, amountIn, sideOut, isUseUTR) {
             const { owner, weth, derivablePools, derivable1155, utr } = await loadFixture(fixture)
-            const convertedId = convertId(sideIn, derivablePools[0].contract.address)
+            const convertedId = packId(sideIn, derivablePools[0].contract.address)
             const payer = isUseUTR 
                 ? encodePayment(owner.address, derivablePools[0].contract.address, 1155, derivable1155.address, convertedId)
                 : []
@@ -741,7 +727,7 @@ describe("Protocol", function () {
             const { owner, weth, utr, uniswapPair, usdc, derivablePools, derivable1155, stateCalHelper } = await loadFixture(fixture)
             // swap weth -> long
             const wethBefore = await weth.balanceOf(owner.address)
-            const tokenBefore = await derivable1155.balanceOf(owner.address, convertId(isLong ? SIDE_A : SIDE_B, derivablePools[0].contract.address))
+            const tokenBefore = await derivable1155.balanceOf(owner.address, packId(isLong ? SIDE_A : SIDE_B, derivablePools[0].contract.address))
             await derivablePools[0].swap(
                 SIDE_R,
                 isLong ? SIDE_A : SIDE_B,
@@ -751,7 +737,7 @@ describe("Protocol", function () {
                     recipient: owner.address
                 }
             )
-            const tokenAfter = await derivable1155.balanceOf(owner.address, convertId(isLong ? SIDE_A : SIDE_B, derivablePools[0].contract.address))
+            const tokenAfter = await derivable1155.balanceOf(owner.address, packId(isLong ? SIDE_A : SIDE_B, derivablePools[0].contract.address))
             // change price
             await swapToSetPriceMock({
                 baseToken: weth,
@@ -837,7 +823,7 @@ describe("Protocol", function () {
                 const { owner, weth, uniswapPair, usdc, derivablePools, derivable1155, stateCalHelper } = await loadFixture(fixture)
     
                 // const wethBefore = await weth.balanceOf(owner.address)
-                const tokenBefore = await derivable1155.balanceOf(owner.address, convertId(side, derivablePools[0].contract.address))
+                const tokenBefore = await derivable1155.balanceOf(owner.address, packId(side, derivablePools[0].contract.address))
                 await derivablePools[0].swap(
                     SIDE_R,
                     side,
@@ -847,7 +833,7 @@ describe("Protocol", function () {
                         recipient: owner.address,
                     }
                 )
-                const tokenAfter = await derivable1155.balanceOf(owner.address, convertId(side, derivablePools[0].contract.address))
+                const tokenAfter = await derivable1155.balanceOf(owner.address, packId(side, derivablePools[0].contract.address))
     
                 // change price
                 await swapToSetPriceMock({
@@ -895,7 +881,7 @@ describe("Protocol", function () {
     
                 // swap eth -> long
                 // const aWethBefore = await weth.balanceOf(accountA.address)
-                const longTokenBefore = await derivable1155.balanceOf(accountA.address, convertId(SIDE_A, derivablePools[0].contract.address))
+                const longTokenBefore = await derivable1155.balanceOf(accountA.address, packId(SIDE_A, derivablePools[0].contract.address))
                 await derivablePools[0].connect(accountA).swap(
                     SIDE_R,
                     SIDE_A,
@@ -905,10 +891,10 @@ describe("Protocol", function () {
                         recipient: accountA.address,
                     }
                 )
-                const longTokenAfter = await derivable1155.balanceOf(accountA.address, convertId(SIDE_A, derivablePools[0].contract.address))
+                const longTokenAfter = await derivable1155.balanceOf(accountA.address, packId(SIDE_A, derivablePools[0].contract.address))
                 // swap eth -> short
                 // const bWethBefore = await weth.balanceOf(accountB.address)
-                const shortTokenBefore = await derivable1155.balanceOf(accountB.address, convertId(SIDE_B, derivablePools[0].contract.address))
+                const shortTokenBefore = await derivable1155.balanceOf(accountB.address, packId(SIDE_B, derivablePools[0].contract.address))
                 await derivablePools[0].connect(accountB).swap(
                     SIDE_R,
                     SIDE_B,
@@ -918,10 +904,10 @@ describe("Protocol", function () {
                         recipient: accountB.address,
                     }
                 )
-                const shortTokenAfter = await derivable1155.balanceOf(accountB.address, convertId(SIDE_B, derivablePools[0].contract.address))
+                const shortTokenAfter = await derivable1155.balanceOf(accountB.address, packId(SIDE_B, derivablePools[0].contract.address))
                 // swap eth -> c
                 const wethBefore = await weth.balanceOf(owner.address)
-                const tokenBefore = await derivable1155.balanceOf(owner.address, convertId(SIDE_C, derivablePools[0].contract.address))
+                const tokenBefore = await derivable1155.balanceOf(owner.address, packId(SIDE_C, derivablePools[0].contract.address))
                 await derivablePools[0].swap(
                     SIDE_R,
                     SIDE_C,
@@ -931,7 +917,7 @@ describe("Protocol", function () {
                         recipient: owner.address,
                     }
                 )
-                const tokenAfter = await derivable1155.balanceOf(owner.address, convertId(SIDE_C, derivablePools[0].contract.address))
+                const tokenAfter = await derivable1155.balanceOf(owner.address, packId(SIDE_C, derivablePools[0].contract.address))
                 // change price
                 await swapToSetPriceMock({
                     baseToken: weth,
