@@ -66,41 +66,43 @@ contract PoolLogic is PoolBase, Fetcher {
                     uint256 rate = _decayRate(elapsed, config.INTEREST_HL);
                     uint256 rAF = FullMath.mulDivRoundingUp(rA, rate, Q64);
                     uint256 rBF = FullMath.mulDivRoundingUp(rB, rate, Q64);
-                    if (rA + rB > rAF + rBF) {
-                        (rA, rB) = (rAF, rBF);
+                    if (rAF < rA || rBF < rB) {
+                        // interest cannot exhaust an entire side
+                        rA = Math.max(rAF, 1);
+                        rB = Math.max(rBF, 1);
                         s_lastInterestTime = uint32(block.timestamp);
                     }
                 }
             }
             // [PREMIUM]
-            if (config.PREMIUM_HL > 0 && rA != rB) {
-                uint256 R = state.R;
-                uint256 elapsed = uint32(block.timestamp & F_MASK) - (s_lastPremiumTime & F_MASK);
-                if (elapsed > 0) {
-                    uint256 premium;
-                    uint256 diff;
-                    if (rA > rB) {
-                        diff = rA - rB;
-                        premium = rA - FullMath.mulDiv(R, rB, R - diff);
-                    } else {
-                        diff = rB - rA;
-                        premium = rB - FullMath.mulDiv(R, rA, R - diff);
-                    }
-                    // diff cannot be zero because rA != rB
-                    uint256 premiumHL = FullMath.mulDivRoundingUp(config.PREMIUM_HL, premium, diff);
-                    // make sure the premiumHL is not zero
-                    premiumHL = Math.max(1, premiumHL);
-                    uint256 rate = _decayRate(elapsed, premiumHL);
-                    premium -= FullMath.mulDivRoundingUp(premium, rate, Q64);
-                    if (premium > 0) {
+            if (config.PREMIUM_HL > 0) {
+                uint256 diff = rA > rB ? rA - rB : rB - rA;
+                if (diff > 1) {
+                    --diff; // premium cannot exhaust an entire side
+                    uint256 R = state.R;
+                    uint256 elapsed = uint32(block.timestamp & F_MASK) - (s_lastPremiumTime & F_MASK);
+                    if (elapsed > 0) {
+                        uint256 premium;
                         if (rA > rB) {
-                            rB += FullMath.mulDiv(premium, rB, R - rA);
-                            rA -= premium;
+                            premium = rA - FullMath.mulDiv(R, rB, R - diff);
                         } else {
-                            rA += FullMath.mulDiv(premium, rA, R - rB);
-                            rB -= premium;
+                            premium = rB - FullMath.mulDiv(R, rA, R - diff);
                         }
-                        s_lastPremiumTime += uint32(elapsed);
+                        uint256 premiumHL = FullMath.mulDivRoundingUp(config.PREMIUM_HL, premium, diff);
+                        // make sure the premiumHL is not zero
+                        premiumHL = Math.max(1, premiumHL);
+                        uint256 rate = _decayRate(elapsed, premiumHL);
+                        premium -= FullMath.mulDivRoundingUp(premium, rate, Q64);
+                        if (premium > 0) {
+                            if (rA > rB) {
+                                rB += FullMath.mulDiv(premium, rB, R - rA);
+                                rA -= premium;
+                            } else {
+                                rA += FullMath.mulDiv(premium, rA, R - rB);
+                                rB -= premium;
+                            }
+                            s_lastPremiumTime += uint32(elapsed);
+                        }
                     }
                 }
             }
@@ -113,13 +115,6 @@ contract PoolLogic is PoolBase, Fetcher {
                     state.R -= fee;
                 }
             }
-        }
-        // [SANITIZATION]
-        if (rA < 1) {
-            rA = 1;
-        }
-        if (rB < 1) {
-            rB = 1;
         }
         // [CALCULATION]
         State memory state1 = IHelper(param.helper).swapToState(
@@ -250,7 +245,34 @@ contract PoolLogic is PoolBase, Fetcher {
     }
 
     function _xk(Config memory config, uint256 price) internal pure returns (uint256 xk) {
-        xk = _powu(FullMath.mulDiv(Q128, price, config.MARK), config.K);
+        uint256 MARK = config.MARK;
+        bool inverted = MARK < price;
+        if (inverted) {
+            // keep the price/MARK <= 1 to avoid overflow
+            (MARK, price) = (price, MARK);
+        }
+        xk = _powu(FullMath.mulDiv(Q128, price, MARK), config.K);
+        if (xk == 0) {
+            // de-power the pool on underflow
+            xk = _powUpTo(price, MARK, config.K);
+        }
+        if (inverted) {
+            xk = Q256M / xk;
+        }
+    }
+
+    /// find the largest number p in 0..y that (a/b)^p > 0,
+    /// and return (a/b)^p
+    function _powUpTo(uint256 a, uint256 b, uint256 y) internal pure returns (uint256 z) {
+        z = Q128;
+        while (y > 0) {
+            uint256 zx = FullMath.mulDiv(z, a, b);
+            if (zx == 0) {
+                return z;
+            }
+            z = zx;
+            --y;
+        }
     }
 
     function _powu(uint256 x, uint256 y) internal pure returns (uint256 z) {
@@ -274,8 +296,8 @@ contract PoolLogic is PoolBase, Fetcher {
     function _r(uint256 xk, uint256 v, uint256 R) internal pure returns (uint256 r) {
         r = FullMath.mulDiv(v, xk, Q128);
         if (r > R >> 1) {
-            uint256 denominator = FullMath.mulDiv(v, xk << 2, Q128);
-            uint256 minuend = FullMath.mulDiv(R, R, denominator);
+            uint256 denominator = FullMath.mulDiv(v, xk, Q126);
+            uint256 minuend = FullMath.mulDivRoundingUp(R, R, denominator);
             r = R - minuend;
         }
     }

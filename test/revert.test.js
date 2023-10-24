@@ -475,7 +475,7 @@ describe("Revert", function () {
     })
   })
 
-  describe("PoolLogic", function () {
+  describe("Token", function () {
     it("onlyItsPool: UNAUTHORIZED_MINT_BURN", async function () {
       const { derivable1155, owner } = await loadFixture(fixture)
       await expect(

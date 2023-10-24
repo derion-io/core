@@ -155,19 +155,23 @@ contract BadHelper1 is Constants, IHelper {
                 amount = FullMath.mulDiv(amount, __.rB, s);
                 rB1 -= amount;
             } else if (sideOut == SIDE_C) {
-                --amount; // SIDE_C sacrifices number rounding for A and B
                 uint256 rC = __.R - __.rA - __.rB;
+                if (rC < amount && 1 < rC) {
+                    --rC;
+                } else {
+                    --amount;
+                }
                 amount = FullMath.mulDiv(amount, rC, s);
             }
             state1.R += amount;
         } else {
-            state1.R -= 100;
+            state1.R -= 1000;
             if (sideIn == SIDE_A) {
-                rB1 -= 100;
+                rB1 -= 1000;
             } else if (sideIn == SIDE_B) {
-                rA1 -= 100;
+                rA1 -= 1000;
             } else if (sideIn == SIDE_C) {
-                rB1 -= 100;
+                rB1 -= 1000;
             }
         }
 
@@ -247,15 +251,11 @@ contract BadHelper1 is Constants, IHelper {
     }
 
     // v(r)
-    function _v(
-        uint256 xk,
-        uint256 r,
-        uint256 R
-    ) internal pure returns (uint256 v) {
+    function _v(uint256 xk, uint256 r, uint256 R) internal pure returns (uint256 v) {
         if (r <= R >> 1) {
             return FullMath.mulDivRoundingUp(r, Q128, xk);
         }
-        uint256 denominator = FullMath.mulDivRoundingUp(R - r, xk << 2, Q128);
+        uint256 denominator = FullMath.mulDiv(R - r, xk, Q126);
         return FullMath.mulDivRoundingUp(R, R, denominator);
     }
 }
