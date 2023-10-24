@@ -42,7 +42,7 @@ describe("Timelock", function () {
     // deploy UTR
     const UTR = require("@derivable/utr/build/UniversalTokenRouter.json")
     const UniversalRouter = new ethers.ContractFactory(UTR.abi, UTR.bytecode, owner)
-    const utr = await UniversalRouter.deploy()
+    const utr = await UniversalRouter.deploy(ethers.constants.HashZero)
     await utr.deployed()
 
     // deploy descriptor

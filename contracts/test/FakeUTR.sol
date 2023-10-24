@@ -4,6 +4,9 @@ pragma solidity 0.8.20;
 import "@derivable/utr/contracts/UniversalTokenRouter.sol";
 
 contract FakeUTR is UniversalTokenRouter {
+    constructor() UniversalTokenRouter('') {
+    }
+
     // override to transfer only half the ammount
     function pay(bytes memory payment, uint256 amount) external override {
         discard(payment, amount);
