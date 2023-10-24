@@ -284,10 +284,10 @@ contract Helper is Constants, IHelper, ERC1155Holder {
                 rB1 -= amount;
             } else /*if (sideIn == SIDE_C)*/ {
                 uint256 rC = __.R - __.rA - __.rB;
-                if (rC > 0) {
-                    rC -= 1;
+                if (rC > 1) {
+                    --rC;
                 }
-                amount = FullMath.mulDiv(rC, amount, s);
+                amount = FullMath.mulDiv(rC, amount-1, s);
             }
         }
 
