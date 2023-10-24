@@ -296,7 +296,7 @@ contract PoolLogic is PoolBase, Fetcher {
     function _r(uint256 xk, uint256 v, uint256 R) internal pure returns (uint256 r) {
         r = FullMath.mulDiv(v, xk, Q128);
         if (r > R >> 1) {
-            uint256 denominator = FullMath.mulDiv(v, xk << 2, Q128);
+            uint256 denominator = FullMath.mulDiv(v, xk, Q126);
             uint256 minuend = FullMath.mulDivRoundingUp(R, R, denominator);
             r = R - minuend;
         }
