@@ -81,34 +81,32 @@ contract View is PoolLogic {
             uint256 elapsed = uint32(block.timestamp) - s_lastInterestTime;
             if (elapsed > 0) {
                 uint256 rate = _decayRate(elapsed, config.INTEREST_HL);
-                if (rate < Q64) {
-                    uint256 rAF = FullMath.mulDivRoundingUp(rA, rate, Q64);
-                    uint256 rBF = FullMath.mulDivRoundingUp(rB, rate, Q64);
-                    if (rA + rB > rAF + rBF) {
-                        (rA, rB) = (rAF, rBF);
-                    }
+                uint256 rAF = FullMath.mulDivRoundingUp(rA, rate, Q64);
+                uint256 rBF = FullMath.mulDivRoundingUp(rB, rate, Q64);
+                if (rAF < rA || rBF < rB) {
+                    // interest cannot exhaust an entire side
+                    rA = Math.max(rAF, 1);
+                    rB = Math.max(rBF, 1);
                 }
             }
         }
         // [PREMIUM]
-        if (config.PREMIUM_HL > 0 && rA != rB) {
+        if (config.PREMIUM_HL > 0) {
+            uint256 diff = rA > rB ? rA - rB : rB - rA;
+            if (diff > 1) {
+                --diff; // premium cannot exhaust an entire side
             uint256 elapsed = uint32(block.timestamp & F_MASK) - (s_lastPremiumTime & F_MASK);
             if (elapsed > 0) {
                 uint256 premium;
-                uint256 diff;
                 if (rA > rB) {
-                    diff = rA - rB;
                     premium = rA - FullMath.mulDiv(R, rB, R - diff);
                 } else {
-                    diff = rB - rA;
                     premium = rB - FullMath.mulDiv(R, rA, R - diff);
                 }
-                // diff cannot be zero because rA != rB
                 uint256 premiumHL = FullMath.mulDivRoundingUp(config.PREMIUM_HL, premium, diff);
                 // make sure the premiumHL is not zero
                 premiumHL = Math.max(1, premiumHL);
                 uint256 rate = _decayRate(elapsed, premiumHL);
-                if (rate < Q64) {
                     premium -= FullMath.mulDivRoundingUp(premium, rate, Q64);
                     if (premium > 0) {
                         if (rA > rB) {
@@ -128,13 +126,6 @@ contract View is PoolLogic {
             if (fee > 0) {
                 R -= fee;
             }
-        }
-        // [SANITIZATION]
-        if (rA < 1) {
-            rA = 1;
-        }
-        if (rB < 1) {
-            rB = 1;
         }
         return (R, rA, rB);
     }

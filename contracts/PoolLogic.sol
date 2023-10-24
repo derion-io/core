@@ -66,41 +66,43 @@ contract PoolLogic is PoolBase, Fetcher {
                     uint256 rate = _decayRate(elapsed, config.INTEREST_HL);
                     uint256 rAF = FullMath.mulDivRoundingUp(rA, rate, Q64);
                     uint256 rBF = FullMath.mulDivRoundingUp(rB, rate, Q64);
-                    if (rA + rB > rAF + rBF) {
-                        (rA, rB) = (rAF, rBF);
+                    if (rAF < rA || rBF < rB) {
+                        // interest cannot exhaust an entire side
+                        rA = Math.max(rAF, 1);
+                        rB = Math.max(rBF, 1);
                         s_lastInterestTime = uint32(block.timestamp);
                     }
                 }
             }
             // [PREMIUM]
-            if (config.PREMIUM_HL > 0 && rA != rB) {
-                uint256 R = state.R;
-                uint256 elapsed = uint32(block.timestamp & F_MASK) - (s_lastPremiumTime & F_MASK);
-                if (elapsed > 0) {
-                    uint256 premium;
-                    uint256 diff;
-                    if (rA > rB) {
-                        diff = rA - rB;
-                        premium = rA - FullMath.mulDiv(R, rB, R - diff);
-                    } else {
-                        diff = rB - rA;
-                        premium = rB - FullMath.mulDiv(R, rA, R - diff);
-                    }
-                    // diff cannot be zero because rA != rB
-                    uint256 premiumHL = FullMath.mulDivRoundingUp(config.PREMIUM_HL, premium, diff);
-                    // make sure the premiumHL is not zero
-                    premiumHL = Math.max(1, premiumHL);
-                    uint256 rate = _decayRate(elapsed, premiumHL);
-                    premium -= FullMath.mulDivRoundingUp(premium, rate, Q64);
-                    if (premium > 0) {
+            if (config.PREMIUM_HL > 0) {
+                uint256 diff = rA > rB ? rA - rB : rB - rA;
+                if (diff > 1) {
+                    --diff; // premium cannot exhaust an entire side
+                    uint256 R = state.R;
+                    uint256 elapsed = uint32(block.timestamp & F_MASK) - (s_lastPremiumTime & F_MASK);
+                    if (elapsed > 0) {
+                        uint256 premium;
                         if (rA > rB) {
-                            rB += FullMath.mulDiv(premium, rB, R - rA);
-                            rA -= premium;
+                            premium = rA - FullMath.mulDiv(R, rB, R - diff);
                         } else {
-                            rA += FullMath.mulDiv(premium, rA, R - rB);
-                            rB -= premium;
+                            premium = rB - FullMath.mulDiv(R, rA, R - diff);
                         }
-                        s_lastPremiumTime += uint32(elapsed);
+                        uint256 premiumHL = FullMath.mulDivRoundingUp(config.PREMIUM_HL, premium, diff);
+                        // make sure the premiumHL is not zero
+                        premiumHL = Math.max(1, premiumHL);
+                        uint256 rate = _decayRate(elapsed, premiumHL);
+                        premium -= FullMath.mulDivRoundingUp(premium, rate, Q64);
+                        if (premium > 0) {
+                            if (rA > rB) {
+                                rB += FullMath.mulDiv(premium, rB, R - rA);
+                                rA -= premium;
+                            } else {
+                                rA += FullMath.mulDiv(premium, rA, R - rB);
+                                rB -= premium;
+                            }
+                            s_lastPremiumTime += uint32(elapsed);
+                        }
                     }
                 }
             }
@@ -113,13 +115,6 @@ contract PoolLogic is PoolBase, Fetcher {
                     state.R -= fee;
                 }
             }
-        }
-        // [SANITIZATION]
-        if (rA < 1) {
-            rA = 1;
-        }
-        if (rB < 1) {
-            rB = 1;
         }
         // [CALCULATION]
         State memory state1 = IHelper(param.helper).swapToState(
