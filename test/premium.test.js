@@ -2,8 +2,7 @@ const { loadFixture, time } = require("@nomicfoundation/hardhat-network-helpers"
 const { baseParams } = require("./shared/baseParams")
 const { loadFixtureFromParams } = require("./shared/scenerios")
 const { SIDE_R, SIDE_A, SIDE_C, SIDE_B } = require("./shared/constant")
-const { numberToWei, bn, weiToNumber } = require("./shared/utilities")
-const { MaxUint256 } = require("@ethersproject/constants")
+const { numberToWei, bn, packId } = require("./shared/utilities")
 const { expect } = require("chai")
 
 const PAYMENT       = 0;
@@ -78,6 +77,79 @@ describe("Premium", function () {
         expect(Math.abs(deviation(premiumB, premiumBExpected)), 'premium B').lte(1/tolerance)
         expect(Math.abs(deviation(premiumC, premiumCExpected)), 'premium C').lte(1/tolerance)
     }
+    it("Apply premium: instant = no elapsed", async function () {
+        const { derivablePools, derivable1155, feeRate, utr, weth, owner } = await loadFixture(fixture)
+        const pool = derivablePools[0]
+
+        await weth.deposit({
+            value: numberToWei(456)
+        })
+        await weth.approve(utr.address, ethers.constants.MaxUint256)
+
+        await utr.exec([], [{
+            inputs: [{
+                mode: PAYMENT,
+                eip: 20,
+                token: weth.address,
+                id: 0,
+                amountIn: numberToWei(1),
+                recipient: pool.contract.address,
+            }],
+            code: pool.contract.address,
+            data: (await pool.swap(
+                SIDE_R,
+                SIDE_A,
+                numberToWei(1),
+                {
+                    populateTransaction: true,
+                    recipient: owner.address,
+                    payer: owner.address,
+                },
+            )).data,
+        }], { gasLimit: 1000000 })
+
+        await utr.exec([], [{
+            inputs: [{
+                mode: PAYMENT,
+                eip: 20,
+                token: weth.address,
+                id: 0,
+                amountIn: numberToWei(1),
+                recipient: pool.contract.address,
+            }],
+            code: pool.contract.address,
+            data: (await pool.swap(
+                SIDE_R,
+                SIDE_C,
+                numberToWei(1),
+                {
+                    populateTransaction: true,
+                    recipient: owner.address,
+                    payer: owner.address,
+                },
+            )).data,
+        }, {
+            inputs: [{
+                mode: PAYMENT,
+                eip: 1155,
+                token: derivable1155.address,
+                id: packId(SIDE_C, pool.contract.address),
+                amountIn: numberToWei(1),
+                recipient: pool.contract.address,
+            }],
+            code: pool.contract.address,
+            data: (await pool.swap(
+                SIDE_C,
+                SIDE_R,
+                numberToWei(1),
+                {
+                    populateTransaction: true,
+                    recipient: owner.address,
+                    payer: owner.address,
+                },
+            )).data,
+        }], { gasLimit: 1000000 })
+    })
 
     it("Apply premium: Long", async function () {
         const { derivablePools, derivable1155, feeRate } = await loadFixture(fixture)
