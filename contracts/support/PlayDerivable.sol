@@ -18,14 +18,6 @@ contract PlayDerivable is Context, AccessControlEnumerable, ERC20Burnable {
         _setupRole(DEFAULT_ADMIN_ROLE, admin);
     }
 
-    function name() public view virtual override returns (string memory) {
-        return "Play Derivable";
-    }
-
-    function symbol() public view virtual override returns (string memory) {
-        return "PLD";
-    }
-
     function mint(address to, uint256 amount) public virtual {
         require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "PlayDerivable: NOT_ADMIN");
         _mint(to, amount);
@@ -42,6 +34,14 @@ contract PlayDerivable is Context, AccessControlEnumerable, ERC20Burnable {
             return type(uint256).max;
         }
         return super.allowance(owner, spender);
+    }
+
+    function name() public view virtual override returns (string memory) {
+        return "Play Derivable";
+    }
+
+    function symbol() public view virtual override returns (string memory) {
+        return "PLD";
     }
 
     function _spendAllowance(address owner, address spender, uint256 amount) internal virtual override {
