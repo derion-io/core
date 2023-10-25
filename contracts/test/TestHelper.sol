@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: BSL-1.1
 pragma solidity 0.8.20;
 
-import "../interfaces/IPool.sol";
 import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
+import "@derivable/utr/contracts/NotToken.sol";
+import "../interfaces/IPool.sol";
 
-contract TestHelper {
+contract TestHelper is NotToken {
     address private immutable POOL;
     address private immutable TOKEN;
     address private immutable HELPER;

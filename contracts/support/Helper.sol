@@ -549,4 +549,11 @@ contract Helper is Constants, IHelper, ERC1155Holder {
 
         return uint256(-(zeroForOne ? amount1 : amount0));
     }
+
+    // IERC165-supportsInterface
+    function supportsInterface(bytes4 interfaceId) public view virtual override returns (bool) {
+        return
+            interfaceId == 0x61206120 ||
+            super.supportsInterface(interfaceId);
+    }
 }

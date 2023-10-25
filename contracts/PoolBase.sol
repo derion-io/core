@@ -219,6 +219,13 @@ abstract contract PoolBase is IPool, ERC1155Holder, Storage, Constants {
         require(f & 1 == 0 && f > 0, 'PoolBase: STATE_INTEGRITY');
     }
 
+    // IERC165-supportsInterface
+    function supportsInterface(bytes4 interfaceId) public view virtual override returns (bool) {
+        return
+            interfaceId == 0x61206120 ||
+            super.supportsInterface(interfaceId);
+    }
+
     /// @notice Returns the metadata of this (MetaProxy) contract.
     /// Only relevant with contracts created via the MetaProxy standard.
     /// @dev This function is aimed to be invoked with- & without a call.
