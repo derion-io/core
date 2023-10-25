@@ -398,6 +398,13 @@ contract Helper is Constants, IHelper, ERC1155Holder {
         );
     }
 
+    // IERC165-supportsInterface
+    function supportsInterface(bytes4 interfaceId) public view virtual override returns (bool) {
+        return
+            interfaceId == 0x61206120 ||
+            super.supportsInterface(interfaceId);
+    }
+
     function _swapMultiPool(SwapParams memory params, address TOKEN_R) internal returns (uint256 amountOut) {
         // swap poolIn/sideIn to poolIn/R
         bytes memory payload = abi.encode(

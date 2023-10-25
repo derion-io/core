@@ -32,7 +32,7 @@ async function main() {
     // deploy utr
     const UTR = require("@derivable/utr/build/UniversalTokenRouter.json")
     const UniversalRouter = new ethers.ContractFactory(UTR.abi, UTR.bytecode, owner)
-    const utr = await UniversalRouter.deploy(ethers.constants.HashZero)
+    const utr = await UniversalRouter.deploy()
     await utr.deployed()
     console.log('utr: ', utr.address)
     addressList["utr"] = utr.address

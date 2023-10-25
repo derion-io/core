@@ -9,6 +9,7 @@ import "@uniswap/lib/contracts/libraries/TransferHelper.sol";
 import "solidity-bytes-utils/contracts/BytesLib.sol";
 
 import "@derivable/erc1155-maturity/contracts/token/ERC1155/IERC1155Supply.sol";
+import "@derivable/utr/contracts/NotToken.sol";
 
 import "../subs/Constants.sol";
 import "../interfaces/IHelper.sol";
@@ -16,7 +17,7 @@ import "../interfaces/IPool.sol";
 import "../interfaces/IPoolFactory.sol";
 import "../interfaces/IWeth.sol";
 
-contract BadHelper1 is Constants, IHelper {
+contract BadHelper1 is NotToken, Constants, IHelper {
     struct SwapParams {
         uint256 sideIn;
         address poolIn;
