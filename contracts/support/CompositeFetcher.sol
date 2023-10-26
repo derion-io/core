@@ -67,15 +67,37 @@ contract CompositeFetcher is Constants {
                 (ORACLE >> 254) % 2,
                 uint32(ORACLE >> 160)
             );
-        } else if (poolType == TYPE_UNIV2) {
+        } else if (sPoolType == TYPE_UNIV2) {
             // v2
-            (sTwap, sSpot) = IFetcher(FETCHER_V2).fetch(ORACLE);
+            (sTwap, sSpot) = IFetcher(FETCHER_V2).fetch(convertOracle(ORACLE));
         } else {
             revert("UNSUPPORTED_SPOOL_TYPE");
         }
-        
+        if (poolType == TYPE_UNIV2 && sPoolType == TYPE_UNIV3) {
+            sTwap = FullMath.mulDiv(sTwap, sTwap, Q128);
+            sSpot = FullMath.mulDiv(sSpot, sSpot, Q128);
+        } else if (poolType == TYPE_UNIV3 && sPoolType == TYPE_UNIV2) {
+            twap = FullMath.mulDiv(twap, twap, Q128);
+            spot = FullMath.mulDiv(spot, spot, Q128);
+        }
         twap = FullMath.mulDiv(twap, sTwap, Q128);
         spot = FullMath.mulDiv(spot, sSpot, Q128);
+    }
+
+    function convertOracle(
+        uint256 ORACLE
+    ) internal view returns (uint256) {
+        uint sqti = (ORACLE >> 254) % 2;
+        uint spi = (ORACLE >> 240) % (1 << 14);
+        uint pt = (ORACLE >> 224) % (1 << 16);
+        uint swindow = uint32(ORACLE >> 160);
+        return (sqti << 255) +
+            (sqti << 254) +
+            (spi << 240) +
+            (pt << 224) +
+            (swindow << 192) +
+            (swindow << 160) +
+            uint256(uint160(_indexToPool(spi)));
     }
 
     function _fetchV3Price(
@@ -84,7 +106,9 @@ contract CompositeFetcher is Constants {
         uint32 window
     ) internal view returns (uint256 twap, uint256 spot) {
         (uint160 sqrtSpotX96, , , , , , ) = IUniswapV3Pool(pool).slot0();
+        
         (int24 arithmeticMeanTick, ) = OracleLibrary.consult(pool, window);
+        
         uint256 sqrtTwapX96 = TickMath.getSqrtRatioAtTick(arithmeticMeanTick);
 
         spot = sqrtSpotX96 << 32;
