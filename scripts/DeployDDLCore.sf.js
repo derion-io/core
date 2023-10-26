@@ -15,7 +15,7 @@ const WETH_BTC = '0x2f5e87C9312fa29aed5c179E456625D79015299c'
 
 // mainnet bsc
 // const weth = '0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c'
-// const utr = '0x05D78D11f1B05ada41daD65B6711f05bC1C1645b'
+// const utr = '0x8Bd6072372189A12A2889a56b6ec982fD02b0B87'
 // const admin = '0x5555a222c465b1873421d844e5d89ed8eb3E5555'
 
 // testnet arb
@@ -356,7 +356,7 @@ task('deployPlayToken', 'Use SingletonFatory to deploy PlayDerivable contract')
                 ethers.utils.hexZeroPad(ethers.utils.hexlify(salt), 32),
                 initCodeHash,
             )
-            console.log(`token: ${address}`)
+            console.log(`PlayDerivable: ${address}`)
             addressList['playToken'] = address
             const byteCodeOfFinalAddress = await provider.getCode(address)
             if (byteCodeOfFinalAddress == '0x') {

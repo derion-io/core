@@ -61,7 +61,11 @@ Step 8: Deploy `Helper.sol`, set Token address get from step 3 and weth address 
 ```
 npx hardhat deployHelper --network <your-network>
 ```
-Address list is stored at `./scripts/json/<address-list-json-file>.json`
+Step 9: Deploy `PlayDerivable.sol`, set Token address get from step 3 and weth address of your network to the constructor
+```
+npx hardhat deployPlayToken --network <your-network>
+```
+Address list is stored at `./scripts/json/<network>.json`
 
 # Design
 

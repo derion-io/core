@@ -61,7 +61,7 @@ module.exports = {
                 },
             ]
         },
-        arbmainnet: {
+        arbitrum: {
             url: process.env.ARB_MAINNET_PROVIDER ?? 'https://arb1.arbitrum.io/rpc',
             accounts: [
                 process.env.MAINNET_DEPLOYER ?? '0x0000000000000000000000000000000000000000000000000000000000000001',
@@ -93,7 +93,7 @@ module.exports = {
             timeout: 20000,
             chainId: 84531
         },
-        basemainnet: {
+        base: {
             url: process.env.BASE_MAINNET_PROVIDER ?? 'https://mainnet.base.org',
             accounts: [
                 process.env.MAINNET_DEPLOYER ?? '0x0000000000000000000000000000000000000000000000000000000000000001',
@@ -101,7 +101,7 @@ module.exports = {
             timeout: 20000,
             chainId: 8453
         },
-        bscmainnet: {
+        bsc: {
             url: process.env.BSC_MAINNET_PROVIDER ?? 'https://bsc-dataseed3.binance.org/',
             accounts: [
                 process.env.MAINNET_DEPLOYER ?? '0x0000000000000000000000000000000000000000000000000000000000000001',
