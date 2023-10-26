@@ -74,11 +74,6 @@ describe('Fetcher logic', function () {
             wethPepeQti ? weth.address : pepe.address,
         )
 
-        // deploy fetchPrice
-        const FetchPrice = await ethers.getContractFactory("FetchPriceUniV3")
-        const fetchPrice = await FetchPrice.deploy()
-        await fetchPrice.deployed()
-
         // FETCHER
         const Fetcher = await ethers.getContractFactory("CompositeFetcher")
         const fetcher = await Fetcher.deploy(
@@ -88,7 +83,7 @@ describe('Fetcher logic', function () {
             1,
             btcWeth.address,
             1,
-            fetchPrice.address
+            AddressZero
         )
 
         return {
@@ -119,7 +114,7 @@ describe('Fetcher logic', function () {
 
         const pepeBtcOracle = bn(wethPepeQti).shl(255)
         .add(bn(btcWethQti).shl(254))
-        .add(bn(2).shl(252))
+        .add(bn(2).shl(240))
         .add(bn(1).shl(224))
         .add(bn(300).shl(192))
         .add(bn(300).shl(160))
@@ -145,7 +140,7 @@ describe('Fetcher logic', function () {
 
         const pepeUsdtOracle = bn(wethPepeQti).shl(255)
         .add(bn(usdtWethQti).shl(254))
-        .add(bn(1).shl(252))
+        .add(bn(1).shl(240))
         .add(bn(1).shl(224))
         .add(bn(300).shl(192))
         .add(bn(300).shl(160))
@@ -170,7 +165,7 @@ describe('Fetcher logic', function () {
 
         const pepeUsdcOracle = bn(wethPepeQti).shl(255)
         .add(bn(usdcWethQti).shl(254))
-        .add(bn(0).shl(252))
+        .add(bn(0).shl(240))
         .add(bn(1).shl(224))
         .add(bn(300).shl(192))
         .add(bn(300).shl(160))
@@ -190,7 +185,7 @@ describe("Pool with CompositeFetcher", function () {
     const fixture = loadFixtureFromParams([])
 
     it("Test", async function() {
-        const { owner, weth, usdc, utr, poolFactory, stateCalHelper, uniswapPair, fetchPrice } = await loadFixture(fixture)
+        const { owner, weth, usdc, utr, poolFactory, stateCalHelper, uniswapPair } = await loadFixture(fixture)
     
         // PEPE
         const erc20Factory = await ethers.getContractFactory('USDC')
@@ -216,13 +211,13 @@ describe("Pool with CompositeFetcher", function () {
             1,
             AddressZero,
             1,
-            fetchPrice.address
+            AddressZero
         )
 
         const usdcWethQti = weth.address.toLowerCase() < usdc.address.toLowerCase() ? 1 : 0
         const oracle = ethers.utils.hexZeroPad(bn(wethPepeQti).shl(255)
             .add(bn(usdcWethQti).shl(254))
-            .add(bn(0).shl(252))
+            .add(bn(0).shl(240))
             .add(bn(1).shl(224))
             .add(bn(300).shl(192))
             .add(bn(300).shl(160))

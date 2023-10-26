@@ -17,13 +17,6 @@ contract CompositeFetcher is Constants {
     uint256 internal immutable PAIR_1_TYPE;
     uint256 internal immutable PAIR_2_TYPE;
 
-    uint256 constant PAIR0_INDEX = 0;
-    uint256 constant PAIR1_INDEX = 1;
-    uint256 constant PAIR2_INDEX = 2;
-
-    uint256 constant POOL_V2 = 0;
-    uint256 constant POOL_V3 = 1;
-
     constructor(
         address pair0,
         uint256 pair0Type,
@@ -42,18 +35,20 @@ contract CompositeFetcher is Constants {
         FETCHER_V2 = fetcherV2;
     }
 
-    // QTI(1bit)|SQTI(1bit)|SPI(2bit)|PT(28bit)|WINDOW(32bit)|SWINDOW(32bit)|POOL(160bit)
+    // QTI(1bit)|SQTI(1bit)|SPI(14bit)|PT(16bit)|WINDOW(32bit)|SWINDOW(32bit)|POOL(160bit)
     function fetch(
         uint256 ORACLE
     ) public returns (uint256 twap, uint256 spot) {
-        uint256 poolType = (ORACLE >> 224) % (1 << 28);
-        if (poolType == POOL_V3) {
+        uint256 poolType = (ORACLE >> 224) % (1 << 16);
+        if (poolType == 1) {
+            // v3
             (twap, spot) = _fetchV3Price(
                 address(uint160(ORACLE)),
                 ORACLE >> 255,
                 uint32(ORACLE >> 192)
             );
-        } else if (poolType == POOL_V2) {
+        } else if (poolType == 0) {
+            // v2
             (twap, spot) = IFetcher(FETCHER_V2).fetch(ORACLE);
         } else {
             revert();
@@ -61,14 +56,16 @@ contract CompositeFetcher is Constants {
 
         uint256 sTwap;
         uint256 sSpot;
-        uint256 sPoolType = _detectSPoolType(_indexToPool((ORACLE >> 252) % 4));
-        if (sPoolType == POOL_V3) {
+        uint256 sPoolType = _detectSPoolType(_indexToPool((ORACLE >> 240) % (1 << 14)));
+        if (sPoolType == 1) {
+            // v3
             (sTwap, sSpot) = _fetchV3Price(
-                _indexToPool((ORACLE >> 252) % 4),
+                _indexToPool((ORACLE >> 240) % (1 << 14)),
                 (ORACLE >> 254) % 2,
                 uint32(ORACLE >> 160)
             );
-        } else if (poolType == POOL_V2) {
+        } else if (poolType == 0) {
+            // v2
             (sTwap, sSpot) = IFetcher(FETCHER_V2).fetch(ORACLE);
         } else {
             revert();
@@ -98,22 +95,18 @@ contract CompositeFetcher is Constants {
 
     // 0: v2, 1: v3
     function _detectSPoolType(address pool) internal view returns (uint256) {
-        if (
-            (pool == PAIR_0 && PAIR_0_TYPE == 0) ||
-            (pool == PAIR_1 && PAIR_1_TYPE == 0) ||
-            (pool == PAIR_2 && PAIR_2_TYPE == 0)
-        ) {
-            return POOL_V2;
-        } else {
-            return POOL_V3;
-        }
+        if  (pool == PAIR_0) return PAIR_0_TYPE;
+        if  (pool == PAIR_1) return PAIR_1_TYPE;
+        if  (pool == PAIR_2) return PAIR_2_TYPE;
+        // undefined pool
+        return 2;
     }
 
     function _indexToPool(uint256 index) internal view returns (address) {
-        if (index == PAIR0_INDEX) {
+        if (index == 0) {
             return PAIR_0;
         }
-        if (index == PAIR1_INDEX) {
+        if (index == 1) {
             return PAIR_1;
         }
         return PAIR_2;
