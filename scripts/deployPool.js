@@ -45,15 +45,16 @@ const gasPrice = gasPrices[chainID]
 const settings = {
     // pairAddress: '0xC31E54c7a869B9FcBEcc14363CF510d1c41fa443',
     // pairAddress: '0x8d76e9c2bd1adde00a3dcdc315fcb2774cb3d1d6',
-    pairAddress: ['0x49B355Bb422dC456314D160C353416afBcAF2996'],
-    power: 5,
+    pairAddress: ['0x31C77F72BCc209AD00E3B7be13d719c08cb7BA7B'],
+    windowBlocks: 120,
+    power: 2,
     interestRate: 0.03 / 100,
     premiumRate: 0.3 / 100,
     MATURITY: 60 * 60 * 12,
     vesting: 60,
     closingFeeDuration: 24 * 60 * 60,
     closingFee: 0.3 / 100,
-    reserveToken: '0xa70926b457618DD7F7a181a5B1b964208159fdD6', // PlayDerivable
+    reserveToken: 'PLD', // PlayDerivable
     // openingFee: 0/100,
     // R: 0.0001, // init liquidity
 }
@@ -62,6 +63,18 @@ async function deploy(settings) {
     const configs = await fetch(
         `https://raw.githubusercontent.com/derivable-labs/configs/dev/${chainID}/network.json`
     ).then(res => res.json())
+
+    const TOKEN_R = settings.reserveToken == 'PLD'
+        ? configs.derivable.playToken
+        : settings.reserveToken ?? configs.wrappedTokenAddress
+
+    if (TOKEN_R == configs.derivable.playToken) {
+        console.log('TOKEN_R', 'PLD')
+    } else if (TOKEN_R == configs.wrappedTokenAddress) {
+        console.log('TOKEn_R', 'WETH')
+    } else {
+        console.log('TOKEn_R', TOKEN_R)
+    }
 
     const provider = new JsonRpcProvider(configs.rpc, chainID)
     const deployer = new ethers.Wallet(process.env.MAINNET_DEPLOYER, provider);
@@ -163,11 +176,15 @@ async function deploy(settings) {
             throw err
         }
     } else {
-        const range = logs[logs.length - 1].blockNumber - logs[0].blockNumber + 1
-        const txFreq = range / logs.length
-        WINDOW = Math.floor(txFreq / 10) * 10
-        WINDOW = Math.max(WINDOW, 20)
-        WINDOW = Math.min(WINDOW, 256)
+        if (!settings.windowBlocks) {
+            const range = logs[logs.length - 1].blockNumber - logs[0].blockNumber + 1
+            const txFreq = range / logs.length
+            WINDOW = Math.floor(txFreq / 10) * 10
+            WINDOW = Math.max(WINDOW, 20)
+            WINDOW = Math.min(WINDOW, 256)
+        } else {
+            WINDOW = settings.windowBlocks
+        }
         console.log('WINDOW', WINDOW, 'block(s)')
     }
 
@@ -228,7 +245,7 @@ async function deploy(settings) {
     const config = {
         FETCHER: slot0 ? AddressZero : configs.derivable.uniswapV2Fetcher,
         ORACLE,
-        TOKEN_R: settings.reserveToken ?? configs.wrappedTokenAddress,
+        TOKEN_R,
         MARK,
         K: bn(K),
         INTEREST_HL,
@@ -262,8 +279,8 @@ async function deploy(settings) {
 
     let params
 
-    if (settings.reserveToken) {
-        const rERC20 = new ethers.Contract(settings.reserveToken, require("@uniswap/v2-core/build/ERC20.json").abi, deployer)
+    if (TOKEN_R != configs.wrappedTokenAddress) {
+        const rERC20 = new ethers.Contract(TOKEN_R, require("@uniswap/v2-core/build/ERC20.json").abi, deployer)
         const rAllowance = await rERC20.allowance(deployer.address, utr.address)
         if (rAllowance.lt(R)) {
             throw new Error("!!! Token reserve approval required !!!")
@@ -287,7 +304,7 @@ async function deploy(settings) {
                     inputs: [{
                         mode: PAYMENT,
                         eip: 20,
-                        token: settings.reserveToken,
+                        token: TOKEN_R,
                         id: 0,
                         amountIn: R,
                         recipient: pool.address,
@@ -310,7 +327,7 @@ async function deploy(settings) {
         ]
     }
 
-    const gasUsed = settings.reserveToken
+    const gasUsed = TOKEN_R != configs.wrappedTokenAddress
         ? await utr.estimateGas.exec(...params)
         : await helper.estimateGas.createPool(...params)
 
@@ -325,7 +342,7 @@ async function deploy(settings) {
     console.log('Sending tx...')
 
     try {
-        const tx = settings.reserveToken
+        const tx = TOKEN_R != configs.wrappedTokenAddress
             ? await utr.exec(...params)
             : await helper.createPool(...params)
         
