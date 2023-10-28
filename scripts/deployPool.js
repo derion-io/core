@@ -26,8 +26,9 @@ function rateFromHL(HL, k, DURATION = SECONDS_PER_DAY) {
 }
 
 const chainID = 56
+
 const SCAN_API_KEY = {
-    42161: process.env.ABISCAN_API_KEY,
+    42161: process.env.ARBISCAN_API_KEY,
     56: process.env.BSCSCAN_API_KEY,
 }
 
@@ -71,9 +72,9 @@ async function deploy(settings) {
     if (TOKEN_R == configs.derivable.playToken) {
         console.log('TOKEN_R', 'PLD')
     } else if (TOKEN_R == configs.wrappedTokenAddress) {
-        console.log('TOKEn_R', 'WETH')
+        console.log('TOKEN_R', 'WETH')
     } else {
-        console.log('TOKEn_R', TOKEN_R)
+        console.log('TOKEN_R', TOKEN_R)
     }
 
     const provider = new JsonRpcProvider(configs.rpc, chainID)
@@ -164,8 +165,12 @@ async function deploy(settings) {
 
     let WINDOW
     if (slot0) {
+        if (!settings.window) {
         const txFreq = EPOCH / logs.length
         WINDOW = Math.ceil(Math.sqrt(txFreq / 60)) * 60
+        } else {
+            WINDOW = settings.window
+        }
         console.log('WINDOW', WINDOW / 60, 'min(s)')
         try {
             await uniswapPair.callStatic.observe([0, WINDOW])
