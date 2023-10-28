@@ -198,26 +198,14 @@ async function deploy(settings) {
         32,
     )
     
-    let MARK
+    const decDiff = decimals0 - decimals1
+    let MARK, price
     if (slot0) {
         MARK = slot0.sqrtPriceX96.shl(32)
         if (QTI == 0) {
             MARK = Q256M.div(MARK)
         }
-
-        const decDiff = decimals0 - decimals1
-
-        let PRICE = MARK.mul(MARK)
-        if (decDiff > 0) {
-            PRICE = PRICE.mul(10 ** decDiff)
-        } else if (decDiff < 0) {
-            PRICE = PRICE.div(10 ** decDiff)
-        }
-        if (PRICE.lt(Q128)) {
-            console.log('MARK', 10000 / Q256M.mul(10000).div(PRICE).toNumber())
-        } else {
-            console.log('MARK', PRICE.mul(10000).div(Q256M).toNumber() / 10000)
-        }
+        price = MARK.mul(MARK).div(10 ** decDiff)
     } else {
         const [r0, r1] = await uniswapPair.getReserves()
         if (QTI == 0) {
@@ -225,20 +213,12 @@ async function deploy(settings) {
         } else {
             MARK = r1.mul(Q128).div(r0)
         }
-
-        const PRICE = MARK
-        const decDiff = decimals0 - decimals1
-        if (decDiff > 0) {
-            PRICE = PRICE.mul(10 ** decDiff)
-        } else if (decDiff < 0) {
-            PRICE = PRICE.div(10 ** decDiff)
+        price = MARK.div(10 ** decDiff)
         }
-
-        if (PRICE.lt(Q128)) {
-            console.log('MARK', 10000 / Q128.mul(10000).div(PRICE).toNumber())
+    if (price.lt(Q128)) {
+        console.log('MARK', PRECISION / Q128.mul(PRECISION).div(price).toNumber())
         } else {
-            console.log('MARK', PRICE.mul(10000).div(Q128).toNumber() / 10000)
-        }
+        console.log('MARK', price.mul(PRECISION).div(Q128).toNumber() / PRECISION)
     }
 
     const INTEREST_HL = rateToHL(settings.interestRate, settings.power)
