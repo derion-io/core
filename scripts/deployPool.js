@@ -1,7 +1,8 @@
 require('dotenv').config()
+const mdp = require('move-decimal-point')
 const { ethers } = require("hardhat")
 const { AddressZero } = ethers.constants
-const { bn, feeToOpenRate } = require("../test/shared/utilities")
+const { bn, feeToOpenRate, numberToWei } = require("../test/shared/utilities")
 const { calculateInitParamsFromPrice } = require("../test/shared/AsymptoticPerpetual")
 const { JsonRpcProvider } = require("@ethersproject/providers");
 const jsonUniswapV3Pool = require("./compiled/UniswapV3Pool.json")
@@ -166,8 +167,8 @@ async function deploy(settings) {
     let WINDOW
     if (slot0) {
         if (!settings.window) {
-        const txFreq = EPOCH / logs.length
-        WINDOW = Math.ceil(Math.sqrt(txFreq / 60)) * 60
+            const txFreq = EPOCH / logs.length
+            WINDOW = Math.ceil(Math.sqrt(txFreq / 60)) * 60
         } else {
             WINDOW = settings.window
         }
@@ -198,14 +199,13 @@ async function deploy(settings) {
         32,
     )
     
-    const decDiff = decimals0 - decimals1
     let MARK, price
     if (slot0) {
         MARK = slot0.sqrtPriceX96.shl(32)
         if (QTI == 0) {
             MARK = Q256M.div(MARK)
         }
-        price = MARK.mul(MARK).div(10 ** decDiff)
+        price = MARK.mul(MARK)
     } else {
         const [r0, r1] = await uniswapPair.getReserves()
         if (QTI == 0) {
@@ -213,13 +213,15 @@ async function deploy(settings) {
         } else {
             MARK = r1.mul(Q128).div(r0)
         }
-        price = MARK.div(10 ** decDiff)
-        }
-    if (price.lt(Q128)) {
-        console.log('MARK', PRECISION / Q128.mul(PRECISION).div(price).toNumber())
-        } else {
-        console.log('MARK', price.mul(PRECISION).div(Q128).toNumber() / PRECISION)
+        price = MARK
     }
+    const decShift = QTI == 0 ? decimals1 - decimals0 : decimals0 - decimals1
+    if (decShift > 0) {
+        price = price.mul(numberToWei(1, decShift))
+    } else if (decShift < 0) {
+        price = price.div(numberToWei(1, -decShift))
+    }
+    console.log('MARK', mulDivNum(price, Q128))
 
     const INTEREST_HL = rateToHL(settings.interestRate, settings.power)
     const PREMIUM_HL = rateToHL(settings.premiumRate, settings.power)
@@ -350,6 +352,21 @@ function waitForKey(keyCode = 10) {
             }
         });
     });
+}
+
+function mulDivNum(a, b, precision = 4) {
+    const al = a.toString().length
+    const bl = b.toString().length
+    const d = al - bl
+    if (d > 0) {
+        b = b.mul(numberToWei(1, d))
+    } else if (d < 0) {
+        a = a.mul(numberToWei(1, -d))
+    }
+    a = a.mul(numberToWei(1, precision))
+    c = a.div(b)
+    c = Math.round(c)
+    return mdp(c, d - precision)
 }
 
 // We recommend this pattern to be able to use async/await everywhere
