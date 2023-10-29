@@ -45,6 +45,7 @@
     "hardhat-gas-reporter": "^1.0.9",
     "jsbi": "^3.2.5",
     "mocha": "^10.0.0",
+    "move-decimal-point": "^0.0.4",
     "prettier": "^2.7.1",
     "prettier-plugin-solidity": "^1.0.0-dev.23",
     "seedrandom": "^3.0.5",

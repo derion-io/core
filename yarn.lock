@@ -7156,6 +7156,11 @@ module-error@^1.0.1, module-error@^1.0.2:
   resolved "https://registry.yarnpkg.com/module-error/-/module-error-1.0.2.tgz#8d1a48897ca883f47a45816d4fb3e3c6ba404d86"
   integrity sha512-0yuvsqSCv8LbaOKhnsQ/T5JhyFlCYLPXK3U2sgV10zoKQwzs/MyfuQUOZQ1V/6OCOJsK/TRgNVrPuPDqtdMFtA==
 
+move-decimal-point@^0.0.4:
+  version "0.0.4"
+  resolved "https://registry.yarnpkg.com/move-decimal-point/-/move-decimal-point-0.0.4.tgz#29a6c0f07f60058380a79d58dae16bc90516e4c4"
+  integrity sha512-cZrpE/ykbwSmD0DnKAcKa49zaK5LaftD6DzpQDmjSMPRK6i4D4xvnVBCIuZXkpAqvon6DP9Oum2TcLZjclVB/Q==
+
 ms@2.0.0:
   version "2.0.0"
   resolved "https://registry.yarnpkg.com/ms/-/ms-2.0.0.tgz#5608aeadfc00be6c2901df5f9861788de0d597c8"
