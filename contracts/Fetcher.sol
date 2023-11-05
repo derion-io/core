@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BSL-1.1
 pragma solidity 0.8.20;
 
-import "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
+import "@uniswap/v3-core/contracts/interfaces/pool/IUniswapV3PoolState.sol";
 import "@uniswap/v3-periphery/contracts/libraries/OracleLibrary.sol";
 import "./interfaces/IFetcher.sol";
 import "./subs/Constants.sol";
@@ -17,7 +17,7 @@ contract Fetcher is Constants, IFetcher {
         uint256 ORACLE
     ) public view returns (uint256 twap, uint256 spot) {
         address pool = address(uint160(ORACLE));
-        (uint160 sqrtSpotX96, , , , , , ) = IUniswapV3Pool(pool).slot0();
+        uint256 sqrtSpotX96 = _sqrtSpotX96(pool);
 
         (int24 arithmeticMeanTick, ) = OracleLibrary.consult(
             pool,
@@ -31,6 +31,17 @@ contract Fetcher is Constants, IFetcher {
         if (ORACLE & Q255 == 0) {
             spot = Q256M / spot;
             twap = Q256M / twap;
+        }
+    }
+
+    function _sqrtSpotX96(address pool) internal view returns (uint256 sqrtSpotX96) {
+        bytes memory encodedParams = abi.encodeWithSelector(IUniswapV3PoolState.slot0.selector);
+        (bool success, bytes memory result) = pool.staticcall(encodedParams);
+        assembly {
+            if eq(success, 0) {
+                revert(add(result,32), mload(result))
+            }
+            sqrtSpotX96 := mload(add(result,32))
         }
     }
 }
