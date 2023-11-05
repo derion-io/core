@@ -477,6 +477,25 @@ task('deployFetcher', 'Use SingletonFatory to deploy Fetcher contract')
         }
     )
 
+task('deployFetcherV3Pancake', 'Use SingletonFatory to deploy Fetcher contract')
+    .setAction(
+        async (taskArgs, hre) => {
+            // deploy fetchPrice factory
+            const Fetcher = await ethers.getContractFactory("FetcherV3Pancake")
+            const estimatedGas = await ethers.provider.estimateGas(
+                Fetcher.getDeployTransaction().data
+            )
+            console.log(estimatedGas)
+            const fetcher = await Fetcher.deploy()
+            await fetcher.deployed()
+            const addressPath = path.join(__dirname, `./json/${hre.network.name}.json`)
+            const addressList = JSON.parse(fs.readFileSync(addressPath, 'utf8'))
+            console.log('fetcherV3Pancake: ', fetcher.address)
+            addressList["fetcherV3Pancake"] = fetcher.address
+            exportData(addressList, hre.network.name)
+        }
+    )
+
 task('deployCompositeFetcher', 'Use SingletonFatory to deploy CompositeFetcher contract')
     .setAction(
         async (taskArgs, hre) => {
