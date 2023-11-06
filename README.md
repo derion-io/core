@@ -182,13 +182,13 @@ With $t$ is the elapsed time, $I$ is *INTEREST_HL* config, we have:
 Premium Rate is charged from the larger side of Long and Short, and pay to the other two sides, pro-rata, give them the chance of negative funding rates. With $t$ is the elapsed time, $P$ is *PREMIUM_HL* config, we have:
 
 If $r_{A0}' > r_{B0}'$, the premium is applied as:
-* $premium = r_{A0}' \times (1-2^{-t\over{P}}) \times \dfrac{r_{A0}' - r_{B0}'}{R_0}$
+* $premium = (1-2^{-t\over{P}}) \times (r_{A0}' - r_{B0}')$
 * $r_{A0}'' = r_{A0}' - premium$
 * $r_{B0}'' = r_{B0}' + premium \times {\dfrac{r_{B0}'}{r_{B0}'+r_{C0}'}}$
 * $r_{C0}'' = r_{C0}' + premium \times {\dfrac{r_{C0}'}{r_{B0}'+r_{C0}'}}$
 
 If $r_{B0}' > r_{A0}'$, the premium is applied as:
-* $premium = r_{B0}' \times (1-2^{-t\over{P}}) \times \dfrac{r_{B0}' - r_{A0}'}{R_0}$
+* $premium = (1-2^{-t\over{P}}) \times (r_{B0}' - r_{A0}')$
 * $r_{B0}'' = r_{B0}' - premium$
 * $r_{A0}'' = r_{A0}' + premium \times{\dfrac{r_{A0}'}{r_{A0}'+r_{C0}'}}$
 * $r_{C0}'' = r_{C0}' + premium \times {\dfrac{r_{C0}'}{r_{A0}'+r_{C0}'}}$
