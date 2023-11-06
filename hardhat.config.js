@@ -67,6 +67,8 @@ module.exports = {
                 process.env.MAINNET_DEPLOYER ?? '0x0000000000000000000000000000000000000000000000000000000000000001',
             ],
             timeout: 900000,
+            weth: '0x82aF49447D8a07e3bd95BD0d56f35241523fBab1',
+            utr: '0x8Bd6072372189A12A2889a56b6ec982fD02b0B87',
             chainId: 42161
         },
         arbtestnet: {
@@ -99,6 +101,7 @@ module.exports = {
                 process.env.MAINNET_DEPLOYER ?? '0x0000000000000000000000000000000000000000000000000000000000000001',
             ],
             timeout: 20000,
+            weth: '0x4200000000000000000000000000000000000006',
             chainId: 8453
         },
         bsc: {
@@ -107,6 +110,8 @@ module.exports = {
                 process.env.MAINNET_DEPLOYER ?? '0x0000000000000000000000000000000000000000000000000000000000000001',
             ],
             timeout: 900000,
+            weth: '0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c',
+            utr: '0x8Bd6072372189A12A2889a56b6ec982fD02b0B87',
             chainId: 56,
             gasPrice: 3e9,
         },
@@ -131,6 +136,7 @@ module.exports = {
     etherscan: {
         apiKey: {
             ethereum: process.env.ETHERSCAN_API_KEY,
+            arbitrumOne: process.env.ARBISCAN_API_KEY,
             bsc: process.env.BSCSCAN_API_KEY
         }
     },

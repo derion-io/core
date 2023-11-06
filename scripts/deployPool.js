@@ -1,12 +1,14 @@
 require('dotenv').config()
+const mdp = require('move-decimal-point')
 const { ethers } = require("hardhat")
 const { AddressZero } = ethers.constants
-const { bn, feeToOpenRate } = require("../test/shared/utilities")
+const { bn, feeToOpenRate, numberToWei } = require("../test/shared/utilities")
 const { calculateInitParamsFromPrice } = require("../test/shared/AsymptoticPerpetual")
 const { JsonRpcProvider } = require("@ethersproject/providers");
 const jsonUniswapV3Pool = require("./compiled/UniswapV3Pool.json")
 const jsonUniswapV2Pool = require("@uniswap/v2-core/build/UniswapV2Pair.json")
 const jsonERC20 = require("../artifacts/@openzeppelin/contracts/token/ERC20/ERC20.sol/ERC20.json")
+const { ADDRESS_ZERO } = require('@uniswap/v3-sdk')
 
 const SECONDS_PER_HOUR = 60 * 60
 const SECONDS_PER_DAY = SECONDS_PER_HOUR * 24
@@ -26,8 +28,9 @@ function rateFromHL(HL, k, DURATION = SECONDS_PER_DAY) {
 }
 
 const chainID = 56
+
 const SCAN_API_KEY = {
-    42161: process.env.ABISCAN_API_KEY,
+    42161: process.env.ARBISCAN_API_KEY,
     56: process.env.BSCSCAN_API_KEY,
 }
 
@@ -59,6 +62,21 @@ const settings = {
     // R: 0.0001, // init liquidity
 }
 
+function findFetcher(fetchers, factory) {
+    const fs = Object.keys(fetchers)
+    let defaultFetcher
+    for (const f of fs) {
+        if (!fetchers[f].factory?.length) {
+            defaultFetcher = [f, fetchers[f]?.type]
+            continue
+        }
+        if (fetchers[f].factory?.includes(factory)) {
+            return [f, fetchers[f]?.type]
+        }
+    }
+    return defaultFetcher
+}
+
 async function deploy(settings) {
     const configs = await fetch(
         `https://raw.githubusercontent.com/derivable-labs/configs/dev/${chainID}/network.json`
@@ -71,28 +89,32 @@ async function deploy(settings) {
     if (TOKEN_R == configs.derivable.playToken) {
         console.log('TOKEN_R', 'PLD')
     } else if (TOKEN_R == configs.wrappedTokenAddress) {
-        console.log('TOKEn_R', 'WETH')
+        console.log('TOKEN_R', 'WETH')
     } else {
-        console.log('TOKEn_R', TOKEN_R)
+        console.log('TOKEN_R', TOKEN_R)
     }
 
     const provider = new JsonRpcProvider(configs.rpc, chainID)
     const deployer = new ethers.Wallet(process.env.MAINNET_DEPLOYER, provider);
     let uniswapPair = new ethers.Contract(settings.pairAddress[0], jsonUniswapV3Pool.abi, provider)
 
-    let slot0
-
-    try {
-        slot0 = await uniswapPair.callStatic.slot0()
-    } catch (error) {
+    const factory = await uniswapPair.callStatic.factory()
+    const [FETCHER, fetcherType] = findFetcher(configs.fetchers, factory)
+    const exp = fetcherType?.endsWith('3') ? 2 : 1
+    if (exp == 1) {
+        // use the univ2 abi
         uniswapPair = new ethers.Contract(settings.pairAddress[0], jsonUniswapV2Pool.abi, provider)
-        FETCHER_UNI_V2 = configs.derivable.uniswapV2Fetcher
+    }
+    if (FETCHER != ADDRESS_ZERO) {
+        console.log('FETCHER', FETCHER)
     }
 
     const [
+        slot0,
         token0,
         token1,
     ] = await Promise.all([
+        exp == 2 ? uniswapPair.callStatic.slot0() : undefined,
         uniswapPair.callStatic.token0(),
         uniswapPair.callStatic.token1(),
     ])
@@ -134,8 +156,8 @@ async function deploy(settings) {
         throw new Error('unable to detect QTI')
     }
 
-    const K = slot0 ? settings.power * 2 : settings.power
-    const prefix = slot0 ? '√' : ''
+    const K = settings.power * exp
+    const prefix = exp == 2 ? '√' : ''
 
     console.log(
         'INDEX',
@@ -144,28 +166,35 @@ async function deploy(settings) {
     )
 
     // detect WINDOW
-    // get the block a day before
-    const now = Math.floor(new Date().getTime() / 1000)
-    const EPOCH = 500 * 60
-    const anEpochAgo = now - EPOCH
-    const blockEpochAgo = await fetch(
-        `${configs.scanApi}?module=block&action=getblocknobytime&timestamp=${anEpochAgo}&closest=before&apikey=${SCAN_API_KEY[chainID]}`
-    ).then(x => x.json()).then(x => Number(x?.result))
+    let logs
+    if ((slot0 && !settings.window) || (!slot0 && !settings.windowBlocks)) {
+        // get the block a day before
+        const now = Math.floor(new Date().getTime() / 1000)
+        const EPOCH = 500 * 60
+        const anEpochAgo = now - EPOCH
+        const blockEpochAgo = await fetch(
+            `${configs.scanApi}?module=block&action=getblocknobytime&timestamp=${anEpochAgo}&closest=before&apikey=${SCAN_API_KEY[chainID]}`
+        ).then(x => x.json()).then(x => Number(x?.result))
 
-    const logs = await fetch(
-        `${configs.scanApi}?module=logs&action=getLogs&address=${settings.pairAddress[0]}` +
-        `&topic0=${SWAP_TOPIC[slot0 ? 3 : 2]}` +
-        `&fromBlock=${blockEpochAgo}&apikey=${SCAN_API_KEY[chainID]}`
-    ).then(x => x.json()).then(x => x?.result)
+            logs = await fetch(
+            `${configs.scanApi}?module=logs&action=getLogs&address=${settings.pairAddress[0]}` +
+            `&topic0=${SWAP_TOPIC[slot0 ? 3 : 2]}` +
+            `&fromBlock=${blockEpochAgo}&apikey=${SCAN_API_KEY[chainID]}`
+        ).then(x => x.json()).then(x => x?.result)
 
-    if (!logs?.length) {
-        throw new Error('no transaction for a whole day')
+        if (!logs?.length) {
+            throw new Error('no transaction for a whole day')
+        }
     }
 
     let WINDOW
     if (slot0) {
-        const txFreq = EPOCH / logs.length
-        WINDOW = Math.ceil(Math.sqrt(txFreq / 60)) * 60
+        if (logs?.length > 0) {
+            const txFreq = EPOCH / logs.length
+            WINDOW = Math.ceil(Math.sqrt(txFreq / 60)) * 60
+        } else {
+            WINDOW = settings.window
+        }
         console.log('WINDOW', WINDOW / 60, 'min(s)')
         try {
             await uniswapPair.callStatic.observe([0, WINDOW])
@@ -176,7 +205,7 @@ async function deploy(settings) {
             throw err
         }
     } else {
-        if (!settings.windowBlocks) {
+        if (logs?.length > 0) {
             const range = logs[logs.length - 1].blockNumber - logs[0].blockNumber + 1
             const txFreq = range / logs.length
             WINDOW = Math.floor(txFreq / 10) * 10
@@ -193,26 +222,13 @@ async function deploy(settings) {
         32,
     )
     
-    let MARK
+    let MARK, price
     if (slot0) {
         MARK = slot0.sqrtPriceX96.shl(32)
         if (QTI == 0) {
             MARK = Q256M.div(MARK)
         }
-
-        const decDiff = decimals0 - decimals1
-
-        let PRICE = MARK.mul(MARK)
-        if (decDiff > 0) {
-            PRICE = PRICE.mul(10 ** decDiff)
-        } else if (decDiff < 0) {
-            PRICE = PRICE.div(10 ** decDiff)
-        }
-        if (PRICE.lt(Q128)) {
-            console.log('MARK', 10000 / Q256M.mul(10000).div(PRICE).toNumber())
-        } else {
-            console.log('MARK', PRICE.mul(10000).div(Q256M).toNumber() / 10000)
-        }
+        price = MARK.mul(MARK)
     } else {
         const [r0, r1] = await uniswapPair.getReserves()
         if (QTI == 0) {
@@ -220,21 +236,15 @@ async function deploy(settings) {
         } else {
             MARK = r1.mul(Q128).div(r0)
         }
-
-        const PRICE = MARK
-        const decDiff = decimals0 - decimals1
-        if (decDiff > 0) {
-            PRICE = PRICE.mul(10 ** decDiff)
-        } else if (decDiff < 0) {
-            PRICE = PRICE.div(10 ** decDiff)
-        }
-
-        if (PRICE.lt(Q128)) {
-            console.log('MARK', 10000 / Q128.mul(10000).div(PRICE).toNumber())
-        } else {
-            console.log('MARK', PRICE.mul(10000).div(Q128).toNumber() / 10000)
-        }
+        price = MARK
     }
+    const decShift = QTI == 0 ? decimals1 - decimals0 : decimals0 - decimals1
+    if (decShift > 0) {
+        price = price.mul(numberToWei(1, decShift))
+    } else if (decShift < 0) {
+        price = price.div(numberToWei(1, -decShift))
+    }
+    console.log('MARK', mulDivNum(price, Q128.pow(exp)))
 
     const INTEREST_HL = rateToHL(settings.interestRate, settings.power)
     const PREMIUM_HL = rateToHL(settings.premiumRate, settings.power)
@@ -243,7 +253,7 @@ async function deploy(settings) {
     console.log('PREMIUM_HL', (PREMIUM_HL / SECONDS_PER_DAY).toFixed(2), 'day(s)')
 
     const config = {
-        FETCHER: slot0 ? AddressZero : configs.derivable.uniswapV2Fetcher,
+        FETCHER,
         ORACLE,
         TOKEN_R,
         MARK,
@@ -365,6 +375,21 @@ function waitForKey(keyCode = 10) {
             }
         });
     });
+}
+
+function mulDivNum(a, b, precision = 4) {
+    const al = a.toString().length
+    const bl = b.toString().length
+    const d = al - bl
+    if (d > 0) {
+        b = b.mul(numberToWei(1, d))
+    } else if (d < 0) {
+        a = a.mul(numberToWei(1, -d))
+    }
+    a = a.mul(numberToWei(1, precision))
+    let c = a.div(b)
+    c = Math.round(c)
+    return mdp(c, d - precision)
 }
 
 // We recommend this pattern to be able to use async/await everywhere

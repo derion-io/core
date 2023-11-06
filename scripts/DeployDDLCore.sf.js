@@ -2,36 +2,10 @@ const fs = require('fs')
 const path = require('path')
 
 const opts = {
-    gasLimit: 5000000
+    gasLimit: 5000000*4,
 }
 
-// mainnet arb
-const weth = '0x82aF49447D8a07e3bd95BD0d56f35241523fBab1'
-const utr = '0x2222C5F0999E74D8D88F7bbfE300147d34c22222'
-const admin = '0xFf6a4D6C03750c0d6449cCF3fF21e1E085c8f26b'
-const WETH_USDC = '0xC31E54c7a869B9FcBEcc14363CF510d1c41fa443'
-const WETH_USDT = '0x641c00a822e8b671738d32a431a4fb6074e5c79d'
-const WETH_BTC = '0x2f5e87C9312fa29aed5c179E456625D79015299c'
-
-// mainnet bsc
-// const weth = '0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c'
-// const utr = '0x8Bd6072372189A12A2889a56b6ec982fD02b0B87'
-// const admin = '0x5555a222c465b1873421d844e5d89ed8eb3E5555'
-
-// testnet arb
-// const weth = '0xe39Ab88f8A4777030A534146A9Ca3B52bd5D43A3'
-// const utr = '0xbc9a257e43f7b3b1a03aEBE909f15e95A4928834'
-// const admin = '0x0af7e6C3dCEd0f86d82229Bd316d403d78F54E07'
-
-// mainnet base
-// const weth = '0x4200000000000000000000000000000000000006'
-// const utr = '0x0e690e6667D48b9E61D9C6eECcb064b8Cb3e3a54'
-// const admin = '0xFf6a4D6C03750c0d6449cCF3fF21e1E085c8f26b'
-
-// testnet base
-// const weth = '0x4200000000000000000000000000000000000006'
-// const utr = '0xb29647dd03F9De2a9Fe9e32DF431dA5015c60353'
-// const admin = '0x0af7e6C3dCEd0f86d82229Bd316d403d78F54E07'
+const admin = '0x5555a222c465b1873421d844e5d89ed8eb3E5555'
 
 const singletonFactoryAddress = '0xce0042B868300000d44A59004Da54A005ffdcf9f'
 
@@ -41,7 +15,8 @@ task('deployFactory', 'Use SingletonFatory to deploy PoolFactory contract')
             const salt = 0
             const saltHex = ethers.utils.hexZeroPad(ethers.utils.hexlify(salt), 32)
             const SingletonFactoryABI = require('./abi/SingletonFactoryABI.json')
-            const { url, gasPrice, accounts } = hre.network.config
+            const { url, accounts } = hre.network.config
+            const gasPrice = hre.network.config.gasPrice != 'auto' ? hre.network.config.gasPrice : undefined
             const account = accounts[0]
             // Connect to the network
             const provider = new ethers.providers.JsonRpcProvider(url)
@@ -65,7 +40,7 @@ task('deployFactory', 'Use SingletonFatory to deploy PoolFactory contract')
             const initCodeHash = ethers.utils.keccak256(initBytecode)
             const address = ethers.utils.getCreate2Address(
                 singletonFactoryAddress,
-                ethers.utils.hexZeroPad(ethers.utils.hexlify(salt), 32),
+                saltHex,
                 initCodeHash,
             )
             console.log(`poolFactory: ${address}`)
@@ -94,7 +69,8 @@ task('deployLogic', 'Use SingletonFatory to deploy Logic contract')
             const salt = 0
             const saltHex = ethers.utils.hexZeroPad(ethers.utils.hexlify(salt), 32)
             const SingletonFactoryABI = require('./abi/SingletonFactoryABI.json')
-            const { url, gasPrice, accounts } = hre.network.config
+            const { url, accounts } = hre.network.config
+            const gasPrice = hre.network.config.gasPrice != 'auto' ? hre.network.config.gasPrice : undefined
             const account = accounts[0]
             // Connect to the network
             const provider = new ethers.providers.JsonRpcProvider(url)
@@ -126,9 +102,9 @@ task('deployLogic', 'Use SingletonFatory to deploy Logic contract')
             addressList['logic'] = address
             const byteCodeOfFinalAddress = await provider.getCode(address)
             if (byteCodeOfFinalAddress == '0x') {
-                console.log(await contractWithSigner.estimateGas.deploy(initBytecode, saltHex))
+                const gasLimit = (await contractWithSigner.estimateGas.deploy(initBytecode, saltHex)) << 1
                 try {
-                    const deployTx = await contractWithSigner.deploy(initBytecode, saltHex, { ...opts, gasPrice })
+                    const deployTx = await contractWithSigner.deploy(initBytecode, saltHex, { ...opts, gasLimit, gasPrice })
                     console.log('Tx: ', deployTx.hash)
                     const res = await deployTx.wait()
                     console.log('Gas Used:', res.gasUsed.toNumber())
@@ -148,7 +124,8 @@ task('deployFeeReceiver', 'Use SingletonFatory to deploy FeeReceiver contract')
             const salt = 0
             const saltHex = ethers.utils.hexZeroPad(ethers.utils.hexlify(salt), 32)
             const SingletonFactoryABI = require('./abi/SingletonFactoryABI.json')
-            const { url, gasPrice, accounts } = hre.network.config
+            const { url, accounts } = hre.network.config
+            const gasPrice = hre.network.config.gasPrice != 'auto' ? hre.network.config.gasPrice : undefined
             const account = accounts[0]
             // Connect to the network
             const provider = new ethers.providers.JsonRpcProvider(url)
@@ -199,7 +176,8 @@ task('deployTokenDescriptor', 'Use SingletonFatory to deploy TokenDescriptor con
             const salt = 0
             const saltHex = ethers.utils.hexZeroPad(ethers.utils.hexlify(salt), 32)
             const SingletonFactoryABI = require('./abi/SingletonFactoryABI.json')
-            const { url, gasPrice, accounts } = hre.network.config
+            const { url, accounts } = hre.network.config
+            const gasPrice = hre.network.config.gasPrice != 'auto' ? hre.network.config.gasPrice : undefined
             const account = accounts[0]
             // Connect to the network
             const provider = new ethers.providers.JsonRpcProvider(url)
@@ -247,7 +225,8 @@ task('deployTokenDescriptor', 'Use SingletonFatory to deploy TokenDescriptor con
 task('setDescriptor', 'Use SingletonFatory to deploy TokenDescriptor contract')
     .setAction(
         async (taskArgs, hre) => {
-            const { url, gasPrice, accounts } = hre.network.config
+            const { url, accounts } = hre.network.config
+            const gasPrice = hre.network.config.gasPrice != 'auto' ? hre.network.config.gasPrice : undefined
             const account = accounts[0]
             // Connect to the network
             const provider = new ethers.providers.JsonRpcProvider(url)
@@ -275,7 +254,8 @@ task('deployToken', 'Use SingletonFatory to deploy Token contract')
             const salt = 0
             const saltHex = ethers.utils.hexZeroPad(ethers.utils.hexlify(salt), 32)
             const SingletonFactoryABI = require('./abi/SingletonFactoryABI.json')
-            const { url, gasPrice, accounts } = hre.network.config
+            const { url, accounts, utr } = hre.network.config
+            const gasPrice = hre.network.config.gasPrice != 'auto' ? hre.network.config.gasPrice : undefined
             const account = accounts[0]
             // Connect to the network
             const provider = new ethers.providers.JsonRpcProvider(url)
@@ -327,7 +307,8 @@ task('deployPlayToken', 'Use SingletonFatory to deploy PlayDerivable contract')
             const salt = 0
             const saltHex = ethers.utils.hexZeroPad(ethers.utils.hexlify(salt), 32)
             const SingletonFactoryABI = require('./abi/SingletonFactoryABI.json')
-            const { accounts, gasPrice, url } = hre.network.config
+            const { accounts, url } = hre.network.config
+            const gasPrice = hre.network.config.gasPrice != 'auto' ? hre.network.config.gasPrice : undefined
             const account = accounts[0]
             // Connect to the network
             const provider = new ethers.providers.JsonRpcProvider(url)
@@ -380,7 +361,8 @@ task('mintPlayToken', 'Mint PlayDerivable token')
     .addParam('amount', 'The amount of 1e18 token')
     .setAction(
         async (taskArgs, hre) => {
-            const { accounts, gasPrice, url } = hre.network.config
+            const { accounts, url } = hre.network.config
+            const gasPrice = hre.network.config.gasPrice != 'auto' ? hre.network.config.gasPrice : undefined
             const account = accounts[0]
             // Connect to the network
             const provider = new ethers.providers.JsonRpcProvider(url)
@@ -411,7 +393,8 @@ task('deployHelper', 'Use SingletonFatory to deploy Helper contract')
             const salt = 0
             const saltHex = ethers.utils.hexZeroPad(ethers.utils.hexlify(salt), 32)
             const SingletonFactoryABI = require('./abi/SingletonFactoryABI.json')
-            const { url, gasPrice, accounts } = hre.network.config
+            const { url, accounts, weth } = hre.network.config
+            const gasPrice = hre.network.config.gasPrice != 'auto' ? hre.network.config.gasPrice : undefined
             const account = accounts[0]
             // Connect to the network
             const provider = new ethers.providers.JsonRpcProvider(url)
