@@ -113,7 +113,7 @@ function loadFixtureFromParams (arrParams, options={}) {
     const quoteTokenIndex = weth.address.toLowerCase() < usdc.address.toLowerCase() ? 1 : 0
     const deno = options.initPriceDeno || 1
     const initPriceX96 = encodeSqrtX96(quoteTokenIndex ? initPrice : deno, quoteTokenIndex ? deno : initPrice)
-    const Univ3PoolMock = await ethers.getContractFactory("Univ3PoolMock")
+    const Univ3PoolMock = await ethers.getContractFactory("Pancake3PoolMock")
     const uniswapPair = await Univ3PoolMock.deploy(
       initPriceX96, 
       initPriceX96,
