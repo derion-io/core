@@ -12,7 +12,7 @@ struct Config {
     uint256 MATURITY;
     uint256 MATURITY_VEST;
     uint256 MATURITY_RATE; // x128
-    uint256 OPEN_RATE;
+    uint256 OPEN_RATE;  // TODO: rename to VOLATILITY_HL;
 }
 
 struct Param {

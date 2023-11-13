@@ -55,10 +55,37 @@ contract PoolLogic is PoolBase, Fetcher {
         State memory state = State(_reserve(config.TOKEN_R), s_a, s_b);
         // [PRICE SELECTION]
         uint256 xk; uint256 rA; uint256 rB;
-        (xk, rA, rB, result.price) = _selectPrice(config, state, sideIn, sideOut);
         unchecked {
             // track the rC before interest and premium for fee calculation
             uint256 rC = state.R - rA - rB;
+            // [VOLATILITY FEE]
+            {
+                uint256 twap;
+                (xk, rA, rB, result.price, twap) = _selectPrice(config, state, sideIn, sideOut);
+                if (config.OPEN_RATE > 0) {
+                    uint256 lastTwap = s_lastTwap;
+                    if (lastTwap == 0) {
+                        s_lastTwap = twap;
+                        s_lastVolatilityTime = uint32(block.timestamp);
+                    } else if (lastTwap != twap) {
+                        uint256 rate = _decayRate(
+                            uint32(block.timestamp) - s_lastVolatilityTime,
+                            config.OPEN_RATE
+                        );
+                        if (rate < Q64 && twap != lastTwap) {
+                            if (twap > lastTwap) {
+                                uint rAk = _r(_xk(config, lastTwap), state.a, state.R);
+                                rA = rAk + FullMath.mulDivRoundingUp(rA - rAk, rate, Q64);
+                            } else {
+                                uint rBk = _r(Q256M/_xk(config, lastTwap), state.b, state.R);
+                                rB = rBk + FullMath.mulDivRoundingUp(rB - rBk, rate, Q64);
+                            }
+                            s_lastTwap = twap;
+                            s_lastVolatilityTime = uint32(block.timestamp);
+                        }
+                    }
+                }
+            }
             // [INTEREST]
             if (config.INTEREST_HL > 0) {
                 uint256 elapsed = uint32(block.timestamp) - s_lastInterestTime;
@@ -180,11 +207,9 @@ contract PoolLogic is PoolBase, Fetcher {
         State memory state,
         uint256 sideIn,
         uint256 sideOut
-    ) internal returns (uint256 xk, uint256 rA, uint256 rB, uint256 price) {
-        (uint256 min, uint256 max) = _fetch(config.FETCHER, uint256(config.ORACLE));
-        if (min > max) {
-            (min, max) = (max, min);
-        }
+    ) internal returns (uint256 xk, uint256 rA, uint256 rB, uint256 price, uint256 twap) {
+        (twap, price) = _fetch(config.FETCHER, uint256(config.ORACLE));
+        (uint256 min, uint256 max) = twap < price ? (twap, price) : (price, twap);
         if (sideOut == SIDE_A || sideIn == SIDE_B) {
             xk = _xk(config, price = max);
             (rA, rB) = _evaluate(xk, state);

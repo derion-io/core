@@ -14,4 +14,7 @@ contract Storage {
 
     // the SHORT coefficient of the pool
     uint224 internal s_b;
+
+    uint32  internal s_lastVolatilityTime;
+    uint256 internal s_lastTwap;
 }
