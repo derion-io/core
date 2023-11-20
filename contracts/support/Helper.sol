@@ -89,7 +89,8 @@ contract Helper is Constants, IHelper, ERC1155Holder {
         uint256 amountIn,
         uint256 amountOut,
         uint256 price,
-        uint256 priceR
+        uint256 priceR,
+        uint256 amountR
     );
 
     constructor(address token, address weth) {
@@ -178,7 +179,8 @@ contract Helper is Constants, IHelper, ERC1155Holder {
             amountInR,
             amountOut,
             price,
-            priceR
+            priceR,
+            amountInR
         );
     }
 
@@ -235,7 +237,8 @@ contract Helper is Constants, IHelper, ERC1155Holder {
             params.amount,
             amountOutR,
             price,
-            priceR
+            priceR,
+            amountOutR
         );
     }
 
@@ -337,12 +340,13 @@ contract Helper is Constants, IHelper, ERC1155Holder {
             return amountOut;
         }
 
+        uint256 amountR;
         if (params.sideIn == SIDE_NATIVE) {
             require(TOKEN_R == WETH, 'Reserve token is not Wrapped');
             require(msg.value != 0, 'Value need > 0');
             IWeth(WETH).deposit{value : msg.value}();
-            uint256 amount = IWeth(WETH).balanceOf(address(this));
-            IERC20(WETH).approve(params.poolIn, amount);
+            amountR = IWeth(WETH).balanceOf(address(this));
+            IERC20(WETH).approve(params.poolIn, amountR);
             params.payer = '';
             params.sideIn = SIDE_R;
         }
@@ -394,7 +398,8 @@ contract Helper is Constants, IHelper, ERC1155Holder {
             params.amountIn,
             amountOut,
             price,
-            priceR
+            priceR,
+            amountR
         );
     }
 
@@ -438,6 +443,7 @@ contract Helper is Constants, IHelper, ERC1155Holder {
             params.sideOut,
             amountOut
         );
+        uint256 amountR = amountOut;
         (, amountOut, price) = IPool(params.poolOut).swap(
             Param(
                 SIDE_R,
@@ -472,7 +478,8 @@ contract Helper is Constants, IHelper, ERC1155Holder {
             params.amountIn,
             amountOut,
             price,
-            priceR
+            priceR,
+            amountR
         );
     }
 
