@@ -16,7 +16,7 @@ import "@derivable/utr/contracts/interfaces/IUniversalTokenRouter.sol";
 import "../subs/Constants.sol";
 import "../interfaces/IHelper.sol";
 import "../interfaces/IPool.sol";
-import "../interfaces/IPoolFactory.sol";
+import "../PoolFactory.sol";
 import "../interfaces/IWeth.sol";
 
 contract Helper is Constants, IHelper, ERC1155Holder {
@@ -104,7 +104,7 @@ contract Helper is Constants, IHelper, ERC1155Holder {
     function createPool(
         Config memory config, State memory state, address factory
     ) external payable returns (address pool) {
-        pool = IPoolFactory(factory).createPool(config);
+        pool = PoolFactory(factory).createPool(config);
         IWeth(WETH).deposit{value : msg.value}();
         uint256 amount = IWeth(WETH).balanceOf(address(this));
         IERC20(WETH).approve(pool, amount);

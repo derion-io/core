@@ -5,6 +5,7 @@ import "@openzeppelin/contracts/utils/Create2.sol";
 import "@derivable/utr/contracts/NotToken.sol";
 import "./libs/MetaProxyFactory.sol";
 import "./interfaces/IPoolFactory.sol";
+import "./interfaces/IPool.sol";
 
 /// @title Factory contract to deploy Derivable pool using ERC-3448.
 /// @author Derivable Labs
