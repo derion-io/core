@@ -1,6 +1,7 @@
 require('dotenv').config()
 const mdp = require('move-decimal-point')
 const { ethers } = require("hardhat")
+const { utils } = ethers
 const { AddressZero } = ethers.constants
 const { bn, feeToOpenRate, numberToWei } = require("../test/shared/utilities")
 const { calculateInitParamsFromPrice } = require("../test/shared/AsymptoticPerpetual")
@@ -27,7 +28,7 @@ function rateFromHL(HL, k, DURATION = SECONDS_PER_DAY) {
     return DURATION * Math.LN2 / HL / k / k
 }
 
-const chainID = 56
+const chainID = 42161
 
 const SCAN_API_KEY = {
     42161: process.env.ARBISCAN_API_KEY,
@@ -48,16 +49,18 @@ const gasPrice = gasPrices[chainID]
 const settings = {
     // pairAddress: '0xC31E54c7a869B9FcBEcc14363CF510d1c41fa443',
     // pairAddress: '0x8d76e9c2bd1adde00a3dcdc315fcb2774cb3d1d6',
-    pairAddress: ['0x31C77F72BCc209AD00E3B7be13d719c08cb7BA7B'],
+    pairAddress: ['0x59d72ddb29da32847a4665d08ffc8464a7185fae'],
+    topics: ['MAG', 'MA'],
+    window: 120,
     windowBlocks: 120,
-    power: 2,
+    power: 8,
     interestRate: 0.03 / 100,
-    premiumRate: 0.3 / 100,
+    premiumRate: 3 / 100,
     MATURITY: 60 * 60 * 12,
-    vesting: 60,
-    closingFeeDuration: 24 * 60 * 60,
-    closingFee: 0.3 / 100,
-    reserveToken: 'PLD', // PlayDerivable
+    vesting: 120,
+    closingFeeDuration: 1 * 60 * 60,
+    closingFee: 1 / 100,
+    // reserveToken: 'PLD', // PlayDerivable
     // openingFee: 0/100,
     // R: 0.0001, // init liquidity
 }
@@ -79,7 +82,7 @@ function findFetcher(fetchers, factory) {
 
 async function deploy(settings) {
     const configs = await fetch(
-        `https://raw.githubusercontent.com/derivable-labs/configs/dev/${chainID}/network.json`
+        `https://raw.githubusercontent.com/derivable-labs/configs/deployer/${chainID}/network.json`
     ).then(res => res.json())
 
     const TOKEN_R = settings.reserveToken == 'PLD'
@@ -164,6 +167,17 @@ async function deploy(settings) {
         QTI == 1 ? `${prefix}${symbol0}/${symbol1}` : `${prefix}${symbol1}/${symbol0}`,
         'x' + K,
     )
+
+    const [baseToken, baseSymbol] = QTI == 1 ? [token0, symbol0] : [token1, symbol1]
+    const topic2 = settings.topics?.[0] ?? baseSymbol.slice(0, -1)
+    const topic3 = settings.topics?.[1] ?? baseSymbol.substring(1)
+    const topics = [baseToken, baseSymbol, topic2, topic3]
+    console.log('TOPICS', ...topics)
+    topics.forEach((_,i) => {
+        if (i > 0) {
+            topics[i] = utils.formatBytes32String(topics[i])
+        }
+    })
 
     // detect WINDOW
     let logs
@@ -272,7 +286,7 @@ async function deploy(settings) {
     console.log('OPEN_FEE', Q128.sub(config.OPEN_RATE).mul(PRECISION*100).shr(128).toNumber() / PRECISION, '%')
 
     // Create Pool
-    const poolFactory = await ethers.getContractAt("contracts/PoolFactory.sol:PoolFactory", configs.derivable.poolFactory, deployer)
+    const poolDeployer = await ethers.getContractAt("contracts/support/PoolDeployer.sol:PoolDeployer", configs.derivable.poolDeployer, deployer)
 
     // init the pool
     const R = ethers.utils.parseEther(String(settings.R ?? 0.0001))
@@ -282,7 +296,7 @@ async function deploy(settings) {
     const helper = await ethers.getContractAt("contracts/support/Helper.sol:Helper", configs.derivable.helper ?? configs.derivable.stateCalHelper, deployer)
 
     // get pool address
-    const poolAddress = await poolFactory.callStatic.createPool(config)
+    const poolAddress = await poolDeployer.callStatic.create(config)
     const pool = await ethers.getContractAt("PoolBase", poolAddress)
 
     console.log('New Pool Address:', poolAddress)
@@ -302,44 +316,43 @@ async function deploy(settings) {
         }
         params = [
             [],
-            [
-                {
-                    inputs: [],
-                    code: poolFactory.address,
-                    data: (await poolFactory.populateTransaction.createPool(
-                        config
-                    )).data,
-                },
-                {
-                    inputs: [{
-                        mode: PAYMENT,
-                        eip: 20,
-                        token: TOKEN_R,
-                        id: 0,
-                        amountIn: R,
-                        recipient: pool.address,
-                    }],
-                    code: poolAddress,
-                    data: (await pool.populateTransaction.init(
-                        initParams,
-                        payment,
-                    )).data,
-                }
-            ],
+            [{
+                inputs: [{
+                    mode: PAYMENT,
+                    eip: 20,
+                    token: TOKEN_R,
+                    id: 0,
+                    amountIn: R,
+                    recipient: pool.address,
+                }],
+                code: poolDeployer.address,
+                data: (await poolDeployer.populateTransaction.deploy(
+                    config,
+                    initParams,
+                    payment,
+                    ...topics,
+                )).data,
+            }],
             { gasPrice },
         ]
     } else {
+        const payment = {
+            utr: AddressZero,
+            payer: [],
+            recipient: deployer.address,
+        }
         params = [
             config,
             initParams,
-            configs.derivable.poolFactory,
+            payment,
+            ...topics,
             { value: R, gasPrice },
         ]
     }
 
     const gasUsed = TOKEN_R != configs.wrappedTokenAddress
         ? await utr.estimateGas.exec(...params)
-        : await helper.estimateGas.createPool(...params)
+        : await poolDeployer.estimateGas.deploy(...params)
 
     console.log('Estimated Gas:', gasUsed.toNumber().toLocaleString())
 
@@ -354,7 +367,7 @@ async function deploy(settings) {
     try {
         const tx = TOKEN_R != configs.wrappedTokenAddress
             ? await utr.exec(...params)
-            : await helper.createPool(...params)
+            : await poolDeployer.deploy(...params)
         
         console.log('Waiting for tx receipt...', tx.hash)
 
