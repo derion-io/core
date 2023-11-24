@@ -29,42 +29,21 @@ The following contracts are not part of the core protocol so user's funds should
 
 ## Deployment instructions
 ### Deployment sequence
-Step 1: Deploy `Fetcher.sol` for fetching Oracle Price, configure when create a pool
+
+Contract dependencies:
+* FeeReceiver, PlayToken: nothing
+* Token: UTR
+* Logic: Token
+* Deployer: Logic
+* TokenDescriptor: Deployer
+* Helper: Token
+
+Deploy each contract using
+
 ```
-npx hardhat deployFetcher --network <your-network>
+npx hardhat deploy<Name> --network <network>
 ```
-Step 2: Deploy `FeeReceiver.sol`, use FeeReceiver address to set into the constructor of PoolLogic
-```
-npx hardhat deployFeeReceiver --network <your-network>
-```
-Step 3: Deploy `Token.sol`, use Token address to set into the constructor of PoolLogic
-```
-npx hardhat deployToken --network <your-network>
-```
-Step 4: Deploy `PoolLogic.sol` with FeeReceiver and Token address from the previous steps
-```
-npx hardhat deployLogic --network <your-network>
-```
-Step 5: Deploy `PoolFactory.sol` with Logic address from the previous step
-```
-npx hardhat deployFactory --network <your-network>
-```
-Step 6: Deploy `TokenDescriptor.sol`, use TokenDescriptor address to configure the description of Token on next step
-```
-npx hardhat deployDescriptor --network <your-network>
-```
-Step 7: Set TokenDescriptor on Token
-```
-npx hardhat setDescriptor --network <your-network>
-```
-Step 8: Deploy `Helper.sol`, set Token address get from step 3 and weth address of your network to the constructor
-```
-npx hardhat deployHelper --network <your-network>
-```
-Step 9: Deploy `PlayDerivable.sol`, set Token address get from step 3 and weth address of your network to the constructor
-```
-npx hardhat deployPlayToken --network <your-network>
-```
+
 Address list is stored at `./scripts/json/<network>.json`
 
 # Design
