@@ -108,6 +108,10 @@ function loadFixtureFromParams (arrParams, options={}) {
       value: numberToWei("10000000000000000000")
     })
     
+    // PoolDeployer
+    const PoolDeployer = await ethers.getContractFactory("PoolDeployer");
+    const poolDeployer = await PoolDeployer.deploy(weth.address, logic.address)
+
     // INIT PAIRRRRR 
     const initPrice = options.initPrice || 1500
     const quoteTokenIndex = weth.address.toLowerCase() < usdc.address.toLowerCase() ? 1 : 0
@@ -221,6 +225,7 @@ function loadFixtureFromParams (arrParams, options={}) {
       usdc,
       utr,
       poolFactory,
+      poolDeployer,
       derivablePools: pools,
       derivable1155,
       feeReceiver,

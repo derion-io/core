@@ -10,6 +10,7 @@ chai.use(solidity)
 const expect = chai.expect
 const { AddressZero, MaxUint256 } = ethers.constants
 const { bn, swapToSetPriceMock, packId, numberToWei, encodePayment } = require("./shared/utilities")
+const { utils } = ethers
 
 const fe = (x) => Number(ethers.utils.formatEther(x))
 const pe = (x) => ethers.utils.parseEther(String(x))
@@ -109,6 +110,108 @@ describe("Protocol", function () {
                 expect(await derivable1155.totalSupply(packId(SIDE_R, derivablePools[0].contract.address))).equal(0)
                 expect(await derivable1155.totalSupply(0)).equal(0)
             })
+        })
+    })
+
+    describe("Pool Deployer", async function() {
+        it("Without UTR", async function () {
+            const { owner, weth, utr, params, poolDeployer } = await loadFixture(fixture)
+            const baseToken = weth.address
+            const R = numberToWei(5)
+            const config = {
+                FETCHER: params[0].fetcher,
+                ORACLE: params[0].oracle,
+                TOKEN_R: params[0].reserveToken,
+                MARK: params[0].mark,
+                K: bn(6),
+                INTEREST_HL: params[0].halfLife,
+                PREMIUM_HL: params[0].premiumHL,
+                MATURITY: params[0].maturity,
+                MATURITY_VEST: params[0].maturityVest,
+                MATURITY_RATE: params[0].maturityRate,
+                OPEN_RATE: params[0].openRate,
+            }
+            const state = {
+                R,
+                a: R.div(3),
+                b: R.div(3),
+            }
+            const payment = {
+                utr: AddressZero,
+                payer: [],
+                recipient: owner.address,
+            }
+            const tx = await poolDeployer.deploy(
+                config,
+                state,
+                payment,
+                weth.address,
+                utils.formatBytes32String("WETH"),
+                utils.formatBytes32String("ETH"),
+                utils.formatBytes32String("ET"),
+                { value: R }
+            )
+            const receipt = await tx.wait()
+            const baseTokenTopic = utils.hexZeroPad(baseToken.toLocaleLowerCase(), 32)
+            const event = receipt.logs.find(({topics}) => topics[0] == baseTokenTopic)
+            expect(event?.topics?.length).equals(4)
+        })
+
+        it("With UTR", async function () {
+            const { owner, weth, utr, params, poolDeployer } = await loadFixture(fixture)
+            const baseToken = weth.address
+            const R = numberToWei(5)
+            const config = {
+                FETCHER: params[0].fetcher,
+                ORACLE: params[0].oracle,
+                TOKEN_R: params[0].reserveToken,
+                MARK: params[0].mark,
+                K: bn(6),
+                INTEREST_HL: params[0].halfLife,
+                PREMIUM_HL: params[0].premiumHL,
+                MATURITY: params[0].maturity,
+                MATURITY_VEST: params[0].maturityVest,
+                MATURITY_RATE: params[0].maturityRate,
+                OPEN_RATE: params[0].openRate,
+            }
+            const poolAddress = await poolDeployer.callStatic.create(config)
+            const state = {
+                R,
+                a: R.div(3),
+                b: R.div(3),
+            }
+            const payment = {
+                utr: utr.address,
+                payer: encodePayment(owner.address, poolAddress, 20, weth.address, 0),
+                recipient: owner.address,
+            }
+            const { data } = await poolDeployer.populateTransaction.deploy(
+                config,
+                state,
+                payment,
+                weth.address,
+                utils.formatBytes32String("BTCB"),
+                utils.formatBytes32String("BTC"),
+                utils.formatBytes32String("BT"),
+            )
+
+            await weth.approve(utr.address, MaxUint256)
+            const tx = await utr.exec([], [{
+                inputs: [{
+                    mode: PAYMENT,
+                    eip: 20,
+                    token: weth.address,
+                    id: 0,
+                    amountIn: numberToWei(5),
+                    recipient: poolAddress,
+                }],
+                code: poolDeployer.address,
+                data,
+            }])
+            const receipt = await tx.wait()
+            const baseTokenTopic = utils.hexZeroPad(baseToken.toLocaleLowerCase(), 32)
+            const event = receipt.logs.find(({topics}) => topics[0] == baseTokenTopic)
+            expect(event?.topics?.length).equals(4)
         })
     })
 
