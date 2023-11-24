@@ -9,13 +9,13 @@ const admin = '0x5555a222c465b1873421d844e5d89ed8eb3E5555'
 
 const singletonFactoryAddress = '0xce0042B868300000d44A59004Da54A005ffdcf9f'
 
-task('deployFactory', 'Use SingletonFatory to deploy PoolFactory contract')
+task('deployDeployer', 'Use SingletonFatory to deploy PoolDeployer contract')
     .setAction(
         async (taskArgs, hre) => {
             const salt = 0
             const saltHex = ethers.utils.hexZeroPad(ethers.utils.hexlify(salt), 32)
             const SingletonFactoryABI = require('./abi/SingletonFactoryABI.json')
-            const { url, accounts } = hre.network.config
+            const { url, accounts, weth } = hre.network.config
             const gasPrice = hre.network.config.gasPrice != 'auto' ? hre.network.config.gasPrice : undefined
             const account = accounts[0]
             // Connect to the network
@@ -23,14 +23,14 @@ task('deployFactory', 'Use SingletonFatory to deploy PoolFactory contract')
             const contract = new ethers.Contract(singletonFactoryAddress, SingletonFactoryABI, provider)
             const wallet = new ethers.Wallet(account, provider)
             const contractWithSigner = contract.connect(wallet)
-            const byteCode = require('../artifacts/contracts/PoolFactory.sol/PoolFactory.json').bytecode
+            const byteCode = require('../artifacts/contracts/support/PoolDeployer.sol/PoolDeployer.json').bytecode
 
             const addressPath = path.join(__dirname, `./json/${hre.network.name}.json`)
             const addressList = JSON.parse(fs.readFileSync(addressPath, 'utf8'))
 
             const params = ethers.utils.defaultAbiCoder.encode(
-                ['address'],
-                [addressList['logic']]
+                ['address', 'address'],
+                [weth, addressList['logic']]
             )
             const initBytecode = ethers.utils.solidityPack(
                 ['bytes', 'bytes'],
@@ -43,11 +43,12 @@ task('deployFactory', 'Use SingletonFatory to deploy PoolFactory contract')
                 saltHex,
                 initCodeHash,
             )
-            console.log(`poolFactory: ${address}`)
-            addressList['poolFactory'] = address
+            console.log(`poolDeployer: ${address}`)
+            addressList['poolDeployer'] = address
             const byteCodeOfFinalAddress = await provider.getCode(address)
             if (byteCodeOfFinalAddress == '0x') {
-                console.log(await contractWithSigner.estimateGas.deploy(initBytecode, saltHex))
+                const estimatedGas = await contractWithSigner.estimateGas.deploy(initBytecode, saltHex)
+                console.log('Estimated Gas: ', estimatedGas.toNumber())
                 try {
                     const deployTx = await contractWithSigner.deploy(initBytecode, saltHex, { ...opts, gasPrice })
                     console.log('Tx: ', deployTx.hash)
