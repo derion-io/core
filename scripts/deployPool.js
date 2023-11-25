@@ -62,7 +62,7 @@ const settings = {
     closingFee: 1 / 100,
     // reserveToken: 'PLD', // PlayDerivable
     // openingFee: 0/100,
-    // R: 0.0001, // init liquidity
+    // R: 0.0003, // init liquidity
 }
 
 function findFetcher(fetchers, factory) {
@@ -85,19 +85,22 @@ async function deploy(settings) {
         `https://raw.githubusercontent.com/derivable-labs/configs/deployer/${chainID}/network.json`
     ).then(res => res.json())
 
+    const provider = new JsonRpcProvider(configs.rpc, chainID)
+
     const TOKEN_R = settings.reserveToken == 'PLD'
         ? configs.derivable.playToken
         : settings.reserveToken ?? configs.wrappedTokenAddress
 
-    if (TOKEN_R == configs.derivable.playToken) {
-        console.log('TOKEN_R', 'PLD')
-    } else if (TOKEN_R == configs.wrappedTokenAddress) {
-        console.log('TOKEN_R', 'WETH')
-    } else {
-        console.log('TOKEN_R', TOKEN_R)
-    }
+    const tokenR = new ethers.Contract(TOKEN_R, jsonERC20.abi, provider)
+    console.log('TOKEN_R', await tokenR.symbol())
 
-    const provider = new JsonRpcProvider(configs.rpc, chainID)
+    // const balance = await tokenR.balanceOf('0xC80EdE62B650Fd825FA9E0e17E6dc03cdcD30562')
+    // console.log(balance)
+
+    // const r = await provider.getTransactionReceipt('0x45fc367f05054bcea17781e852dd767241686a3dd4502dcbb736c6466e0c2147')
+    // console.log(r)
+    // return
+
     const deployer = new ethers.Wallet(process.env.MAINNET_DEPLOYER, provider);
     let uniswapPair = new ethers.Contract(settings.pairAddress[0], jsonUniswapV3Pool.abi, provider)
 
@@ -293,7 +296,6 @@ async function deploy(settings) {
     const initParams = await calculateInitParamsFromPrice(config, MARK, R)
 
     const utr = new ethers.Contract(configs.helperContract.utr, require("@derivable/utr/build/UniversalTokenRouter.json").abi, deployer)
-    const helper = await ethers.getContractAt("contracts/support/Helper.sol:Helper", configs.derivable.helper ?? configs.derivable.stateCalHelper, deployer)
 
     // get pool address
     const poolAddress = await poolDeployer.callStatic.create(config)
@@ -348,6 +350,25 @@ async function deploy(settings) {
             ...topics,
             { value: R, gasPrice },
         ]
+    }
+
+    // provider.setStateOverride({
+    //     [poolDeployer.address]: {
+    //         code: require("../artifacts/contracts/support/PoolDeployer.sol/PoolDeployer.json").deployedBytecode,
+    //     },
+    //     [configs.derivable.logic]: {
+    //         code: require("../artifacts/contracts/PoolLogic.sol/PoolLogic.json").deployedBytecode,
+    //     },
+    // })
+
+    try {
+        // Arbitrum estimateGas does not report contract revert
+        const res = TOKEN_R != configs.wrappedTokenAddress
+            ? await utr.callStatic.exec(...params)
+            : await poolDeployer.callStatic.deploy(...params)
+    } catch (err) {
+        console.error(err.reason ?? err)
+        return
     }
 
     const gasUsed = TOKEN_R != configs.wrappedTokenAddress
