@@ -33,12 +33,15 @@ contract PoolDeployer is NotToken, IPoolFactory {
     ) external payable returns (address pool) {
         pool = create(config);
         require(pool != address(0), "PoolDeployer: CREATE2_FAILED");
-        if (msg.value > 0) {
+        if (config.TOKEN_R == WETH) {
             IWeth(WETH).deposit{value : msg.value}();
-            uint256 amount = IWeth(WETH).balanceOf(address(this));
+            uint256 amount = IERC20(WETH).balanceOf(address(this));
             IERC20(WETH).approve(pool, amount);
+        } else {
+            require(msg.value == 0, "PoolDeployer: UNUSED_VALUE");
         }
         IPool(pool).init(state, payment);
+        require(IERC20(config.TOKEN_R).balanceOf(pool) >= state.R, "PoolDeployer: POOL_INIT_FAILED");
         _emit(
             baseToken,
             baseSymbol,
