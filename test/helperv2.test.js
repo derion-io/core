@@ -13,8 +13,14 @@ describe("Helper v2", function () {
       baseParams
     ],
     {
-      helper: "HelperV2",
-      useLPAsReserve: true
+      useLPAsReserve: true,
+      callback: async ({ weth }) => {
+        const UniV2LPHelper = await ethers.getContractFactory("UniV2LPHelper")
+        const uniV2LPHelper = await UniV2LPHelper.deploy(
+          weth.address
+        )
+        return { uniV2LPHelper }
+      }
     }
   );
 
@@ -24,6 +30,7 @@ describe("Helper v2", function () {
       reserveToken,
       weth,
       stateCalHelper,
+      uniV2LPHelper,
       usdc,
       owner,
       derivablePools,
@@ -62,9 +69,9 @@ describe("Helper v2", function () {
             },
           ],
           flags: 0,
-          code: stateCalHelper.address,
+          code: uniV2LPHelper.address,
           data: (
-            await stateCalHelper.populateTransaction.mintLPV2AndOpen(
+            await uniV2LPHelper.populateTransaction.mintLPV2AndOpen(
               {
                 mintParams: {
                   pair: reserveToken,
@@ -77,6 +84,7 @@ describe("Helper v2", function () {
                 side: SIDE_A,
                 deriPool: pool.contract.address,
                 recipient: owner.address,
+                stateCalHelper: stateCalHelper.address,
                 payer: owner.address,
                 INDEX_R: 0
               }

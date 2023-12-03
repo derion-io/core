@@ -1,17 +1,22 @@
 // SPDX-License-Identifier: BSL-1.1
 pragma solidity 0.8.20;
 
+import "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
+import "@uniswap/lib/contracts/libraries/TransferHelper.sol";
 import "@uniswap/v2-core/contracts/interfaces/IUniswapV2Pair.sol";
+import "@derivable/utr/contracts/interfaces/IUniversalTokenRouter.sol";
+import "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 
-import "hardhat/console.sol";
+import "../interfaces/IPool.sol";
+import "../interfaces/IWeth.sol";
+import "../subs/Constants.sol";
 
-import "./Helper.sol";
-
-contract HelperV2 is Helper {
+contract UniV2LPHelper is Constants, ERC1155Holder {
     struct MintLPV2AndSwapParams {
         MintLPV2Params mintParams;
         uint256 side;
         address deriPool;
+        address stateCalHelper;
         address payer;
         address recipient;
         uint256 INDEX_R;
@@ -26,7 +31,28 @@ contract HelperV2 is Helper {
         uint256 fee10000;
     }
 
-    constructor(address token, address weth) Helper(token, weth) {}
+    event Swap(
+        address indexed payer,
+        address indexed poolIn,
+        address indexed poolOut,
+        address recipient,
+        uint256 sideIn,
+        uint256 sideOut,
+        uint256 amountIn,
+        uint256 amountOut,
+        uint256 price,
+        uint256 priceR,
+        uint256 amountR
+    );
+
+    uint256 internal constant Q254 = 1 << 254;
+    uint256 internal constant Q254M = Q254 - 1;
+
+    address internal immutable WETH;
+
+    constructor(address weth) {
+        WETH = weth;
+    }
 
     function mintLPV2AndOpen(
         MintLPV2AndSwapParams memory params
@@ -49,7 +75,7 @@ contract HelperV2 is Helper {
         bytes memory payload = abi.encode(SIDE_R, params.side, amountOut);
 
         (, amountOut, price) = IPool(params.deriPool).swap(
-            Param(SIDE_R, params.side, address(this), payload),
+            Param(SIDE_R, params.side, params.stateCalHelper, payload),
             payment
         );
 
@@ -201,6 +227,49 @@ contract HelperV2 is Helper {
             amountMainDesired = (amountOtherFromSwap * rMain) / rOther;
         }
         amountMain += amountMainDesired;
+    }
+
+    // IERC165-supportsInterface
+    function supportsInterface(bytes4 interfaceId) public view virtual override returns (bool) {
+        return
+            interfaceId == 0x61206120 ||
+            super.supportsInterface(interfaceId);
+    }
+
+    function _pay(
+        address utr,
+        address token,
+        address payer,
+        address recipient,
+        uint256 value
+    ) internal {
+        if (utr == address(0)) {
+            TransferHelper.safeTransfer(token, recipient, value);
+        } else {
+            bytes memory payload = abi.encode(payer, recipient, 20, token, 0);
+            IUniversalTokenRouter(utr).pay(payload, value);
+        }
+    }
+
+    function _getPrice(uint256 INDEX) internal view returns (uint256 spot) {
+        if (INDEX == 0) {
+            return 0;
+        }
+        if (INDEX & Q254 != 0) {
+            return INDEX & Q254M;
+        }
+        return _fetch(INDEX);
+    }
+
+    function _fetch(uint256 INDEX) internal view returns (uint256 spot) {
+        address pool = address(uint160(INDEX));
+        (uint160 sqrtSpotX96,,,,,,) = IUniswapV3Pool(pool).slot0();
+
+        spot = sqrtSpotX96 << 32;
+
+        if (INDEX & Q255 == 0) {
+            spot = Q256M / spot;
+        }
     }
 
     function _getReserves(
