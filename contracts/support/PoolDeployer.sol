@@ -58,6 +58,7 @@ contract PoolDeployer is NotToken, IPoolFactory {
         return abi.encode(
             config.FETCHER,
             config.ORACLE,
+            config.TOKEN_R,
             config.K,
             config.MARK,
             config.INTEREST_HL,
