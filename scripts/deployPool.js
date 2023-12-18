@@ -9,7 +9,6 @@ const { JsonRpcProvider } = require("@ethersproject/providers");
 const jsonUniswapV3Pool = require("./compiled/UniswapV3Pool.json")
 const jsonUniswapV2Pool = require("@uniswap/v2-core/build/UniswapV2Pair.json")
 const jsonERC20 = require("../artifacts/@openzeppelin/contracts/token/ERC20/ERC20.sol/ERC20.json")
-const { ADDRESS_ZERO } = require('@uniswap/v3-sdk')
 
 const SECONDS_PER_HOUR = 60 * 60
 const SECONDS_PER_DAY = SECONDS_PER_HOUR * 24
@@ -49,17 +48,19 @@ const gasPrice = gasPrices[chainID]
 const settings = {
     // pairAddress: '0xC31E54c7a869B9FcBEcc14363CF510d1c41fa443',
     // pairAddress: '0x8d76e9c2bd1adde00a3dcdc315fcb2774cb3d1d6',
-    pairAddress: ['0x59d72ddb29da32847a4665d08ffc8464a7185fae'],
-    topics: ['MAG', 'MA'],
+    pairAddress: ['0xdbaeb7f0dfe3a0aafd798ccecb5b22e708f7852c'],
+    topics: ['PEND', 'PE'],
     window: 120,
     windowBlocks: 120,
-    power: 8,
+    power: 2,
     interestRate: 0.03 / 100,
     premiumRate: 3 / 100,
     MATURITY: 60 * 60 * 12,
     vesting: 120,
     closingFeeDuration: 1 * 60 * 60,
     closingFee: 1 / 100,
+    // reserveToken: '0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9', // USDT
+    // R: 1,
     // reserveToken: 'PLD', // PlayDerivable
     // openingFee: 0/100,
     // R: 0.0003, // init liquidity
@@ -82,7 +83,7 @@ function findFetcher(fetchers, factory) {
 
 async function deploy(settings) {
     const configs = await fetch(
-        `https://raw.githubusercontent.com/derivable-labs/configs/deployer/${chainID}/network.json`
+        `https://raw.githubusercontent.com/derivable-labs/configs/dev/${chainID}/network.json`
     ).then(res => res.json())
 
     const provider = new JsonRpcProvider(configs.rpc, chainID)
@@ -91,8 +92,19 @@ async function deploy(settings) {
         ? configs.derivable.playToken
         : settings.reserveToken ?? configs.wrappedTokenAddress
 
-    const tokenR = new ethers.Contract(TOKEN_R, jsonERC20.abi, provider)
-    console.log('TOKEN_R', await tokenR.symbol())
+    if (!settings.R) {
+        settings.R = 0.0001
+    }
+
+    const deployer = new ethers.Wallet(process.env.MAINNET_DEPLOYER, provider);
+
+    const rToken = new ethers.Contract(TOKEN_R, jsonERC20.abi, deployer)
+    const [rSymbol, rDecimals] = await Promise.all([
+        rToken.symbol(),
+        rToken.decimals(),
+    ])
+
+    console.log('TOKEN_R', rSymbol, settings.R)
 
     // const balance = await tokenR.balanceOf('0xC80EdE62B650Fd825FA9E0e17E6dc03cdcD30562')
     // console.log(balance)
@@ -101,7 +113,6 @@ async function deploy(settings) {
     // console.log(r)
     // return
 
-    const deployer = new ethers.Wallet(process.env.MAINNET_DEPLOYER, provider);
     let uniswapPair = new ethers.Contract(settings.pairAddress[0], jsonUniswapV3Pool.abi, provider)
 
     const factory = await uniswapPair.callStatic.factory()
@@ -111,7 +122,7 @@ async function deploy(settings) {
         // use the univ2 abi
         uniswapPair = new ethers.Contract(settings.pairAddress[0], jsonUniswapV2Pool.abi, provider)
     }
-    if (FETCHER != ADDRESS_ZERO) {
+    if (FETCHER != AddressZero) {
         console.log('FETCHER', FETCHER)
     }
 
@@ -291,8 +302,10 @@ async function deploy(settings) {
     // Create Pool
     const poolDeployer = await ethers.getContractAt("contracts/support/PoolDeployer.sol:PoolDeployer", configs.derivable.poolDeployer, deployer)
 
+    // get TOKEN_R decimals
+    const R = ethers.utils.parseUnits(String(settings.R), rDecimals)
+
     // init the pool
-    const R = ethers.utils.parseEther(String(settings.R ?? 0.0001))
     const initParams = await calculateInitParamsFromPrice(config, MARK, R)
 
     const utr = new ethers.Contract(configs.helperContract.utr, require("@derivable/utr/build/UniversalTokenRouter.json").abi, deployer)
@@ -306,10 +319,14 @@ async function deploy(settings) {
     let params
 
     if (TOKEN_R != configs.wrappedTokenAddress) {
-        const rERC20 = new ethers.Contract(TOKEN_R, require("@uniswap/v2-core/build/ERC20.json").abi, deployer)
-        const rAllowance = await rERC20.allowance(deployer.address, utr.address)
+        const rBalance = await rToken.balanceOf(deployer.address)
+        if (rBalance.lt(R)) {
+            throw new Error(`TOKEN_R balance insufficient: ${rBalance} < ${R}`)
+        }
+        const rAllowance = await rToken.allowance(deployer.address, utr.address)
         if (rAllowance.lt(R)) {
-            throw new Error("!!! Token reserve approval required !!!")
+            // await rERC20.approve(utr.address, ethers.constants.MaxUint256)
+            throw new Error(`TOKEN_R approval required for UTR (${utr.address})`)
         }
         const payment = {
             utr: utr.address,
