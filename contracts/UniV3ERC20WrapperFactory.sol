@@ -8,6 +8,7 @@ import {IUniswapV3Factory} from "@uniswap/v3-core/contracts/interfaces/IUniswapV
 
 import {SelfPermit} from "@uniswap/v3-periphery/contracts/base/SelfPermit.sol";
 import {LiquidityAmounts} from "@uniswap/v3-periphery/contracts/libraries/LiquidityAmounts.sol";
+import "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {UniKey, LiquidityManagement} from "./LiquidityManagement.sol";
@@ -19,7 +20,8 @@ import "./UniV3ERC20Wrapper.sol";
 contract UniV3ERC20WrapperFactory is
     SelfPermit,
     LiquidityManagement,
-    IUniV3ERC20WrapperFactory
+    IUniV3ERC20WrapperFactory,
+    ERC1155Holder
 {
     uint256 internal constant MIN_INITIAL_SHARES = 1e9;
 
@@ -76,7 +78,7 @@ contract UniV3ERC20WrapperFactory is
             LiquidityManagement.AddLiquidityParams({
                 key: params.key,
                 recipient: address(this),
-                payer: msg.sender,
+                payer: params.payer,
                 amount0Desired: params.amount0Desired,
                 amount1Desired: params.amount1Desired,
                 amount0Min: params.amount0Min,
@@ -91,7 +93,7 @@ contract UniV3ERC20WrapperFactory is
         );
 
         emit Deposit(
-            msg.sender,
+            params.payer,
             params.recipient,
             keccak256(abi.encode(params.key)),
             addedLiquidity,
@@ -289,6 +291,13 @@ contract UniV3ERC20WrapperFactory is
     /// -----------------------------------------------------------------------
     /// View functions
     /// -----------------------------------------------------------------------
+
+    // IERC165-supportsInterface
+    function supportsInterface(bytes4 interfaceId) public view virtual override returns (bool) {
+        return
+            interfaceId == 0x61206120 ||
+            super.supportsInterface(interfaceId);
+    }
 
     function getToken(UniKey calldata key)
         public

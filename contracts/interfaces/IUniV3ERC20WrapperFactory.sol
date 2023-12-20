@@ -92,6 +92,7 @@ interface IUniV3ERC20WrapperFactory is ISelfPermit, ILiquidityManagement {
         uint256 amount0Min;
         uint256 amount1Min;
         uint256 deadline;
+        address payer;
         address recipient;
     }
 

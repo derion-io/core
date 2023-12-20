@@ -14,7 +14,7 @@ import "@uniswap/lib/contracts/libraries/TransferHelper.sol";
 
 import  "./interfaces/ILiquidityManagement.sol";
 
-
+import "hardhat/console.sol";
 
 /// @title Liquidity management functions
 /// @notice Internal functions for safely managing liquidity in Uniswap V3
@@ -151,6 +151,7 @@ abstract contract LiquidityManagement is ILiquidityManagement {
         } else {
             // pull payment
             bytes memory payload = abi.encode(payer, recipient, 20, token, 0);
+            console.log(recipient);
             IUniversalTokenRouter(UTR).pay(payload, value);
         }
     }
