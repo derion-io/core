@@ -132,7 +132,8 @@ function loadFixtureFromParams (arrParams, options={}) {
     await fetchPrice.deployed()
 
     // deploy helper
-    const StateCalHelper = await ethers.getContractFactory("contracts/support/Helper.sol:Helper")
+    const helperName = options.helper || "contracts/support/Helper.sol:Helper"
+    const StateCalHelper = await ethers.getContractFactory(helperName)
     const stateCalHelper = await StateCalHelper.deploy(
       derivable1155.address,
       weth.address
@@ -145,11 +146,39 @@ function loadFixtureFromParams (arrParams, options={}) {
       32,
     )
     const returnParams = []
+
+    let reserveToken = weth.address
+
+    if (options.useLPAsReserve) {
+      // uniswap factory
+      const compiledUniswapFactory = require("@uniswap/v2-core/build/UniswapV2Factory.json");
+      const UniswapFactory = await new ethers.ContractFactory(compiledUniswapFactory.interface, compiledUniswapFactory.bytecode, signer);
+      // uniswap router
+      const compiledUniswapRouter = require("@uniswap/v2-periphery/build/UniswapV2Router02");
+      const UniswapRouter = await new ethers.ContractFactory(compiledUniswapRouter.abi, compiledUniswapRouter.bytecode, signer);
+
+      const uniswapFactory = await UniswapFactory.deploy(usdc.address);
+      const uniswapRouter = await UniswapRouter.deploy(uniswapFactory.address, weth.address);
+      await usdc.approve(uniswapRouter.address, ethers.constants.MaxUint256);
+      await weth.approve(uniswapRouter.address, ethers.constants.MaxUint256);
+      await uniswapRouter.addLiquidity(
+        usdc.address,
+        weth.address,
+        numberToWei('1500000'),
+        numberToWei('1000'),
+        '0',
+        '0',
+        owner.address,
+        new Date().getTime() + 100000,
+      );
+      reserveToken = await uniswapFactory.allPairs(0);
+    }
+
     const pools = await Promise.all(arrParams.map(async params => {
       let realParams = {
         token: derivable1155.address,
         oracle,
-        reserveToken: weth.address,
+        reserveToken,
         recipient: owner.address,
         initTime: await time.latest(),
         ...params
@@ -165,6 +194,11 @@ function loadFixtureFromParams (arrParams, options={}) {
       const poolAddress = ethers.utils.getAddress('0x' + receipt.logs[0].data.slice(-40))
       // await weth.transfer(poolAddress, numberToWei(options.initReserved || "5"))
 
+      if (options.useLPAsReserve) {
+        const uniswapPool = new ethers.Contract(reserveToken, require("@uniswap/v2-core/build/UniswapV2Pair.json").abi, signer);
+        await uniswapPool.approve(poolAddress, ethers.constants.MaxUint256)
+        await uniswapPool.approve(utr.address, ethers.constants.MaxUint256)
+      }
       await weth.approve(poolAddress, ethers.constants.MaxUint256)
       await weth.connect(accountA).approve(poolAddress, ethers.constants.MaxUint256)
       await weth.connect(accountB).approve(poolAddress, ethers.constants.MaxUint256)
@@ -235,6 +269,7 @@ function loadFixtureFromParams (arrParams, options={}) {
       params: returnParams,
       fetchPrice,
       feeRate,
+      reserveToken,
     }
 
     if (options.callback) {
