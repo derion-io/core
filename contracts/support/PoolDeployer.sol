@@ -2,11 +2,17 @@
 pragma solidity 0.8.20;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import "@derivable/utr/contracts/NotToken.sol";
 import "../libs/MetaProxyFactory.sol";
 import "../interfaces/IPoolFactory.sol";
 import "../interfaces/IPool.sol";
 import "../interfaces/IWeth.sol";
+
+interface IUniswapPair {
+    function token0() external view returns (address);
+    function token1() external view returns (address);
+}
 
 /// @title Factory contract to deploy Derivable pool using ERC-3448.
 /// @author Derivable Labs
@@ -29,7 +35,8 @@ contract PoolDeployer is NotToken, IPoolFactory {
         address baseToken,
         bytes32 baseSymbol,
         bytes32 topic2,
-        bytes32 topic3
+        bytes32 topic3,
+        bool skipTokenDetails
     ) external payable returns (address pool) {
         pool = create(config);
         require(pool != address(0), "PoolDeployer: CREATE2_FAILED");
@@ -42,12 +49,38 @@ contract PoolDeployer is NotToken, IPoolFactory {
         }
         IPool(pool).init(state, payment);
         require(IERC20(config.TOKEN_R).balanceOf(pool) >= state.R, "PoolDeployer: POOL_INIT_FAILED");
+        bytes memory data = _encode(config, pool);
+        if (!skipTokenDetails) {
+            data = bytes.concat(data, _gatherTokenDetails(uint256(config.ORACLE)));
+        }
         _emit(
             baseToken,
             baseSymbol,
             topic2,
             topic3,
-            _encode(config, pool)
+            data
+        );
+    }
+
+    function _gatherTokenDetails(
+        uint256 ORACLE
+    ) internal view returns (bytes memory data) {
+        address pool = address(uint160(ORACLE));
+        address tokenB = IUniswapPair(pool).token0();
+        address tokenQ = IUniswapPair(pool).token1();
+        if (ORACLE >> 255 == 0) { // QTI
+            (tokenB, tokenQ) = (tokenQ, tokenB);
+        }
+        data = abi.encodePacked(
+            tokenB,
+            tokenQ,
+            IERC20Metadata(tokenB).symbol(),
+            bytes1(0),
+            IERC20Metadata(tokenQ).symbol(),
+            bytes1(0),
+            IERC20Metadata(tokenB).name(),
+            bytes1(0),
+            IERC20Metadata(tokenQ).name()
         );
     }
 

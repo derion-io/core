@@ -114,8 +114,20 @@ describe("Protocol", function () {
     })
 
     describe("Pool Deployer", async function() {
+        function verifyAuxData(auxData, baseToken, quoteToken) {
+            const tokenB = utils.getAddress('0x' + auxData.slice(0, 40))
+            const tokenQ = utils.getAddress('0x' + auxData.slice(40, 80))
+            const [symbolB, symbolQ, nameB, nameQ] = auxData.slice(80).split('00').map(d => utils.toUtf8String('0x' + d))
+            expect(tokenB).equals(baseToken)
+            expect(tokenQ).equals(quoteToken)
+            expect(symbolB).equals('WETH')
+            expect(symbolQ).equals('USDC')
+            expect(nameB).equals('Wrapped Ether')
+            expect(nameQ).equals('Circle USD')
+        }
+
         it("Without UTR", async function () {
-            const { owner, weth, utr, params, poolDeployer } = await loadFixture(fixture)
+            const { owner, weth, usdc, params, poolDeployer } = await loadFixture(fixture)
             const baseToken = weth.address
             const R = numberToWei(5)
             const config = {
@@ -149,16 +161,20 @@ describe("Protocol", function () {
                 utils.formatBytes32String("WETH"),
                 utils.formatBytes32String("ETH"),
                 utils.formatBytes32String("ET"),
+                false,
                 { value: R }
             )
             const receipt = await tx.wait()
             const baseTokenTopic = utils.hexZeroPad(baseToken.toLocaleLowerCase(), 32)
             const event = receipt.logs.find(({topics}) => topics[0] == baseTokenTopic)
             expect(event?.topics?.length).equals(4)
+            expect(event.data.startsWith('0x0000000000000000000000000000000000000000000000000000000000000000000000000000012c00000000d30c8839c1145609e564b986f667b273ddcb8496000000000000000000000000000000000000000000000000000000000000000600000000000000000000000000000026000000000000000000000000000000000000000000000000000000000000000000000000000000000000000012cc030000000000000000000000000000000000800000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000c7d981571cd6c5cda798faa13ebbf04db04fdea0')).is.true
+            const auxData = event.data.slice(2+64*11)
+            verifyAuxData(auxData, weth.address, usdc.address)
         })
 
         it("With UTR", async function () {
-            const { owner, weth, utr, params, poolDeployer } = await loadFixture(fixture)
+            const { owner, weth, usdc, utr, params, poolDeployer } = await loadFixture(fixture)
             const baseToken = weth.address
             const R = numberToWei(5)
             const config = {
@@ -193,6 +209,7 @@ describe("Protocol", function () {
                 utils.formatBytes32String("BTCB"),
                 utils.formatBytes32String("BTC"),
                 utils.formatBytes32String("BT"),
+                false,
             )
 
             await weth.approve(utr.address, MaxUint256)
@@ -212,6 +229,9 @@ describe("Protocol", function () {
             const baseTokenTopic = utils.hexZeroPad(baseToken.toLocaleLowerCase(), 32)
             const event = receipt.logs.find(({topics}) => topics[0] == baseTokenTopic)
             expect(event?.topics?.length).equals(4)
+            expect(event.data.startsWith('0x0000000000000000000000000000000000000000000000000000000000000000000000000000012c00000000d30c8839c1145609e564b986f667b273ddcb8496000000000000000000000000000000000000000000000000000000000000000600000000000000000000000000000026000000000000000000000000000000000000000000000000000000000000000000000000000000000000000012cc030000000000000000000000000000000000800000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000c7d981571cd6c5cda798faa13ebbf04db04fdea0')).is.true
+            const auxData = event.data.slice(2+64*11)
+            verifyAuxData(auxData, weth.address, usdc.address)
         })
     })
 
