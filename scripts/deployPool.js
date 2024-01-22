@@ -27,16 +27,11 @@ function rateFromHL(HL, k, DURATION = SECONDS_PER_DAY) {
     return DURATION * Math.LN2 / HL / k / k
 }
 
-const chainID = 42161
+const chainID = 56
 
 const SCAN_API_KEY = {
     42161: process.env.ARBISCAN_API_KEY,
     56: process.env.BSCSCAN_API_KEY,
-}
-
-const SWAP_TOPIC = {
-    2: '0xd78ad95fa46c994b6551d0da85fc275fe613ce37657fb8d5e3d130840159d822',
-    3: '0xc42079f94a6350d7e6235f29174924f928cc2ac818eb64fed8004e115fbcca67',
 }
 
 const gasPrices = {
@@ -48,11 +43,11 @@ const gasPrice = gasPrices[chainID]
 const settings = {
     // pairAddress: '0xC31E54c7a869B9FcBEcc14363CF510d1c41fa443',
     // pairAddress: '0x8d76e9c2bd1adde00a3dcdc315fcb2774cb3d1d6',
-    pairAddress: ['0xdbaeb7f0dfe3a0aafd798ccecb5b22e708f7852c'],
-    topics: ['PEND', 'PE'],
-    window: 120,
-    windowBlocks: 120,
-    power: 2,
+    pairAddress: ['0x172fcD41E0913e95784454622d1c3724f546f849'],
+    topics: ['BNB', 'BN'],
+    // window: 120,
+    // windowBlocks: 120,
+    power: 8,
     interestRate: 0.03 / 100,
     premiumRate: 3 / 100,
     MATURITY: 60 * 60 * 12,
@@ -64,21 +59,6 @@ const settings = {
     // reserveToken: 'PLD', // PlayDerivable
     // openingFee: 0/100,
     // R: 0.0003, // init liquidity
-}
-
-function findFetcher(fetchers, factory) {
-    const fs = Object.keys(fetchers)
-    let defaultFetcher
-    for (const f of fs) {
-        if (!fetchers[f].factory?.length) {
-            defaultFetcher = [f, fetchers[f]?.type]
-            continue
-        }
-        if (fetchers[f].factory?.includes(factory)) {
-            return [f, fetchers[f]?.type]
-        }
-    }
-    return defaultFetcher
 }
 
 async function deploy(settings) {
@@ -93,7 +73,7 @@ async function deploy(settings) {
         : settings.reserveToken ?? configs.wrappedTokenAddress
 
     if (!settings.R) {
-        settings.R = 0.0001
+        settings.R = 0.0003
     }
 
     const deployer = new ethers.Wallet(process.env.MAINNET_DEPLOYER, provider);
@@ -113,10 +93,15 @@ async function deploy(settings) {
     // console.log(r)
     // return
 
-    let uniswapPair = new ethers.Contract(settings.pairAddress[0], jsonUniswapV3Pool.abi, provider)
+    let uniswapPair = new ethers.Contract(settings.pairAddress[0], jsonUniswapV3Pool.abi, deployer)
 
     const factory = await uniswapPair.callStatic.factory()
-    const [FETCHER, fetcherType] = findFetcher(configs.fetchers, factory)
+    const factoryConfig = configs.factory[factory] ?? configs.factory['0x']
+    if (!factoryConfig) {
+        throw new Error('no config for factory ' + factory)
+    }
+    const FETCHER = factoryConfig.fetcher ?? AddressZero
+    const fetcherType = factoryConfig.type ?? "uniswap3"
     const exp = fetcherType?.endsWith('3') ? 2 : 1
     if (exp == 1) {
         // use the univ2 abi
@@ -194,24 +179,31 @@ async function deploy(settings) {
     })
 
     // detect WINDOW
+    let EPOCH = 500 * 60
     let logs
     if ((slot0 && !settings.window) || (!slot0 && !settings.windowBlocks)) {
         // get the block a day before
         const now = Math.floor(new Date().getTime() / 1000)
-        const EPOCH = 500 * 60
         const anEpochAgo = now - EPOCH
         const blockEpochAgo = await fetch(
             `${configs.scanApi}?module=block&action=getblocknobytime&timestamp=${anEpochAgo}&closest=before&apikey=${SCAN_API_KEY[chainID]}`
         ).then(x => x.json()).then(x => Number(x?.result))
 
-            logs = await fetch(
-            `${configs.scanApi}?module=logs&action=getLogs&address=${settings.pairAddress[0]}` +
-            `&topic0=${SWAP_TOPIC[slot0 ? 3 : 2]}` +
+        const topic0 = factoryConfig.topic0 ?? "0xc42079f94a6350d7e6235f29174924f928cc2ac818eb64fed8004e115fbcca67"
+
+        const apiQuery = `${configs.scanApi}?module=logs&action=getLogs&address=${settings.pairAddress[0]}` +
+            `&topic0=${topic0}` +
             `&fromBlock=${blockEpochAgo}&apikey=${SCAN_API_KEY[chainID]}`
-        ).then(x => x.json()).then(x => x?.result)
+        logs = await fetch(apiQuery).then(x => x.json()).then(x => x?.result)
 
         if (!logs?.length) {
+            console.log(apiQuery)
             throw new Error('no transaction for a whole day')
+        }
+        // update the EPOCH when the query limit is reached
+        if (logs.length >= 1000) {
+            EPOCH = bn(logs[logs.length-1].timeStamp).toNumber() - bn(logs[0].timeStamp).toNumber()
+            console.log('Effective EPOCH:', Math.round(EPOCH / 60), 'min(s)')
         }
     }
 
@@ -227,10 +219,21 @@ async function deploy(settings) {
         try {
             await uniswapPair.callStatic.observe([0, WINDOW])
         } catch (err) {
-            if (err.reason == 'OLD') {
-                throw new Error('WINDOW too long')
+            if (err.reason != 'OLD') {
+                throw err
             }
-            throw err
+            // throw new Error('WINDOW too long')
+            const newCardinality = Math.round(logs.length * WINDOW * 3 / 2 / EPOCH)
+            const estimatedGas = await uniswapPair.estimateGas.increaseObservationCardinalityNext(newCardinality)
+            console.log(`Spend ${estimatedGas.toNumber().toLocaleString()} gas to increase pair's cardinality from ${slot0.observationCardinalityNext} to ${newCardinality}?`)
+            console.log(`> Enter [Y] to accept, [Ctrl-C] to stop.`);
+            await waitForKey(89)
+            console.log('Sending tx...')
+            const tx = await uniswapPair.increaseObservationCardinalityNext(newCardinality, { gasPrice })
+            console.log('Waiting for tx receipt...', tx.hash)
+            const rec = await tx.wait()
+            console.log('Gas Used:', rec.gasUsed.toNumber())
+            console.log('Logs:', rec.logs)
         }
     } else {
         if (logs?.length > 0) {
@@ -424,6 +427,7 @@ function waitForKey(keyCode = 10) {
                 resolve();
                 process.stdin.pause();
             }
+            // TBT: process.stdin.resume();
         });
     });
 }

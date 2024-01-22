@@ -31,12 +31,13 @@ The following contracts are not part of the core protocol so user's funds should
 ### Deployment sequence
 
 Contract dependencies:
-* FeeReceiver, PlayToken: nothing
-* Token: UTR
-* Logic: Token
-* Deployer: Logic
+* FeeReceiver: feeSetter
+* Token: UTR, descriptorSetter
+* Logic: Token, FeeReceiver, feeRate
+* Helper: Token, WETH
+* Deployer: WETH, Logic
 * TokenDescriptor: Deployer
-* Helper: Token
+* PlayToken: UTR
 
 Deploy each contract using
 

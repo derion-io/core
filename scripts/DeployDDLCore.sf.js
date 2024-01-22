@@ -48,7 +48,7 @@ task('deployDeployer', 'Use SingletonFatory to deploy PoolDeployer contract')
             const byteCodeOfFinalAddress = await provider.getCode(address)
             if (byteCodeOfFinalAddress == '0x') {
                 const estimatedGas = await contractWithSigner.estimateGas.deploy(initBytecode, saltHex)
-                console.log('Estimated Gas: ', estimatedGas.toNumber())
+                console.log('Estimated Gas: ', estimatedGas.toNumber().toLocaleString())
                 try {
                     const deployTx = await contractWithSigner.deploy(initBytecode, saltHex, { ...opts, gasPrice })
                     console.log('Tx: ', deployTx.hash)
@@ -100,19 +100,24 @@ task('deployLogic', 'Use SingletonFatory to deploy Logic contract')
                 initCodeHash,
             )
             console.log(`logic: ${address}`)
-            addressList['logic'] = address
             const byteCodeOfFinalAddress = await provider.getCode(address)
             if (byteCodeOfFinalAddress == '0x') {
-                const gasLimit = (await contractWithSigner.estimateGas.deploy(initBytecode, saltHex)) << 1
+                const estimatedGas = await contractWithSigner.estimateGas.deploy(initBytecode, saltHex)
+                console.log('Estimated Gas:', estimatedGas.toNumber().toLocaleString())
                 try {
-                    const deployTx = await contractWithSigner.deploy(initBytecode, saltHex, { ...opts, gasLimit, gasPrice })
+                    const deployTx = await contractWithSigner.deploy(initBytecode, saltHex, { ...opts, gasPrice })
                     console.log('Tx: ', deployTx.hash)
                     const res = await deployTx.wait()
                     console.log('Gas Used:', res.gasUsed.toNumber())
+                    if ((await provider.getCode(address))?.length > 2) {
+                        addressList['logic'] = address
+                        exportData(addressList, hre.network.name)
+                    } else {
+                        console.error('Failed to deploy contract')
+                    }
                 } catch (error) {
-                    console.log('Error: ', error.error ?? error)
+                    console.error('Error: ', error.error ?? error)
                 }
-                exportData(addressList, hre.network.name)
             } else {
                 return
             }
@@ -207,7 +212,7 @@ task('deployTokenDescriptor', 'Use SingletonFatory to deploy TokenDescriptor con
             addressList['tokenDescriptor'] = address
             const byteCodeOfFinalAddress = await provider.getCode(address)
             if (byteCodeOfFinalAddress == '0x') {
-                console.log(await contractWithSigner.estimateGas.deploy(initBytecode, saltHex))
+                console.log('Estimated Gas:', await contractWithSigner.estimateGas.deploy(initBytecode, saltHex))
                 try {
                     const deployTx = await contractWithSigner.deploy(initBytecode, saltHex, { ...opts, gasPrice })
                     console.log('Tx: ', deployTx.hash)
@@ -426,7 +431,7 @@ task('deployHelper', 'Use SingletonFatory to deploy Helper contract')
             addressList['stateCalHelper'] = address
             const byteCodeOfFinalAddress = await provider.getCode(address)
             if (byteCodeOfFinalAddress == '0x') {
-                console.log(await contractWithSigner.estimateGas.deploy(initBytecode, saltHex))
+                console.log('Estimated Gas:', await contractWithSigner.estimateGas.deploy(initBytecode, saltHex))
                 try {
                     const deployTx = await contractWithSigner.deploy(initBytecode, saltHex, { ...opts, gasPrice })
                     console.log('Tx: ', deployTx.hash)
@@ -450,7 +455,7 @@ task('deployFetcher', 'Use SingletonFatory to deploy Fetcher contract')
             const estimatedGas = await ethers.provider.estimateGas(
                 Fetcher.getDeployTransaction().data
             )
-            console.log(estimatedGas)
+            console.log('Estimated Gas:', estimatedGas.toNumber().toLocaleString())
             const fetcher = await Fetcher.deploy()
             await fetcher.deployed()
             const addressPath = path.join(__dirname, `./json/${hre.network.name}.json`)
@@ -473,7 +478,7 @@ task('deployCompositeFetcher', 'Use SingletonFatory to deploy CompositeFetcher c
                     WETH_BTC
                 ).data
             )
-            console.log(estimatedGas)
+            console.log('Estimated Gas:', estimatedGas.toNumber().toLocaleString())
             const fetcher = await Fetcher.deploy(
                 WETH_USDC,
                 WETH_USDT,

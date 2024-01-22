@@ -72,6 +72,17 @@ module.exports = {
             utr: '0x8Bd6072372189A12A2889a56b6ec982fD02b0B87',
             chainId: 42161
         },
+        bsc: {
+            url: process.env.BSC_MAINNET_PROVIDER ?? 'https://bsc-dataseed3.binance.org/',
+            accounts: [
+                process.env.MAINNET_DEPLOYER ?? '0x0000000000000000000000000000000000000000000000000000000000000001',
+            ],
+            timeout: 900000,
+            weth: '0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c',
+            utr: '0x8Bd6072372189A12A2889a56b6ec982fD02b0B87',
+            chainId: 56,
+            gasPrice: 3e9,
+        },
         arbtestnet: {
             url: process.env.ARB_TESTNET_PROVIDER ?? 'https://endpoints.omniatech.io/v1/arbitrum/goerli/public',
             accounts: [
@@ -104,17 +115,6 @@ module.exports = {
             timeout: 20000,
             weth: '0x4200000000000000000000000000000000000006',
             chainId: 8453
-        },
-        bsc: {
-            url: process.env.BSC_MAINNET_PROVIDER ?? 'https://bsc-dataseed3.binance.org/',
-            accounts: [
-                process.env.MAINNET_DEPLOYER ?? '0x0000000000000000000000000000000000000000000000000000000000000001',
-            ],
-            timeout: 900000,
-            weth: '0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c',
-            utr: '0x8Bd6072372189A12A2889a56b6ec982fD02b0B87',
-            chainId: 56,
-            gasPrice: 3e9,
         },
         ganache: {
             url: 'http://127.0.0.1:8545',
