@@ -9,6 +9,7 @@ require("hardhat-gas-reporter");
 require('hardhat-dependency-compiler');
 require("solidity-coverage");
 require("@nomicfoundation/hardhat-verify");
+require('@solidstate/hardhat-4byte-uploader');
 
 require("./scripts/DeployDDLCore.sf");
 require("./scripts/utilities");
