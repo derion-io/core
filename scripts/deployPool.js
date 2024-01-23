@@ -94,8 +94,11 @@ async function deploy(settings) {
     // return
 
     let uniswapPair = new ethers.Contract(settings.pairAddress[0], jsonUniswapV3Pool.abi, deployer)
+    console.log('PAIR', uniswapPair.address)
 
     const factory = await uniswapPair.callStatic.factory()
+    console.log('FACTORY', factory)
+
     const factoryConfig = configs.factory[factory] ?? configs.factory['0x']
     if (!factoryConfig) {
         throw new Error('no config for factory ' + factory)
