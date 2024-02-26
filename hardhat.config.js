@@ -83,6 +83,17 @@ module.exports = {
             chainId: 56,
             gasPrice: 3e9,
         },
+        opbnb: {
+            url: process.env.OPBNB_MAINNET_PROVIDER ?? 'https://1rpc.io/opbnb',
+            accounts: [
+                process.env.MAINNET_DEPLOYER ?? '0x0000000000000000000000000000000000000000000000000000000000000001',
+            ],
+            timeout: 900000,
+            weth: '0x4200000000000000000000000000000000000006',
+            utr: '0x8Bd6072372189A12A2889a56b6ec982fD02b0B87',
+            chainId: 204,
+            gasPrice: 100,
+        },
         arbtestnet: {
             url: process.env.ARB_TESTNET_PROVIDER ?? 'https://endpoints.omniatech.io/v1/arbitrum/goerli/public',
             accounts: [
@@ -135,10 +146,19 @@ module.exports = {
         }
     },
     etherscan: {
+        customChains: [{
+            network: "opbnb",
+            chainId: 204,
+            urls: {
+                apiURL: "https://api-opbnb.bscscan.com/api",
+                browserURL: "https://opbnb.bscscan.com/"
+            }
+        }],
         apiKey: {
-            ethereum: process.env.ETHERSCAN_API_KEY,
-            arbitrumOne: process.env.ARBISCAN_API_KEY,
-            bsc: process.env.BSCSCAN_API_KEY
+            ethereum: process.env.SCAN_API_KEY_1,
+            arbitrumOne: process.env.SCAN_API_KEY_42161,
+            bsc: process.env.SCAN_API_KEY_56,
+            opbnb: process.env.SCAN_API_KEY_204,
         }
     },
     mocha: {
