@@ -7,10 +7,13 @@ const {
   const { MaxUint256 } = require("@ethersproject/constants");
   const { baseParams } = require("./shared/baseParams");
   const { SIDE_R, SIDE_A } = require("./shared/constant");
+  const { ADDRESS_ZERO } = require("@uniswap/v3-sdk");
+  const { encodePath } = require("./shared/Helper");
   
   const PAYMENT = 0;
+  const TRANSFER = 1;
   
-  
+
   describe("Helper swap2swap", function () {
     const fixture = loadFixtureFromParams(
       [
@@ -30,6 +33,7 @@ const {
             signer
           );
           const uniswapFactory = await UniswapFactory.deploy();
+          const poolFee = 500
   
           // uniswap PM
           const compiledUniswapv3PositionManager = require("./compiled/NonfungiblePositionManager.json");
@@ -49,7 +53,7 @@ const {
           const pairAddress = await uniswapFactory.getPool(
             usdc.address,
             weth.address,
-            500
+            poolFee,
           );
           const uniswapPairFee500 = new ethers.Contract(
             pairAddress,
@@ -73,7 +77,7 @@ const {
             {
               token0: quoteTokenIndex ? weth.address : usdc.address,
               token1: quoteTokenIndex ? usdc.address : weth.address,
-              fee: 500,
+              fee: poolFee,
               tickLower: Math.ceil(-887272 / 10) * 10,
               tickUpper: Math.floor(887272 / 10) * 10,
               amount0Desired: numberToWei("150000"),
@@ -89,13 +93,88 @@ const {
             }
           );
           await time.increase(1000);
+
+          // uniswap router
+          const compiledUniswapv3Router = require("./compiled/SwapRouter.json")
+          const UniswapRouter = new ethers.ContractFactory(compiledUniswapv3Router.abi, compiledUniswapv3Router.bytecode, signer)
+          const uniswapRouter = await UniswapRouter.deploy(uniswapFactory.address, weth.address)
+
           return {
             uniswapPairFee500,
+            uniswapRouter,
+            poolFee,
           };
         },
       }
     );
-  
+
+    it("AggregateAndOpen", async function () {
+      const {
+        utr,
+        uniswapRouter,
+        poolFee,
+        stateCalHelper,
+        usdc,
+        weth,
+        owner,
+        derivablePools,
+      } = await loadFixture(fixture);
+      const pool = derivablePools[0];
+      await usdc.approve(utr.address, MaxUint256);
+
+      const swapTx = await uniswapRouter.populateTransaction.exactInput(
+        {
+          path: encodePath([usdc.address, weth.address], [poolFee]),
+          recipient: stateCalHelper.address,
+          deadline: MaxUint256,
+          amountIn: numberToWei(5),
+          amountOutMinimum: 1,
+        },
+        { gasLimit: 30000000 },
+      )
+
+      const tx = await utr.exec(
+        [],
+        [
+          {
+            inputs: [
+              {
+                mode: TRANSFER,
+                eip: 20,
+                token: usdc.address,
+                id: 0,
+                amountIn: numberToWei(5),
+                recipient: stateCalHelper.address,
+              },
+            ],
+            flags: 0,
+            code: stateCalHelper.address,
+            data: (
+              await stateCalHelper.populateTransaction.aggregateAndOpen(
+                usdc.address,
+                uniswapRouter.address,
+                swapTx.data,
+                {
+                  sideIn: SIDE_R,
+                  poolIn: pool.contract.address,
+                  sideOut: SIDE_A,
+                  poolOut: pool.contract.address,
+                  token: usdc.address,
+                  amountIn: numberToWei(5),
+                  payer: ADDRESS_ZERO,
+                  recipient: owner.address,
+                  INDEX_R: 0,
+                }
+              )
+            ).data,
+          },
+        ]
+      );
+
+      const rec = await tx.wait(1)
+      console.log(rec?.events)
+    });
+   
     it("Swap and open", async function () {
       const {
         utr,

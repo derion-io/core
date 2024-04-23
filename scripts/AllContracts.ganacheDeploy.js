@@ -43,9 +43,6 @@ async function main() {
     // uniswap factory
     const compiledUniswapFactory = require("./compiled/UniswapV3Factory.json")
     const UniswapFactory = await new ethers.ContractFactory(compiledUniswapFactory.abi, compiledUniswapFactory.bytecode, signer)
-    // uniswap router
-    const compiledUniswapv3Router = require("./compiled/SwapRouter.json")
-    const UniswapRouter = new ethers.ContractFactory(compiledUniswapv3Router.abi, compiledUniswapv3Router.bytecode, signer)
     // uniswap PM
     const compiledUniswapv3PositionManager = require("./compiled/NonfungiblePositionManager.json")
     const UniswapPositionManager = new ethers.ContractFactory(compiledUniswapv3PositionManager.abi, compiledUniswapv3PositionManager.bytecode, signer)
@@ -71,6 +68,9 @@ async function main() {
     console.log('poolFactory: ', poolFactory.address)
     addressList["poolFactory"] = poolFactory.address
 
+    // uniswap router
+    const compiledUniswapv3Router = require("./compiled/SwapRouter.json")
+    const UniswapRouter = new ethers.ContractFactory(compiledUniswapv3Router.abi, compiledUniswapv3Router.bytecode, signer)
     const uniswapRouter = await UniswapRouter.deploy(uniswapFactory.address, weth.address)
     console.log('uniswapRouter: ', uniswapRouter.address)
     addressList["uniswapRouter"] = uniswapRouter.address

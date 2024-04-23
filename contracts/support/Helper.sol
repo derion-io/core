@@ -122,6 +122,69 @@ contract Helper is Constants, IHelper, ERC1155Holder {
         }
     }
 
+    function aggregateAndOpen (
+        address tokenIn,
+        address target,
+        bytes memory data,
+        SwapParams memory params
+    ) external returns (uint256 amountOut) {
+        TransferHelper.safeApprove(tokenIn, target, IERC20(tokenIn).balanceOf(address(this)));
+        {
+            (bool success, bytes memory result) = target.call(data);
+            if (!success) {
+                assembly {
+                    revert(add(result,32),mload(result))
+                }
+            }
+        }
+        TransferHelper.safeApprove(tokenIn, target, 0);
+
+        Config memory config = IPool(params.poolOut).loadConfig();
+        uint256 price;
+        uint amountInR = IERC20(config.TOKEN_R).balanceOf(address(this));
+        TransferHelper.safeApprove(config.TOKEN_R, params.poolOut, amountOut);
+
+        Payment memory payment = Payment(
+            msg.sender, // UTR
+            bytes(''),
+            params.recipient
+        );
+
+        bytes memory payload = abi.encode(
+            SIDE_R,
+            params.sideOut,
+            amountOut
+        );
+
+        (, amountOut, price) = IPool(params.poolOut).swap(
+            Param(
+                SIDE_R,
+                params.sideOut,
+                address(this),
+                payload
+            ),
+            payment
+        );
+
+        TransferHelper.safeApprove(config.TOKEN_R, params.poolOut, 0);
+
+        uint256 priceR = _getPrice(params.INDEX_R);
+
+        emit Swap(
+            BytesLib.toAddress(params.payer, 0),
+            params.poolOut,
+            params.poolOut,
+            params.recipient,
+            SIDE_R,
+            params.sideOut,
+            amountInR,
+            amountOut,
+            price,
+            priceR,
+            amountInR
+        );
+    }
+
     function swapAndOpen (
         SwapAndSwapParams memory params
     ) external returns (uint256 amountOut) {
