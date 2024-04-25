@@ -152,17 +152,13 @@ const { expect } = require("chai");
             code: stateCalHelper.address,
             data: (
               await stateCalHelper.populateTransaction.aggregateAndOpen(
-                usdc.address,
-                uniswapRouter.address,
-                swapTx.data,
                 {
-                  sideIn: SIDE_R,
-                  poolIn: pool.contract.address,
-                  sideOut: SIDE_A,
-                  poolOut: pool.contract.address,
-                  token: usdc.address,
-                  amountIn,
-                  payer: ADDRESS_ZERO,
+                  tokenIn: usdc.address,
+                  router: uniswapRouter.address,
+                  data: swapTx.data,
+                  pool: pool.contract.address,
+                  side: SIDE_A,
+                  payer: owner.address,
                   recipient: owner.address,
                   INDEX_R: 0,
                 }
@@ -209,17 +205,13 @@ const { expect } = require("chai");
             code: stateCalHelper.address,
             data: (
               await stateCalHelper.populateTransaction.aggregateAndOpen(
-                weth.address,
-                weth.address,
-                swapTx.data,
                 {
-                  sideIn: SIDE_R,
-                  poolIn: pool.contract.address,
-                  sideOut: SIDE_A,
-                  poolOut: pool.contract.address,
-                  token: usdc.address,
-                  amountIn,
-                  payer: ADDRESS_ZERO,
+                  tokenIn: weth.address,
+                  router: weth.address,
+                  data: swapTx.data,
+                  pool: pool.contract.address,
+                  side: SIDE_A,
+                  payer: owner.address,
                   recipient: owner.address,
                   INDEX_R: 0,
                 }

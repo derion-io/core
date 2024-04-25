@@ -22,6 +22,17 @@ import "../interfaces/IWeth.sol";
 contract Helper is Constants, IHelper, ERC1155Holder {
     using BytesLib for bytes;
 
+    struct AggregateOpenParams {
+        address tokenIn;
+        address router;
+        bytes data;
+        address pool;
+        uint256 side;
+        address payer;
+        address recipient;
+        uint256 INDEX_R;
+    }
+
     // INDEX_R == 0: priceR = 0
     // INDEX_R == Q254 | uint253(p): priceR = p
     // otherwise: priceR = _fetch(INDEX_R)
@@ -123,16 +134,13 @@ contract Helper is Constants, IHelper, ERC1155Holder {
     }
 
     function aggregateAndOpen (
-        address tokenIn,
-        address router,
-        bytes memory data,
-        SwapParams memory params
+        AggregateOpenParams memory params
     ) external payable returns (uint256 amountOut) {
         if (msg.value == 0) {
-            TransferHelper.safeApprove(tokenIn, router, IERC20(tokenIn).balanceOf(address(this)));
+            TransferHelper.safeApprove(params.tokenIn, params.router, IERC20(params.tokenIn).balanceOf(address(this)));
         }
         { // assembly scope
-            (bool success, bytes memory result) = router.call{value: msg.value}(data);
+            (bool success, bytes memory result) = params.router.call{value: msg.value}(params.data);
             if (!success) {
                 assembly {
                     revert(add(result,32),mload(result))
@@ -140,13 +148,13 @@ contract Helper is Constants, IHelper, ERC1155Holder {
             }
         }
         if (msg.value == 0) {
-            TransferHelper.safeApprove(tokenIn, router, 0);
+            TransferHelper.safeApprove(params.tokenIn, params.router, 0);
         }
 
-        Config memory config = IPool(params.poolOut).loadConfig();
+        Config memory config = IPool(params.pool).loadConfig();
         uint256 price;
         uint amountInR = IERC20(config.TOKEN_R).balanceOf(address(this));
-        TransferHelper.safeApprove(config.TOKEN_R, params.poolOut, amountOut);
+        TransferHelper.safeApprove(config.TOKEN_R, params.pool, amountOut);
 
         Payment memory payment = Payment(
             msg.sender, // UTR
@@ -156,31 +164,31 @@ contract Helper is Constants, IHelper, ERC1155Holder {
 
         bytes memory payload = abi.encode(
             SIDE_R,
-            params.sideOut,
+            params.side,
             amountOut
         );
 
-        (, amountOut, price) = IPool(params.poolOut).swap(
+        (, amountOut, price) = IPool(params.pool).swap(
             Param(
                 SIDE_R,
-                params.sideOut,
+                params.side,
                 address(this),
                 payload
             ),
             payment
         );
 
-        TransferHelper.safeApprove(config.TOKEN_R, params.poolOut, 0);
+        TransferHelper.safeApprove(config.TOKEN_R, params.pool, 0);
 
         uint256 priceR = _getPrice(params.INDEX_R);
 
         emit Swap(
-            BytesLib.toAddress(params.payer, 0),
-            params.poolOut,
-            params.poolOut,
+            params.payer,
+            address(0),
+            params.pool,
             params.recipient,
             SIDE_R,
-            params.sideOut,
+            params.side,
             amountInR,
             amountOut,
             price,
