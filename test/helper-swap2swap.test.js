@@ -9,9 +9,11 @@ const {
   const { SIDE_R, SIDE_A } = require("./shared/constant");
   const { ADDRESS_ZERO } = require("@uniswap/v3-sdk");
   const { encodePath } = require("./shared/Helper");
+const { expect } = require("chai");
   
   const PAYMENT = 0;
   const TRANSFER = 1;
+  const CALL_VALUE = 2;
   
 
   describe("Helper swap2swap", function () {
@@ -108,7 +110,7 @@ const {
       }
     );
 
-    it("AggregateAndOpen", async function () {
+    it("AggregateAndOpen-erc", async function () {
       const {
         utr,
         uniswapRouter,
@@ -119,6 +121,7 @@ const {
         owner,
         derivablePools,
       } = await loadFixture(fixture);
+      const amountIn = numberToWei(5)
       const pool = derivablePools[0];
       await usdc.approve(utr.address, MaxUint256);
 
@@ -127,10 +130,9 @@ const {
           path: encodePath([usdc.address, weth.address], [poolFee]),
           recipient: stateCalHelper.address,
           deadline: MaxUint256,
-          amountIn: numberToWei(5),
+          amountIn,
           amountOutMinimum: 1,
         },
-        { gasLimit: 30000000 },
       )
 
       const tx = await utr.exec(
@@ -147,7 +149,6 @@ const {
                 recipient: stateCalHelper.address,
               },
             ],
-            flags: 0,
             code: stateCalHelper.address,
             data: (
               await stateCalHelper.populateTransaction.aggregateAndOpen(
@@ -160,7 +161,7 @@ const {
                   sideOut: SIDE_A,
                   poolOut: pool.contract.address,
                   token: usdc.address,
-                  amountIn: numberToWei(5),
+                  amountIn,
                   payer: ADDRESS_ZERO,
                   recipient: owner.address,
                   INDEX_R: 0,
@@ -172,7 +173,65 @@ const {
       );
 
       const rec = await tx.wait(1)
-      console.log(rec?.events)
+      expect(rec.events.length).greaterThan(4)
+    });
+
+    it("AggregateAndOpen-native", async function () {
+      const {
+        utr,
+        uniswapRouter,
+        poolFee,
+        stateCalHelper,
+        usdc,
+        weth,
+        owner,
+        derivablePools,
+      } = await loadFixture(fixture);
+      const amountIn = numberToWei(5)
+      const pool = derivablePools[0];
+
+      const swapTx = await weth.populateTransaction.deposit()
+
+      const tx = await utr.exec(
+        [],
+        [
+          {
+            inputs: [
+              {
+                mode: CALL_VALUE,
+                eip: 0,
+                token: ADDRESS_ZERO,
+                id: 0,
+                amountIn: amountIn,
+                recipient: ADDRESS_ZERO,
+              },
+            ],
+            code: stateCalHelper.address,
+            data: (
+              await stateCalHelper.populateTransaction.aggregateAndOpen(
+                weth.address,
+                weth.address,
+                swapTx.data,
+                {
+                  sideIn: SIDE_R,
+                  poolIn: pool.contract.address,
+                  sideOut: SIDE_A,
+                  poolOut: pool.contract.address,
+                  token: usdc.address,
+                  amountIn,
+                  payer: ADDRESS_ZERO,
+                  recipient: owner.address,
+                  INDEX_R: 0,
+                }
+              )
+            ).data,
+          },
+        ],
+        { value: amountIn }
+      );
+
+      const rec = await tx.wait(1)
+      expect(rec.events.length).greaterThan(4)
     });
    
     it("Swap and open", async function () {

@@ -124,20 +124,24 @@ contract Helper is Constants, IHelper, ERC1155Holder {
 
     function aggregateAndOpen (
         address tokenIn,
-        address target,
+        address router,
         bytes memory data,
         SwapParams memory params
-    ) external returns (uint256 amountOut) {
-        TransferHelper.safeApprove(tokenIn, target, IERC20(tokenIn).balanceOf(address(this)));
-        {
-            (bool success, bytes memory result) = target.call(data);
+    ) external payable returns (uint256 amountOut) {
+        if (msg.value == 0) {
+            TransferHelper.safeApprove(tokenIn, router, IERC20(tokenIn).balanceOf(address(this)));
+        }
+        { // assembly scope
+            (bool success, bytes memory result) = router.call{value: msg.value}(data);
             if (!success) {
                 assembly {
                     revert(add(result,32),mload(result))
                 }
             }
         }
-        TransferHelper.safeApprove(tokenIn, target, 0);
+        if (msg.value == 0) {
+            TransferHelper.safeApprove(tokenIn, router, 0);
+        }
 
         Config memory config = IPool(params.poolOut).loadConfig();
         uint256 price;
