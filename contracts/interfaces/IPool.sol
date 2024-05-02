@@ -22,6 +22,9 @@ struct Param {
     bytes payload;
 }
 
+/// if payer.length == 0: payment is transferFrom msg.sender and utr is ignored
+/// if payer.length != 20: payer is passed as utr.pay's payload bytes
+/// if payer.length == 20: utr.pay's payload is constructed with payer address
 struct Payment {
     address utr;
     bytes payer;
