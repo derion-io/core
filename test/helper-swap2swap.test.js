@@ -123,7 +123,7 @@ const { expect } = require("chai");
       } = await loadFixture(fixture);
       const amountIn = numberToWei(5)
       const pool = derivablePools[0];
-      await usdc.approve(utr.address, MaxUint256);
+      await usdc.approve(utr.address, amountIn);
 
       const swapTx = await uniswapRouter.populateTransaction.exactInput(
         {
@@ -154,6 +154,7 @@ const { expect } = require("chai");
               await stateCalHelper.populateTransaction.aggregateAndOpen(
                 {
                   tokenIn: usdc.address,
+                  tokenTransferProxy: '0x216b4b4ba9f3e719726886d34a177484278bfcae',
                   router: uniswapRouter.address,
                   data: swapTx.data,
                   pool: pool.contract.address,
