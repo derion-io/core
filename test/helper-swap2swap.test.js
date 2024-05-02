@@ -154,7 +154,7 @@ const { expect } = require("chai");
               await stateCalHelper.populateTransaction.aggregateAndOpen(
                 {
                   tokenIn: usdc.address,
-                  tokenTransferProxy: '0x216b4b4ba9f3e719726886d34a177484278bfcae',
+                  tokenOperator: '0x216b4b4ba9f3e719726886d34a177484278bfcae',
                   router: uniswapRouter.address,
                   data: swapTx.data,
                   pool: pool.contract.address,

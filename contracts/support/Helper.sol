@@ -24,9 +24,9 @@ contract Helper is Constants, IHelper, ERC1155Holder {
 
     struct AggregateOpenParams {
         address tokenIn;
-        address tokenTransferProxy;
-        address router;
-        bytes data;
+        address tokenOperator;
+        address aggregator;
+        bytes aggregatorData;
         address pool;
         uint256 side;
         address payer;
@@ -138,10 +138,10 @@ contract Helper is Constants, IHelper, ERC1155Holder {
         AggregateOpenParams memory params
     ) external payable returns (uint256 amountOut) {
         if (msg.value == 0) {
-            TransferHelper.safeApprove(params.tokenIn, params.tokenTransferProxy, type(uint256).max);
+            TransferHelper.safeApprove(params.tokenIn, params.tokenOperator, type(uint256).max);
         }
         { // assembly scope
-            (bool success, bytes memory result) = params.router.call{value: msg.value}(params.data);
+            (bool success, bytes memory result) = params.aggregator.call{value: msg.value}(params.aggregatorData);
             if (!success) {
                 assembly {
                     revert(add(result,32),mload(result))
@@ -149,7 +149,7 @@ contract Helper is Constants, IHelper, ERC1155Holder {
             }
         }
         if (msg.value == 0) {
-            TransferHelper.safeApprove(params.tokenIn, params.tokenTransferProxy, 0);
+            TransferHelper.safeApprove(params.tokenIn, params.tokenOperator, 0);
         }
 
         Config memory config = IPool(params.pool).loadConfig();
