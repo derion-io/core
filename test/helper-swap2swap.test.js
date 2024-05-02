@@ -110,12 +110,12 @@ const { expect } = require("chai");
       }
     );
 
-    it("AggregateAndOpen-erc", async function () {
+    it("AggregateAndOpen-erc20", async function () {
       const {
         utr,
         uniswapRouter,
         poolFee,
-        stateCalHelper,
+        stateCalHelper: helper,
         usdc,
         weth,
         owner,
@@ -128,7 +128,7 @@ const { expect } = require("chai");
       const swapTx = await uniswapRouter.populateTransaction.exactInput(
         {
           path: encodePath([usdc.address, weth.address], [poolFee]),
-          recipient: stateCalHelper.address,
+          recipient: helper.address,
           deadline: MaxUint256,
           amountIn,
           amountOutMinimum: 1,
@@ -145,18 +145,18 @@ const { expect } = require("chai");
                 eip: 20,
                 token: usdc.address,
                 id: 0,
-                amountIn: numberToWei(5),
-                recipient: stateCalHelper.address,
+                amountIn,
+                recipient: helper.address,
               },
             ],
-            code: stateCalHelper.address,
+            code: helper.address,
             data: (
-              await stateCalHelper.populateTransaction.aggregateAndOpen(
+              await helper.populateTransaction.aggregateAndOpen(
                 {
-                  tokenIn: usdc.address,
-                  tokenOperator: '0x216b4b4ba9f3e719726886d34a177484278bfcae',
-                  router: uniswapRouter.address,
-                  data: swapTx.data,
+                  token: usdc.address,
+                  tokenOperator: uniswapRouter.address,
+                  aggregator: uniswapRouter.address,
+                  aggregatorData: swapTx.data,
                   pool: pool.contract.address,
                   side: SIDE_A,
                   payer: owner.address,
@@ -171,15 +171,15 @@ const { expect } = require("chai");
 
       const rec = await tx.wait(1)
       expect(rec.events.length).greaterThan(4)
+
+      const leftoverR = await weth.callStatic.balanceOf(helper.address)
+      expect(leftoverR).equal(0)
     });
 
     it("AggregateAndOpen-native", async function () {
       const {
         utr,
-        uniswapRouter,
-        poolFee,
-        stateCalHelper,
-        usdc,
+        stateCalHelper: helper,
         weth,
         owner,
         derivablePools,
@@ -203,13 +203,14 @@ const { expect } = require("chai");
                 recipient: ADDRESS_ZERO,
               },
             ],
-            code: stateCalHelper.address,
+            code: helper.address,
             data: (
-              await stateCalHelper.populateTransaction.aggregateAndOpen(
+              await helper.populateTransaction.aggregateAndOpen(
                 {
-                  tokenIn: weth.address,
-                  router: weth.address,
-                  data: swapTx.data,
+                  token: weth.address,
+                  tokenOperator: weth.address,
+                  aggregator: weth.address,
+                  aggregatorData: swapTx.data,
                   pool: pool.contract.address,
                   side: SIDE_A,
                   payer: owner.address,
@@ -225,6 +226,9 @@ const { expect } = require("chai");
 
       const rec = await tx.wait(1)
       expect(rec.events.length).greaterThan(4)
+
+      const leftoverR = await weth.callStatic.balanceOf(helper.address)
+      expect(leftoverR).equal(0)
     });
    
     it("Swap and open", async function () {
@@ -248,7 +252,7 @@ const { expect } = require("chai");
                 eip: 20,
                 token: usdc.address,
                 id: 0,
-                amountIn: numberToWei(5),
+                amountIn,
                 recipient: uniswapPairFee500.address,
               },
             ],
@@ -261,10 +265,10 @@ const { expect } = require("chai");
                   deriPool: pool.contract.address,
                   uniPool: uniswapPairFee500.address,
                   token: usdc.address,
-                  amount: numberToWei(5),
+                  amount: amountIn,
                   recipient: owner.address,
                   payer: owner.address,
-                  INDEX_R: 0
+                  INDEX_R: 0,
                 }
               )
             ).data,
