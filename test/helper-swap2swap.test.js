@@ -240,6 +240,7 @@ const { expect } = require("chai");
         owner,
         derivablePools,
       } = await loadFixture(fixture);
+      const amountIn = numberToWei(5)
       const pool = derivablePools[0];
       await usdc.approve(utr.address, MaxUint256);
       await utr.exec(
