@@ -22,6 +22,18 @@ import "../interfaces/IWeth.sol";
 contract Helper is Constants, IHelper, ERC1155Holder {
     using BytesLib for bytes;
 
+    struct AggregateParams {
+        address token;
+        address tokenOperator;
+        address aggregator;
+        bytes aggregatorData;
+        address pool;
+        uint256 side;
+        address payer;          // for event only
+        address recipient;
+        uint256 INDEX_R;        // for event price data
+    }
+
     // INDEX_R == 0: priceR = 0
     // INDEX_R == Q254 | uint253(p): priceR = p
     // otherwise: priceR = _fetch(INDEX_R)
@@ -120,6 +132,79 @@ contract Helper is Constants, IHelper, ERC1155Holder {
         if (amountOut > 0) {
             IERC1155Supply(TOKEN).safeTransferFrom(address(this), recipient, id, amountOut, '');
         }
+    }
+
+    /// @dev swap token to pool.TOKEN_R via an aggregator, then open the position
+    /// @dev left-over TOKEN_R in this contract will not be refunded
+    /// @dev payer is only used for event data
+    function aggregateAndOpen (
+        AggregateParams memory params
+    ) external payable returns (uint256 amountOut) {
+        uint256 amountIn = msg.value;
+        if (msg.value == 0) {
+            TransferHelper.safeApprove(params.token, params.tokenOperator, type(uint256).max);
+            amountIn = IERC20(params.token).balanceOf(address(this));
+        }
+        { // assembly scope
+            (bool success, bytes memory result) = params.aggregator.call{value: msg.value}(params.aggregatorData);
+            if (!success) {
+                assembly {
+                    revert(add(result,32),mload(result))
+                }
+            }
+        }
+        if (msg.value == 0) {
+            TransferHelper.safeApprove(params.token, params.tokenOperator, 0);
+        }
+
+        Config memory config = IPool(params.pool).loadConfig();
+        uint256 price;
+        uint amountInR = IERC20(config.TOKEN_R).balanceOf(address(this));
+        TransferHelper.safeApprove(config.TOKEN_R, params.pool, type(uint256).max);
+
+        // pool.swap
+        {
+            Payment memory payment = Payment(
+                address(0),     // UTR is ignored
+                bytes(''),      // ignored, transferFrom msg.sender
+                params.recipient
+            );
+
+            bytes memory payload = abi.encode(
+                SIDE_R,         // sideIn
+                params.side,    // sideOut
+                amountInR       // amount
+            );
+
+            (, amountOut, price) = IPool(params.pool).swap(
+                Param(
+                    SIDE_R,         // sideIn
+                    params.side,    // sideOut
+                    address(this),  // helper's contract
+                    payload         // helper's payload
+                ),
+                payment
+            );
+        }
+
+        // clean up
+        TransferHelper.safeApprove(config.TOKEN_R, params.pool, 0);
+
+        uint256 priceR = _getPrice(params.INDEX_R);
+
+        emit Swap(
+            params.payer,
+            params.token,       // emit the token as poolIn
+            params.pool,
+            params.recipient,
+            SIDE_R,             // emit SIDE_R as sideIn
+            params.side,
+            amountIn,
+            amountOut,
+            price,
+            priceR,
+            amountInR
+        );
     }
 
     function swapAndOpen (

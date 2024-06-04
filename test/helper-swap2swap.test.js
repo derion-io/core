@@ -7,10 +7,15 @@ const {
   const { MaxUint256 } = require("@ethersproject/constants");
   const { baseParams } = require("./shared/baseParams");
   const { SIDE_R, SIDE_A } = require("./shared/constant");
+  const { ADDRESS_ZERO } = require("@uniswap/v3-sdk");
+  const { encodePath } = require("./shared/Helper");
+  const { expect } = require("chai");
   
   const PAYMENT = 0;
+  const TRANSFER = 1;
+  const CALL_VALUE = 2;
   
-  
+
   describe("Helper swap2swap", function () {
     const fixture = loadFixtureFromParams(
       [
@@ -30,6 +35,7 @@ const {
             signer
           );
           const uniswapFactory = await UniswapFactory.deploy();
+          const poolFee = 500
   
           // uniswap PM
           const compiledUniswapv3PositionManager = require("./compiled/NonfungiblePositionManager.json");
@@ -49,7 +55,7 @@ const {
           const pairAddress = await uniswapFactory.getPool(
             usdc.address,
             weth.address,
-            500
+            poolFee,
           );
           const uniswapPairFee500 = new ethers.Contract(
             pairAddress,
@@ -73,7 +79,7 @@ const {
             {
               token0: quoteTokenIndex ? weth.address : usdc.address,
               token1: quoteTokenIndex ? usdc.address : weth.address,
-              fee: 500,
+              fee: poolFee,
               tickLower: Math.ceil(-887272 / 10) * 10,
               tickUpper: Math.floor(887272 / 10) * 10,
               amount0Desired: numberToWei("150000"),
@@ -89,13 +95,142 @@ const {
             }
           );
           await time.increase(1000);
+
+          // uniswap router
+          const compiledUniswapv3Router = require("./compiled/SwapRouter.json")
+          const UniswapRouter = new ethers.ContractFactory(compiledUniswapv3Router.abi, compiledUniswapv3Router.bytecode, signer)
+          const uniswapRouter = await UniswapRouter.deploy(uniswapFactory.address, weth.address)
+
           return {
             uniswapPairFee500,
+            uniswapRouter,
+            poolFee,
           };
         },
       }
     );
-  
+
+    it("AggregateAndOpen-erc20", async function () {
+      const {
+        utr,
+        uniswapRouter,
+        poolFee,
+        stateCalHelper: helper,
+        usdc,
+        weth,
+        owner,
+        derivablePools,
+      } = await loadFixture(fixture);
+      const amountIn = numberToWei(5)
+      const pool = derivablePools[0];
+      await usdc.approve(utr.address, amountIn);
+
+      const swapTx = await uniswapRouter.populateTransaction.exactInput(
+        {
+          path: encodePath([usdc.address, weth.address], [poolFee]),
+          recipient: helper.address,
+          deadline: MaxUint256,
+          amountIn,
+          amountOutMinimum: 1,
+        },
+      )
+
+      const tx = await utr.exec(
+        [],
+        [
+          {
+            inputs: [
+              {
+                mode: TRANSFER,
+                eip: 20,
+                token: usdc.address,
+                id: 0,
+                amountIn,
+                recipient: helper.address,
+              },
+            ],
+            code: helper.address,
+            data: (
+              await helper.populateTransaction.aggregateAndOpen(
+                {
+                  token: usdc.address,
+                  tokenOperator: uniswapRouter.address,
+                  aggregator: uniswapRouter.address,
+                  aggregatorData: swapTx.data,
+                  pool: pool.contract.address,
+                  side: SIDE_A,
+                  payer: owner.address,
+                  recipient: owner.address,
+                  INDEX_R: 0,
+                }
+              )
+            ).data,
+          },
+        ]
+      );
+
+      const rec = await tx.wait(1)
+      expect(rec.events.length).greaterThan(4)
+
+      const leftoverR = await weth.callStatic.balanceOf(helper.address)
+      expect(leftoverR).equal(0)
+    });
+
+    it("AggregateAndOpen-native", async function () {
+      const {
+        utr,
+        stateCalHelper: helper,
+        weth,
+        owner,
+        derivablePools,
+      } = await loadFixture(fixture);
+      const amountIn = numberToWei(5)
+      const pool = derivablePools[0];
+
+      const swapTx = await weth.populateTransaction.deposit()
+
+      const tx = await utr.exec(
+        [],
+        [
+          {
+            inputs: [
+              {
+                mode: CALL_VALUE,
+                eip: 0,
+                token: ADDRESS_ZERO,
+                id: 0,
+                amountIn: amountIn,
+                recipient: ADDRESS_ZERO,
+              },
+            ],
+            code: helper.address,
+            data: (
+              await helper.populateTransaction.aggregateAndOpen(
+                {
+                  token: weth.address,
+                  tokenOperator: weth.address,
+                  aggregator: weth.address,
+                  aggregatorData: swapTx.data,
+                  pool: pool.contract.address,
+                  side: SIDE_A,
+                  payer: owner.address,
+                  recipient: owner.address,
+                  INDEX_R: 0,
+                }
+              )
+            ).data,
+          },
+        ],
+        { value: amountIn }
+      );
+
+      const rec = await tx.wait(1)
+      expect(rec.events.length).greaterThan(4)
+
+      const leftoverR = await weth.callStatic.balanceOf(helper.address)
+      expect(leftoverR).equal(0)
+    });
+   
     it("Swap and open", async function () {
       const {
         utr,
@@ -105,6 +240,7 @@ const {
         owner,
         derivablePools,
       } = await loadFixture(fixture);
+      const amountIn = numberToWei(5)
       const pool = derivablePools[0];
       await usdc.approve(utr.address, MaxUint256);
       await utr.exec(
@@ -117,7 +253,7 @@ const {
                 eip: 20,
                 token: usdc.address,
                 id: 0,
-                amountIn: numberToWei(5),
+                amountIn,
                 recipient: uniswapPairFee500.address,
               },
             ],
@@ -130,10 +266,10 @@ const {
                   deriPool: pool.contract.address,
                   uniPool: uniswapPairFee500.address,
                   token: usdc.address,
-                  amount: numberToWei(5),
+                  amount: amountIn,
                   recipient: owner.address,
                   payer: owner.address,
-                  INDEX_R: 0
+                  INDEX_R: 0,
                 }
               )
             ).data,
