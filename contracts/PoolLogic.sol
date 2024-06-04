@@ -167,7 +167,7 @@ contract PoolLogic is PoolBase, Fetcher {
                     result.amountOut = FullMath.mulDiv(_supply(sideOut), rB1 - rB, rB);
                 }
                 if (config.OPEN_RATE != Q128) {
-                    result.amountIn = FullMath.mulDiv(result.amountIn, Q128, config.OPEN_RATE);
+                    result.amountIn = FullMath.mulDivRoundingUp(result.amountIn, Q128, config.OPEN_RATE);
                 }
             }
         }
