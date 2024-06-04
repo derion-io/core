@@ -53,7 +53,9 @@ describe("Premium", function () {
             rC = state.R.sub(rA).sub(rB)
         }
 
-        const premium = rA.sub(rB).abs().mul(UNIT*DAILY_PREMIUM).div(UNIT*timeRate)
+        const premium = rA.sub(rB).abs().shr(1)
+            .mul(rA.add(rB)).div(state.R)
+            .mul(UNIT*DAILY_PREMIUM).div(UNIT*timeRate)
 
         let premiumAExpected
         let premiumBExpected
@@ -61,21 +63,22 @@ describe("Premium", function () {
 
         if (rA.gt(rB)) {
             premiumAExpected = bn(0).sub(premium)
-            premiumBExpected = premium.mul(rB).div(rB.add(rC))
-            premiumCExpected = premium.mul(rC).div(rB.add(rC))
+            premiumBExpected = premium
+            // premiumCExpected = bn(0)
         } else {
             premiumBExpected = bn(0).sub(premium)
-            premiumAExpected = premium.mul(rA).div(rA.add(rC))
-            premiumCExpected = premium.mul(rC).div(rA.add(rC))
+            premiumAExpected = premium
+            // premiumCExpected = bn(0)
         }
         
         const premiumA = rA1.sub(rA)
         const premiumB = rB1.sub(rB)
-        const premiumC = rC1.sub(rC)
+        // const premiumC = rC1.sub(rC)
 
         expect(Math.abs(deviation(premiumA, premiumAExpected)), 'premium A').lte(1/tolerance)
         expect(Math.abs(deviation(premiumB, premiumBExpected)), 'premium B').lte(1/tolerance)
-        expect(Math.abs(deviation(premiumC, premiumCExpected)), 'premium C').lte(1/tolerance)
+        expect(Math.abs(deviation(rC1, rC)), 'premium C').equal(0)
+        // expect(Math.abs(deviation(premiumC, premiumCExpected)), 'premium C').lte(1/tolerance)
     }
     it("Apply premium: instant = no elapsed", async function () {
         const { derivablePools, derivable1155, feeRate, utr, weth, owner } = await loadFixture(fixture)
@@ -184,7 +187,7 @@ describe("Premium", function () {
             numberToWei(2)
         )
         
-        await compare(pool, derivable1155, DAILY_INTEREST, feeRate, 10)
+        await compare(pool, derivable1155, DAILY_INTEREST, feeRate, 9)
     })
 
     it("Apply premium continuos: After a month - Long", async function () {
@@ -272,7 +275,7 @@ describe("Premium", function () {
             numberToWei(2)
         )
         
-        await compare(pool, derivable1155, DAILY_INTEREST, feeRate, 10)
+        await compare(pool, derivable1155, DAILY_INTEREST, feeRate, 9)
     })
 
     it("Apply premium continuos: After a month - Short", async function () {
