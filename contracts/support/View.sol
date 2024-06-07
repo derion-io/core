@@ -97,11 +97,9 @@ contract View is PoolLogic {
                 --diff; // premium cannot exhaust an entire side
             uint256 elapsed = uint32(block.timestamp & F_MASK) - (s_lastPremiumTime & F_MASK);
             if (elapsed > 0) {
-                uint256 premium = diff >> 1;
                 uint256 premiumHL = FullMath.mulDivRoundingUp(config.PREMIUM_HL, R, rA + rB);
-                // make sure the premiumHL is not zero
-                premiumHL = Math.max(1, premiumHL);
                 uint256 rate = _decayRate(elapsed, premiumHL);
+                    uint256 premium = diff >> 1;
                     premium -= FullMath.mulDivRoundingUp(premium, rate, Q64);
                     if (premium > 0) {
                         if (rA > rB) {
