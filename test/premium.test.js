@@ -53,7 +53,7 @@ describe("Premium", function () {
             rC = state.R.sub(rA).sub(rB)
         }
 
-        const premium = rA.sub(rB).abs().shr(1)
+        const premium = rA.sub(rB).abs()
             .mul(rA.add(rB)).div(state.R)
             .mul(UNIT*DAILY_PREMIUM).div(UNIT*timeRate)
 
@@ -181,7 +181,7 @@ describe("Premium", function () {
         await time.increase(SECONDS_PER_DAY)
         const {rA: rA1, rB: rB1, rC: rC1} = await pool.contract.callStatic.compute(derivable1155.address, feeRate, 0, 0)
         expect(rC.sub(rC1), 'LP premmium').equals(0)
-        const premium = numberToWei(DAILY_PREMIUM/2)
+        const premium = numberToWei(DAILY_PREMIUM)
         expect(rA.sub(rA1).sub(premium).abs(), 'LONG premmium').lte(premium.div(100000))
         expect(rB1.sub(rB).sub(premium).abs(), 'SHORT premmium').lte(premium.div(100000))
 
@@ -202,9 +202,9 @@ describe("Premium", function () {
         await time.increase(SECONDS_PER_DAY)
         const {rA: rA1, rB: rB1, rC: rC1} = await pool.contract.callStatic.compute(derivable1155.address, feeRate, 0, 0)
         expect(rC.sub(rC1), 'LP premmium').equals(0)
-        const premium = numberToWei(DAILY_PREMIUM/2)
-        expect(Number(weiToNumber(rA.sub(rA1)) / (DAILY_PREMIUM/2/2)), 'LONG premmium').closeTo(1, 0.03)
-        expect(Number(weiToNumber(rB1.sub(rB)) / (DAILY_PREMIUM/2/2)), 'SHORT premmium').closeTo(1, 0.03)
+        const premium = numberToWei(DAILY_PREMIUM)
+        expect(Number(weiToNumber(rA.sub(rA1)) / (DAILY_PREMIUM/2)), 'LONG premmium').closeTo(1, 0.03)
+        expect(Number(weiToNumber(rB1.sub(rB)) / (DAILY_PREMIUM/2)), 'SHORT premmium').closeTo(1, 0.03)
 
         await time.increase(SECONDS_PER_DAY * 365 * 50)
         const {rA: rA2, rB: rB2, rC: rC2} = await pool.contract.callStatic.compute(derivable1155.address, feeRate, 0, 0)
@@ -224,7 +224,7 @@ describe("Premium", function () {
         await time.increase(SECONDS_PER_DAY)
         const {rA: rA1, rB: rB1, rC: rC1} = await pool.contract.callStatic.compute(derivable1155.address, feeRate, 0, 0)
         expect(rC.sub(rC1), 'LP premmium').equals(0)
-        const premium = numberToWei(DAILY_PREMIUM/2)
+        const premium = numberToWei(DAILY_PREMIUM)
         expect(rA1.sub(rA).sub(premium).abs(), 'LONG premmium').lte(premium.div(100000))
         expect(rB.sub(rB1).sub(premium).abs(), 'SHORT premmium').lte(premium.div(100000))
 
@@ -245,9 +245,9 @@ describe("Premium", function () {
         await time.increase(SECONDS_PER_DAY)
         const {rA: rA1, rB: rB1, rC: rC1} = await pool.contract.callStatic.compute(derivable1155.address, feeRate, 0, 0)
         expect(rC.sub(rC1), 'LP premmium').equals(0)
-        const premium = numberToWei(DAILY_PREMIUM/2)
-        expect(Number(weiToNumber(rA1.sub(rA)) / (DAILY_PREMIUM/2/2)), 'LONG premmium').closeTo(1, 0.03)
-        expect(Number(weiToNumber(rB.sub(rB1)) / (DAILY_PREMIUM/2/2)), 'SHORT premmium').closeTo(1, 0.03)
+        const premium = numberToWei(DAILY_PREMIUM)
+        expect(Number(weiToNumber(rA1.sub(rA)) / (DAILY_PREMIUM/2)), 'LONG premmium').closeTo(1, 0.03)
+        expect(Number(weiToNumber(rB.sub(rB1)) / (DAILY_PREMIUM/2)), 'SHORT premmium').closeTo(1, 0.03)
 
         await time.increase(SECONDS_PER_DAY * 365 * 50)
         const {rA: rA2, rB: rB2, rC: rC2} = await pool.contract.callStatic.compute(derivable1155.address, feeRate, 0, 0)
