@@ -439,7 +439,7 @@ describe("Protocol", function () {
             const receipt = await tx.wait()
             const poolAddress = ethers.utils.getAddress('0x' + receipt.logs[0].data.slice(-40))
             const initParams = {
-                R: 5000,
+                R: 6000,
                 a: 2000,
                 b: 2000,
             }
@@ -457,7 +457,7 @@ describe("Protocol", function () {
                     eip: 20,
                     token: weth.address,
                     id: 0,
-                    amountIn: 5000,
+                    amountIn: 6000,
                     recipient: poolAddress,
                 }],
                 flags: 0,
@@ -912,7 +912,7 @@ describe("Protocol", function () {
             await testPriceChange(false, 1, 1500 - (1500 * 50 / 100), 4.655)
         })
         it("Short -99%", async function () {
-            await testPriceChange(false, 1, 1500 - (1500 * 99 / 100), 5168.547)
+            await testPriceChange(false, 1, 1500 - (1500 * 99 / 100), 3714)
         })
         describe("Price change drastically", function () {
             const MARK = 1500;

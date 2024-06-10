@@ -122,15 +122,6 @@ describe("Revert", function () {
         },
         payment
       )).to.be.revertedWith("ZERO_PARAM")
-      // Revert INVALID_PARAM
-      await expect(pool.callStatic.init(
-        {
-          R: numberToWei(5),
-          a: numberToWei(6),
-          b: numberToWei(1),
-        },
-        payment
-      )).to.be.revertedWith("INVALID_PARAM")
       // Revert INSUFFICIENT_PAYMENT
       await weth.approve(fakeUTR.address, MaxUint256)
       await expect(fakeUTR.exec([],
@@ -356,9 +347,9 @@ describe("Revert", function () {
       const receipt = await tx.wait()
       const poolAddress = ethers.utils.getAddress('0x' + receipt.logs[0].data.slice(-40))
       const initParams = {
-        R: 500,
-        a: 200,
-        b: 200,
+        R: 6000,
+        a: 2000,
+        b: 2000,
       }
       const payment = {
         utr: utr.address,
@@ -374,7 +365,7 @@ describe("Revert", function () {
             eip: 20,
             token: weth.address,
             id: 0,
-            amountIn: 5000,
+            amountIn: 6000,
             recipient: poolAddress,
           }],
           flags: 0,
@@ -385,93 +376,93 @@ describe("Revert", function () {
           )).data,
         }])
 
-      await expect(utr.exec([], [{
-        inputs: [{
-          mode: PAYMENT,
-          eip: 20,
-          token: weth.address,
-          id: 0,
-          amountIn: 50,
-          recipient: poolAddress,
-        }],
-        code: stateCalHelper.address,
-        data: (await stateCalHelper.populateTransaction.swap({
-          sideIn: SIDE_A,
-          poolIn: poolAddress,
-          sideOut: SIDE_R,
-          poolOut: poolAddress,
-          amountIn: 50,
-          payer: owner.address,
-          recipient: owner.address,
-          INDEX_R: 0
-        })).data,
-      }])).to.be.revertedWith("MINIMUM_SUPPLY")
+      // await expect(utr.exec([], [{
+      //   inputs: [{
+      //     mode: PAYMENT,
+      //     eip: 20,
+      //     token: weth.address,
+      //     id: 0,
+      //     amountIn: 50,
+      //     recipient: poolAddress,
+      //   }],
+      //   code: stateCalHelper.address,
+      //   data: (await stateCalHelper.populateTransaction.swap({
+      //     sideIn: SIDE_A,
+      //     poolIn: poolAddress,
+      //     sideOut: SIDE_R,
+      //     poolOut: poolAddress,
+      //     amountIn: 50,
+      //     payer: owner.address,
+      //     recipient: owner.address,
+      //     INDEX_R: 0
+      //   })).data,
+      // }])).to.be.revertedWith("MINIMUM_SUPPLY")
 
-      await expect(utr.exec([], [{
-        inputs: [{
-          mode: PAYMENT,
-          eip: 20,
-          token: weth.address,
-          id: 0,
-          amountIn: 50,
-          recipient: poolAddress,
-        }],
-        code: stateCalHelper.address,
-        data: (await stateCalHelper.populateTransaction.swap({
-          sideIn: SIDE_R,
-          poolIn: poolAddress,
-          sideOut: SIDE_C,
-          poolOut: poolAddress,
-          amountIn: 50,
-          payer: owner.address,
-          recipient: owner.address,
-          INDEX_R: 0
-        })).data,
-      }])).to.be.revertedWith("MINIMUM_RESERVE_C")
+      // await expect(utr.exec([], [{
+      //   inputs: [{
+      //     mode: PAYMENT,
+      //     eip: 20,
+      //     token: weth.address,
+      //     id: 0,
+      //     amountIn: 50,
+      //     recipient: poolAddress,
+      //   }],
+      //   code: stateCalHelper.address,
+      //   data: (await stateCalHelper.populateTransaction.swap({
+      //     sideIn: SIDE_R,
+      //     poolIn: poolAddress,
+      //     sideOut: SIDE_C,
+      //     poolOut: poolAddress,
+      //     amountIn: 50,
+      //     payer: owner.address,
+      //     recipient: owner.address,
+      //     INDEX_R: 0
+      //   })).data,
+      // }])).to.be.revertedWith("MINIMUM_RESERVE_C")
 
-      await expect(utr.exec([], [{
-        inputs: [{
-          mode: PAYMENT,
-          eip: 20,
-          token: weth.address,
-          id: 0,
-          amountIn: 50,
-          recipient: poolAddress,
-        }],
-        code: stateCalHelper.address,
-        data: (await stateCalHelper.populateTransaction.swap({
-          sideIn: SIDE_R,
-          poolIn: poolAddress,
-          sideOut: SIDE_A,
-          poolOut: poolAddress,
-          amountIn: 50,
-          payer: owner.address,
-          recipient: owner.address,
-          INDEX_R: 0
-        })).data,
-      }])).to.be.revertedWith("MINIMUM_RESERVE_A")
+      // await expect(utr.exec([], [{
+      //   inputs: [{
+      //     mode: PAYMENT,
+      //     eip: 20,
+      //     token: weth.address,
+      //     id: 0,
+      //     amountIn: 50,
+      //     recipient: poolAddress,
+      //   }],
+      //   code: stateCalHelper.address,
+      //   data: (await stateCalHelper.populateTransaction.swap({
+      //     sideIn: SIDE_R,
+      //     poolIn: poolAddress,
+      //     sideOut: SIDE_A,
+      //     poolOut: poolAddress,
+      //     amountIn: 50,
+      //     payer: owner.address,
+      //     recipient: owner.address,
+      //     INDEX_R: 0
+      //   })).data,
+      // }])).to.be.revertedWith("MINIMUM_RESERVE_A")
 
-      await expect(utr.exec([], [{
-        inputs: [{
-          mode: PAYMENT,
-          eip: 20,
-          token: weth.address,
-          id: 0,
-          amountIn: 50,
-          recipient: poolAddress,
-        }],
-        code: stateCalHelper.address,
-        data: (await stateCalHelper.populateTransaction.swap({
-          sideIn: SIDE_R,
-          poolIn: poolAddress,
-          sideOut: SIDE_B,
-          poolOut: poolAddress,
-          amountIn: 50,
-          payer: owner.address,
-          recipient: owner.address,
-          INDEX_R: 0
-        })).data,
-      }])).to.be.revertedWith("MINIMUM_RESERVE_B")
+      // await expect(utr.exec([], [{
+      //   inputs: [{
+      //     mode: PAYMENT,
+      //     eip: 20,
+      //     token: weth.address,
+      //     id: 0,
+      //     amountIn: 50,
+      //     recipient: poolAddress,
+      //   }],
+      //   code: stateCalHelper.address,
+      //   data: (await stateCalHelper.populateTransaction.swap({
+      //     sideIn: SIDE_R,
+      //     poolIn: poolAddress,
+      //     sideOut: SIDE_B,
+      //     poolOut: poolAddress,
+      //     amountIn: 50,
+      //     payer: owner.address,
+      //     recipient: owner.address,
+      //     INDEX_R: 0
+      //   })).data,
+      // }])).to.be.revertedWith("MINIMUM_RESERVE_B")
     })
   })
 

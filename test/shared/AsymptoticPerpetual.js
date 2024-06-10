@@ -237,12 +237,12 @@ function _selectPrice(
 async function _init(oracleLibrary, R, params) {
   const oraclePrice = await oracleLibrary.fetch(params.oracle)
   const twap = oraclePrice.twap
-  const t = bn(0)
-  const decayRateX64 = _decayRate(t, params.halfLife)
-  const state = {a: params.a, b: params.b, R}
-  const market = _market(params.k, params.mark, decayRateX64, twap)
-  // const a = _v(market.xkA, R.div(3), R)
-  // const b = _v(market.xkB, R.div(3), R)
+  // const t = bn(0)
+  // const decayRateX64 = _decayRate(t, params.halfLife)
+  // const state = {a: params.a, b: params.b, R}
+  const market = _market(params.k, params.mark, Q64, twap)
+  params.a = _v(market.xkA, R.div(3), R)
+  params.b = _v(market.xkB, R.div(3), R)
   return params
 }
 
