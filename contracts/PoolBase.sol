@@ -28,18 +28,16 @@ abstract contract PoolBase is IPool, ERC1155Holder, Storage, Constants {
     uint32 constant internal F_MASK = ~uint32(1);
     address immutable internal TOKEN;
 
-    /// Swap event for each state transistion
-    /// @param sideMax the most significant side of sideIn and sideOut
-    event Swap(
+    /// Position event for each postion mint/burn
+    event Position(
         address indexed payer,
         address indexed recipient,
-        uint256 indexed sideMax,
-        uint256 sideIn,
-        uint256 sideOut,
+        address indexed index,
+        uint256 id,
+        uint256 amount,
         uint256 maturity,
-        uint256 amountIn,
-        uint256 amountOut,
-        uint256 price
+        uint256 indexPrice,
+        uint256 valueR
     );
 
     /**
@@ -71,7 +69,6 @@ abstract contract PoolBase is IPool, ERC1155Holder, Storage, Constants {
         uint256 a = state.a;
         uint256 b = state.b;
         require(R > 0 && a > 0 && b > 0, "PoolBase: ZERO_PARAM");
-        require(a <= R >> 1 && b <= R >> 1, "PoolBase: INVALID_PARAM");
 
         s_lastInterestTime = uint32(block.timestamp);
         s_a = uint224(a);
@@ -79,29 +76,41 @@ abstract contract PoolBase is IPool, ERC1155Holder, Storage, Constants {
         s_b = uint224(b);
 
         Config memory config = loadConfig();
+        address payer;
 
         if (payment.payer.length > 0) {
             uint256 expected = R + IERC20(config.TOKEN_R).balanceOf(address(this));
+            payer = BytesLib.toAddress(payment.payer, 0);
             if (payment.payer.length == 20) {
-                address payer = BytesLib.toAddress(payment.payer, 0);
                 payment.payer = abi.encode(payer, address(this), 20, config.TOKEN_R, 0);
             }
             IUniversalTokenRouter(payment.utr).pay(payment.payer, R);
             require(expected <= IERC20(config.TOKEN_R).balanceOf(address(this)), "PoolBase: INSUFFICIENT_PAYMENT");
         } else {
             TransferHelper.safeTransferFrom(config.TOKEN_R, msg.sender, address(this), R);
+            payer = msg.sender;
         }
 
         uint256 idA = _packID(address(this), SIDE_A);
         uint256 idB = _packID(address(this), SIDE_B);
         uint256 idC = _packID(address(this), SIDE_C);
 
+        (uint256 price,) = _fetch(config.FETCHER, uint256(config.ORACLE));
+        (uint256 rA, uint256 rB) = _evaluate(_xk(config, price), state);
+        require(rA >= MINIMUM_RESERVE, 'PoolBase: MINIMUM_RESERVE_A');
+        require(rB >= MINIMUM_RESERVE, 'PoolBase: MINIMUM_RESERVE_B');
+        uint256 rC = R - rA - rB;
+        require(rC >= MINIMUM_RESERVE, 'PoolBase: MINIMUM_RESERVE_C');
+
         // mint tokens to recipient
-        uint256 R3 = R / 3;
         uint32 maturity = uint32(block.timestamp + config.MATURITY);
-        IToken(TOKEN).mint(payment.recipient, idA, R3, maturity, "");
-        IToken(TOKEN).mint(payment.recipient, idB, R3, maturity, "");
-        IToken(TOKEN).mint(payment.recipient, idC, R - (R3 << 1), maturity, "");
+        IToken(TOKEN).mint(payment.recipient, idA, rA, maturity, "");
+        IToken(TOKEN).mint(payment.recipient, idB, rB, maturity, "");
+        IToken(TOKEN).mint(payment.recipient, idC, rC, maturity, "");
+        address index = address(uint160(uint256(config.ORACLE)));
+        emit Position(payer, payment.recipient, index, idA, rA, maturity, price, rA);
+        emit Position(payer, payment.recipient, index, idB, rB, maturity, price, rB);
+        emit Position(payer, payment.recipient, index, idC, rC, maturity, price, rC);
     }
 
     /// Performs single direction (1 side in, 1 side out) state transistion
@@ -122,12 +131,10 @@ abstract contract PoolBase is IPool, ERC1155Holder, Storage, Constants {
         address payer;
         if (param.sideIn == SIDE_R) {
             if (payment.payer.length > 0) {
+                payer = BytesLib.toAddress(payment.payer, 0);
                 // prepare the utr payload
                 if (payment.payer.length == 20) {
-                    payer = BytesLib.toAddress(payment.payer, 0);
                     payment.payer = abi.encode(payer, address(this), 20, config.TOKEN_R, 0);
-                } else {
-                    payer = tx.origin; // only for event index
                 }
                 uint256 expected = amountIn + IERC20(config.TOKEN_R).balanceOf(address(this));
                 // pull payment
@@ -146,12 +153,10 @@ abstract contract PoolBase is IPool, ERC1155Holder, Storage, Constants {
                 if (balance > 0) {
                     IToken(TOKEN).burn(address(this), idIn, balance);
                 }
+                payer = BytesLib.toAddress(payment.payer, 0);
                 // prepare the utr payload
                 if (payment.payer.length == 20) {
-                    payer = BytesLib.toAddress(payment.payer, 0);
                     payment.payer = abi.encode(payer, address(this), 1155, TOKEN, idIn);
-                } else {
-                    payer = tx.origin; // only for event index
                 }
                 // pull payment
                 IUniversalTokenRouter(payment.utr).pay(payment.payer, amountIn);
@@ -168,6 +173,17 @@ abstract contract PoolBase is IPool, ERC1155Holder, Storage, Constants {
                 IToken(TOKEN).burn(msg.sender, idIn, amountIn);
                 payer = msg.sender;
             }
+            uint256 valueR = param.sideOut == SIDE_R ? amountOut : 0;
+            emit Position(
+                payer,
+                address(0),  // burn from payer
+                address(uint160(uint256(config.ORACLE))),
+                idIn,
+                amountIn,
+                inputMaturity,
+                price,
+                valueR
+            );
             amountOut = _maturityPayoff(config, inputMaturity, amountOut);
         }
 
@@ -178,19 +194,18 @@ abstract contract PoolBase is IPool, ERC1155Holder, Storage, Constants {
             uint256 idOut = _packID(address(this), param.sideOut);
             maturity = uint32(block.timestamp) + config.MATURITY;
             IToken(TOKEN).mint(payment.recipient, idOut, amountOut, uint32(maturity), "");
+            uint256 valueR = param.sideIn == SIDE_R ? amountIn : 0;
+            emit Position(
+                payer,
+                payment.recipient,
+                address(uint160(uint256(config.ORACLE))),
+                idOut,
+                amountOut,
+                maturity,
+                price,
+                valueR
+            );
         }
-
-        emit Swap(
-            payer,
-            payment.recipient,
-            Math.max(param.sideIn, param.sideOut),
-            param.sideIn,
-            param.sideOut,
-            maturity,
-            amountIn,
-            amountOut,
-            price
-        );
     }
 
     /// @return R pool reserve
@@ -246,6 +261,9 @@ abstract contract PoolBase is IPool, ERC1155Holder, Storage, Constants {
     }
 
     function _swap(Config memory config, Param memory param) internal virtual returns (Result memory);
+    function _fetch(address fetcher, uint256 ORACLE) internal virtual returns (uint256 twap, uint256 spot);
+    function _evaluate(uint256 xk, State memory state) internal pure virtual returns (uint256 rA, uint256 rB);
+    function _xk(Config memory config, uint256 price) internal pure virtual returns (uint256 xk);
 
     function _maturityPayoff(
         Config memory config, uint256 maturity, uint256 amountOut

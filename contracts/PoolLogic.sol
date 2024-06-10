@@ -194,7 +194,7 @@ contract PoolLogic is PoolBase, Fetcher {
         }
     }
 
-    function _fetch(address fetcher, uint256 ORACLE) internal returns (uint256 twap, uint256 spot) {
+    function _fetch(address fetcher, uint256 ORACLE) internal override returns (uint256 twap, uint256 spot) {
         if (fetcher == address(0)) {
             return fetch(ORACLE);
         } else {
@@ -237,7 +237,7 @@ contract PoolLogic is PoolBase, Fetcher {
         return uint256(int(rate));
     }
 
-    function _xk(Config memory config, uint256 price) internal pure returns (uint256 xk) {
+    function _xk(Config memory config, uint256 price) internal pure override returns (uint256 xk) {
         uint256 MARK = config.MARK;
         bool inverted = MARK < price;
         if (inverted) {
@@ -281,7 +281,7 @@ contract PoolLogic is PoolBase, Fetcher {
         }
     }
 
-    function _evaluate(uint256 xk, State memory state) internal pure returns (uint256 rA, uint256 rB) {
+    function _evaluate(uint256 xk, State memory state) internal pure override returns (uint256 rA, uint256 rB) {
         rA = _r(xk, state.a, state.R);
         rB = _r(Q256M/xk, state.b, state.R);
     }
