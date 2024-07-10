@@ -34,7 +34,7 @@ Contract dependencies:
 * FeeReceiver: feeSetter
 * Token: UTR, descriptorSetter
 * Logic: Token, FeeReceiver, feeRate
-* Helper: Token, WETH
+* Helper: Token, WETH, (Logic)
 * Deployer: WETH, Logic
 * TokenDescriptor: Deployer
 * PlayToken: UTR
