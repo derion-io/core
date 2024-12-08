@@ -82,23 +82,16 @@ contract PoolLogic is PoolBase, Fetcher {
                     uint256 R = state.R;
                     uint256 elapsed = uint32(block.timestamp & F_MASK) - (s_lastPremiumTime & F_MASK);
                     if (elapsed > 0) {
-                        uint256 premium;
-                        if (rA > rB) {
-                            premium = rA - FullMath.mulDiv(R, rB, R - diff);
-                        } else {
-                            premium = rB - FullMath.mulDiv(R, rA, R - diff);
-                        }
-                        uint256 premiumHL = FullMath.mulDivRoundingUp(config.PREMIUM_HL, premium, diff);
-                        // make sure the premiumHL is not zero
-                        premiumHL = Math.max(1, premiumHL);
+                        uint256 premiumHL = FullMath.mulDivRoundingUp(config.PREMIUM_HL >> 1, R, rA + rB);
                         uint256 rate = _decayRate(elapsed, premiumHL);
+                        uint256 premium = diff >> 1;
                         premium -= FullMath.mulDivRoundingUp(premium, rate, Q64);
                         if (premium > 0) {
                             if (rA > rB) {
-                                rB += FullMath.mulDiv(premium, rB, R - rA);
+                                rB += premium;
                                 rA -= premium;
                             } else {
-                                rA += FullMath.mulDiv(premium, rA, R - rB);
+                                rA += premium;
                                 rB -= premium;
                             }
                             s_lastPremiumTime += uint32(elapsed);
@@ -167,7 +160,7 @@ contract PoolLogic is PoolBase, Fetcher {
                     result.amountOut = FullMath.mulDiv(_supply(sideOut), rB1 - rB, rB);
                 }
                 if (config.OPEN_RATE != Q128) {
-                    result.amountIn = FullMath.mulDiv(result.amountIn, Q128, config.OPEN_RATE);
+                    result.amountIn = FullMath.mulDivRoundingUp(result.amountIn, Q128, config.OPEN_RATE);
                 }
             }
         }
@@ -201,7 +194,7 @@ contract PoolLogic is PoolBase, Fetcher {
         }
     }
 
-    function _fetch(address fetcher, uint256 ORACLE) internal returns (uint256 twap, uint256 spot) {
+    function _fetch(address fetcher, uint256 ORACLE) internal override returns (uint256 twap, uint256 spot) {
         if (fetcher == address(0)) {
             return fetch(ORACLE);
         } else {
@@ -244,7 +237,7 @@ contract PoolLogic is PoolBase, Fetcher {
         return uint256(int(rate));
     }
 
-    function _xk(Config memory config, uint256 price) internal pure returns (uint256 xk) {
+    function _xk(Config memory config, uint256 price) internal pure override returns (uint256 xk) {
         uint256 MARK = config.MARK;
         bool inverted = MARK < price;
         if (inverted) {
@@ -288,7 +281,7 @@ contract PoolLogic is PoolBase, Fetcher {
         }
     }
 
-    function _evaluate(uint256 xk, State memory state) internal pure returns (uint256 rA, uint256 rB) {
+    function _evaluate(uint256 xk, State memory state) internal pure override returns (uint256 rA, uint256 rB) {
         rA = _r(xk, state.a, state.R);
         rB = _r(Q256M/xk, state.b, state.R);
     }

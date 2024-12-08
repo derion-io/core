@@ -410,7 +410,7 @@ contract Helper is Constants, IHelper, ERC1155Holder {
         require(amountOut >= params.amountOutMinimum, 'Too little received');
     }
 
-    function swap(SwapParams memory params) public payable returns (uint256 amountOut){
+    function swap(SwapParams memory params) public payable returns (uint256 amountOut) {
         ChangableSwapParams memory __ = ChangableSwapParams(
             params.sideIn,
             params.sideOut,

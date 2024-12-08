@@ -207,7 +207,6 @@ configs.forEach(config => describe(`Maturity - EXP = ${config.exp}, COEF ${confi
         )
         await time.setNextBlockTimestamp(curTime + 120 - t)
 
-        const tokenBalance = await derivable1155.balanceOf(accountA.address, packId(side, derivablePool.contract.address))
         const transferOut = 1
         await derivable1155.connect(accountA).safeTransferFrom(
             accountA.address,
@@ -247,7 +246,7 @@ configs.forEach(config => describe(`Maturity - EXP = ${config.exp}, COEF ${confi
         const {amountOut: amountOutFull, amountIn: amountInFull} = await derivablePool.connect(accountA).swap(
             side,
             SIDE_R,
-            tokenBalance,
+            await derivable1155.balanceOf(accountA.address, packId(side, derivablePool.contract.address)),
             { 
                 static: true,
                 keepBoth: true

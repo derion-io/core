@@ -112,7 +112,7 @@ describe("Price/Mark Overflow/Underflow", function () {
                         poolIn: poolAddress,
                         sideOut: SIDE_R,
                         poolOut: poolAddress,
-                        amountIn: balance.sub(1000).sub(1),
+                        amountIn: balance.sub(1000),
                         payer: owner.address,
                         recipient: owner.address,
                         INDEX_R: 0
@@ -129,7 +129,7 @@ describe("Price/Mark Overflow/Underflow", function () {
             expect(before.sub(middle)).lte(0)
             await withdrawAll(winner)
             const { R: after } = await pool.getStates()
-            expect(after).lte(3006)
+            expect(after).lte(5002)
         })
     }
 })

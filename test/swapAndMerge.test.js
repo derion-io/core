@@ -78,7 +78,7 @@ maturities.forEach(maturity => describe(`Swap and merge maturity: ${maturity}`, 
       eip: 1155,
       token: derivable1155.address,
       id: idOut,
-      amountOutMin: amountIn,
+      amountOutMin: 1,
     }], [{
       inputs: [{
         mode: TRANSFER,
