@@ -2,7 +2,7 @@
  *Submitted for verification at BscScan.com on 2021-10-27
  */
 
-// SPDX-License-Identifier: BSL-1.1
+// SPDX-License-Identifier: BUSL-1.1
 pragma solidity >=0.6.2;
 pragma experimental ABIEncoderV2;
 

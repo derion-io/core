@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: BSL-1.1
+// SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.20;
 
 import "abdk-libraries-solidity/ABDKMath64x64.sol";
