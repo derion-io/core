@@ -36,7 +36,7 @@ abstract contract PoolBase is IPool, ERC1155Holder, Storage, Constants {
         uint256 id,
         uint256 amount,
         uint256 maturity,
-        uint256 indexPrice,
+        uint256 price,
         uint256 valueR
     );
 

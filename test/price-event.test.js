@@ -45,7 +45,7 @@ describe("Price selection", async function () {
       bn(100000)
     )
     const {events} = await txn.wait()
-    const swapEvent = events.find(x => x.event === 'Swap')
+    const swapEvent = events.find(x => x.event === 'Position')
     const eventPrice = swapEvent.args['price']
     const max = twap.gt(spot) ? twap : spot
     const min = twap.gt(spot) ? spot : twap
