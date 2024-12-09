@@ -45,7 +45,7 @@ contract View is PoolLogic {
 
         stateView.rA = Math.min(rAt, rAs);
         stateView.rB = Math.min(rBt, rBs);
-        stateView.rC = Math.min(Rt - rAt - rBt, state.R - rAs - rBs);
+        stateView.rC = Math.max(Rt - rAt - rBt, state.R - rAs - rBs);
 
         if (Rt < state.R) {
             state.R = Rt;
@@ -95,10 +95,10 @@ contract View is PoolLogic {
             uint256 diff = rA > rB ? rA - rB : rB - rA;
             if (diff > 1) {
                 --diff; // premium cannot exhaust an entire side
-            uint256 elapsed = uint32(block.timestamp & F_MASK) - (s_lastPremiumTime & F_MASK);
-            if (elapsed > 0) {
-                uint256 premiumHL = FullMath.mulDivRoundingUp(config.PREMIUM_HL >> 1, R, rA + rB);
-                uint256 rate = _decayRate(elapsed, premiumHL);
+                uint256 elapsed = uint32(block.timestamp & F_MASK) - (s_lastPremiumTime & F_MASK);
+                if (elapsed > 0) {
+                    uint256 premiumHL = FullMath.mulDivRoundingUp(config.PREMIUM_HL >> 1, R, rA + rB);
+                    uint256 rate = _decayRate(elapsed, premiumHL);
                     uint256 premium = diff >> 1;
                     premium -= FullMath.mulDivRoundingUp(premium, rate, Q64);
                     if (premium > 0) {

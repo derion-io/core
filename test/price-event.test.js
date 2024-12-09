@@ -77,7 +77,7 @@ describe("Price selection", async function () {
   })
 
   it("Price up; C->R", async function () {
-    await testPriceSelection(SIDE_C, SIDE_R, 1600, 1500, true)
+    await testPriceSelection(SIDE_C, SIDE_R, 1600, 1500, false)
   })
 
   it("Price down; R->A", async function () {
@@ -101,6 +101,6 @@ describe("Price selection", async function () {
   })
 
   it("Price down; C->R", async function () {
-    await testPriceSelection(SIDE_C, SIDE_R, 1500, 1600, true)
+    await testPriceSelection(SIDE_C, SIDE_R, 1500, 1600, false)
   })
 })

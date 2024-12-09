@@ -80,10 +80,13 @@ describe("Price selection", async function () {
       numberToWei(0.1),
       {static: true}
     )
-    
+
     const min = firstOut.lte(secondOut) ? firstOut : secondOut
-    expect(min).to.be.equal(thirdOut)
-    expect(min).to.be.equal(fourthOut)
+    const max = firstOut.gt(secondOut) ? firstOut : secondOut
+    const removeLP = sideIn == SIDE_C && sideOut == SIDE_R
+    const target = removeLP ? max : min
+    expect(target).to.be.equal(thirdOut)
+    expect(target).to.be.equal(fourthOut)
   }
 
   it("Price up; R->A", async function () {

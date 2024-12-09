@@ -187,9 +187,10 @@ contract PoolLogic is PoolBase, Fetcher {
         } else {
             xk = _xk(config, price = min);
             (rA, rB) = _evaluate(xk, state);
-            if ((sideIn == SIDE_R) == rB > rA) {
-                xk = _xk(config, price = max);
-                (rA, rB) = _evaluate(xk, state);
+            uint256 xkMax = _xk(config, max);
+            (uint256 rAMax, uint256 rBMax) = _evaluate(xkMax, state);
+            if (rA + rB > rAMax + rBMax) {
+                return (xkMax, rAMax, rBMax, max);
             }
         }
     }
