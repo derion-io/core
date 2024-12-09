@@ -174,8 +174,8 @@ describe('Fetcher logic', function () {
     })
 })
 
-describe("Pool with CompositeFetcher", function () {
-    const fixture = loadFixtureFromParams([])
+describe("Pool with CompositeFetcher", async function () {
+    const fixture = await loadFixtureFromParams([])
 
     it("Test", async function() {
         const { owner, weth, usdc, utr, poolFactory, stateCalHelper, uniswapPair } = await loadFixture(fixture)

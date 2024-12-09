@@ -47,7 +47,7 @@ configs.forEach(({hl, fee}) => {
   const dailyInterestRate = toDailyRate(hl)
 
   describe(`Frequency Test: interest rate - ${dailyInterestRate*100}%, fee - ${fee}`, function() {
-    const fixture = loadFixtureFromParams([{
+    const fixture = await loadFixtureFromParams([{
       ...baseParams,
       halfLife: bn(hl),
     }], { 

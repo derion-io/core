@@ -5,8 +5,8 @@ const { SIDE_R, SIDE_A } = require("./shared/constant")
 const { loadFixtureFromParams } = require("./shared/scenerios")
 const { bn, swapToSetPriceMock, numberToWei, weiToNumber } = require("./shared/utilities")
 
-describe('ARB', function() {
-  const fixture = loadFixtureFromParams([{
+describe('ARB', async function() {
+  const fixture = await loadFixtureFromParams([{
     ...baseParams,
     mark: bn('15065122318819189091263847637975040'),
     k: bn('40'),

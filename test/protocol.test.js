@@ -30,8 +30,8 @@ const PAYMENT = 0;
 
 const HALF_LIFE = 10 * 365 * 24 * 60 * 60
 
-describe("Protocol", function () {
-    const fixture = loadFixtureFromParams([{
+describe("Protocol", async function () {
+    const fixture = await loadFixtureFromParams([{
         ...baseParams,
         halfLife: bn(HALF_LIFE),
         premiumHL: bn(1).shl(128).div(2)

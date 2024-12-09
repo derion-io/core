@@ -17,7 +17,7 @@ const HALF_LIFE = 0;
 const pe = (x) => ethers.utils.parseEther(String(x))
 
 describe("Premium", function () {
-  const fixture = loadFixtureFromParams([
+  const fixture = await loadFixtureFromParams([
     baseParams, 
     {
       ...baseParams,

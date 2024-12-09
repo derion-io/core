@@ -16,8 +16,8 @@ const pe = (x) => ethers.utils.parseEther(String(x))
 
 const HALF_LIFE = 10 * 365 * 24 * 60 * 60
 
-describe("Order", function () {
-    const fixture = loadFixtureFromParams([{
+describe("Order", async function () {
+    const fixture = await loadFixtureFromParams([{
         ...baseParams,
         k: bn(64),
         a: bn('400000000000000'),

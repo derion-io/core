@@ -21,8 +21,8 @@ const PREMIUM_HLS = [0, 1, 60, 60 * 60, 1024, 60*60*24*365*10]
 INTEREST_HLS.forEach(INTEREST_HL => {
   PREMIUM_HLS.forEach(PREMIUM_HL => {
     describe("High Interest and Premium", function () {
-      describe(`I = ${INTEREST_HL}, P = ${PREMIUM_HL}`, function () {
-        const fixture = loadFixtureFromParams([
+      describe(`I = ${INTEREST_HL}, P = ${PREMIUM_HL}`, async function () {
+        const fixture = await loadFixtureFromParams([
           {
             ...baseParams,
             halfLife: bn(INTEREST_HL),

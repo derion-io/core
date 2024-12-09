@@ -34,8 +34,8 @@ function toHalfLife(dailyRate) {
 
 HLs.forEach(HALF_LIFE => {
   const dailyInterestRate = toDailyRate(HALF_LIFE)
-  describe(`Interest rate fee: Interest rate ${dailyInterestRate*100}%, Fee rate ${FEE_RATE}`, function () {
-    const fixture = loadFixtureFromParams([{
+  describe(`Interest rate fee: Interest rate ${dailyInterestRate*100}%, Fee rate ${FEE_RATE}`, async function () {
+    const fixture = await loadFixtureFromParams([{
       ...baseParams,
       halfLife: bn(HALF_LIFE)
     }], { feeRate: FEE_RATE })
@@ -124,8 +124,8 @@ HLs.forEach(HALF_LIFE => {
     })
   })
 
-  describe(`Interest rate fee: Interest rate ${dailyInterestRate*100}%, Fee rate ${numberToWei(10000)}`, function () {
-    const fixture = loadFixtureFromParams([{
+  describe(`Interest rate fee: Interest rate ${dailyInterestRate*100}%, Fee rate ${numberToWei(10000)}`, async function () {
+    const fixture = await loadFixtureFromParams([{
       ...baseParams,
       halfLife: bn(HALF_LIFE)
     }], { feeRate: numberToWei(10000) })
@@ -150,8 +150,8 @@ HLs.forEach(HALF_LIFE => {
   })
 
   const dailyPremiumRate = 0.1
-  describe(`Interest rate ${dailyInterestRate*100}% - Premium rate ${dailyPremiumRate*100}% - Fee rate ${FEE_RATE}`, function () {
-    const fixture = loadFixtureFromParams([{
+  describe(`Interest rate ${dailyInterestRate*100}% - Premium rate ${dailyPremiumRate*100}% - Fee rate ${FEE_RATE}`, async function () {
+    const fixture = await loadFixtureFromParams([{
       ...baseParams,
       halfLife: bn(HALF_LIFE),
       premiumHL: bn(toHalfLife(dailyPremiumRate))

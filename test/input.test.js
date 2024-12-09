@@ -7,8 +7,8 @@ const { AddressZero, MaxUint256 } = require("@ethersproject/constants");
 const { _selectPrice, _evaluate } = require("./shared/AsymptoticPerpetual")
 const { expect } = require("chai")
 
-describe('Input', function () {
-    const fixture = loadFixtureFromParams([{
+describe('Input', async function () {
+    const fixture = await loadFixtureFromParams([{
         ...baseParams,
         openRate: feeToOpenRate(0.003),
         premiumHL: bn(1).shl(128).div(2)

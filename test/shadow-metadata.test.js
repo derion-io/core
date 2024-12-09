@@ -12,8 +12,8 @@ const expect = chai.expect
 const { packId, decodeDataURI } = require("./shared/utilities")
 
 
-describe("Shadow metadata spec", function () {
-    const fixture = loadFixtureFromParams([baseParams],{
+describe("Shadow metadata spec", async function () {
+    const fixture = await loadFixtureFromParams([baseParams],{
         callback: async ({derivable1155}) => {
             // deploy TestHelper
             const FakePool = await ethers.getContractFactory("contracts/test/FakePool.sol:FakePool")

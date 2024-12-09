@@ -21,7 +21,7 @@ function toHalfLife(dailyRate) {
 }
 
 describe("Premium and Future", function () {
-  const fixture = loadFixtureFromParams([{
+  const fixture = await loadFixtureFromParams([{
     ...baseParams,
     halfLife: bn(toHalfLife(0.006)),
     maturity: MIN_EXPIRE,

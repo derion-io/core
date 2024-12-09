@@ -22,8 +22,8 @@ function deviation(a, b) {
     return a.sub(b).mul(UNIT).div(m).toNumber() / UNIT
 }
 
-describe("Premium", function () {
-    const fixture = loadFixtureFromParams([{
+describe("Premium", async function () {
+    const fixture = await loadFixtureFromParams([{
         ...baseParams,
         halfLife: bn(0),
         premiumHL: bn(toHalfLife(DAILY_PREMIUM)),
@@ -432,8 +432,8 @@ describe("Premium", function () {
     })
 })
 
-describe("Apply premium R too big", function () {
-    const fixture = loadFixtureFromParams([{
+describe("Apply premium R too big", async function () {
+    const fixture = await loadFixtureFromParams([{
         ...baseParams,
         halfLife: bn(toHalfLife(DAILY_INTEREST)),
         premiumHL: bn(toHalfLife(DAILY_PREMIUM)),

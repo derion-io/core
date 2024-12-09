@@ -18,8 +18,8 @@ const opts = {
 
 const feeRates = [0.03, 0.005, 0.95, 0.999] 
 
-feeRates.forEach(feeRate => {
-  const fixture = loadFixtureFromParams([{
+feeRates.forEach(async feeRate => {
+  const fixture = await loadFixtureFromParams([{
     ...baseParams,
     premiumHL: bn(1).shl(128).div(2)
   }, {

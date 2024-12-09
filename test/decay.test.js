@@ -21,8 +21,8 @@ const PAYMENT       = 0;
 const HLs = [ 10 * 365 * 24 * 60 * 60]
 
 HLs.forEach(HALF_LIFE => {
-  describe(`HALF_LIFE ${HALF_LIFE == 0 ? '= 0' : '> 0'} Decay funding rate`, function () {
-    const fixture = loadFixtureFromParams([{
+  describe(`HALF_LIFE ${HALF_LIFE == 0 ? '= 0' : '> 0'} Decay funding rate`, async function () {
+    const fixture = await loadFixtureFromParams([{
       ...baseParams,
       halfLife: bn(HALF_LIFE)
     }], {

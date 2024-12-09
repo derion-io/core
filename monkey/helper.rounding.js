@@ -31,7 +31,7 @@ for (let index = 0; index < 50; index++) {
       SECONDS_PER_DAY /
       Math.log2(1 / (1 - dailyFundingRate)))
   
-    const fixture = loadFixtureFromParams([{
+    const fixture = await loadFixtureFromParams([{
       ...baseParams,
       halfLife: bn(halfLife),
       k: bn(k),

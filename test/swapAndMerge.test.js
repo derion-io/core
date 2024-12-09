@@ -13,8 +13,8 @@ const static = true
 const PAYMENT = 0;
 const TRANSFER = 1;
 
-maturities.forEach(maturity => describe(`Swap and merge maturity: ${maturity}`, function () {
-  const fixture = loadFixtureFromParams([{
+maturities.forEach(maturity => describe(`Swap and merge maturity: ${maturity}`, async function () {
+  const fixture = await loadFixtureFromParams([{
     ...baseParams,
     maturity,
   }])

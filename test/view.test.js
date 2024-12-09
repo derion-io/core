@@ -27,8 +27,8 @@ function deviation(a, b) {
   return a.sub(b).mul(UNIT).div(m).toNumber() / UNIT
 }
 
-describe("View", function () {
-  const fixture = loadFixtureFromParams([{
+describe("View", async function () {
+  const fixture = await loadFixtureFromParams([{
     ...baseParams,
     halfLife: bn(19932680),
   },

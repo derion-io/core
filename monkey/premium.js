@@ -41,7 +41,7 @@ const configs = [
 
 configs.forEach(config => {
     describe(`Monkey Test: Interest rate ${config.interestRate * 100}%, Premium ${config.premiumRate * 100}%`, function () {
-        const fixture = loadFixtureFromParams([{
+        const fixture = await loadFixtureFromParams([{
             ...baseParams,
             halfLife: bn(toHalfLife(config.interestRate)),
             premiumHL: bn(toHalfLife(config.premiumRate)),

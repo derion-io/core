@@ -28,9 +28,9 @@ const configs = [
 }
 ]
 
-configs.forEach(config => describe(`Maturity - EXP = ${config.exp}, COEF ${config.coef}`, function () {
+configs.forEach(config => describe(`Maturity - EXP = ${config.exp}, COEF ${config.coef}`, async function () {
     const {exp, coef} = config
-    const fixture = loadFixtureFromParams([{
+    const fixture = await loadFixtureFromParams([{
         ...baseParams,
         maturity: 60,
         maturityVest: Math.floor(60 / exp),

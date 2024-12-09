@@ -12,8 +12,8 @@ const expect = chai.expect
 const { bn, numberToWei, swapToSetPriceMock } = require("./shared/utilities")
 
 
-describe("Price selection", function () {
-  const fixture = loadFixtureFromParams([{
+describe("Price selection", async function () {
+  const fixture = await loadFixtureFromParams([{
     ...baseParams,
     premiumHL: bn(1).shl(128).div(2)
   }])

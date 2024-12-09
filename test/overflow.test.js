@@ -13,8 +13,8 @@ const PAYMENT = 0;
 
 const PRICES = [1e20, 1e10, 1e-10, 1e-18]
 
-describe("Price/Mark Overflow/Underflow", function () {
-    const fixture = loadFixtureFromParams([])
+describe("Price/Mark Overflow/Underflow", async function () {
+    const fixture = await loadFixtureFromParams([])
 
     for (const PRICE of PRICES) {
         it(`O/U: ${PRICE}`, async function() {

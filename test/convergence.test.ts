@@ -26,8 +26,8 @@ const PREMIUM_HLS = [10, 60, 60*60, 60*60*24]
 INTEREST_HLS.forEach(INTEREST_HL => {
   PREMIUM_HLS.forEach(PREMIUM_HL => {
     describe("Convergence", function () {
-      describe(`I = ${INTEREST_HL}, P = ${PREMIUM_HL}`, function () {
-        const fixture = loadFixtureFromParams([{
+      describe(`I = ${INTEREST_HL}, P = ${PREMIUM_HL}`, async function () {
+        const fixture = await loadFixtureFromParams([{
           ...baseParams,
           halfLife: bn(INTEREST_HL),
           premiumHL: bn(PREMIUM_HL),

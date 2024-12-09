@@ -16,8 +16,8 @@ const {
   const CALL_VALUE = 2;
   
 
-  describe("Helper swap2swap", function () {
-    const fixture = loadFixtureFromParams(
+  describe("Helper swap2swap", async function () {
+    const fixture = await loadFixtureFromParams(
       [
         {
           ...baseParams,

@@ -17,8 +17,8 @@ const pe = (x) => ethers.utils.parseEther(String(x))
 const HALF_LIFE = 10 * 365 * 24 * 60 * 60
 const PAYMENT = 0
 
-describe("Revert", function () {
-  const fixture = loadFixtureFromParams([{
+describe("Revert", async function () {
+  const fixture = await loadFixtureFromParams([{
     ...baseParams,
     halfLife: bn(HALF_LIFE),
     premiumHL: bn(1).shl(128).div(2),

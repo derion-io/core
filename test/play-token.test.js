@@ -12,8 +12,8 @@ const { SIDE_R, SIDE_B } = require("./shared/constant");
 const PAYMENT = 0;
 const pe = (x) => ethers.utils.parseEther(String(x))
 
-describe("Play Token", function () {
-    const fixture = loadFixtureFromParams([])
+describe("Play Token", async function () {
+    const fixture = await loadFixtureFromParams([])
 
     it("is Token reserve", async function() {
         const { owner, weth, usdc, utr, poolFactory, stateCalHelper, uniswapPair, derivable1155 } = await loadFixture(fixture)

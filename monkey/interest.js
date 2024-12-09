@@ -31,7 +31,7 @@ function toDailyRate(HALF_LIFE, precision = 4) {
 HLs.forEach(HALF_LIFE => {
   const dailyInterestRate = toDailyRate(HALF_LIFE)
   describe(`Monkey Test: Interest rate ${dailyInterestRate*100}%`, function() {
-    const fixture = loadFixtureFromParams([{
+    const fixture = await loadFixtureFromParams([{
       ...baseParams,
       halfLife: bn(HALF_LIFE),
       premiumHL: 0,
