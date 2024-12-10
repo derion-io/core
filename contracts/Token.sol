@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
-pragma solidity 0.8.20;
+pragma solidity ^0.8.28;
 
-import "@derivable/shadow-token/contracts/ShadowFactory.sol";
+import "@derion/shadow-token/contracts/ShadowFactory.sol";
 import "./interfaces/IPool.sol";
 import "./interfaces/ITokenDescriptor.sol";
 
@@ -37,7 +37,7 @@ contract Token is ShadowFactory {
         address utr,
         address descriptorSetter,
         address descriptor
-    ) ShadowFactory("") {
+    ) ShadowFactory("", "Derion Shadow Token", "DST") {
         UTR = utr;
         s_descriptor = descriptor;
         s_descriptorSetter = descriptorSetter;

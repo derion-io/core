@@ -314,7 +314,7 @@ async function deploy(settings) {
     // init the pool
     const initParams = await calculateInitParamsFromPrice(config, MARK, R)
 
-    const utr = new ethers.Contract(configs.helperContract.utr, require("@derivable/utr/build/UniversalTokenRouter.json").abi, deployer)
+    const utr = new ethers.Contract(configs.helperContract.utr, require("@derion/utr/build/UniversalTokenRouter.json").abi, deployer)
 
     // get pool address
     const poolAddress = await poolDeployer.callStatic.create(config)

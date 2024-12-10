@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.20;
+pragma solidity ^0.8.28;
 
-import "@derivable/shadow-token/contracts/interfaces/IShadowFactory.sol";
+import "@derion/shadow-token/contracts/interfaces/IShadowFactory.sol";
 
 interface IToken is IShadowFactory {
     function mint(

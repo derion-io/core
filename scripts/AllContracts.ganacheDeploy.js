@@ -30,7 +30,7 @@ async function main() {
     const [owner, acc1] = await ethers.getSigners()
     const signer = owner
     // deploy utr
-    const UTR = require("@derivable/utr/build/UniversalTokenRouter.json")
+    const UTR = require("@derion/utr/build/UniversalTokenRouter.json")
     const UniversalRouter = new ethers.ContractFactory(UTR.abi, UTR.bytecode, owner)
     const utr = await UniversalRouter.deploy()
     await utr.deployed()

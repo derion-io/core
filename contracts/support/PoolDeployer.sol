@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
-pragma solidity 0.8.20;
+pragma solidity ^0.8.28;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@derivable/utr/contracts/NotToken.sol";
+import "@derion/utr/contracts/NotToken.sol";
 import "../libs/MetaProxyFactory.sol";
 import "../interfaces/IPoolFactory.sol";
 import "../interfaces/IPool.sol";

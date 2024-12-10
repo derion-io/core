@@ -1,30 +1,27 @@
 // SPDX-License-Identifier: BUSL-1.1
-pragma solidity 0.8.20;
+pragma solidity ^0.8.28;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
-import "@openzeppelin/contracts/access/AccessControlEnumerable.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Context.sol";
 
-contract PlayDerivable is Context, AccessControlEnumerable, ERC20Burnable {
+contract PlayDerivable is Context, Ownable, ERC20Burnable {
     // Immutables
     address internal immutable UTR;
 
-    constructor(address admin, address utr) ERC20("", "") {
-        if (admin == address(0)) {
-            admin = tx.origin;
-        }
+    constructor(address admin, address utr)
+        Ownable(admin != address(0) ? admin : tx.origin)
+        ERC20("", "")
+    {
         UTR = utr;
-        _setupRole(DEFAULT_ADMIN_ROLE, admin);
     }
 
-    function mint(address to, uint256 amount) public virtual {
-        require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "PlayDerivable: NOT_ADMIN");
+    function mint(address to, uint256 amount) onlyOwner public virtual {
         _mint(to, amount);
     }
 
-    function burnFrom(address account, uint256 amount) public virtual override {
-        require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "PlayDerivable: NOT_ADMIN");
+    function burnFrom(address account, uint256 amount) onlyOwner public virtual override {
         _burn(account, amount);
     }
 

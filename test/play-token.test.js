@@ -137,19 +137,19 @@ describe("Play Token", async function () {
         await playToken.burnFrom(accountA.address, pe(100))
         expect(await playToken.balanceOf(accountA.address)).eq(pe(9900))
 
-        await expect(playToken.connect(accountA).mint(accountA.address, pe(10000))).to.be.revertedWith("PlayDerivable: NOT_ADMIN")
-        await expect(playToken.connect(accountA).burnFrom(accountA.address, pe(100))).to.be.revertedWith("PlayDerivable: NOT_ADMIN")
+        await expect(playToken.connect(accountA).mint(accountA.address, pe(10000))).to.be.revertedWith("OwnableUnauthorizedAccount")
+        await expect(playToken.connect(accountA).burnFrom(accountA.address, pe(100))).to.be.revertedWith("OwnableUnauthorizedAccount")
         // Transferable owner
-        // grant role
-        const MINTER_ROLE = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("MINTER_ROLE"))
-        const BURNER_ROLE = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("BURNER_ROLE"))
-        await playToken.grantRole(MINTER_ROLE, accountA.address)
-        await expect(playToken.connect(accountA).mint(accountA.address, pe(10000))).revertedWith("PlayDerivable: NOT_ADMIN")
-        // revoke role
-        await playToken.revokeRole(MINTER_ROLE, accountA.address)
-        await expect(playToken.connect(accountA).mint(accountA.address, pe(10000))).to.be.revertedWith("PlayDerivable: NOT_ADMIN")
-        await playToken.grantRole(ethers.utils.hexZeroPad('0x00', 32), accountA.address)
-        await playToken.revokeRole(BURNER_ROLE, owner.address)
-        await playToken.connect(accountA).burnFrom(accountA.address, pe(100))
+        // // grant role
+        // const MINTER_ROLE = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("MINTER_ROLE"))
+        // const BURNER_ROLE = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("BURNER_ROLE"))
+        // await playToken.grantRole(MINTER_ROLE, accountA.address)
+        // await expect(playToken.connect(accountA).mint(accountA.address, pe(10000))).revertedWith("OwnableUnauthorizedAccount")
+        // // revoke role
+        // await playToken.revokeRole(MINTER_ROLE, accountA.address)
+        // await expect(playToken.connect(accountA).mint(accountA.address, pe(10000))).to.be.revertedWith("OwnableUnauthorizedAccount")
+        // await playToken.grantRole(ethers.utils.hexZeroPad('0x00', 32), accountA.address)
+        // await playToken.revokeRole(BURNER_ROLE, owner.address)
+        // await playToken.connect(accountA).burnFrom(accountA.address, pe(100))
     })
 })

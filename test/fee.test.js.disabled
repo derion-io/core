@@ -32,7 +32,7 @@ HLs.forEach(HALF_LIFE => {
       const signer = owner;
       // deploy token1155
 
-      const UTR = require("@derivable/utr/build/UniversalTokenRouter.json")
+      const UTR = require("@derion/utr/build/UniversalTokenRouter.json")
       const UniversalRouter = new ethers.ContractFactory(UTR.abi, UTR.bytecode, owner)
       const utr = await UniversalRouter.deploy()
       await utr.deployed()

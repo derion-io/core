@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BUSL-1.1
-pragma solidity 0.8.20;
+pragma solidity ^0.8.28;
 
 import "abdk-libraries-solidity/ABDKMath64x64.sol";
 import "./interfaces/IHelper.sol";

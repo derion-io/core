@@ -1,9 +1,12 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.20;
+pragma solidity ^0.8.28;
 
-import "@derivable/utr/contracts/UniversalTokenRouter.sol";
+import "@derion/utr/contracts/UniversalTokenRouter.sol";
 
 contract FakeUTR is UniversalTokenRouter {
+    constructor() UniversalTokenRouter(address(0)) {
+    }
+
     // override to transfer only half the ammount
     function pay(bytes memory payment, uint256 amount) external override {
         discard(payment, amount);

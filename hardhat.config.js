@@ -17,20 +17,20 @@ require("./scripts/utilities");
 module.exports = {
     defaultNetwork: 'hardhat',
     solidity: {
-        compilers: [
-            {
-                version: "0.8.20",
-                settings: {
-                    evmVersion: 'paris', 
-                    optimizer: {
-                        enabled: true,
-                        runs: 1000000,
-                    },
-                    metadata: {
-                        bytecodeHash: 'none',
-                    },
-                },
+        version: "0.8.28",
+        settings: {
+            evmVersion: 'cancun',
+            optimizer: {
+                enabled: true,
+                runs: 1000000,
             },
+            metadata: {
+                bytecodeHash: 'none',
+            },
+            // viaIR: true,
+            // outputSelection: { '*': { '*': ['storageLayout'] } },
+        },
+        compilers: [
             {
                 version: "0.6.6",
                 settings: {
@@ -166,7 +166,7 @@ module.exports = {
     },
     dependencyCompiler: {
         paths: [
-            '@derivable/utr/contracts/UniversalTokenRouter.sol'
+            '@derion/utr/contracts/UniversalTokenRouter.sol'
         ]
     },
     contractSizer: {
