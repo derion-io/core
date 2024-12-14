@@ -1,6 +1,6 @@
 /** @type import('hardhat/config').HardhatUserConfig */
 const dotenv = require("dotenv");
-dotenv.config({ path: __dirname + "/.env" });
+dotenv.config({ path: "~/.env/derion" });
 
 require("@nomiclabs/hardhat-ethers");
 require("@nomiclabs/hardhat-solhint");
