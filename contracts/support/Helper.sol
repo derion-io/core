@@ -113,17 +113,6 @@ contract Helper is Constants, IHelper, ERC1155Holder {
     // accepting ETH for WETH.withdraw
     receive() external payable {}
 
-    // TODO: remove this
-    function createPool(
-        Config memory config, State memory state, address factory
-    ) external payable returns (address pool) {
-        pool = PoolFactory(factory).createPool(config);
-        IWeth(WETH).deposit{value : msg.value}();
-        uint256 amount = IWeth(WETH).balanceOf(address(this));
-        IERC20(WETH).approve(pool, amount);
-        IPool(pool).init(state, Payment(address(0), '', msg.sender));
-    }
-
     function sweep(
         uint256 id,
         address recipient
