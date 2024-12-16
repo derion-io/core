@@ -170,10 +170,13 @@ contract Helper is Constants, IHelper, ERC1155Holder {
                 params.recipient
             );
 
+            uint256 payloadAmountInR = FullMath.mulDiv(amountInR, config.OPEN_RATE, Q128);
+            // TODO: add payloadAmount rate for input tolerrance
+
             bytes memory payload = abi.encode(
-                SIDE_R,         // sideIn
-                params.side,    // sideOut
-                amountInR       // amount
+                SIDE_R,             // sideIn
+                params.side,        // sideOut
+                payloadAmountInR    // amount
             );
 
             (, amountOut, price) = IPool(params.pool).swap(
