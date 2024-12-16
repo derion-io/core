@@ -80,7 +80,7 @@ contract PoolLogic is PoolBase, Fetcher {
                 if (diff > 1) {
                     --diff; // premium cannot exhaust an entire side
                     uint256 R = state.R;
-                    uint256 elapsed = uint32(block.timestamp & F_MASK) - (s_lastPremiumTime & F_MASK);
+                    uint256 elapsed = uint32(block.timestamp) - (s_lastPremiumTime);
                     if (elapsed > 0) {
                         uint256 premiumHL = FullMath.mulDivRoundingUp(config.PREMIUM_HL >> 1, R, rA + rB);
                         uint256 rate = _decayRate(elapsed, premiumHL);

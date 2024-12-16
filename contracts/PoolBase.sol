@@ -2,6 +2,7 @@
 pragma solidity ^0.8.28;
 
 import "@openzeppelin/contracts/utils/math/Math.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuardTransient.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
 import "@uniswap/lib/contracts/libraries/TransferHelper.sol";
@@ -19,14 +20,13 @@ import "./subs/Storage.sol";
 /// @title The base logic code for state initialization and token payment. 
 /// @author Derivable Labs
 /// @notice PoolBase is extended by PoolLogic to form the Pool contract.
-abstract contract PoolBase is IPool, ERC1155Holder, Storage, Constants, NotToken {
+abstract contract PoolBase is IPool, ERC1155Holder, Storage, Constants, NotToken, ReentrancyGuardTransient {
     struct Result {
         uint256 amountIn;
         uint256 amountOut;
         uint256 price;
     }
     
-    uint32 constant internal F_MASK = ~uint32(1);
     address immutable internal TOKEN;
 
     /// Position event for each postion mint/burn
@@ -40,20 +40,6 @@ abstract contract PoolBase is IPool, ERC1155Holder, Storage, Constants, NotToken
         uint256 price,
         uint256 valueR
     );
-
-    /**
-     * @dev Prevents a contract from calling itself, directly or indirectly.
-     * Calling a `nonReentrant` function from another `nonReentrant`
-     * function is not supported. It is possible to prevent this from happening
-     * by making the `nonReentrant` function external, and making it call a
-     * `private` function that does the actual work.
-     */
-    modifier nonReentrant() {
-        ensureStateIntegrity();
-        s_lastPremiumTime |= 1;
-        _;
-        s_lastPremiumTime &= F_MASK;
-    }
 
     /// @param token Token 1155 for pool's derivatives
     constructor(address token) {
@@ -73,7 +59,7 @@ abstract contract PoolBase is IPool, ERC1155Holder, Storage, Constants, NotToken
 
         s_lastInterestTime = uint32(block.timestamp);
         s_a = uint224(a);
-        s_lastPremiumTime = uint32(block.timestamp & F_MASK);
+        s_lastPremiumTime = uint32(block.timestamp);
         s_b = uint224(b);
 
         Config memory config = loadConfig();
@@ -223,7 +209,7 @@ abstract contract PoolBase is IPool, ERC1155Holder, Storage, Constants, NotToken
         R = IERC20(config.TOKEN_R).balanceOf(address(this));
         i = s_lastInterestTime;
         a = s_a;
-        f = s_lastPremiumTime & F_MASK;
+        f = s_lastPremiumTime;
         b = s_b;
     }
 
@@ -231,8 +217,7 @@ abstract contract PoolBase is IPool, ERC1155Holder, Storage, Constants, NotToken
      * @dev against read-only reentrancy
      */
     function ensureStateIntegrity() public view {
-        uint256 f = s_lastPremiumTime;
-        require(f & 1 == 0 && f > 0, 'PoolBase: STATE_INTEGRITY');
+        require(!_reentrancyGuardEntered(), 'PoolBase: STATE_INTEGRITY');
     }
 
     /// @notice Returns the metadata of this (MetaProxy) contract.
