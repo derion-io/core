@@ -172,7 +172,7 @@ describe("Revert", async function () {
       )).to.be.revertedWith("ALREADY_INITIALIZED")
     })
 
-    it("swap: STATE_INTEGRITY", async function () {
+    it("swap: reentrancy", async function () {
       const { stateCalHelper, derivablePools, accountA, reentrancyAttack, weth, utr, owner } = await loadFixture(fixture)
       const pool = derivablePools[1]
       // await expect(pool.swap(
@@ -193,10 +193,10 @@ describe("Revert", async function () {
       //   }
       // )).to.be.revertedWith("MO")
 
-      // Revert STATE_INTEGRITY
+      // Revert re-entrancy
       const swapParams = {
-        sideIn: 0,
-        sideOut: 48,
+        sideIn: SIDE_R,
+        sideOut: SIDE_C,
         maturity: 0,
         helper: stateCalHelper.address,
         payload: '0x0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000300000000000000000000000000000000000000000000000004563918244f400000000000000000000000000000000000080000000000000000000000000000000'
@@ -207,11 +207,20 @@ describe("Revert", async function () {
         recipient: reentrancyAttack.address
       }
       await weth.transfer(reentrancyAttack.address, numberToWei(5))
+
+      // trigger the attack with sideOut == SIDE_C
       await expect(reentrancyAttack.attack(
         numberToWei(5),
         swapParams,
-        paymentParams
-      )).to.be.revertedWith("STATE_INTEGRITY")
+        paymentParams,
+      )).to.be.reverted
+
+      // no attack when sideOut != SIDE_C
+      await reentrancyAttack.attack(
+        numberToWei(5),
+        { ...swapParams, sideOut: SIDE_A },
+        paymentParams,
+      )
     })
 
     it("Swap: INSUFFICIENT_PAYMENT", async function () {
