@@ -210,6 +210,7 @@ contract Helper is Constants, IHelper, ERC1155Holder {
         );
     }
 
+    // currently unused
     function swapAndOpen (
         SwapAndSwapParams memory params
     ) external returns (uint256 amountOut) {
