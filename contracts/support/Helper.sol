@@ -12,6 +12,7 @@ import "solidity-bytes-utils/contracts/BytesLib.sol";
 
 import "@derion/erc1155-maturity/contracts/token/ERC1155/IERC1155Supply.sol";
 import "@derion/utr/contracts/interfaces/IUniversalTokenRouter.sol";
+import "@derion/utr/contracts/NotToken.sol";
 
 import "../subs/Constants.sol";
 import "../interfaces/IHelper.sol";
@@ -19,7 +20,7 @@ import "../interfaces/IPool.sol";
 import "../PoolFactory.sol";
 import "../interfaces/IWeth.sol";
 
-contract Helper is Constants, IHelper, ERC1155Holder {
+contract Helper is Constants, IHelper, ERC1155Holder, NotToken {
     using BytesLib for bytes;
 
     struct AggregateParams {
@@ -480,13 +481,6 @@ contract Helper is Constants, IHelper, ERC1155Holder {
             priceR,
             amountR
         );
-    }
-
-    // IERC165-supportsInterface
-    function supportsInterface(bytes4 interfaceId) public view virtual override returns (bool) {
-        return
-            interfaceId == 0x61206120 ||
-            super.supportsInterface(interfaceId);
     }
 
     function _swapMultiPool(SwapParams memory params, address TOKEN_R) internal returns (uint256 amountOut) {

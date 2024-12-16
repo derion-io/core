@@ -7,6 +7,7 @@ import "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
 import "@uniswap/lib/contracts/libraries/TransferHelper.sol";
 import "solidity-bytes-utils/contracts/BytesLib.sol";
 
+import "@derion/utr/contracts/NotToken.sol";
 import "@derion/utr/contracts/interfaces/IUniversalTokenRouter.sol";
 
 import "./interfaces/IPoolFactory.sol";
@@ -18,7 +19,7 @@ import "./subs/Storage.sol";
 /// @title The base logic code for state initialization and token payment. 
 /// @author Derivable Labs
 /// @notice PoolBase is extended by PoolLogic to form the Pool contract.
-abstract contract PoolBase is IPool, ERC1155Holder, Storage, Constants {
+abstract contract PoolBase is IPool, ERC1155Holder, Storage, Constants, NotToken {
     struct Result {
         uint256 amountIn;
         uint256 amountOut;
@@ -232,13 +233,6 @@ abstract contract PoolBase is IPool, ERC1155Holder, Storage, Constants {
     function ensureStateIntegrity() public view {
         uint256 f = s_lastPremiumTime;
         require(f & 1 == 0 && f > 0, 'PoolBase: STATE_INTEGRITY');
-    }
-
-    // IERC165-supportsInterface
-    function supportsInterface(bytes4 interfaceId) public view virtual override returns (bool) {
-        return
-            interfaceId == 0x61206120 ||
-            super.supportsInterface(interfaceId);
     }
 
     /// @notice Returns the metadata of this (MetaProxy) contract.
