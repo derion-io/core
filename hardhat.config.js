@@ -127,6 +127,19 @@ module.exports = {
             weth: '0x4200000000000000000000000000000000000006',
             chainId: 8453
         },
+        polygon: {
+            url: process.env.POL_MAINNET_PROVIDER ?? 'https://polygon.llamarpc.com',
+            accounts: [
+                process.env.MAINNET_DEPLOYER ?? '0x0000000000000000000000000000000000000000000000000000000000000001',
+            ],
+        },
+        poltestnet: {
+            url: process.env.POL_TESTNET_PROVIDER ?? 'https://rpc-amoy.polygon.technology',
+            accounts: [
+                process.env.TESTNET_DEPLOYER ?? '0x0000000000000000000000000000000000000000000000000000000000000001',
+            ],
+            gasPrice: 35000000000,
+        },
         ganache: {
             url: 'http://127.0.0.1:8545',
             // kick balcony people guess oppose verb faint explain spoil learn that pool
@@ -159,6 +172,7 @@ module.exports = {
             arbitrumOne: process.env.SCAN_API_KEY_42161,
             bsc: process.env.SCAN_API_KEY_56,
             opbnb: process.env.SCAN_API_KEY_204,
+            poltestnet: process.env.SCAN_API_KEY_POLTESTNET,
         }
     },
     mocha: {
