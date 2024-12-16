@@ -5,7 +5,7 @@ const opts = {
     gasLimit: 5000000*4,
 }
 
-const admin = '0x5555a222c465b1873421d844e5d89ed8eb3E5555'
+const admin = '0x66660614538F7aB66977fF42905986A4f85F6666'
 
 const singletonFactoryAddress = '0xce0042B868300000d44A59004Da54A005ffdcf9f'
 
@@ -195,7 +195,7 @@ task('deployTokenDescriptor', 'Use SingletonFatory to deploy TokenDescriptor con
             const addressList = JSON.parse(fs.readFileSync(addressPath, 'utf8'))
             const params = ethers.utils.defaultAbiCoder.encode(
                 ['address'],
-                [addressList['poolFactory']]
+                [addressList['poolDeployer']]
             )
             const initBytecode = ethers.utils.solidityPack(
                 ['bytes', 'bytes'],

@@ -132,12 +132,16 @@ module.exports = {
             accounts: [
                 process.env.MAINNET_DEPLOYER ?? '0x0000000000000000000000000000000000000000000000000000000000000001',
             ],
+            weth: '0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270',
+            utr: '0xAe68B2DcCd3aD80a5adD5E7e566d243F64fF8BA9',
+            gasPrice: 45000000000,
         },
         poltestnet: {
             url: process.env.POL_TESTNET_PROVIDER ?? 'https://rpc-amoy.polygon.technology',
             accounts: [
                 process.env.TESTNET_DEPLOYER ?? '0x0000000000000000000000000000000000000000000000000000000000000001',
             ],
+            utr: '0xAe68B2DcCd3aD80a5adD5E7e566d243F64fF8BA9',
             gasPrice: 35000000000,
         },
         ganache: {
