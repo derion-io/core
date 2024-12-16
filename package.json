@@ -9,6 +9,7 @@
     "test": "hardhat test",
     "coverage": "hardhat coverage",
     "lint": "hardhat check",
+    "deployPool": "hardhat run scripts/deployPool.js",
     "testnet": "hardhat run --network testnet",
     "mainnet": "hardhat run --network mainnet",
     "deploy:ganache": "npx hardhat run scripts/AllContracts.ganacheDeploy.js --network ganache"

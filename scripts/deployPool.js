@@ -29,16 +29,13 @@ function rateFromHL(HL, k, DURATION = SECONDS_PER_DAY) {
 
 const chainID = 56
 
-const SCAN_API_KEY = {
-    42161: process.env.ARBISCAN_API_KEY,
-    56: process.env.BSCSCAN_API_KEY,
-}
-
 const gasPrices = {
+    137: 45e9,
     56: 3e9,
 }
 
 const gasPrice = gasPrices[chainID]
+const gasLimit = 1000000
 
 const settings = {
     // pairAddress: '0xC31E54c7a869B9FcBEcc14363CF510d1c41fa443',
@@ -189,14 +186,14 @@ async function deploy(settings) {
         const now = Math.floor(new Date().getTime() / 1000)
         const anEpochAgo = now - EPOCH
         const blockEpochAgo = await fetch(
-            `${configs.scanApi}?module=block&action=getblocknobytime&timestamp=${anEpochAgo}&closest=before&apikey=${SCAN_API_KEY[chainID]}`
+            `${configs.scanApi}?module=block&action=getblocknobytime&timestamp=${anEpochAgo}&closest=before&apikey=${process.env[`SCAN_API_KEY_${chainID}`]}`
         ).then(x => x.json()).then(x => Number(x?.result))
 
         const topic0 = factoryConfig.topic0 ?? "0xc42079f94a6350d7e6235f29174924f928cc2ac818eb64fed8004e115fbcca67"
 
         const apiQuery = `${configs.scanApi}?module=logs&action=getLogs&address=${settings.pairAddress[0]}` +
             `&topic0=${topic0}` +
-            `&fromBlock=${blockEpochAgo}&apikey=${SCAN_API_KEY[chainID]}`
+            `&fromBlock=${blockEpochAgo}&apikey=${process.env[`SCAN_API_KEY_${chainID}`]}`
         logs = await fetch(apiQuery).then(x => x.json()).then(x => x?.result)
 
         if (!logs?.length) {
@@ -294,8 +291,8 @@ async function deploy(settings) {
         K: bn(K),
         INTEREST_HL,
         PREMIUM_HL,
-        MATURITY: settings.closingFeeDuration,
-        MATURITY_VEST: settings.vesting,
+        MATURITY: settings.closingFeeDuration ?? 0,
+        MATURITY_VEST: settings.vesting ?? 0,
         MATURITY_RATE: feeToOpenRate(settings.closingFee ?? 0),
         OPEN_RATE: feeToOpenRate(settings.openingFee ?? 0),
     }
@@ -331,7 +328,7 @@ async function deploy(settings) {
         }
         const rAllowance = await rToken.allowance(deployer.address, utr.address)
         if (rAllowance.lt(R)) {
-            // await rERC20.approve(utr.address, ethers.constants.MaxUint256)
+            // await rToken.approve(utr.address, ethers.constants.MaxUint256, { gasPrice })
             throw new Error(`TOKEN_R approval required for UTR (${utr.address})`)
         }
         const payment = {
@@ -358,7 +355,7 @@ async function deploy(settings) {
                     ...topics,
                 )).data,
             }],
-            { gasPrice },
+            { gasPrice, gasLimit },
         ]
     } else {
         const payment = {
@@ -371,7 +368,7 @@ async function deploy(settings) {
             initParams,
             payment,
             ...topics,
-            { value: R, gasPrice },
+            { value: R, gasPrice, gasLimit },
         ]
     }
 
@@ -390,7 +387,7 @@ async function deploy(settings) {
             ? await utr.callStatic.exec(...params)
             : await poolDeployer.callStatic.deploy(...params)
     } catch (err) {
-        console.error(err.reason ?? err)
+        console.error('callStatic failed:', err.reason ?? err)
         return
     }
 
