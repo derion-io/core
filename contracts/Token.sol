@@ -75,12 +75,12 @@ contract Token is ShadowFactory {
 
     /// self-explanatory
     function name() external pure returns (string memory) {
-        return "Derivable Position";
+        return "Derion Position";
     }
 
     /// self-explanatory
     function symbol() external pure returns (string memory) {
-        return "DERIVABLE-POS";
+        return "DERION-POS";
     }
 
     /// self-explanatory

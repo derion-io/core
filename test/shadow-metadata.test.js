@@ -104,8 +104,8 @@ describe("Shadow metadata spec", async function () {
             const {
                 derivable1155
             } = await loadFixture(fixture)
-            expect(await derivable1155.name()).to.be.equals('Derivable Position')
-            expect(await derivable1155.symbol()).to.be.equals('DERIVABLE-POS')
+            expect(await derivable1155.name()).to.be.equals('Derion Position')
+            expect(await derivable1155.symbol()).to.be.equals('DERION-POS')
         })
 
         it("Token metadata", async function () {
