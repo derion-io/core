@@ -19,12 +19,12 @@ const Q128 = bn(1).shl(128)
 
 const PRECISION = 1000000
 
-function rateToHL(r, k, DURATION = SECONDS_PER_DAY) {
-    return Math.ceil(DURATION * Math.LN2 / r / k / k)
+function rateToHL(rate, power, DURATION = SECONDS_PER_DAY) {
+    return Math.ceil(DURATION * Math.LN2 / power / rate)
 }
 
-function rateFromHL(HL, k, DURATION = SECONDS_PER_DAY) {
-    return DURATION * Math.LN2 / HL / k / k
+function rateFromHL(HL, power, DURATION = SECONDS_PER_DAY) {
+    return DURATION * Math.LN2 / power / HL
 }
 
 const chainID = 56
