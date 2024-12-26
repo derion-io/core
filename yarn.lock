@@ -41,7 +41,7 @@
 
 "@derion/utr@https://github.com/derion-io/utr.git":
   version "1.1.0"
-  resolved "https://github.com/derion-io/utr.git#e91dba3be5208fa5da54a5998b0f05d94256ae51"
+  resolved "https://github.com/derion-io/utr.git#31b1f0bfd926852fdf02baf038885c779376c37d"
   dependencies:
     "@atixlabs/hardhat-time-n-mine" "^0.0.5"
     "@uniswap/lib" "^4.0.1-alpha"
