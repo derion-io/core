@@ -193,5 +193,6 @@ module.exports = {
         runOnCompile: true,
         strict: true,
         only: [],
+        except: ['View'],
     }
 };

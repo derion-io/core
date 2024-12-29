@@ -2,10 +2,15 @@
 pragma solidity ^0.8.28;
 
 import "../PoolLogic.sol";
+import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+
+interface IUniPool {
+    function token0() external view returns (address);
+    function token1() external view returns (address);
+}
 
 contract View is PoolLogic {
     struct StateView {
-        Config config;
         State state;
         uint256 sA;
         uint256 sB;
@@ -17,11 +22,49 @@ contract View is PoolLogic {
         uint256 spot;
     }
 
+    struct TokenMetadata {
+        address token;
+        string symbol;
+        uint decimals;
+    }
+
+    struct Metadata {
+        Config config;
+        TokenMetadata reserve;
+        TokenMetadata base;
+        TokenMetadata quote;
+    }
+
     constructor(
         address token,
         address feeTo,
         uint256 feeRate
     ) PoolLogic(token, feeTo, feeRate) {}
+
+    function metadata() external view returns (Metadata memory meta) {
+        Config memory config = loadConfig();
+        uint256 ORACLE = uint256(config.ORACLE);
+        address pool = address(uint160(ORACLE));
+        address token0 = IUniPool(pool).token0();
+        address token1 = IUniPool(pool).token1();
+        uint256 QTI = ORACLE & Q255;
+        if (QTI == 0) {
+            meta.base.token = token1;
+            meta.quote.token = token0;
+        } else {
+            meta.base.token = token0;
+            meta.quote.token = token1;
+        }
+        meta.base.symbol = IERC20Metadata(meta.base.token).symbol();
+        meta.base.decimals = IERC20Metadata(meta.base.token).decimals();
+        meta.quote.symbol = IERC20Metadata(meta.quote.token).symbol();
+        meta.quote.decimals = IERC20Metadata(meta.quote.token).decimals();
+        meta.reserve.token = config.TOKEN_R;
+        meta.reserve.symbol = IERC20Metadata(meta.reserve.token).symbol();
+        meta.reserve.decimals = IERC20Metadata(meta.reserve.token).decimals();
+        meta.config = config;
+        return meta;
+    }
 
     function compute(
         address TOKEN,
@@ -56,7 +99,6 @@ contract View is PoolLogic {
         stateView.sC = _supply(TOKEN, SIDE_C);
         stateView.twap = twap;
         stateView.spot = spot;
-        stateView.config = config;
         stateView.state = state;
     }
 
