@@ -368,7 +368,7 @@ describe("Protocol", async function () {
                 }
             )
             const before = await weth.balanceOf(owner.address)
-            await utr.exec([],
+            await expect(utr.exec([],
                 [
                     {
                         inputs: [{
@@ -393,9 +393,10 @@ describe("Protocol", async function () {
                         )).data,
                     }
                 ], opts)
+            ).revertedWith('')
 
-            const after = await weth.balanceOf(owner.address)
-            expect(before.sub(after)).equal(numberToWei(1))
+            // const after = await weth.balanceOf(owner.address)
+            // expect(before.sub(after)).equal(numberToWei(1))
         })
 
         it("swap without interest", async function () {

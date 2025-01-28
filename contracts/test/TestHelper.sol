@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity ^0.8.28;
 
+import '@uniswap/v3-core/contracts/libraries/FullMath.sol';
 import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
 import "@derion/utr/contracts/NotToken.sol";
 import "../interfaces/IPool.sol";
+import "../interfaces/IToken.sol";
 
 contract TestHelper is NotToken {
     address private immutable POOL;
@@ -23,10 +25,13 @@ contract TestHelper is NotToken {
         address recipient
     ) external returns (uint256, uint256, uint256) {
         IERC1155(TOKEN).setApprovalForAll(POOL, true);
+        uint id = _packID(POOL, sideIn);
+        uint amount = IERC1155(TOKEN).balanceOf(address(this), id);
+        uint burnAmount = IToken(TOKEN).burnRate(address(this), id, amount);
         bytes memory payload = abi.encode(
             sideIn,
             sideOut,
-            IERC1155(TOKEN).balanceOf(address(this), _packID(POOL, sideIn))
+            burnAmount
         );
         return
             IPool(POOL).swap(
