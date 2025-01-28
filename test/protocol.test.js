@@ -41,7 +41,7 @@ describe("Protocol", async function () {
         maturityVest: 30,
         maturityRate: bn(97).shl(128).div(100)
     }], {
-        callback: async ({weth, usdc, derivable1155, stateCalHelper, owner, derivablePools, accountA, accountB}) => {
+        callback: async ({weth, usdc, derivable1155s, stateCalHelpers, owner, derivablePools, accountA, accountB}) => {
             const pool = derivablePools[0]
             await pool.swap(
                 SIDE_R,
@@ -55,8 +55,8 @@ describe("Protocol", async function () {
             const DerivableHelper = await ethers.getContractFactory("contracts/test/TestHelper.sol:TestHelper")
             const derivableHelper = await DerivableHelper.deploy(
                 pool.contract.address,
-                derivable1155.address,
-                stateCalHelper.address
+                derivable1155s[0].address,
+                stateCalHelpers[0].address
             )
             await derivableHelper.deployed()
             // setup accA
@@ -78,44 +78,44 @@ describe("Protocol", async function () {
 
     describe("Token", function () {
         it("isApprovedForAll", async function () {
-            const { owner, derivable1155, accountA, utr } = await loadFixture(fixture)
-            expect(await derivable1155.isApprovedForAll(owner.address, accountA.address)).equal(false)
-            await derivable1155.setApprovalForAll(accountA.address, true)
-            expect(await derivable1155.isApprovedForAll(owner.address, accountA.address)).equal(true)
-            expect(await derivable1155.isApprovedForAll(owner.address, utr.address)).equal(true)
+            const { owner, derivable1155s, accountA, utr } = await loadFixture(fixture)
+            expect(await derivable1155s[0].isApprovedForAll(owner.address, accountA.address)).equal(false)
+            await derivable1155s[0].setApprovalForAll(accountA.address, true)
+            expect(await derivable1155s[0].isApprovedForAll(owner.address, accountA.address)).equal(true)
+            expect(await derivable1155s[0].isApprovedForAll(owner.address, utr.address)).equal(true)
         })
         it("setDescriptorSetter", async function () {
-            const { derivable1155, accountA, accountB, poolFactory } = await loadFixture(fixture)
+            const { derivable1155s, accountA, accountB } = await loadFixture(fixture)
             // deploy descriptor
             const TokenDescriptor = await ethers.getContractFactory("TokenDescriptor")
-            const tokenDescriptor = await TokenDescriptor.deploy(poolFactory.address)
+            const tokenDescriptor = await TokenDescriptor.deploy()
             await tokenDescriptor.deployed()
-            await expect(derivable1155.connect(accountA).setDescriptorSetter(accountB.address)).to.be.revertedWith("UNAUTHORIZED")
-            await expect(derivable1155.connect(accountA).setDescriptor(tokenDescriptor.address)).to.be.revertedWith("UNAUTHORIZED")
-            await derivable1155.setDescriptorSetter(accountA.address)
-            await derivable1155.connect(accountA).setDescriptor(tokenDescriptor.address)
+            await expect(derivable1155s[0].connect(accountA).setDescriptorSetter(accountB.address)).to.be.revertedWith("UNAUTHORIZED")
+            await expect(derivable1155s[0].connect(accountA).setDescriptor(tokenDescriptor.address)).to.be.revertedWith("UNAUTHORIZED")
+            await derivable1155s[0].setDescriptorSetter(accountA.address)
+            await derivable1155s[0].connect(accountA).setDescriptor(tokenDescriptor.address)
         })
         it("Verify Descriptor", async function () {
-            const { derivable1155, derivablePools } = await loadFixture(fixture)
-            expect(await derivable1155.getShadowDecimals(packId(SIDE_A, derivablePools[0].contract.address))).eq(18)
-            expect(await derivable1155.getShadowSymbol(packId(SIDE_A, derivablePools[0].contract.address))).eq('WETH+2.5xWETH/USDC')
-            expect(await derivable1155.symbol()).eq("DERIVABLE-POS")
+            const { derivable1155s, derivablePools } = await loadFixture(fixture)
+            expect(await derivable1155s[0].getShadowDecimals(packId(SIDE_A, derivablePools[0].contract.address))).eq(18)
+            expect(await derivable1155s[0].getShadowSymbol(packId(SIDE_A, derivablePools[0].contract.address))).eq('WETH+2.5xWETH/USDC')
+            expect(await derivable1155s[0].symbol()).eq("DERION-POS")
         })
         describe("ERC1155SupplyVirtual", function () {
             it("exists", async function () {
-                const { derivable1155, derivablePools} = await loadFixture(fixture)
-                expect(await derivable1155.totalSupply(packId(SIDE_A, derivablePools[0].contract.address))).gt(0)
-                expect(await derivable1155.totalSupply(packId(SIDE_B, derivablePools[0].contract.address))).gt(0)
-                expect(await derivable1155.totalSupply(packId(SIDE_C, derivablePools[0].contract.address))).gt(0)
-                expect(await derivable1155.totalSupply(packId(SIDE_R, derivablePools[0].contract.address))).equal(0)
-                expect(await derivable1155.totalSupply(0)).equal(0)
+                const { derivable1155s, derivablePools} = await loadFixture(fixture)
+                expect(await derivable1155s[0].totalSupply(packId(SIDE_A, derivablePools[0].contract.address))).gt(0)
+                expect(await derivable1155s[0].totalSupply(packId(SIDE_B, derivablePools[0].contract.address))).gt(0)
+                expect(await derivable1155s[0].totalSupply(packId(SIDE_C, derivablePools[0].contract.address))).gt(0)
+                expect(await derivable1155s[0].totalSupply(packId(SIDE_R, derivablePools[0].contract.address))).equal(0)
+                expect(await derivable1155s[0].totalSupply(0)).equal(0)
             })
         })
     })
 
     describe("Pool Deployer", async function() {
         it("Without UTR", async function () {
-            const { owner, weth, utr, params, poolDeployer } = await loadFixture(fixture)
+            const { owner, weth, params, poolDeployer } = await loadFixture(fixture)
             const baseToken = weth.address
             const R = numberToWei(5)
             const config = {
@@ -163,6 +163,7 @@ describe("Protocol", async function () {
             const baseToken = weth.address
             const R = numberToWei(5)
             const config = {
+                TOKEN: params[0].token,
                 FETCHER: params[0].fetcher,
                 ORACLE: params[0].oracle,
                 TOKEN_R: params[0].reserveToken,
@@ -170,10 +171,10 @@ describe("Protocol", async function () {
                 K: bn(6),
                 INTEREST_HL: params[0].halfLife,
                 PREMIUM_HL: params[0].premiumHL,
-                MATURITY: params[0].maturity,
-                MATURITY_VEST: params[0].maturityVest,
-                MATURITY_RATE: params[0].maturityRate,
-                OPEN_RATE: params[0].openRate,
+                // MATURITY: params[0].maturity,
+                // MATURITY_VEST: params[0].maturityVest,
+                // MATURITY_RATE: params[0].maturityRate,
+                // OPEN_RATE: params[0].openRate,
             }
             const poolAddress = await poolDeployer.callStatic.create(config)
             const state = {
@@ -218,8 +219,9 @@ describe("Protocol", async function () {
 
     describe("Pool", function () {
         it("Init pool by UTR", async function () {
-            const { owner, weth, utr, params, poolFactory, derivable1155 } = await loadFixture(fixture)
+            const { owner, weth, utr, params, derivable1155s, poolDeployer } = await loadFixture(fixture)
             const config = {
+                TOKEN: params[0].token,
                 FETCHER: params[0].fetcher,
                 ORACLE: params[0].oracle,
                 TOKEN_R: params[0].reserveToken,
@@ -227,15 +229,15 @@ describe("Protocol", async function () {
                 K: bn(6),
                 INTEREST_HL: params[0].halfLife,
                 PREMIUM_HL: params[0].premiumHL,
-                MATURITY: params[0].maturity,
-                MATURITY_VEST: params[0].maturityVest,
-                MATURITY_RATE: params[0].maturityRate,
-                OPEN_RATE: params[0].openRate,
+                // MATURITY: params[0].maturity,
+                // MATURITY_VEST: params[0].maturityVest,
+                // MATURITY_RATE: params[0].maturityRate,
+                // OPEN_RATE: params[0].openRate,
             }
-            const tx = await poolFactory.createPool(config)
-            const receipt = await tx.wait()
-            const poolAddress = ethers.utils.getAddress('0x' + receipt.logs[0].data.slice(-40))
-            expect(await derivable1155.balanceOf(owner.address, packId(SIDE_A, poolAddress))).equal(0)
+            const poolAddress = await poolDeployer.callStatic.create(config)
+            await poolDeployer.create(config)
+
+            expect(await derivable1155s[0].balanceOf(owner.address, packId(SIDE_A, poolAddress))).equal(0)
             const initParams = {
                 R: numberToWei(5),
                 a: numberToWei(1),
@@ -265,16 +267,17 @@ describe("Protocol", async function () {
                     payment
                 )).data,
             }])
-            expect(await derivable1155.balanceOf(owner.address, packId(SIDE_A, poolAddress))).gt(0)
+            expect(await derivable1155s[0].balanceOf(owner.address, packId(SIDE_A, poolAddress))).gt(0)
         })
 
         it("Deploy Fetcher and Init Pool", async function () {
-            const { owner, weth, utr, params, poolFactory, derivable1155, stateCalHelper } = await loadFixture(fixture)
+            const { owner, weth, utr, params, poolDeployer, stateCalHelpers } = await loadFixture(fixture)
             // deploy Fetcher
             const Fetcher = await ethers.getContractFactory("Fetcher")
             const fetcher = await Fetcher.deploy()
             await fetcher.deployed()
             const config = {
+                TOKEN: params[0].token,
                 FETCHER: fetcher.address,
                 ORACLE: params[0].oracle,
                 TOKEN_R: params[0].reserveToken,
@@ -282,14 +285,13 @@ describe("Protocol", async function () {
                 K: bn(6),
                 INTEREST_HL: params[0].halfLife,
                 PREMIUM_HL: params[0].premiumHL,
-                MATURITY: params[0].maturity,
-                MATURITY_VEST: params[0].maturityVest,
-                MATURITY_RATE: params[0].maturityRate,
-                OPEN_RATE: params[0].openRate,
+                // MATURITY: params[0].maturity,
+                // MATURITY_VEST: params[0].maturityVest,
+                // MATURITY_RATE: params[0].maturityRate,
+                // OPEN_RATE: params[0].openRate,
             }
-            const tx = await poolFactory.createPool(config)
-            const receipt = await tx.wait()
-            const poolAddress = ethers.utils.getAddress('0x' + receipt.logs[0].data.slice(-40))
+            const poolAddress = await poolDeployer.callStatic.create(config)
+            await poolDeployer.create(config)
             const initParams = {
                 R: numberToWei(5),
                 a: numberToWei(1),
@@ -328,8 +330,8 @@ describe("Protocol", async function () {
                     amountIn: pe(0.0001),
                     recipient: poolAddress,
                 }],
-                code: stateCalHelper.address,
-                data: (await stateCalHelper.populateTransaction.swap({
+                code: stateCalHelpers[0].address,
+                data: (await stateCalHelpers[0].populateTransaction.swap({
                     sideIn: SIDE_R,
                     poolIn: poolAddress,
                     sideOut: SIDE_B,
@@ -343,14 +345,14 @@ describe("Protocol", async function () {
         })
 
         it('_maturityPayoff return 0', async function () {
-            const {accountA, derivablePools, weth, owner, utr, derivable1155, stateCalHelper} = await loadFixture(fixture)
+            const {accountA, derivablePools, weth, owner, utr, derivable1155s, stateCalHelpers} = await loadFixture(fixture)
             const derivablePool = derivablePools[1].connect(owner)
             // deploy TestHelper
             const TestHelper = await ethers.getContractFactory("contracts/test/TestHelper.sol:TestHelper")
             const maturityPoolTestHelper = await TestHelper.deploy(
                 derivablePool.contract.address,
-                derivable1155.address,
-                stateCalHelper.address
+                derivable1155s[1].address,
+                stateCalHelpers[1].address
             )
             await maturityPoolTestHelper.deployed()
 
@@ -391,52 +393,30 @@ describe("Protocol", async function () {
                         )).data,
                     }
                 ], opts)
+
             const after = await weth.balanceOf(owner.address)
             expect(before.sub(after)).equal(numberToWei(1))
         })
 
-        it('constructor require', async function () {
-            const {owner, derivable1155} = await loadFixture(fixture)
-            // PoolLogic
-            const PoolLogic = await ethers.getContractFactory('PoolLogic')
-            await expect(PoolLogic.deploy(
-                AddressZero,
-                5
-            )).revertedWith('PoolLogic: ZERO_ADDRESS')
-            await expect(PoolLogic.deploy(
-                owner.address,
-                5
-            )).revertedWith('PoolBase: ZERO_ADDRESS')
-            // PoolFactory
-            const PoolFactory = await ethers.getContractFactory('PoolFactory')
-            await expect(PoolFactory.deploy(
-                AddressZero
-            )).revertedWith('PoolFactory: ZERO_ADDRESS')
-        })
-
         it("swap without interest", async function () {
-            const { owner, weth, utr, params, poolFactory, derivable1155, stateCalHelper } = await loadFixture(fixture)
+            const { owner, weth, utr, params, derivable1155s, stateCalHelpers, poolDeployer } = await loadFixture(fixture)
             const SECONDS_PER_DAY = 60 * 60 * 24
             const dailyFundingRate = (0.0000000002 * 6) / 100
             const halfLife = Math.round(
                 SECONDS_PER_DAY /
                 Math.log2(1 / (1 - dailyFundingRate)))
             const config = {
+                TOKEN: params[0].token,
                 FETCHER: AddressZero,
                 ORACLE: params[0].oracle,
                 TOKEN_R: params[0].reserveToken,
                 MARK: params[0].mark,
                 K: bn(6),
                 INTEREST_HL: halfLife,
-                PREMIUM_HL: params[0].premiumHL,
-                MATURITY: params[0].maturity,
-                MATURITY_VEST: params[0].maturityVest,
-                MATURITY_RATE: params[0].maturityRate,
-                OPEN_RATE: params[0].openRate,
+                PREMIUM_HL: params[0].premiumHL
             }
-            const tx = await poolFactory.createPool(config)
-            const receipt = await tx.wait()
-            const poolAddress = ethers.utils.getAddress('0x' + receipt.logs[0].data.slice(-40))
+            const poolAddress = await poolDeployer.callStatic.create(config)
+            await poolDeployer.create(config)
             const initParams = {
                 R: 6000,
                 a: 2000,
@@ -472,8 +452,8 @@ describe("Protocol", async function () {
             const TestHelper = await ethers.getContractFactory("contracts/test/TestHelper.sol:TestHelper")
             const testHelper = await TestHelper.deploy(
                 poolAddress,
-                derivable1155.address,
-                stateCalHelper.address
+                derivable1155s[0].address,
+                stateCalHelpers[0].address
             )
             await testHelper.deployed()
 
@@ -491,8 +471,8 @@ describe("Protocol", async function () {
                             amountIn: pe(0.0001),
                             recipient: poolAddress,
                         }],
-                        code: stateCalHelper.address,
-                        data: (await stateCalHelper.populateTransaction.swap({
+                        code: stateCalHelpers[0].address,
+                        data: (await stateCalHelpers[0].populateTransaction.swap({
                             sideIn: SIDE_R,
                             poolIn: poolAddress,
                             sideOut: SIDE_A,
@@ -517,9 +497,9 @@ describe("Protocol", async function () {
         })
 
         it("clear the pool first", async function () {
-            const { owner, weth, derivablePools, utr, derivable1155 } = await loadFixture(fixture)
-            await derivable1155.setApprovalForAll(utr.address, true);
-            await derivable1155.safeTransferFrom(
+            const { owner, weth, derivablePools, utr, derivable1155s } = await loadFixture(fixture)
+            await derivable1155s[0].setApprovalForAll(utr.address, true);
+            await derivable1155s[0].safeTransferFrom(
                 owner.address,
                 derivablePools[0].contract.address,
                 packId(SIDE_A, derivablePools[0].contract.address),
@@ -542,7 +522,7 @@ describe("Protocol", async function () {
                         inputs: [{
                             mode: PAYMENT,
                             eip: 1155,
-                            token: derivable1155.address,
+                            token: derivable1155s[0].address,
                             id: packId(SIDE_A, derivablePools[0].contract.address),
                             amountIn: 1000,
                             recipient: derivablePools[0].contract.address,
@@ -616,19 +596,19 @@ describe("Protocol", async function () {
         })
 
         async function testROut(sideIn, amountIn, sideOut, isUseUTR) {
-            const { owner, weth, derivablePools, derivable1155, utr } = await loadFixture(fixture)
+            const { owner, weth, derivablePools, derivable1155s, utr } = await loadFixture(fixture)
             const convertedId = packId(sideIn, derivablePools[0].contract.address)
             const payer = isUseUTR 
-                ? encodePayment(owner.address, derivablePools[0].contract.address, 1155, derivable1155.address, convertedId)
+                ? encodePayment(owner.address, derivablePools[0].contract.address, 1155, derivable1155s[0].address, convertedId)
                 : []
             
-            const tokenBefore = await derivable1155.balanceOf(owner.address, convertedId)
+            const tokenBefore = await derivable1155s[0].balanceOf(owner.address, convertedId)
             if (amountIn == null) {
                 amountIn = tokenBefore
             } else {
                 amountIn = pe(amountIn)
             }
-            const supply = await derivable1155.totalSupply(convertedId)
+            const supply = await derivable1155s[0].totalSupply(convertedId)
             const amountInMax = supply.sub(MINIMUM_SUPPLY)
             if (amountIn.gt(amountInMax)) {
                 amountIn = amountInMax
@@ -648,7 +628,7 @@ describe("Protocol", async function () {
                     inputs: [{
                         mode: PAYMENT,
                         eip: 1155,
-                        token: derivable1155.address,
+                        token: derivable1155s[0].address,
                         id: convertedId,
                         amountIn,
                         recipient: derivablePools[0].contract.address,
@@ -666,7 +646,7 @@ describe("Protocol", async function () {
                     }
                 )
             }
-            const tokenAfter = await derivable1155.balanceOf(owner.address, convertedId)
+            const tokenAfter = await derivable1155s[0].balanceOf(owner.address, convertedId)
             const tokenChanged = tokenBefore.sub(tokenAfter)
             expect(tokenChanged).lte(amountIn).gte(amountIn.sub(2))
         }
@@ -765,11 +745,11 @@ describe("Protocol", async function () {
         })
 
         async function testSupplyIn(side, amount, useUTR) {
-            const {derivable1155, owner, utr, derivablePools} = await loadFixture(fixture)
+            const {derivable1155s, owner, utr, derivablePools} = await loadFixture(fixture)
             const pool = derivablePools[0]
             const idIn = packId(side, pool.contract.address)
 
-            const supplyBefore = await derivable1155.totalSupply(idIn)
+            const supplyBefore = await derivable1155s[0].totalSupply(idIn)
             const amountIn = numberToWei(amount)
 
             if (!useUTR) {
@@ -792,7 +772,7 @@ describe("Protocol", async function () {
                         inputs: [{
                             mode: PAYMENT,
                             eip: 1155,
-                            token: derivable1155.address,
+                            token: derivable1155s[0].address,
                             id: idIn,
                             amountIn: amountIn,
                             recipient: pool.contract.address,
@@ -802,7 +782,7 @@ describe("Protocol", async function () {
                     }
                 ])
             }
-            const supplyAfter = await derivable1155.totalSupply(idIn)
+            const supplyAfter = await derivable1155s[0].totalSupply(idIn)
             // console.log(supplyAfter.sub(supplyBefore.sub(amountIn)))
             expect(supplyAfter.sub(supplyBefore.sub(amountIn))).lte(2)
         }
@@ -826,10 +806,10 @@ describe("Protocol", async function () {
         })
 
         async function testPriceChange(isLong = true, wethAmountIn, priceChange, expected) {
-            const { owner, weth, utr, uniswapPair, usdc, derivablePools, derivable1155, stateCalHelper } = await loadFixture(fixture)
+            const { owner, weth, utr, uniswapPair, usdc, derivablePools, derivable1155s, stateCalHelpers } = await loadFixture(fixture)
             // swap weth -> long
             const wethBefore = await weth.balanceOf(owner.address)
-            const tokenBefore = await derivable1155.balanceOf(owner.address, packId(isLong ? SIDE_A : SIDE_B, derivablePools[0].contract.address))
+            const tokenBefore = await derivable1155s[0].balanceOf(owner.address, packId(isLong ? SIDE_A : SIDE_B, derivablePools[0].contract.address))
             await derivablePools[0].swap(
                 SIDE_R,
                 isLong ? SIDE_A : SIDE_B,
@@ -839,7 +819,7 @@ describe("Protocol", async function () {
                     recipient: owner.address
                 }
             )
-            const tokenAfter = await derivable1155.balanceOf(owner.address, packId(isLong ? SIDE_A : SIDE_B, derivablePools[0].contract.address))
+            const tokenAfter = await derivable1155s[0].balanceOf(owner.address, packId(isLong ? SIDE_A : SIDE_B, derivablePools[0].contract.address))
             // change price
             await swapToSetPriceMock({
                 baseToken: weth,
@@ -922,10 +902,10 @@ describe("Protocol", async function () {
             const INFI2 = INFI1 * SAFE_SCALE;
     
             async function testSinglePositionPriceChangeDrastically(side, amountIn, priceChange, waitRecover) {
-                const { owner, weth, uniswapPair, usdc, derivablePools, derivable1155, stateCalHelper } = await loadFixture(fixture)
+                const { owner, weth, uniswapPair, usdc, derivablePools, derivable1155s, stateCalHelpers } = await loadFixture(fixture)
     
                 // const wethBefore = await weth.balanceOf(owner.address)
-                const tokenBefore = await derivable1155.balanceOf(owner.address, packId(side, derivablePools[0].contract.address))
+                const tokenBefore = await derivable1155s[0].balanceOf(owner.address, packId(side, derivablePools[0].contract.address))
                 await derivablePools[0].swap(
                     SIDE_R,
                     side,
@@ -935,7 +915,7 @@ describe("Protocol", async function () {
                         recipient: owner.address,
                     }
                 )
-                const tokenAfter = await derivable1155.balanceOf(owner.address, packId(side, derivablePools[0].contract.address))
+                const tokenAfter = await derivable1155s[0].balanceOf(owner.address, packId(side, derivablePools[0].contract.address))
     
                 // change price
                 await swapToSetPriceMock({
@@ -970,7 +950,7 @@ describe("Protocol", async function () {
             }
     
             async function testMultiPositonPriceChangeDrastically(longIn, shortIn, cIn, priceChange, waitRecover) {
-                const { owner, weth, uniswapPair, usdc, derivablePools, derivable1155, accountA, accountB, stateCalHelper } = await loadFixture(fixture)
+                const { owner, weth, uniswapPair, usdc, derivablePools, derivable1155s, accountA, accountB, stateCalHelpers } = await loadFixture(fixture)
     
                 let txSignerA = await weth.connect(accountA)
                 let txSignerB = await weth.connect(accountB)
@@ -983,7 +963,7 @@ describe("Protocol", async function () {
     
                 // swap eth -> long
                 // const aWethBefore = await weth.balanceOf(accountA.address)
-                const longTokenBefore = await derivable1155.balanceOf(accountA.address, packId(SIDE_A, derivablePools[0].contract.address))
+                const longTokenBefore = await derivable1155s[0].balanceOf(accountA.address, packId(SIDE_A, derivablePools[0].contract.address))
                 await derivablePools[0].connect(accountA).swap(
                     SIDE_R,
                     SIDE_A,
@@ -993,10 +973,10 @@ describe("Protocol", async function () {
                         recipient: accountA.address,
                     }
                 )
-                const longTokenAfter = await derivable1155.balanceOf(accountA.address, packId(SIDE_A, derivablePools[0].contract.address))
+                const longTokenAfter = await derivable1155s[0].balanceOf(accountA.address, packId(SIDE_A, derivablePools[0].contract.address))
                 // swap eth -> short
                 // const bWethBefore = await weth.balanceOf(accountB.address)
-                const shortTokenBefore = await derivable1155.balanceOf(accountB.address, packId(SIDE_B, derivablePools[0].contract.address))
+                const shortTokenBefore = await derivable1155s[0].balanceOf(accountB.address, packId(SIDE_B, derivablePools[0].contract.address))
                 await derivablePools[0].connect(accountB).swap(
                     SIDE_R,
                     SIDE_B,
@@ -1006,10 +986,10 @@ describe("Protocol", async function () {
                         recipient: accountB.address,
                     }
                 )
-                const shortTokenAfter = await derivable1155.balanceOf(accountB.address, packId(SIDE_B, derivablePools[0].contract.address))
+                const shortTokenAfter = await derivable1155s[0].balanceOf(accountB.address, packId(SIDE_B, derivablePools[0].contract.address))
                 // swap eth -> c
                 const wethBefore = await weth.balanceOf(owner.address)
-                const tokenBefore = await derivable1155.balanceOf(owner.address, packId(SIDE_C, derivablePools[0].contract.address))
+                const tokenBefore = await derivable1155s[0].balanceOf(owner.address, packId(SIDE_C, derivablePools[0].contract.address))
                 await derivablePools[0].swap(
                     SIDE_R,
                     SIDE_C,
@@ -1019,7 +999,7 @@ describe("Protocol", async function () {
                         recipient: owner.address,
                     }
                 )
-                const tokenAfter = await derivable1155.balanceOf(owner.address, packId(SIDE_C, derivablePools[0].contract.address))
+                const tokenAfter = await derivable1155s[0].balanceOf(owner.address, packId(SIDE_C, derivablePools[0].contract.address))
                 // change price
                 await swapToSetPriceMock({
                     baseToken: weth,

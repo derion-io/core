@@ -54,24 +54,6 @@ function loadFixtureFromParams (arrParams, options={}) {
     const oracleLibrary = await OracleLibrary.deploy()
     await oracleLibrary.deployed()
 
-    const maturity = 0
-    const maturityVest = 0
-    const maturityRate = 0
-    const openRate = 0
-
-    // deploy token1155
-    const Token = await ethers.getContractFactory("Token")
-    const derivable1155 = await Token.deploy(
-      utr.address,
-      maturity,
-      maturityVest,
-      maturityRate,
-      openRate,
-      owner.address,
-      AddressZero
-    )
-    await derivable1155.deployed()
-
     // deploy fee receiver
     const FeeReceiver = await ethers.getContractFactory("FeeReceiver")
     const feeReceiver = await FeeReceiver.deploy(owner.address)
@@ -86,18 +68,10 @@ function loadFixtureFromParams (arrParams, options={}) {
     )
     await logic.deployed()
 
-    // deploy pool factory
-    const PoolFactory = await ethers.getContractFactory("PoolFactory");
-    const poolFactory = await PoolFactory.deploy(
-      logic.address
-    )
-
     // deploy descriptor
     const TokenDescriptor = await ethers.getContractFactory("TokenDescriptor")
-    const tokenDescriptor = await TokenDescriptor.deploy(poolFactory.address)
+    const tokenDescriptor = await TokenDescriptor.deploy()
     await tokenDescriptor.deployed()
-
-    await derivable1155.setDescriptor(tokenDescriptor.address)
 
     // USDC
     const erc20Factory = await ethers.getContractFactory('USDC')
@@ -140,21 +114,29 @@ function loadFixtureFromParams (arrParams, options={}) {
     const fetchPrice = await FetchPrice.deploy()
     await fetchPrice.deployed()
 
-    // deploy helper
-    const StateCalHelper = await ethers.getContractFactory("contracts/support/Helper.sol:Helper")
-    const stateCalHelper = await StateCalHelper.deploy(
-      derivable1155.address,
-      weth.address
-    )
-    await stateCalHelper.deployed()
-
     // deploy ddl pool
     const oracle = ethers.utils.hexZeroPad(
       bn(quoteTokenIndex).shl(255).add(bn(300).shl(256 - 64)).add(uniswapPair.address).toHexString(),
       32,
     )
     const returnParams = []
+    const derivable1155s = []
+    const stateCalHelpers = []
     const pools = await Promise.all(arrParams.map(async params => {
+      // deploy token1155
+      const Token = await ethers.getContractFactory("Token")
+      const derivable1155 = await Token.deploy(
+        utr.address,
+        params.maturity,
+        params.maturityVest,
+        params.maturityRate,
+        params.openRate,
+        owner.address,
+        tokenDescriptor.address
+      )
+      await derivable1155.deployed()
+      derivable1155s.push(derivable1155)
+
       let realParams = {
         token: derivable1155.address,
         oracle,
@@ -167,11 +149,8 @@ function loadFixtureFromParams (arrParams, options={}) {
       returnParams.push(realParams)
 
       const config = toConfig(realParams)
-      const tx = await poolFactory.createPool(config)
-      const receipt = await tx.wait()
-
-      // const poolAddress = await poolFactory.computePoolAddress(realParams)
-      const poolAddress = ethers.utils.getAddress('0x' + receipt.logs[0].data.slice(-40))
+      const poolAddress = await poolDeployer.callStatic.create(config)
+      await poolDeployer.create(config)
       // await weth.transfer(poolAddress, numberToWei(options.initReserved || "5"))
 
       await weth.approve(poolAddress, ethers.constants.MaxUint256)
@@ -181,6 +160,15 @@ function loadFixtureFromParams (arrParams, options={}) {
       await derivable1155.setApprovalForAll(poolAddress, true)
       await derivable1155.connect(accountA).setApprovalForAll(poolAddress, true)
       await derivable1155.connect(accountB).setApprovalForAll(poolAddress, true)
+
+      // deploy helper
+      const StateCalHelper = await ethers.getContractFactory("contracts/support/Helper.sol:Helper")
+      const stateCalHelper = await StateCalHelper.deploy(
+        derivable1155.address,
+        weth.address
+      )
+      await stateCalHelper.deployed()
+      stateCalHelpers.push(stateCalHelper)
 
       const pool = new Pool(
         await ethers.getContractAt(LogicName, poolAddress),
@@ -233,12 +221,11 @@ function loadFixtureFromParams (arrParams, options={}) {
       weth,
       usdc,
       utr,
-      poolFactory,
       poolDeployer,
       derivablePools: pools,
-      derivable1155,
+      derivable1155s,
       feeReceiver,
-      stateCalHelper,
+      stateCalHelpers,
       uniswapPair,
       oracleLibrary,
       params: returnParams,

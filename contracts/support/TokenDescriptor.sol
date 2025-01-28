@@ -16,21 +16,6 @@ contract TokenDescriptor is ITokenDescriptor {
     uint256 internal constant SIDE_B = 0x20;
     uint256 internal constant SIDE_C = 0x30;
 
-    address internal immutable POOL_FACTORY;
-
-    modifier onlyDerivableToken(uint256 id) {
-        address pool = address(uint160(id));
-        require(
-            _computePoolAddress(IPool(pool).loadConfig()) == pool,
-            "NOT_A_DERIVABLE_TOKEN"
-        );
-        _;
-    }
-
-    constructor(address poolFactory) {
-        POOL_FACTORY = poolFactory;
-    }
-
     function getName(
         uint256 id
     )
@@ -38,7 +23,6 @@ contract TokenDescriptor is ITokenDescriptor {
         view
         virtual
         override
-        onlyDerivableToken(id)
         returns (string memory)
     {
         address pool = address(uint160(id));
@@ -55,7 +39,6 @@ contract TokenDescriptor is ITokenDescriptor {
         view
         virtual
         override
-        onlyDerivableToken(id)
         returns (string memory)
     {
         address pool = address(uint160(id));
@@ -67,7 +50,7 @@ contract TokenDescriptor is ITokenDescriptor {
 
     function getDecimals(
         uint256 id
-    ) public view virtual override onlyDerivableToken(id) returns (uint8) {
+    ) public view virtual override returns (uint8) {
         address pool = address(uint160(id));
         return IERC20Metadata(IPool(pool).loadConfig().TOKEN_R).decimals();
     }
@@ -79,7 +62,6 @@ contract TokenDescriptor is ITokenDescriptor {
         view
         virtual
         override
-        onlyDerivableToken(id)
         returns (string memory)
     {
         address pool = address(uint160(id));
@@ -263,15 +245,4 @@ contract TokenDescriptor is ITokenDescriptor {
             );
     }
     /* solhint-enable */
-
-    function _computePoolAddress(
-        Config memory config
-    ) private view returns (address pool) {
-        bytes memory input = abi.encode(config);
-        bytes32 bytecodeHash = MetaProxyView.computeBytecodeHash(
-            IPoolFactory(POOL_FACTORY).LOGIC(),
-            input
-        );
-        return Create2.computeAddress(0, bytecodeHash, POOL_FACTORY);
-    }
 }
