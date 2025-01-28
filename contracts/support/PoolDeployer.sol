@@ -63,10 +63,6 @@ contract PoolDeployer is NotToken, IPoolFactory {
             config.MARK,
             config.INTEREST_HL,
             config.PREMIUM_HL,
-            config.MATURITY,
-            config.MATURITY_VEST,
-            config.MATURITY_RATE,
-            config.OPEN_RATE,
             pool
         );
     }

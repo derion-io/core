@@ -11,7 +11,6 @@ import "solidity-bytes-utils/contracts/BytesLib.sol";
 import "@derion/utr/contracts/NotToken.sol";
 import "@derion/utr/contracts/interfaces/IUniversalTokenRouter.sol";
 
-import "./interfaces/IPoolFactory.sol";
 import "./interfaces/IToken.sol";
 import "./interfaces/IPool.sol";
 import "./subs/Constants.sol";
@@ -27,8 +26,6 @@ abstract contract PoolBase is IPool, ERC1155Holder, Storage, Constants, NotToken
         uint256 price;
     }
     
-    address immutable internal TOKEN;
-
     /// Position event for each postion mint/burn
     event Position(
         address indexed payer,
@@ -36,16 +33,9 @@ abstract contract PoolBase is IPool, ERC1155Holder, Storage, Constants, NotToken
         address indexed index,
         uint256 id,
         uint256 amount,
-        uint256 maturity,
         uint256 price,
         uint256 valueR
     );
-
-    /// @param token Token 1155 for pool's derivatives
-    constructor(address token) {
-        require(token != address(0), "PoolBase: ZERO_ADDRESS");
-        TOKEN = token;
-    }
 
     /// Initializes the pool state before any interaction can be made.
     /// @param state initial state of the pool
@@ -90,14 +80,13 @@ abstract contract PoolBase is IPool, ERC1155Holder, Storage, Constants, NotToken
         require(rC >= MINIMUM_RESERVE, 'PoolBase: MINIMUM_RESERVE_C');
 
         // mint tokens to recipient
-        uint32 maturity = uint32(block.timestamp + config.MATURITY);
-        IToken(TOKEN).mint(payment.recipient, idA, rA, maturity, "");
-        IToken(TOKEN).mint(payment.recipient, idB, rB, maturity, "");
-        IToken(TOKEN).mint(payment.recipient, idC, rC, maturity, "");
+        IToken(config.TOKEN).mint(payment.recipient, idA, rA, "");
+        IToken(config.TOKEN).mint(payment.recipient, idB, rB, "");
+        IToken(config.TOKEN).mint(payment.recipient, idC, rC, "");
         address index = address(uint160(uint256(config.ORACLE)));
-        emit Position(payer, payment.recipient, index, idA, rA, maturity, price, rA);
-        emit Position(payer, payment.recipient, index, idB, rB, maturity, price, rB);
-        emit Position(payer, payment.recipient, index, idC, rC, maturity, price, rC);
+        emit Position(payer, payment.recipient, index, idA, rA, price, rA);
+        emit Position(payer, payment.recipient, index, idB, rB, price, rB);
+        emit Position(payer, payment.recipient, index, idC, rC, price, rC);
     }
 
     /// Performs single direction (1 side in, 1 side out) state transistion
@@ -133,31 +122,26 @@ abstract contract PoolBase is IPool, ERC1155Holder, Storage, Constants, NotToken
             }
         } else {
             uint256 idIn = _packID(address(this), param.sideIn);
-            uint256 inputMaturity;
             if (payment.payer.length > 0) {
                 // clear the pool first to prevent maturity griefing attacks
-                uint256 balance = IERC1155Supply(TOKEN).balanceOf(address(this), idIn);
+                uint256 balance = IERC1155Supply(config.TOKEN).balanceOf(address(this), idIn);
                 if (balance > 0) {
-                    IToken(TOKEN).burn(address(this), idIn, balance);
+                    IToken(config.TOKEN).burn(address(this), idIn, balance);
                 }
                 payer = BytesLib.toAddress(payment.payer, 0);
                 // prepare the utr payload
                 if (payment.payer.length == 20) {
-                    payment.payer = abi.encode(payer, address(this), 1155, TOKEN, idIn);
+                    payment.payer = abi.encode(payer, address(this), 1155, config.TOKEN, idIn);
                 }
                 // pull payment
                 IUniversalTokenRouter(payment.utr).pay(payment.payer, amountIn);
-                balance = IERC1155Supply(TOKEN).balanceOf(address(this), idIn);
+                balance = IERC1155Supply(config.TOKEN).balanceOf(address(this), idIn);
                 require(amountIn <= balance, "PoolBase: INSUFFICIENT_PAYMENT");
-                // query the maturity first before burning
-                inputMaturity = IToken(TOKEN).maturityOf(address(this), idIn);
                 // burn the 1155 token
-                IToken(TOKEN).burn(address(this), idIn, balance);
+                IToken(config.TOKEN).burn(address(this), idIn, balance);
             } else {
-                // query the maturity first before burning
-                inputMaturity = IToken(TOKEN).maturityOf(msg.sender, idIn);
                 // burn the 1155 token directly from msg.sender
-                IToken(TOKEN).burn(msg.sender, idIn, amountIn);
+                IToken(config.TOKEN).burn(msg.sender, idIn, amountIn);
                 payer = msg.sender;
             }
             uint256 valueR = param.sideOut == SIDE_R ? amountOut : 0;
@@ -167,20 +151,16 @@ abstract contract PoolBase is IPool, ERC1155Holder, Storage, Constants, NotToken
                 address(uint160(uint256(config.ORACLE))),
                 idIn,
                 amountIn,
-                inputMaturity,
                 price,
                 valueR
             );
-            amountOut = _maturityPayoff(config, inputMaturity, amountOut);
         }
 
-        uint256 maturity;
         if (param.sideOut == SIDE_R) {
             TransferHelper.safeTransfer(config.TOKEN_R, payment.recipient, amountOut);
         } else {
             uint256 idOut = _packID(address(this), param.sideOut);
-            maturity = uint32(block.timestamp) + config.MATURITY;
-            IToken(TOKEN).mint(payment.recipient, idOut, amountOut, uint32(maturity), "");
+            IToken(config.TOKEN).mint(payment.recipient, idOut, amountOut, "");
             uint256 valueR = param.sideIn == SIDE_R ? amountIn : 0;
             emit Position(
                 payer,
@@ -188,7 +168,6 @@ abstract contract PoolBase is IPool, ERC1155Holder, Storage, Constants, NotToken
                 address(uint160(uint256(config.ORACLE))),
                 idOut,
                 amountOut,
-                maturity,
                 price,
                 valueR
             );
@@ -243,10 +222,6 @@ abstract contract PoolBase is IPool, ERC1155Holder, Storage, Constants, NotToken
     function _fetch(address fetcher, uint256 ORACLE) internal virtual returns (uint256 twap, uint256 spot);
     function _evaluate(uint256 xk, State memory state) internal pure virtual returns (uint256 rA, uint256 rB);
     function _xk(Config memory config, uint256 price) internal pure virtual returns (uint256 xk);
-
-    function _maturityPayoff(
-        Config memory config, uint256 maturity, uint256 amountOut
-    ) internal view virtual returns (uint256);
 
     function _packID(address pool, uint256 side) internal pure returns (uint256 id) {
         id = (side << 160) | uint160(pool);

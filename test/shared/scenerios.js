@@ -16,6 +16,7 @@ use(solidity)
 
 function toConfig(params) {
   return {
+    TOKEN: params.token,
     FETCHER: params.fetcher,
     ORACLE: params.oracle,
     TOKEN_R: params.reserveToken,
@@ -23,10 +24,10 @@ function toConfig(params) {
     K: params.k,
     INTEREST_HL: params.halfLife,
     PREMIUM_HL: params.premiumHL,
-    MATURITY: params.maturity,
-    MATURITY_VEST: params.maturityVest,
-    MATURITY_RATE: params.maturityRate,
-    OPEN_RATE: params.openRate,
+    // MATURITY: params.maturity,
+    // MATURITY_VEST: params.maturityVest,
+    // MATURITY_RATE: params.maturityRate,
+    // OPEN_RATE: params.openRate,
   }
 }
 
@@ -53,10 +54,19 @@ function loadFixtureFromParams (arrParams, options={}) {
     const oracleLibrary = await OracleLibrary.deploy()
     await oracleLibrary.deployed()
 
+    const maturity = 0
+    const maturityVest = 0
+    const maturityRate = 0
+    const openRate = 0
+
     // deploy token1155
     const Token = await ethers.getContractFactory("Token")
     const derivable1155 = await Token.deploy(
       utr.address,
+      maturity,
+      maturityVest,
+      maturityRate,
+      openRate,
       owner.address,
       AddressZero
     )
@@ -71,7 +81,6 @@ function loadFixtureFromParams (arrParams, options={}) {
     const feeRate = options.feeRate ?? 0
     const Logic = await ethers.getContractFactory(LogicName)
     const logic = await Logic.deploy(
-      derivable1155.address,
       feeReceiver.address,
       feeRate,
     )

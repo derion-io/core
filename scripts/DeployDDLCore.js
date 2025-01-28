@@ -65,8 +65,6 @@ async function main() {
   // logic
   const Logic = await ethers.getContractFactory("PoolLogic")
   const logic = await Logic.deploy(
-    derivable1155.address,
-    feeReceiver.address,
     feeRate,
     opts
   )

@@ -17,7 +17,7 @@ import "@derion/utr/contracts/NotToken.sol";
 import "../subs/Constants.sol";
 import "../interfaces/IHelper.sol";
 import "../interfaces/IPool.sol";
-import "../PoolFactory.sol";
+import "../interfaces/IToken.sol";
 import "../interfaces/IWeth.sol";
 
 contract Helper is Constants, IHelper, ERC1155Holder, NotToken {
@@ -160,13 +160,12 @@ contract Helper is Constants, IHelper, ERC1155Holder, NotToken {
                 params.recipient
             );
 
-            uint256 payloadAmountInR = FullMath.mulDiv(amountInR, config.OPEN_RATE, Q128);
             // TODO: add payloadAmount rate for input tolerrance
 
             bytes memory payload = abi.encode(
                 SIDE_R,             // sideIn
                 params.side,        // sideOut
-                payloadAmountInR    // amount
+                amountInR           // amount
             );
 
             (, amountOut, price) = IPool(params.pool).swap(
@@ -269,28 +268,30 @@ contract Helper is Constants, IHelper, ERC1155Holder, NotToken {
     ) external returns (uint256 amountOut) {
         Config memory config = IPool(params.deriPool).loadConfig();
         uint256 price;
+        address payer = BytesLib.toAddress(params.payer, 0);
 
-        Payment memory payment = Payment(
-            msg.sender, // UTR
-            params.payer,
-            address(this)
-        );
-
-        bytes memory payload = abi.encode(
-            params.side,
-            SIDE_R,
-            params.amount
-        );
-
-        (, amountOut, price) = IPool(params.deriPool).swap(
-            Param(
+        {
+            uint256 payloadAmountIn = IToken(TOKEN).burnRate(payer, _packID(params.deriPool, params.side), params.amount);
+            bytes memory payload = abi.encode(
                 params.side,
                 SIDE_R,
-                address(this),
-                payload
-            ),
-            payment
-        );
+                payloadAmountIn
+            );
+            Payment memory payment = Payment(
+                msg.sender, // UTR
+                params.payer,
+                address(this)
+            );
+            (, amountOut, price) = IPool(params.deriPool).swap(
+                Param(
+                    params.side,
+                    SIDE_R,
+                    address(this),
+                    payload
+                ),
+                payment
+            );
+        }
         uint256 amountOutR = amountOut;
 
         amountOut = exactInputSingle(ExactInputSingleParams({
@@ -308,7 +309,7 @@ contract Helper is Constants, IHelper, ERC1155Holder, NotToken {
         uint256 priceR = _getPrice(params.INDEX_R);
 
         emit Swap(
-            BytesLib.toAddress(params.payer, 0),
+            payer,
             params.deriPool,
             params.deriPool,
             params.recipient,
@@ -342,6 +343,7 @@ contract Helper is Constants, IHelper, ERC1155Holder, NotToken {
         }
     }
 
+    // TODO: don't reduce the payload.amount for OPEN_RATE before passing to here
     function swapToState(
         Slippable calldata __,
         bytes calldata payload

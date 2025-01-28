@@ -18,14 +18,12 @@ contract PoolLogic is PoolBase, Fetcher {
     address immutable internal FEE_TO;
     uint256 immutable internal FEE_RATE;
 
-    /// @param token ERC-1155 Token for pool derivatives
     /// @param feeTo fee recipient address
     /// @param feeRate fee rate
     constructor(
-        address token,
         address feeTo,
         uint256 feeRate
-    ) PoolBase(token) {
+    ) {
         require(feeTo != address(0), "PoolLogic: ZERO_ADDRESS");
         FEE_TO = feeTo;
         FEE_RATE = feeRate;
@@ -123,7 +121,7 @@ contract PoolLogic is PoolBase, Fetcher {
             result.amountIn = state1.R - state.R;
         } else {
             require(state.R >= state1.R, "PoolLogic: INVALID_STATE1_NR");
-            uint256 s = _supply(sideIn);
+            uint256 s = _supply(config.TOKEN, sideIn);
             if (sideIn == SIDE_A) {
                 require(rB1 >= rB, "PoolLogic: INVALID_STATE1_A");
                 result.amountIn = FullMath.mulDivRoundingUp(s, rA - rA1, rA);
@@ -150,17 +148,14 @@ contract PoolLogic is PoolBase, Fetcher {
                 uint256 rC = state.R - rA - rB;
                 uint256 rC1 = state1.R - rA1 - rB1;
                 require(rC1 >= MINIMUM_RESERVE, 'PoolLogic: MINIMUM_RESERVE_C');
-                result.amountOut = FullMath.mulDiv(_supply(sideOut), rC1 - rC, rC);
+                result.amountOut = FullMath.mulDiv(_supply(config.TOKEN, sideOut), rC1 - rC, rC);
             } else {
                 if (sideOut == SIDE_A) {
                     require(rA1 >= MINIMUM_RESERVE, 'PoolLogic: MINIMUM_RESERVE_A');
-                    result.amountOut = FullMath.mulDiv(_supply(sideOut), rA1 - rA, rA);
+                    result.amountOut = FullMath.mulDiv(_supply(config.TOKEN, sideOut), rA1 - rA, rA);
                 } else {
                     require(rB1 >= MINIMUM_RESERVE, 'PoolLogic: MINIMUM_RESERVE_B');
-                    result.amountOut = FullMath.mulDiv(_supply(sideOut), rB1 - rB, rB);
-                }
-                if (config.OPEN_RATE != Q128) {
-                    result.amountIn = FullMath.mulDivRoundingUp(result.amountIn, Q128, config.OPEN_RATE);
+                    result.amountOut = FullMath.mulDiv(_supply(config.TOKEN, sideOut), rB1 - rB, rB);
                 }
             }
         }
@@ -203,26 +198,7 @@ contract PoolLogic is PoolBase, Fetcher {
         }
     }
 
-    function _maturityPayoff(
-        Config memory config, uint256 maturity, uint256 amountOut
-    ) internal view override returns (uint256) {
-        unchecked {
-            if (maturity <= block.timestamp) {
-                return amountOut;
-            }
-            uint256 remain = maturity - block.timestamp;
-            if (config.MATURITY <= remain) {
-                return 0;
-            }
-            uint256 elapsed = config.MATURITY - remain;
-            if (elapsed < config.MATURITY_VEST) {
-                amountOut = amountOut * elapsed / config.MATURITY_VEST;
-            }
-            return FullMath.mulDiv(amountOut, config.MATURITY_RATE, Q128);
-        }
-    }
-
-    function _supply(uint256 side) internal view returns (uint256 s) {
+    function _supply(address TOKEN, uint256 side) internal view returns (uint256 s) {
         return IERC1155Supply(TOKEN).totalSupply(_packID(address(this), side));
     }
 

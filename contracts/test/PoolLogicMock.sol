@@ -8,7 +8,7 @@ contract PoolLogicMock is PoolLogic {
         address token,
         address feeTo,
         uint256 feeRate
-    ) PoolLogic(token, feeTo, feeRate) {}
+    ) PoolLogic(feeTo, feeRate) {}
 
     function loadState(
         uint224 a,
@@ -24,53 +24,50 @@ contract PoolLogicMock is PoolLogic {
         s_b = b;
         s_lastPremiumTime = f;
         s_lastInterestTime = i;
-        uint256 curSA = _supply(SIDE_A);
-        uint256 curSB = _supply(SIDE_B);
-        uint256 curSC = _supply(SIDE_C);
+        uint256 curSA = _supply(config.TOKEN, SIDE_A);
+        uint256 curSB = _supply(config.TOKEN, SIDE_B);
+        uint256 curSC = _supply(config.TOKEN, SIDE_C);
         if (sA < curSA) {
-            IToken(TOKEN).burn(
+            IToken(config.TOKEN).burn(
                 msg.sender,
                 _packID(address(this), SIDE_A),
                 curSA - sA
             );
         } else {
-            IToken(TOKEN).mint(
+            IToken(config.TOKEN).mint(
                 msg.sender,
                 _packID(address(this), SIDE_A),
                 sA - curSA,
-                uint32(config.MATURITY),
                 ""
             );
         }
 
         if (sB < curSB) {
-            IToken(TOKEN).burn(
+            IToken(config.TOKEN).burn(
                 msg.sender,
                 _packID(address(this), SIDE_B),
                 curSB - sB
             );
         } else {
-            IToken(TOKEN).mint(
+            IToken(config.TOKEN).mint(
                 msg.sender,
                 _packID(address(this), SIDE_B),
                 sB - curSB,
-                uint32(config.MATURITY),
                 ""
             );
         }
 
         if (sC < curSC) {
-            IToken(TOKEN).burn(
+            IToken(config.TOKEN).burn(
                 msg.sender,
                 _packID(address(this), SIDE_C),
                 curSC - sC
             );
         } else {
-            IToken(TOKEN).mint(
+            IToken(config.TOKEN).mint(
                 msg.sender,
                 _packID(address(this), SIDE_C),
                 sC - curSC,
-                uint32(config.MATURITY),
                 ""
             );
         }

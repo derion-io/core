@@ -2,6 +2,7 @@
 pragma solidity ^0.8.28;
 
 struct Config {
+    address TOKEN;
     address FETCHER;
     bytes32 ORACLE; // 1bit QTI, 31bit reserve, 32bit WINDOW, ... PAIR ADDRESS
     address TOKEN_R;
@@ -9,10 +10,6 @@ struct Config {
     uint256 MARK;
     uint256 INTEREST_HL;
     uint256 PREMIUM_HL;
-    uint256 MATURITY;
-    uint256 MATURITY_VEST;
-    uint256 MATURITY_RATE; // x128
-    uint256 OPEN_RATE;
 }
 
 struct Param {

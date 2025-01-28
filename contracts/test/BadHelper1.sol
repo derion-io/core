@@ -14,7 +14,6 @@ import "@derion/utr/contracts/NotToken.sol";
 import "../subs/Constants.sol";
 import "../interfaces/IHelper.sol";
 import "../interfaces/IPool.sol";
-import "../PoolFactory.sol";
 import "../interfaces/IWeth.sol";
 
 contract BadHelper1 is NotToken, Constants, IHelper {
@@ -52,18 +51,6 @@ contract BadHelper1 is NotToken, Constants, IHelper {
 
     // accepting ETH for WETH.withdraw
     receive() external payable {}
-
-    function createPool(
-        Config memory config,
-        State memory state,
-        address factory
-    ) external payable returns (address pool) {
-        pool = PoolFactory(factory).createPool(config);
-        IWeth(WETH).deposit{value: msg.value}();
-        uint256 amount = IWeth(WETH).balanceOf(address(this));
-        IERC20(WETH).approve(pool, amount);
-        IPool(pool).init(state, Payment(address(0), "", msg.sender));
-    }
 
     function swap(
         SwapParams memory params

@@ -8,16 +8,11 @@ interface IToken is IShadowFactory {
         address to,
         uint256 id,
         uint256 amount,
-        uint32 maturity,
-        bytes memory data
-    ) external;
-
-    function mint(
-        address to,
-        uint256 id,
-        uint256 amount,
         bytes memory data
     ) external;
 
     function burn(address from, uint256 id, uint256 amount) external;
+
+    function mintRate(address account, uint256 id, uint256 amount) external view returns (uint256);
+    function burnRate(address account, uint256 id, uint256 amount) external view returns (uint256);
 }

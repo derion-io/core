@@ -119,6 +119,7 @@ describe("Protocol", async function () {
             const baseToken = weth.address
             const R = numberToWei(5)
             const config = {
+                TOKEN: params[0].token,
                 FETCHER: params[0].fetcher,
                 ORACLE: params[0].oracle,
                 TOKEN_R: params[0].reserveToken,
@@ -126,10 +127,10 @@ describe("Protocol", async function () {
                 K: bn(6),
                 INTEREST_HL: params[0].halfLife,
                 PREMIUM_HL: params[0].premiumHL,
-                MATURITY: params[0].maturity,
-                MATURITY_VEST: params[0].maturityVest,
-                MATURITY_RATE: params[0].maturityRate,
-                OPEN_RATE: params[0].openRate,
+                // MATURITY: params[0].maturity,
+                // MATURITY_VEST: params[0].maturityVest,
+                // MATURITY_RATE: params[0].maturityRate,
+                // OPEN_RATE: params[0].openRate,
             }
             const state = {
                 R,
@@ -399,12 +400,10 @@ describe("Protocol", async function () {
             // PoolLogic
             const PoolLogic = await ethers.getContractFactory('PoolLogic')
             await expect(PoolLogic.deploy(
-                derivable1155.address,
                 AddressZero,
                 5
             )).revertedWith('PoolLogic: ZERO_ADDRESS')
             await expect(PoolLogic.deploy(
-                AddressZero,
                 owner.address,
                 5
             )).revertedWith('PoolBase: ZERO_ADDRESS')

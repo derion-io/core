@@ -36,10 +36,9 @@ contract View is PoolLogic {
     }
 
     constructor(
-        address token,
         address feeTo,
         uint256 feeRate
-    ) PoolLogic(token, feeTo, feeRate) {}
+    ) PoolLogic(feeTo, feeRate) {}
 
     function metadata() external view returns (Metadata memory meta) {
         Config memory config = loadConfig();
@@ -67,7 +66,7 @@ contract View is PoolLogic {
     }
 
     function compute(
-        address TOKEN,
+        address TOKEN,  // TODO: remove this
         uint256 FEE_RATE,
         uint256 twap,
         uint256 spot
@@ -94,19 +93,12 @@ contract View is PoolLogic {
             state.R = Rt;
         }
 
-        stateView.sA = _supply(TOKEN, SIDE_A);
-        stateView.sB = _supply(TOKEN, SIDE_B);
-        stateView.sC = _supply(TOKEN, SIDE_C);
+        stateView.sA = _supply(config.TOKEN, SIDE_A);
+        stateView.sB = _supply(config.TOKEN, SIDE_B);
+        stateView.sC = _supply(config.TOKEN, SIDE_C);
         stateView.twap = twap;
         stateView.spot = spot;
         stateView.state = state;
-    }
-
-    function _supply(
-        address TOKEN,
-        uint256 side
-    ) internal view returns (uint256 s) {
-        return IERC1155Supply(TOKEN).totalSupply(_packID(address(this), side));
     }
 
     function _applyRate(
