@@ -27,21 +27,47 @@ contract PoolLogic is PoolBase {
         address feeTo,
         uint256 feeRate
     ) {
-        require(feeTo != address(0), "PoolLogic: ZERO_ADDRESS");
+        require(feeTo != address(0), "ZERO_ADDRESS");
         FEE_TO = feeTo;
         FEE_RATE = feeRate;
     }
 
+    /// Performs single direction (1 side in, 1 side out) state transistion
+    /// @param param swap param
+    /// @param payment payment param
+    function transition(
+        Param memory param,
+        Payment memory payment
+    ) external override nonReentrant {
+        Config memory config = loadConfig();
+        Receipt memory receipt = _transition(config, param);
+        (bool success, bytes memory result) = config.POSITIONER.delegatecall(
+            abi.encodeWithSelector(
+                IPositioner.handleTransition.selector,
+                config.TOKEN_R,
+                payment,
+                receipt
+            )
+        );
+        if (!success) {
+            assembly {
+                revert(add(result,32),mload(result))
+            }
+        }
+        assembly {
+            return(add(result,32),mload(result))
+        }
+    }
+
     function _transition(
         Config memory config,
-        Param memory param,
-        uint256 twap,
-        uint256 spot
-    ) internal override returns(Receipt memory receipt) {
+        Param memory param
+    ) internal returns (Receipt memory receipt) {
         State memory state = State(_reserve(config.TOKEN_R), s_a, s_b);
         // [PRICE SELECTION]
         uint256 xk; uint256 rA; uint256 rB;
-        (xk, rA, rB, receipt.price) = _selectPrice(config, state, twap, spot);
+        (xk, rA, rB, receipt.price) = _selectPrice(config, state, param.payload);
+        // [RISK MANAGEMENT FEE]
         unchecked {
             // track the rC before interest and premium for fee calculation
             uint256 rC = state.R - rA - rB;
@@ -103,12 +129,12 @@ contract PoolLogic is PoolBase {
             Slippable(xk, state.R, rA, rB),
             param.payload
         );
-        require(state1.a <= type(uint224).max, "PoolLogic: STATE1_OVERFLOW_A");
-        require(state1.b <= type(uint224).max, "PoolLogic: STATE1_OVERFLOW_B");
-        // [UPDATE]
+        // [STATE UPDATE]
+        require(state1.a <= type(uint224).max, "STATE1_OVERFLOW_A");
+        require(state1.b <= type(uint224).max, "STATE1_OVERFLOW_B");
         s_a = uint224(state1.a);
         s_b = uint224(state1.b);
-        // [TRANSITION]
+        // [TRANSITION RECEIPT]
         (uint256 rA1, uint256 rB1) = _evaluate(xk, state1);
         receipt.R1 = state1.R;
         receipt.rA1 = rA1;
@@ -118,9 +144,12 @@ contract PoolLogic is PoolBase {
     function _selectPrice(
         Config memory config,
         State memory state,
-        uint256 twap,
-        uint256 spot
-    ) internal pure returns (uint256 xk, uint256 rA, uint256 rB, uint256 price) {
+        bytes memory payload
+    ) internal view returns (uint256 xk, uint256 rA, uint256 rB, uint256 price) {
+        (uint256 twap, uint256 spot) = IPositioner(config.POSITIONER).fetchPrices(
+            uint256(config.ORACLE),
+            payload
+        );
         xk = _xk(config, price = twap);
         (rA, rB) = _evaluate(xk, state);
         if (twap != spot) {

@@ -39,40 +39,6 @@ abstract contract PoolBase is IPool, ERC1155Holder, Storage, Constants, NotToken
         }
     }
 
-    /// Performs single direction (1 side in, 1 side out) state transistion
-    /// @param param swap param
-    /// @param payment payment param
-    function transition(
-        Param memory param,
-        Payment memory payment
-    ) external override nonReentrant {
-        Config memory config = loadConfig();
-
-        (uint256 twap, uint256 spot) = IPositioner(config.POSITIONER).fetchPrices(
-            uint256(config.ORACLE),
-            param.payload
-        );
-
-        Receipt memory receipt = _transition(config, param, twap, spot);
-
-        (bool success, bytes memory result) = config.POSITIONER.delegatecall(
-            abi.encodeWithSelector(
-                IPositioner.handleTransition.selector,
-                config.TOKEN_R,
-                payment,
-                receipt
-            )
-        );
-        if (!success) {
-            assembly {
-                revert(add(result,32),mload(result))
-            }
-        }
-        assembly {
-            return(add(result,32),mload(result))
-        }
-    }
-
     /// @return R pool reserve
     /// @return a LONG coefficient
     /// @return b SHORT coefficient
@@ -116,6 +82,4 @@ abstract contract PoolBase is IPool, ERC1155Holder, Storage, Constants, NotToken
         }
         return abi.decode(data, (Config));
     }
-
-    function _transition(Config memory config, Param memory param, uint256 twap, uint256 spot) internal virtual returns (Receipt memory);
 }
