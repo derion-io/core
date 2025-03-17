@@ -21,7 +21,7 @@ contract PoolMulticall {
         Univ3PoolMock(ROUTER).setPrice(spot, twap);
         Payment memory payment = Payment(msg.sender, "", msg.sender);
         for (uint256 i = 0; i < params.length; ++i) {
-            IPool(POOL).swap(params[i], payment);
+            IPool(POOL).transition(params[i], payment);
         }
     }
 

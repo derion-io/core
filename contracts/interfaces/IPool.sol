@@ -2,22 +2,16 @@
 pragma solidity ^0.8.28;
 
 struct Config {
-    address FETCHER;
     bytes32 ORACLE; // 1bit QTI, 31bit reserve, 32bit WINDOW, ... PAIR ADDRESS
     address TOKEN_R;
     uint256 K;
     uint256 MARK;
     uint256 INTEREST_HL;
     uint256 PREMIUM_HL;
-    uint256 MATURITY;
-    uint256 MATURITY_VEST;
-    uint256 MATURITY_RATE; // x128
-    uint256 OPEN_RATE;
+    address POSITIONER;
 }
 
 struct Param {
-    uint256 sideIn;
-    uint256 sideOut;
     address helper;
     bytes payload;
 }
@@ -38,6 +32,22 @@ struct State {
     uint256 b; // SHORT coefficient
 }
 
+struct Result {
+    uint256 amountIn;
+    uint256 amountOut;
+    uint256 price;
+}
+
+struct Receipt {
+    uint256 price;
+    uint256 R;
+    uint256 rA;
+    uint256 rB;
+    uint256 R1;
+    uint256 rA1;
+    uint256 rB1;
+}
+
 // anything that can be changed between tx construction and confirmation
 struct Slippable {
     uint256 xk; // (price/MARK)^K
@@ -47,12 +57,12 @@ struct Slippable {
 }
 
 interface IPool {
-    function init(State memory state, Payment memory payment) external;
+    function initialize(State memory state, Payment memory payment) external;
 
-    function swap(
+    function transition(
         Param memory param,
         Payment memory payment
-    ) external returns (uint256 amountIn, uint256 amountOut, uint256 price);
+    ) external;
 
     function loadConfig() external view returns (Config memory);
 }

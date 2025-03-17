@@ -2,13 +2,13 @@
 pragma solidity ^0.8.28;
 
 import "../PoolLogic.sol";
+import "../interfaces/IToken.sol";
 
 contract PoolLogicMock is PoolLogic {
     constructor(
-        address token,
         address feeTo,
         uint256 feeRate
-    ) PoolLogic(token, feeTo, feeRate) {}
+    ) PoolLogic(feeTo, feeRate) {}
 
     function loadState(
         uint224 a,
@@ -24,9 +24,11 @@ contract PoolLogicMock is PoolLogic {
         s_b = b;
         s_lastPremiumTime = f;
         s_lastInterestTime = i;
-        uint256 curSA = _supply(SIDE_A);
-        uint256 curSB = _supply(SIDE_B);
-        uint256 curSC = _supply(SIDE_C);
+        uint256 curSA = IPositioner(config.POSITIONER).sideSupply(address(this), SIDE_A);
+        uint256 curSB = IPositioner(config.POSITIONER).sideSupply(address(this), SIDE_B);
+        uint256 curSC = IPositioner(config.POSITIONER).sideSupply(address(this), SIDE_C);
+        address TOKEN = IPositioner(config.POSITIONER).TOKEN();
+        uint256 MATURITY = IPositioner(config.POSITIONER).MATURITY();
         if (sA < curSA) {
             IToken(TOKEN).burn(
                 msg.sender,
@@ -38,7 +40,7 @@ contract PoolLogicMock is PoolLogic {
                 msg.sender,
                 _packID(address(this), SIDE_A),
                 sA - curSA,
-                uint32(config.MATURITY),
+                uint32(MATURITY),
                 ""
             );
         }
@@ -54,7 +56,7 @@ contract PoolLogicMock is PoolLogic {
                 msg.sender,
                 _packID(address(this), SIDE_B),
                 sB - curSB,
-                uint32(config.MATURITY),
+                uint32(MATURITY),
                 ""
             );
         }
@@ -70,9 +72,13 @@ contract PoolLogicMock is PoolLogic {
                 msg.sender,
                 _packID(address(this), SIDE_C),
                 sC - curSC,
-                uint32(config.MATURITY),
+                uint32(MATURITY),
                 ""
             );
         }
+    }
+
+    function _packID(address pool, uint256 side) internal pure returns (uint256 id) {
+        id = (side << 160) | uint160(pool);
     }
 }

@@ -139,7 +139,7 @@ In state transistions, all core calculation is peformed one side (from state to 
 4. Apply interest rate to current payoff $p_0$ ⇒ $p_0'$
 5. Cut the protocol fee from the interest and transfer out to `FeeReceiver`
 6. Apply Premium rate to current payoff $p_0'$ ⇒ $p_0''$
-7. Call `Helper.swapToState` with input `payload` to calculate the target state ($s_1$)
+7. Call `Helper.updateState` with input `payload` to calculate the target state ($s_1$)
 8. Calculate target payoff: $p_1 = 〈R_1, r_{A1}, r_{B1}〉$
 9. Verify that there's only one side in. (Multiple sides out are not verified as they only hurt the transitioner, not the pool.)
 10. Calculate the payoff deltas from $p_0''$ to $p_1$ to get the `amountIn` and `amountOut` values.
