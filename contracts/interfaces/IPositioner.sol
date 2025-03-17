@@ -5,12 +5,6 @@ import "./IPool.sol";
 import "./IFetcher.sol";
 
 interface IPositioner {
-    function TOKEN() external returns (address);
-    function MATURITY() external returns (uint256);
-    function MATURITY_VEST() external returns (uint256);
-    function MATURITY_RATE() external returns (uint256);
-    function OPEN_RATE() external returns (uint256);
-
     function fetchPrices(
         uint256 ORACLE,
         bytes calldata payload
