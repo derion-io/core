@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity ^0.8.28;
 
-import "../PoolLogic.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+import "../PoolLogic.sol";
+import "./PositionerForMaturity.sol";
 
 interface IUniPool {
     function token0() external view returns (address);
@@ -92,9 +93,9 @@ contract View is PoolLogic {
             state.R = Rt;
         }
 
-        stateView.sA = IPositioner(config.POSITIONER).sideSupply(address(this), SIDE_A);
-        stateView.sB = IPositioner(config.POSITIONER).sideSupply(address(this), SIDE_B);
-        stateView.sC = IPositioner(config.POSITIONER).sideSupply(address(this), SIDE_C);
+        stateView.sA = PositionerForMaturity(config.POSITIONER).sideSupply(address(this), SIDE_A);
+        stateView.sB = PositionerForMaturity(config.POSITIONER).sideSupply(address(this), SIDE_B);
+        stateView.sC = PositionerForMaturity(config.POSITIONER).sideSupply(address(this), SIDE_C);
         stateView.twap = twap;
         stateView.spot = spot;
         stateView.state = state;
