@@ -37,7 +37,7 @@ abstract contract ReentrancyGuardTransient {
         _nonReentrantAfter();
     }
 
-    function _nonReentrantBefore() private {
+    function _nonReentrantBefore() internal {
         // On the first call to nonReentrant, _status will be NOT_ENTERED
         if (_reentrancyGuardEntered()) {
             revert ReentrancyGuardReentrantCall();
@@ -47,7 +47,7 @@ abstract contract ReentrancyGuardTransient {
         REENTRANCY_GUARD_STORAGE.asBoolean().tstore(true);
     }
 
-    function _nonReentrantAfter() private {
+    function _nonReentrantAfter() internal {
         REENTRANCY_GUARD_STORAGE.asBoolean().tstore(false);
     }
 
