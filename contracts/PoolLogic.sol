@@ -38,7 +38,8 @@ contract PoolLogic is PoolBase {
     function transition(
         Param memory param,
         Payment memory payment
-    ) external override nonReentrant {
+    ) external override {
+        _nonReentrantBefore();
         Config memory config = loadConfig();
         Receipt memory receipt = _transition(config, param);
         (bool success, bytes memory result) = config.POSITIONER.delegatecall(
@@ -55,6 +56,7 @@ contract PoolLogic is PoolBase {
                 revert(add(result,32),mload(result))
             }
         }
+        _nonReentrantAfter();
         assembly {
             return(add(result,32),mload(result))
         }
