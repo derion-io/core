@@ -5,6 +5,11 @@ bnjs.config({ EXPONENTIAL_AT: 999999, DECIMAL_PLACES: 40 })
 
 const abiCoder = new ethers.utils.AbiCoder()
 
+function trace(text) {
+    if (!!process.env.TRACE) {
+      console.log(text ?? 'TRACE')
+    }
+}
 const stringToBytes32 = (text) => {
     let result = hre.ethers.utils.hexlify(hre.ethers.utils.toUtf8Bytes(text))
     while (result.length < 66) { result += '0' }
@@ -286,6 +291,7 @@ function encodePayment(...args) {
 
 module.exports = {
     stringToBytes32,
+    trace,
     calculateSwapToPrice,
     weiToNumber,
     numberToWei,
