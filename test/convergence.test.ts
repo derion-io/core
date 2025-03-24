@@ -71,7 +71,7 @@ INTEREST_HLS.forEach(INTEREST_HL => {
               const nextTime = anchor + (PREMIUM_HL << i)
               if (i == 1) {
                 await time.increaseTo(anchor+10)
-                const { rA, rB } = await pool.contract.callStatic.compute(derivable1155.address, feeRate, 0, 0)
+                const { rA, rB } = await pool.contract.callStatic.compute(feeRate, 0, 0)
                 if (pa > pb) {
                   rate = rates[0].rA.sub(rA).mul(PRECISION).div(rates[0].rA.sub(rates[0].rB)).toNumber() / (PRECISION << i)
                 } else {
@@ -80,7 +80,7 @@ INTEREST_HLS.forEach(INTEREST_HL => {
               }
               await time.increaseTo(nextTime)
               if (swap) {
-                const { rA, rB, rC } = await pool.contract.callStatic.compute(derivable1155.address, feeRate, 0, 0)
+                const { rA, rB, rC } = await pool.contract.callStatic.compute(feeRate, 0, 0)
                 if (rA.gte(rB) && rA.gte(rC)) {
                   await pool.swap(SIDE_R, SIDE_A, 1)
                 } else if (rB.gte(rA) && rB.gte(rC)) {
@@ -90,7 +90,7 @@ INTEREST_HLS.forEach(INTEREST_HL => {
                 }
               }
             }
-            const { rA, rB, rC } = await pool.contract.callStatic.compute(derivable1155.address, feeRate, 0, 0)
+            const { rA, rB, rC } = await pool.contract.callStatic.compute(feeRate, 0, 0)
             rates.push({ rA, rB, rC })
 
             if (rA.sub(rB).abs().lte(rA.div(1000))) {
