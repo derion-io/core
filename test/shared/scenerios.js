@@ -30,6 +30,12 @@ function toConfig(params) {
   }
 }
 
+function trace(text) {
+  if (!!process.env.TRACE) {
+    console.trace(text ?? 'TRACE')
+  }
+}
+
 /** 
  * @param options
  * @param options.feeRate
@@ -43,12 +49,14 @@ function loadFixtureFromParams (arrParams, options={}) {
 
     const LogicName = options.logicName || 'PoolLogic'
     // deploy utr
+    trace()
     const UTR = require("@derion/utr/build/UniversalTokenRouter.json")
     const UniversalRouter = new ethers.ContractFactory(UTR.abi, UTR.bytecode, owner)
     const utr = await UniversalRouter.deploy(signer.address)
     await utr.deployed()
 
     // deploy oracle library
+    trace()
     const OracleLibrary = await ethers.getContractFactory("TestOracleHelper")
     const oracleLibrary = await OracleLibrary.deploy()
     await oracleLibrary.deployed()
