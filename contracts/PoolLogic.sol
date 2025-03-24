@@ -38,7 +38,7 @@ contract PoolLogic is PoolBase {
     function transition(
         Param memory param,
         Payment memory payment
-    ) external override {
+    ) external override returns (Result memory) {
         _nonReentrantBefore();
         Config memory config = loadConfig();
         Receipt memory receipt = _transition(config, param);

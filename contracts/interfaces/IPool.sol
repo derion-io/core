@@ -62,7 +62,7 @@ interface IPool {
     function transition(
         Param memory param,
         Payment memory payment
-    ) external;
+    ) external returns (Result memory);
 
     function loadConfig() external view returns (Config memory);
 }

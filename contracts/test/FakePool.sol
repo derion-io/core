@@ -22,7 +22,7 @@ contract FakePool is IPool {
     function transition(
         Param memory param,
         Payment memory payment
-    ) external {
+    ) external returns (Result memory)  {
     }
 
     function mint(
