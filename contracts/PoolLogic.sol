@@ -43,7 +43,6 @@ contract PoolLogic is PoolBase {
         _nonReentrantBefore();
         Config memory config = loadConfig();
         Receipt memory receipt = _transition(config, param);
-        console.log("Positioner Delegate Call %s", config.POSITIONER);
         (bool success, bytes memory result) = config.POSITIONER.delegatecall(
             abi.encodeWithSelector(
                 IPositioner.handleTransition.selector,
@@ -53,7 +52,6 @@ contract PoolLogic is PoolBase {
                 receipt
             )
         );
-        console.log("Positioner Delegate Call Res: %s ", success);
         if (!success) {
             assembly {
                 revert(add(result,32),mload(result))

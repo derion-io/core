@@ -21,7 +21,6 @@ abstract contract PoolBase is IPool, ERC1155Holder, Storage, Constants, NotToken
     /// @param payment payment info
     function initialize(State memory state, Payment memory payment) external {
         Config memory config = loadConfig();
-        console.log("Positioner Delegate Call base %s", config.POSITIONER);
 
         (bool success, bytes memory result) = config.POSITIONER.delegatecall(
             abi.encodeWithSelector(
@@ -31,7 +30,6 @@ abstract contract PoolBase is IPool, ERC1155Holder, Storage, Constants, NotToken
                 payment
             )
         );
-        console.log("Positioner Delegate Call base Res: %s", success);
         if (!success) {
             assembly {
                 revert(add(result,32),mload(result))
