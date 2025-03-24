@@ -218,9 +218,10 @@ function loadFixtureFromParams (arrParams, options={}) {
         payer: [],
         recipient: owner.address,
       }
-      console.log(pool.contract)
+      trace("Pool initialize")
       await pool.contract.initialize(initParams, payment)
 
+      trace("safeBatchTransferFrom")
       // permanently burn MINIMUM_SUPPLY of each token
       await derivable1155.safeBatchTransferFrom(
         owner.address,
