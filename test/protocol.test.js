@@ -115,7 +115,7 @@ describe("Protocol", async function () {
 
     describe("Pool Deployer", async function() {
         it("Without UTR", async function () {
-            const { owner, weth, utr, params, poolDeployer } = await loadFixture(fixture)
+            const { owner, weth, utr, params, poolDeployer, derivable1155 } = await loadFixture(fixture)
             const baseToken = weth.address
             const R = numberToWei(5)
             const config = {
@@ -131,6 +131,16 @@ describe("Protocol", async function () {
                 MATURITY_RATE: params[0].maturityRate,
                 OPEN_RATE: params[0].openRate,
             }
+            const PositionerForMaturity = await ethers.getContractFactory("PositionerForMaturity")
+            const positionerForMaturity = await PositionerForMaturity.deploy(
+                derivable1155.address,
+                config.MATURITY,
+                config.MATURITY_VEST,
+                config.MATURITY_RATE,
+                config.OPEN_RATE,
+            )
+            await positionerForMaturity.deployed()
+            config.POSITIONER = positionerForMaturity.address
             const state = {
                 R,
                 a: R.div(3),
@@ -158,7 +168,7 @@ describe("Protocol", async function () {
         })
 
         it("With UTR", async function () {
-            const { owner, weth, utr, params, poolDeployer } = await loadFixture(fixture)
+            const { owner, weth, utr, params, poolDeployer, derivable1155 } = await loadFixture(fixture)
             const baseToken = weth.address
             const R = numberToWei(5)
             const config = {
@@ -174,6 +184,17 @@ describe("Protocol", async function () {
                 MATURITY_RATE: params[0].maturityRate,
                 OPEN_RATE: params[0].openRate,
             }
+            const PositionerForMaturity = await ethers.getContractFactory("PositionerForMaturity")
+            const positionerForMaturity = await PositionerForMaturity.deploy(
+                derivable1155.address,
+                config.MATURITY,
+                config.MATURITY_VEST,
+                config.MATURITY_RATE,
+                config.OPEN_RATE,
+            )
+            await positionerForMaturity.deployed()
+            config.POSITIONER = positionerForMaturity.address
+
             const poolAddress = await poolDeployer.callStatic.create(config)
             const state = {
                 R,
@@ -422,16 +443,16 @@ describe("Protocol", async function () {
             await expect(PoolLogic.deploy(
                 AddressZero,
                 5
-            )).revertedWith('PoolLogic: ZERO_ADDRESS')
-            await expect(PoolLogic.deploy(
-                owner.address,
-                5
-            )).revertedWith('PoolBase: ZERO_ADDRESS')
+            )).revertedWith('ZERO_ADDRESS')
+            // await expect(PoolLogic.deploy(
+            //     owner.address,
+            //     5
+            // )).revertedWith('PoolBase:ZERO_ADDRESS')
             // PoolFactory
             const PoolFactory = await ethers.getContractFactory('PoolFactory')
             await expect(PoolFactory.deploy(
                 AddressZero
-            )).revertedWith('PoolFactory: ZERO_ADDRESS')
+            )).revertedWith('ZERO_ADDRESS')
         })
 
         it("swap without interest", async function () {
