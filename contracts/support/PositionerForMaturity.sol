@@ -11,8 +11,9 @@ import "../interfaces/IPositioner.sol";
 import "../subs/Constants.sol";
 import "../Fetcher.sol";
 import "../subs/Storage.sol";
+import "../subs/Events.sol";
 
-contract PositionerForMaturity is IPositioner, Storage, Constants, Fetcher {
+contract PositionerForMaturity is IPositioner, Events, Storage, Constants, Fetcher {
     address public immutable TOKEN;
     uint256 public immutable MATURITY;
     uint256 public immutable MATURITY_VEST;
@@ -32,18 +33,6 @@ contract PositionerForMaturity is IPositioner, Storage, Constants, Fetcher {
         MATURITY_RATE = maturityRate;
         OPEN_RATE = openRate;
     }
-
-    /// Position event for each postion mint/burn
-    event Position(
-        address indexed payer,
-        address indexed recipient,
-        address indexed index,
-        uint256 id,
-        uint256 amount,
-        uint256 maturity,
-        uint256 price,
-        uint256 valueR
-    );
 
     function initialize(Config memory config, State memory state, Payment memory payment) external {
         require(s_lastInterestTime == 0, "ALREADY_INITIALIZED");

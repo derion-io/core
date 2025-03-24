@@ -11,11 +11,12 @@ import "./interfaces/IPool.sol";
 import "./interfaces/IPositioner.sol";
 import "./subs/Constants.sol";
 import "./subs/Storage.sol";
+import "./subs/Events.sol";
 
 /// @title The base logic code for state initialization and token payment. 
 /// @author Derivable Labs
 /// @notice PoolBase is extended by PoolLogic to form the Pool contract.
-abstract contract PoolBase is IPool, ERC1155Holder, Storage, Constants, NotToken, ReentrancyGuardTransient {
+abstract contract PoolBase is IPool, ERC1155Holder, Events, Storage, Constants, NotToken, ReentrancyGuardTransient {
     /// Initializes the pool state before any interaction can be made.
     /// @param state initial state of the pool
     /// @param payment payment info
