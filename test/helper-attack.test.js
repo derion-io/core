@@ -370,7 +370,7 @@ describe("Helper Attacks", async function () {
     })
 
     it("Helper create pool", async function () {
-        const {stateCalHelper, params, fetchPrice, poolFactory} = await loadFixture(fixture)
+        const {stateCalHelper, params,derivable1155, fetchPrice, poolFactory} = await loadFixture(fixture)
 
         function toConfig(params) {
             return {
@@ -394,10 +394,23 @@ describe("Helper Attacks", async function () {
         }
 
         const config = toConfig(params1) 
-        const initParams = await calculateInitParams(config, fetchPrice, numberToWei(5))
-        await stateCalHelper.createPool(config, initParams, poolFactory.address, {
-            value: numberToWei(5)
-        })
+
+        const PositionerForMaturity = await ethers.getContractFactory("PositionerForMaturity")
+        const positionerForMaturity = await PositionerForMaturity.deploy(
+           derivable1155.address,
+           config.MATURITY,
+           config.MATURITY_VEST,
+           config.MATURITY_RATE,
+           config.OPEN_RATE,
+        )
+        await positionerForMaturity.deployed()
+        config.POSITIONER = positionerForMaturity.address
+        // const initParams = await calculateInitParams(config, fetchPrice, numberToWei(5))
+        // console.log(stateCalHelper)
+        await poolFactory.createPool(config)
+        // await stateCalHelper.createPool(config, initParams, poolFactory.address, {
+        //     value: numberToWei(5)
+        // })
     })
 
     describe("Helper attack", function () {
