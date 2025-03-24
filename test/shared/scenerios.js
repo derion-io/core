@@ -151,10 +151,6 @@ function loadFixtureFromParams (arrParams, options={}) {
       bn(quoteTokenIndex).shl(255).add(bn(300).shl(256 - 64)).add(uniswapPair.address).toHexString(),
       32,
     )
-    trace("Deploy PositionerForMaturity")
-    const PositionerForMaturity = await ethers.getContractFactory("PositionerForMaturity")
-    const positionerForMaturity = await PositionerForMaturity.deploy()
-    await positionerForMaturity.deployed()
     
     trace('Creating Pools')
     const returnParams = []
@@ -166,15 +162,28 @@ function loadFixtureFromParams (arrParams, options={}) {
         reserveToken: weth.address,
         recipient: owner.address,
         initTime: await time.latest(),
-        positioner: positionerForMaturity.address,
         ...params
       }
       realParams = await _init(oracleLibrary, numberToWei(options.initReserved || "5"), realParams)
       returnParams.push(realParams)
 
-      trace('Deploying Pool')
       const config = toConfig(realParams)
       console.log(config)
+
+      trace("Deploy PositionerForMaturity")
+      const PositionerForMaturity = await ethers.getContractFactory("PositionerForMaturity")
+      const positionerForMaturity = await PositionerForMaturity.deploy(
+        derivable1155.address,
+        config.MATURITY,
+        config.MATURITY_VEST,
+        config.MATURITY_RATE,
+        config.OPEN_RATE,
+      )
+      await positionerForMaturity.deployed()
+
+      config.POSITIONER = positionerForMaturity.address
+  
+      trace('Deploying Pool')
       const tx = await poolFactory.createPool(config)
       const receipt = await tx.wait()
       trace('Aprrove to Account')
