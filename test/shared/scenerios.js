@@ -181,6 +181,8 @@ function loadFixtureFromParams (arrParams, options={}) {
         }
       )
 
+      pool.positioner = positionerForMaturity
+
       const initParams = options.calInitParams 
       ? await calculateInitParams(config, fetchPrice, numberToWei(options.initReserved ?? 5))
       : {
