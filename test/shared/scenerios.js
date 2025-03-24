@@ -27,6 +27,7 @@ function toConfig(params) {
     MATURITY_VEST: params.maturityVest,
     MATURITY_RATE: params.maturityRate,
     OPEN_RATE: params.openRate,
+    POSITIONER: params.positioner
   }
 }
 
@@ -150,7 +151,11 @@ function loadFixtureFromParams (arrParams, options={}) {
       bn(quoteTokenIndex).shl(255).add(bn(300).shl(256 - 64)).add(uniswapPair.address).toHexString(),
       32,
     )
-
+    trace("Deploy PositionerForMaturity")
+    const PositionerForMaturity = await ethers.getContractFactory("PositionerForMaturity")
+    const positionerForMaturity = await PositionerForMaturity.deploy()
+    await positionerForMaturity.deployed()
+    
     trace('Creating Pools')
     const returnParams = []
     const pools = await Promise.all(arrParams.map(async params => {
@@ -161,6 +166,7 @@ function loadFixtureFromParams (arrParams, options={}) {
         reserveToken: weth.address,
         recipient: owner.address,
         initTime: await time.latest(),
+        positioner: positionerForMaturity.address,
         ...params
       }
       realParams = await _init(oracleLibrary, numberToWei(options.initReserved || "5"), realParams)
@@ -168,6 +174,7 @@ function loadFixtureFromParams (arrParams, options={}) {
 
       trace('Deploying Pool')
       const config = toConfig(realParams)
+      console.log(config)
       const tx = await poolFactory.createPool(config)
       const receipt = await tx.wait()
       trace('Aprrove to Account')
@@ -211,7 +218,8 @@ function loadFixtureFromParams (arrParams, options={}) {
         payer: [],
         recipient: owner.address,
       }
-      await pool.contract.init(initParams, payment)
+      console.log(pool.contract)
+      await pool.contract.initialize(initParams, payment)
 
       // permanently burn MINIMUM_SUPPLY of each token
       await derivable1155.safeBatchTransferFrom(
