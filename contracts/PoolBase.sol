@@ -11,7 +11,7 @@ import "./interfaces/IPool.sol";
 import "./interfaces/IPositioner.sol";
 import "./subs/Constants.sol";
 import "./subs/Storage.sol";
-
+import "hardhat/console.sol";
 /// @title The base logic code for state initialization and token payment. 
 /// @author Derivable Labs
 /// @notice PoolBase is extended by PoolLogic to form the Pool contract.
@@ -21,6 +21,8 @@ abstract contract PoolBase is IPool, ERC1155Holder, Storage, Constants, NotToken
     /// @param payment payment info
     function initialize(State memory state, Payment memory payment) external {
         Config memory config = loadConfig();
+        console.log("Positioner Delegate Call base %s", config.POSITIONER);
+
         (bool success, bytes memory result) = config.POSITIONER.delegatecall(
             abi.encodeWithSelector(
                 IPositioner.initialize.selector,
@@ -29,6 +31,7 @@ abstract contract PoolBase is IPool, ERC1155Holder, Storage, Constants, NotToken
                 payment
             )
         );
+        console.log("Positioner Delegate Call base Res: %s", success);
         if (!success) {
             assembly {
                 revert(add(result,32),mload(result))

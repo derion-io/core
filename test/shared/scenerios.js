@@ -168,7 +168,6 @@ function loadFixtureFromParams (arrParams, options={}) {
       returnParams.push(realParams)
 
       const config = toConfig(realParams)
-      console.log(config)
 
       trace("Deploy PositionerForMaturity")
       const PositionerForMaturity = await ethers.getContractFactory("PositionerForMaturity")
@@ -182,8 +181,8 @@ function loadFixtureFromParams (arrParams, options={}) {
       await positionerForMaturity.deployed()
 
       config.POSITIONER = positionerForMaturity.address
-  
-      trace('Deploying Pool')
+
+      trace('Deploying Pool', config)
       const tx = await poolFactory.createPool(config)
       const receipt = await tx.wait()
       trace('Aprrove to Account')
@@ -266,13 +265,14 @@ function loadFixtureFromParams (arrParams, options={}) {
       fetchPrice,
       feeRate,
     }
-
+    trace("callback")
     if (options.callback) {
       returns = {
         ...returns,
         ...(await options.callback(returns))
       }
     }
+    trace("return")
 
     return returns
   }
