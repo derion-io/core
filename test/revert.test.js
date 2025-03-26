@@ -227,7 +227,7 @@ describe("Revert", async function () {
       )).to.be.reverted
 
       // no attack when sideOut != SIDE_C
-      // TODO: zergity this test make a revert - VM Exception while processing transaction: reverted with reason string 'SAME_SIDE'
+      // TODO: zergity to handle same side transition
       // await reentrancyAttack.attack(
       //   numberToWei(5),
       //   { ...swapParams, sideOut: SIDE_A },
