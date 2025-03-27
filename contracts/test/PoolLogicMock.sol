@@ -4,8 +4,9 @@ pragma solidity ^0.8.28;
 import "../PoolLogic.sol";
 import "../interfaces/IToken.sol";
 import "../support/PositionerForMaturity.sol";
+import "../subs/SideConstants.sol";
 
-contract PoolLogicMock is PoolLogic {
+contract PoolLogicMock is SideConstants, PoolLogic {
     constructor(
         address feeTo,
         uint256 feeRate

@@ -9,10 +9,14 @@ import "solidity-bytes-utils/contracts/BytesLib.sol";
 import "../interfaces/IToken.sol";
 import "../interfaces/IPositioner.sol";
 import "../subs/Constants.sol";
+import "../subs/SideConstants.sol";
 import "../Fetcher.sol";
 import "../subs/Storage.sol";
 
-contract PositionerForMaturity is IPositioner, Storage, Constants, Fetcher {
+contract PositionerForMaturity is IPositioner, Storage, SideConstants, Constants, Fetcher {
+    uint256 constant internal MINIMUM_RESERVE = 1000;
+    uint256 constant internal MINIMUM_SUPPLY = 1000;
+
     address public immutable TOKEN;
     uint256 public immutable MATURITY;
     uint256 public immutable MATURITY_VEST;

@@ -12,6 +12,7 @@ import "@derion/erc1155-maturity/contracts/token/ERC1155/IERC1155Supply.sol";
 import "@derion/utr/contracts/NotToken.sol";
 
 import "../subs/Constants.sol";
+import "../subs/SideConstants.sol";
 import "../interfaces/IHelper.sol";
 import "../interfaces/IPool.sol";
 import "../PoolFactory.sol";
@@ -19,7 +20,7 @@ import "../interfaces/IWeth.sol";
 
 import "../interfaces/IPoolForMaturity.sol";
 
-contract BadHelper1 is NotToken, Constants, IHelper {
+contract BadHelper1 is NotToken, SideConstants, Constants, IHelper {
     struct SwapParams {
         uint256 sideIn;
         address poolIn;

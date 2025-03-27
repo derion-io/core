@@ -15,6 +15,7 @@ import "@derion/utr/contracts/interfaces/IUniversalTokenRouter.sol";
 import "@derion/utr/contracts/NotToken.sol";
 
 import "../subs/Constants.sol";
+import "../subs/SideConstants.sol";
 import "../interfaces/IHelper.sol";
 import "../interfaces/IPool.sol";
 import "../interfaces/IPositioner.sol";
@@ -24,7 +25,7 @@ import "../interfaces/IWeth.sol";
 import "../interfaces/IPoolForMaturity.sol";
 import "./PositionerForMaturity.sol";
 
-contract Helper is Constants, IHelper, ERC1155Holder, NotToken {
+contract Helper is SideConstants, Constants, IHelper, ERC1155Holder, NotToken {
     using BytesLib for bytes;
 
     struct AggregateParams {

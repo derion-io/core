@@ -2,6 +2,7 @@
 pragma solidity ^0.8.28;
 
 import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+import "../subs/SideConstants.sol";
 import "../PoolLogic.sol";
 import "./PositionerForMaturity.sol";
 
@@ -10,7 +11,7 @@ interface IUniPool {
     function token1() external view returns (address);
 }
 
-contract View is PoolLogic {
+contract View is SideConstants, PoolLogic {
     struct StateView {
         State state;
         uint256 sA;
