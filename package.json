@@ -55,6 +55,8 @@
   "dependencies": {
     "@derion/shadow-token": "https://github.com/derion-io/shadow-token.git",
     "@derion/utr": "https://github.com/derion-io/utr.git",
-    "@openzeppelin/contracts": "^5.1.0"
+    "@nomicfoundation/ethereumjs-util": "^9.0.4",
+    "@openzeppelin/contracts": "^5.1.0",
+    "hardhat-tracer": "^3.2.0"
   }
 }

@@ -7,6 +7,7 @@ require("@nomiclabs/hardhat-solhint");
 require("hardhat-contract-sizer");
 require("hardhat-gas-reporter");
 require('hardhat-dependency-compiler');
+require("hardhat-tracer");
 require("solidity-coverage");
 require("@nomicfoundation/hardhat-verify");
 require('@solidstate/hardhat-4byte-uploader');
