@@ -5,7 +5,7 @@ const { use } = require("chai");
 const { solidity } = require("ethereum-waffle");
 const { _init, calculateInitParams } = require("./AsymptoticPerpetual");
 const Pool = require("./Pool");
-const { bn, numberToWei, encodeSqrtX96, packId } = require("./utilities");
+const { bn, numberToWei, encodeSqrtX96, packId, trace } = require("./utilities");
 const { ethers } = require("hardhat");
 const { SIDE_A, SIDE_B, SIDE_C } = require("./constant");
 const { AddressZero } = ethers.constants;
@@ -28,12 +28,6 @@ function toConfig(params) {
     MATURITY_RATE: params.maturityRate,
     OPEN_RATE: params.openRate,
     POSITIONER: params.positioner
-  }
-}
-
-function trace(text) {
-  if (!!process.env.TRACE) {
-    console.log(text ?? 'TRACE')
   }
 }
 
