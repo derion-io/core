@@ -11,8 +11,6 @@ interface IPositioner {
     function MATURITY_RATE() external returns (uint256);
     function OPEN_RATE() external returns (uint256);
 
-    function sideSupply(address pool, uint256 side) external returns (uint256);
-
     function fetchPrices(
         uint256 ORACLE,
         bytes calldata payload
