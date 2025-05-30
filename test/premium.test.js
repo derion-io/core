@@ -41,11 +41,11 @@ describe("Premium", async function () {
     })
 
     async function compare(pool, derivable1155, dailyInterest = 0, feeRate = 0, tolerance = 15) {
-        let {rA, rB, rC, state} = await pool.contract.callStatic.compute(derivable1155.address, feeRate, 0, 0)
+        let {rA, rB, rC, state} = await pool.contract.callStatic.compute(feeRate, 0, 0)
         const timeRate = 24*60
         await time.increase(SECONDS_PER_DAY / timeRate)
         await pool.swap(SIDE_R, SIDE_C, 1)
-        const {rA: rA1, rB: rB1, rC: rC1} = await pool.contract.callStatic.compute(derivable1155.address, feeRate, 0, 0)
+        const {rA: rA1, rB: rB1, rC: rC1} = await pool.contract.callStatic.compute(feeRate, 0, 0)
 
         if (dailyInterest > 0) {
             rA = rA.sub(rA.mul(UNIT*dailyInterest).div(UNIT*timeRate))
@@ -157,14 +157,14 @@ describe("Premium", async function () {
     it("Premium: 1-1-1", async function() {
         const { derivablePools, derivable1155, feeRate } = await loadFixture(fixture)
         const pool = derivablePools[0]
-        const {rA, rB, rC} = await pool.contract.callStatic.compute(derivable1155.address, feeRate, 0, 0)
+        const {rA, rB, rC} = await pool.contract.callStatic.compute(feeRate, 0, 0)
         await time.increase(SECONDS_PER_DAY)
-        const {rA: rA1, rB: rB1, rC: rC1} = await pool.contract.callStatic.compute(derivable1155.address, feeRate, 0, 0)
+        const {rA: rA1, rB: rB1, rC: rC1} = await pool.contract.callStatic.compute(feeRate, 0, 0)
         expect(rA.sub(rA1).isZero(), 'LONG premmium must be zero').to.be.true
         expect(rB.sub(rB1).isZero(), 'SHORT premmium must be zero').to.be.true
         expect(rC.sub(rC1), 'LP premmium').equals(0)
         await time.increase(SECONDS_PER_DAY * 365 * 50)
-        const {rA: rA2, rB: rB2, rC: rC2} = await pool.contract.callStatic.compute(derivable1155.address, feeRate, 0, 0)
+        const {rA: rA2, rB: rB2, rC: rC2} = await pool.contract.callStatic.compute(feeRate, 0, 0)
         expect(rA2.sub(rB2).abs()).lte(2, 'eventually rA == rB')
         expect(rC.sub(rC2).abs()).lte(2, 'eventually rC unchanged')
     })
@@ -177,16 +177,16 @@ describe("Premium", async function () {
         await pool.swap(SIDE_B, SIDE_R, (await derivable1155.balanceOf(pool.contract.signer.address, packId(SIDE_B, pool.contract.address))))
         await pool.swap(SIDE_C, SIDE_R, (await derivable1155.balanceOf(pool.contract.signer.address, packId(SIDE_C, pool.contract.address))))
 
-        const {rA, rB, rC} = await pool.contract.callStatic.compute(derivable1155.address, feeRate, 0, 0)
+        const {rA, rB, rC} = await pool.contract.callStatic.compute(feeRate, 0, 0)
         await time.increase(SECONDS_PER_DAY)
-        const {rA: rA1, rB: rB1, rC: rC1} = await pool.contract.callStatic.compute(derivable1155.address, feeRate, 0, 0)
+        const {rA: rA1, rB: rB1, rC: rC1} = await pool.contract.callStatic.compute(feeRate, 0, 0)
         expect(rC.sub(rC1), 'LP premmium').equals(0)
         const premium = Number(weiToNumber(rA.mul(Math.floor(DAILY_PREMIUM * UNIT)).div(UNIT)))
         expect(Number(weiToNumber(rA.sub(rA1)) / premium), 'LONG premmium').closeTo(1, 0.06)
         expect(Number(weiToNumber(rB1.sub(rB)) / premium), 'SHORT premmium').closeTo(1, 0.06)
 
         await time.increase(SECONDS_PER_DAY * 365 * 50)
-        const {rA: rA2, rB: rB2, rC: rC2} = await pool.contract.callStatic.compute(derivable1155.address, feeRate, 0, 0)
+        const {rA: rA2, rB: rB2, rC: rC2} = await pool.contract.callStatic.compute(feeRate, 0, 0)
         expect(rA2.sub(rB2).abs()).lte(2, 'eventually rA == rB')
         expect(rC.sub(rC2).abs()).lte(2, 'eventually rC unchanged')
     })
@@ -198,16 +198,16 @@ describe("Premium", async function () {
         // remove all B and C
         await pool.swap(SIDE_B, SIDE_R, (await derivable1155.balanceOf(pool.contract.signer.address, packId(SIDE_B, pool.contract.address))))
 
-        const {rA, rB, rC} = await pool.contract.callStatic.compute(derivable1155.address, feeRate, 0, 0)
+        const {rA, rB, rC} = await pool.contract.callStatic.compute(feeRate, 0, 0)
         await time.increase(SECONDS_PER_DAY)
-        const {rA: rA1, rB: rB1, rC: rC1} = await pool.contract.callStatic.compute(derivable1155.address, feeRate, 0, 0)
+        const {rA: rA1, rB: rB1, rC: rC1} = await pool.contract.callStatic.compute(feeRate, 0, 0)
         expect(rC.sub(rC1), 'LP premmium').equals(0)
         const premium = Number(weiToNumber(rA.mul(Math.floor(DAILY_PREMIUM * UNIT)).div(UNIT)))
         expect(Number(weiToNumber(rA.sub(rA1)) / (premium/2)), 'LONG premmium').closeTo(1, 0.000001)
         expect(Number(weiToNumber(rB1.sub(rB)) / (premium/2)), 'SHORT premmium').closeTo(1, 0.000001)
 
         await time.increase(SECONDS_PER_DAY * 365 * 50)
-        const {rA: rA2, rB: rB2, rC: rC2} = await pool.contract.callStatic.compute(derivable1155.address, feeRate, 0, 0)
+        const {rA: rA2, rB: rB2, rC: rC2} = await pool.contract.callStatic.compute(feeRate, 0, 0)
         expect(rA2.sub(rB2).abs()).lte(2, 'eventually rA == rB')
         expect(rC.sub(rC2).abs()).lte(2, 'eventually rC unchanged')
     })
@@ -220,16 +220,16 @@ describe("Premium", async function () {
         await pool.swap(SIDE_A, SIDE_R, (await derivable1155.balanceOf(pool.contract.signer.address, packId(SIDE_A, pool.contract.address))))
         await pool.swap(SIDE_C, SIDE_R, (await derivable1155.balanceOf(pool.contract.signer.address, packId(SIDE_C, pool.contract.address))))
 
-        const {rA, rB, rC} = await pool.contract.callStatic.compute(derivable1155.address, feeRate, 0, 0)
+        const {rA, rB, rC} = await pool.contract.callStatic.compute(feeRate, 0, 0)
         await time.increase(SECONDS_PER_DAY)
-        const {rA: rA1, rB: rB1, rC: rC1} = await pool.contract.callStatic.compute(derivable1155.address, feeRate, 0, 0)
+        const {rA: rA1, rB: rB1, rC: rC1} = await pool.contract.callStatic.compute(feeRate, 0, 0)
         expect(rC.sub(rC1), 'LP premmium').equals(0)
         const premium = Number(weiToNumber(rB.mul(Math.floor(DAILY_PREMIUM * UNIT)).div(UNIT)))
         expect(Number(weiToNumber(rA1.sub(rA)) / (premium)), 'LONG premmium').closeTo(1, 0.06)
         expect(Number(weiToNumber(rB.sub(rB1)) / (premium)), 'SHORT premmium').closeTo(1, 0.06)
 
         await time.increase(SECONDS_PER_DAY * 365 * 50)
-        const {rA: rA2, rB: rB2, rC: rC2} = await pool.contract.callStatic.compute(derivable1155.address, feeRate, 0, 0)
+        const {rA: rA2, rB: rB2, rC: rC2} = await pool.contract.callStatic.compute(feeRate, 0, 0)
         expect(rA2.sub(rB2).abs()).lte(2, 'eventually rA == rB')
         expect(rC.sub(rC2).abs()).lte(2, 'eventually rC unchanged')
     })
@@ -241,16 +241,16 @@ describe("Premium", async function () {
         // remove all A
         await pool.swap(SIDE_A, SIDE_R, numberToWei(1).sub(1000))
 
-        const {rA, rB, rC} = await pool.contract.callStatic.compute(derivable1155.address, feeRate, 0, 0)
+        const {rA, rB, rC} = await pool.contract.callStatic.compute(feeRate, 0, 0)
         await time.increase(SECONDS_PER_DAY)
-        const {rA: rA1, rB: rB1, rC: rC1} = await pool.contract.callStatic.compute(derivable1155.address, feeRate, 0, 0)
+        const {rA: rA1, rB: rB1, rC: rC1} = await pool.contract.callStatic.compute(feeRate, 0, 0)
         expect(rC.sub(rC1), 'LP premmium').equals(0)
         const premium = numberToWei(DAILY_PREMIUM)
         expect(Number(weiToNumber(rA1.sub(rA)) / (DAILY_PREMIUM/2)), 'LONG premmium').closeTo(1, 0.03)
         expect(Number(weiToNumber(rB.sub(rB1)) / (DAILY_PREMIUM/2)), 'SHORT premmium').closeTo(1, 0.03)
 
         await time.increase(SECONDS_PER_DAY * 365 * 50)
-        const {rA: rA2, rB: rB2, rC: rC2} = await pool.contract.callStatic.compute(derivable1155.address, feeRate, 0, 0)
+        const {rA: rA2, rB: rB2, rC: rC2} = await pool.contract.callStatic.compute(feeRate, 0, 0)
         expect(rA2.sub(rB2).abs()).lte(2, 'eventually rA == rB')
         expect(rC.sub(rC2).abs()).lte(2, 'eventually rC unchanged')
     })
