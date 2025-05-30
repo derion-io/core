@@ -101,15 +101,16 @@ describe("Protocol", async function () {
             expect(await derivable1155.getShadowSymbol(packId(SIDE_A, derivablePools[0].contract.address))).eq('WETH+2.5xWETH/USDC')
             expect(await derivable1155.symbol()).eq("DERION-POS")
         })
-        describe("ERC1155SupplyVirtual", function () {
-            it("exists", async function () {
-                const { derivable1155, derivablePools} = await loadFixture(fixture)
-                expect(await derivable1155.totalSupply(packId(SIDE_A, derivablePools[0].contract.address))).gt(0)
-                expect(await derivable1155.totalSupply(packId(SIDE_B, derivablePools[0].contract.address))).gt(0)
-                expect(await derivable1155.totalSupply(packId(SIDE_C, derivablePools[0].contract.address))).gt(0)
-                expect(await derivable1155.totalSupply(packId(SIDE_R, derivablePools[0].contract.address))).equal(0)
-                expect(await derivable1155.totalSupply(0)).equal(0)
-            })
+    })
+
+    describe("ERC1155SupplyVirtual", function () {
+        it("exists", async function () {
+            const { derivable1155, derivablePools} = await loadFixture(fixture)
+            expect(await derivable1155.totalSupply(packId(SIDE_A, derivablePools[0].contract.address))).gt(0)
+            expect(await derivable1155.totalSupply(packId(SIDE_B, derivablePools[0].contract.address))).gt(0)
+            expect(await derivable1155.totalSupply(packId(SIDE_C, derivablePools[0].contract.address))).gt(0)
+            expect(await derivable1155.totalSupply(packId(SIDE_R, derivablePools[0].contract.address))).equal(0)
+            expect(await derivable1155.totalSupply(0)).equal(0)
         })
     })
 
