@@ -10,7 +10,7 @@ const { loadFixtureFromParams } = require("./shared/scenerios")
 chai.use(solidity)
 const { AddressZero, MaxUint256 } = ethers.constants
 const expect = chai.expect
-const { numberToWei, packId, bn, encodePayment } = require("./shared/utilities")
+const { numberToWei, packId, bn, encodePayment, encodePayload } = require("./shared/utilities")
 
 const pe = (x) => ethers.utils.parseEther(String(x))
 
@@ -245,12 +245,13 @@ describe("Revert", async function () {
 
       // Revert re-entrancy
       const swapParams = {
-        sideIn: SIDE_R,
-        sideOut: SIDE_C,
-        maturity: 0,
+        // sideIn: SIDE_R,
+        // sideOut: SIDE_C,
+        // maturity: 0,
         helper: stateCalHelper.address,
-        payload: '0x0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000300000000000000000000000000000000000000000000000004563918244f400000000000000000000000000000000000080000000000000000000000000000000'
+        payload: '0x0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000030000000000000000000000000000000000000000000000004563918244f40000'
       }
+
       const paymentParams = {
         utr: utr.address,
         payer: [],
@@ -267,11 +268,11 @@ describe("Revert", async function () {
 
       // no attack when sideOut != SIDE_C
       // TODO: zergity to handle same side transition
-      // await reentrancyAttack.attack(
-      //   numberToWei(5),
-      //   { ...swapParams, sideOut: SIDE_A },
-      //   paymentParams,
-      // )
+      await reentrancyAttack.attack(
+        numberToWei(5),
+        { ...swapParams, payload: encodePayload(SIDE_R, SIDE_A,  numberToWei(5)) },
+        paymentParams,
+      )
     })
 
     it("Swap: INSUFFICIENT_PAYMENT", async function () {
