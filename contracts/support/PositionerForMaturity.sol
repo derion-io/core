@@ -19,6 +19,20 @@ contract PositionerForMaturity is IPositioner, Storage, Constants, Fetcher {
     uint256 public immutable MATURITY_RATE; // x128
     uint256 public immutable OPEN_RATE;
 
+    constructor(
+        address token,
+        uint256 maturity,
+        uint256 maturityVest,
+        uint256 maturityRate,
+        uint256 openRate
+    ) {
+        TOKEN = token;
+        MATURITY = maturity;
+        MATURITY_VEST = maturityVest;
+        MATURITY_RATE = maturityRate;
+        OPEN_RATE = openRate;
+    }
+
     /// Position event for each postion mint/burn
     event Position(
         address indexed payer,
