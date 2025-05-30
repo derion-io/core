@@ -187,7 +187,7 @@ configs.forEach(config => describe(`Maturity - EXP = ${config.exp}, COEF ${confi
         trace("Fixture loaded");
         const derivablePool = derivablePools[0]
         const poolNoMaturity = derivablePools[1]
-        console.log(poolNoMaturity)
+        // console.log(poolNoMaturity)
         trace("Fetching current time...");
         const curTime = await time.latest()
         
