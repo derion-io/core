@@ -32,6 +32,41 @@ contract PoolLogic is PoolBase {
         FEE_RATE = feeRate;
     }
 
+    /// Initializes the pool state before any interaction can be made.
+    /// @param state initial state of the pool
+    /// @param payment payment info
+    function initialize(State memory state, Payment memory payment) external {
+        require(s_lastInterestTime == 0, "ALREADY_INITIALIZED");
+        uint256 a = state.a;
+        uint256 b = state.b;
+        require(state.R > 0 && a > 0 && b > 0, "ZERO_PARAM");
+
+        s_lastInterestTime = uint32(block.timestamp);
+        s_a = uint224(a);
+        s_lastPremiumTime = uint32(block.timestamp);
+        s_b = uint224(b);
+
+        Config memory config = loadConfig();
+
+        (bool success, bytes memory result) = config.POSITIONER.delegatecall(
+            abi.encodeWithSelector(
+                IPositioner.initialize.selector,
+                config,
+                state,
+                payment
+            )
+        );
+        if (!success) {
+            assembly {
+                revert(add(result,32),mload(result))
+            }
+        }
+        assembly {
+            return(add(result,32),mload(result))
+        }
+    }
+
+
     /// Performs single direction (1 side in, 1 side out) state transistion
     /// @param param swap param
     /// @param payment payment param

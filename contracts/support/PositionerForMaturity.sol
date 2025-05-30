@@ -10,9 +10,8 @@ import "../interfaces/IToken.sol";
 import "../interfaces/IPositioner.sol";
 import "../subs/Constants.sol";
 import "../Fetcher.sol";
-import "../subs/Storage.sol";
 
-contract PositionerForMaturity is IPositioner, Storage, Constants, Fetcher {
+contract PositionerForMaturity is IPositioner, Constants, Fetcher {
     address public immutable TOKEN;
     uint256 public immutable MATURITY;
     uint256 public immutable MATURITY_VEST;
@@ -46,17 +45,7 @@ contract PositionerForMaturity is IPositioner, Storage, Constants, Fetcher {
     );
 
     function initialize(Config memory config, State memory state, Payment memory payment) external {
-        require(s_lastInterestTime == 0, "ALREADY_INITIALIZED");
         uint256 R = state.R;
-        uint256 a = state.a;
-        uint256 b = state.b;
-        require(R > 0 && a > 0 && b > 0, "ZERO_PARAM");
-
-        s_lastInterestTime = uint32(block.timestamp);
-        s_a = uint224(a);
-        s_lastPremiumTime = uint32(block.timestamp);
-        s_b = uint224(b);
-
         address payer;
 
         if (payment.payer.length > 0) {
@@ -72,16 +61,16 @@ contract PositionerForMaturity is IPositioner, Storage, Constants, Fetcher {
             payer = msg.sender;
         }
 
-        uint256 idA = _packID(address(this), SIDE_A);
-        uint256 idB = _packID(address(this), SIDE_B);
-        uint256 idC = _packID(address(this), SIDE_C);
-
         (uint256 price,) = fetch(uint256(config.ORACLE));
         (uint256 rA, uint256 rB) = _evaluate(_xk(config, price), state);
         require(rA >= MINIMUM_RESERVE, 'MINIMUM_RESERVE_A');
         require(rB >= MINIMUM_RESERVE, 'MINIMUM_RESERVE_B');
         uint256 rC = R - rA - rB;
         require(rC >= MINIMUM_RESERVE, 'MINIMUM_RESERVE_C');
+
+        uint256 idA = _packID(address(this), SIDE_A);
+        uint256 idB = _packID(address(this), SIDE_B);
+        uint256 idC = _packID(address(this), SIDE_C);
 
         // mint tokens to recipient
         uint32 maturity = uint32(block.timestamp + MATURITY);
