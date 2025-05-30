@@ -99,7 +99,7 @@ describe("Protocol", async function () {
             const { derivable1155, derivablePools } = await loadFixture(fixture)
             expect(await derivable1155.getShadowDecimals(packId(SIDE_A, derivablePools[0].contract.address))).eq(18)
             expect(await derivable1155.getShadowSymbol(packId(SIDE_A, derivablePools[0].contract.address))).eq('WETH+2.5xWETH/USDC')
-            expect(await derivable1155.symbol()).eq("DERIVABLE-POS")
+            expect(await derivable1155.symbol()).eq("DERION-POS")
         })
         describe("ERC1155SupplyVirtual", function () {
             it("exists", async function () {
