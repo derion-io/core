@@ -47,7 +47,16 @@ describe("Play Token", async function () {
             MATURITY_RATE: baseParams.maturityRate,
             OPEN_RATE: baseParams.openRate,
         }
-
+        const PositionerForMaturity = await ethers.getContractFactory("PositionerForMaturity")
+        const positionerForMaturity = await PositionerForMaturity.deploy(
+           derivable1155.address,
+           config.MATURITY,
+           config.MATURITY_VEST,
+           config.MATURITY_RATE,
+           config.OPEN_RATE,
+        )
+        await positionerForMaturity.deployed()
+        config.POSITIONER = positionerForMaturity.address
         // const tx = await poolFactory.createPool(config)
         // const receipt = await tx.wait()
         // const poolAddress = ethers.utils.getAddress('0x' + receipt.logs[0].data.slice(-40))
@@ -86,7 +95,7 @@ describe("Play Token", async function () {
                 }],
                 flags: 0,
                 code: poolAddress,
-                data: (await pool.populateTransaction.init(
+                data: (await pool.populateTransaction.initialize(
                     initParams,
                     payment
                 )).data,

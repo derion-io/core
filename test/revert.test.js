@@ -98,6 +98,17 @@ describe("Revert", async function () {
         MATURITY_RATE: params[1].maturityRate,
         OPEN_RATE: params[1].openRate,
       }
+      const PositionerForMaturity = await ethers.getContractFactory("PositionerForMaturity")
+      const positionerForMaturity = await PositionerForMaturity.deploy(
+         derivable1155.address,
+         config.MATURITY,
+         config.MATURITY_VEST,
+         config.MATURITY_RATE,
+         config.OPEN_RATE,
+      )
+      await positionerForMaturity.deployed()
+      config.POSITIONER = positionerForMaturity.address
+      
       const tx = await poolFactory.createPool(config)
       const receipt = await tx.wait()
       const poolAddress = ethers.utils.getAddress('0x' + receipt.logs[0].data.slice(-40))
@@ -114,7 +125,7 @@ describe("Revert", async function () {
       }
       const pool = await ethers.getContractAt("PoolBase", poolAddress)
       // Revert ZERO_PARAM
-      await expect(pool.callStatic.init(
+      await expect(pool.callStatic.initialize(
         {
           R: numberToWei(5),
           a: numberToWei(0),
@@ -136,7 +147,7 @@ describe("Revert", async function () {
           }],
           flags: 0,
           code: poolAddress,
-          data: (await pool.populateTransaction.init(
+          data: (await pool.populateTransaction.initialize(
             initParams,
             {
               utr: fakeUTR.address,
@@ -159,14 +170,14 @@ describe("Revert", async function () {
           }],
           flags: 0,
           code: poolAddress,
-          data: (await pool.populateTransaction.init(
+          data: (await pool.populateTransaction.initialize(
             initParams,
             payment
           )).data,
         }])
       expect(await derivable1155.balanceOf(owner.address, convertId(SIDE_A, poolAddress))).gt(0)
       // Revert ALREADY_INITIALIZED
-      await expect(pool.init(
+      await expect(pool.initialize(
         initParams,
         payment
       )).to.be.revertedWith("ALREADY_INITIALIZED")
@@ -352,6 +363,17 @@ describe("Revert", async function () {
         MATURITY_RATE: params[0].maturityRate,
         OPEN_RATE: params[0].openRate,
       }
+      const PositionerForMaturity = await ethers.getContractFactory("PositionerForMaturity")
+      const positionerForMaturity = await PositionerForMaturity.deploy(
+         derivable1155.address,
+         config.MATURITY,
+         config.MATURITY_VEST,
+         config.MATURITY_RATE,
+         config.OPEN_RATE,
+      )
+      await positionerForMaturity.deployed()
+      config.POSITIONER = positionerForMaturity.address
+
       const tx = await poolFactory.createPool(config)
       const receipt = await tx.wait()
       const poolAddress = ethers.utils.getAddress('0x' + receipt.logs[0].data.slice(-40))
@@ -379,7 +401,7 @@ describe("Revert", async function () {
           }],
           flags: 0,
           code: poolAddress,
-          data: (await poolBase.populateTransaction.init(
+          data: (await poolBase.populateTransaction.initialize(
             initParams,
             payment
           )).data,
