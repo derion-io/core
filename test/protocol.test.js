@@ -434,6 +434,7 @@ describe("Protocol", async function () {
                 AddressZero,
                 5
             )).revertedWith('ZERO_ADDRESS')
+            // TODO: zergity why here expect revert
             // await expect(PoolLogic.deploy(
             //     owner.address,
             //     5
