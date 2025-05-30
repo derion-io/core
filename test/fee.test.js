@@ -7,7 +7,7 @@ const { solidity } = require("ethereum-waffle");
 const { ethers } = require("hardhat");
 const { _selectPrice, _evaluate } = require("./shared/AsymptoticPerpetual");
 const { SIDE_R, SIDE_A, SIDE_B, SIDE_C } = require("./shared/constant");
-const { weiToNumber, bn, numberToWei, paramToConfig } = require("./shared/utilities");
+const { weiToNumber, bn, numberToWei, paramToConfig, trace } = require("./shared/utilities");
 const { AddressZero } = require("@ethersproject/constants");
 const { loadFixtureFromParams } = require("./shared/scenerios");
 const { baseParams } = require("./shared/baseParams");
@@ -171,9 +171,10 @@ HLs.forEach(HALF_LIFE => {
         SIDE_A,
         numberToWei(1),
       )
+      trace("Pool Compute")
+      const {rA, rB, state} = await pool.contract.callStatic.compute(FEE_RATE, 0, 0)
 
-      const {rA, rB, state} = await pool.contract.callStatic.compute(derivable1155.address, FEE_RATE, 0, 0)
-
+      trace("Calculate Rate")
       const interestRate = Math.round(((1 - dailyInterestRate)**365)*UNIT)/UNIT
 
       const rAAfter = rA.mul(Math.round(UNIT * interestRate)).div(UNIT)
