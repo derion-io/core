@@ -399,12 +399,10 @@ describe("Protocol", async function () {
             // PoolLogic
             const PoolLogic = await ethers.getContractFactory('PoolLogic')
             await expect(PoolLogic.deploy(
-                derivable1155.address,
                 AddressZero,
                 5
             )).revertedWith('PoolLogic: ZERO_ADDRESS')
             await expect(PoolLogic.deploy(
-                AddressZero,
                 owner.address,
                 5
             )).revertedWith('PoolBase: ZERO_ADDRESS')

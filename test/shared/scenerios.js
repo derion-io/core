@@ -71,7 +71,6 @@ function loadFixtureFromParams (arrParams, options={}) {
     const feeRate = options.feeRate ?? 0
     const Logic = await ethers.getContractFactory(LogicName)
     const logic = await Logic.deploy(
-      derivable1155.address,
       feeReceiver.address,
       feeRate,
     )
