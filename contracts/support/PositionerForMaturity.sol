@@ -11,6 +11,8 @@ import "../interfaces/IPositioner.sol";
 import "../subs/Constants.sol";
 import "../Fetcher.sol";
 
+/// Positioner for ERC1155-Maturity semi-fungible token.
+/// Supports single side transition (1 side in, 1 side out).
 contract PositionerForMaturity is IPositioner, Constants, Fetcher {
     address public immutable TOKEN;
     uint256 public immutable MATURITY;

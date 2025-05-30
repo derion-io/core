@@ -67,7 +67,7 @@ contract PoolLogic is PoolBase {
     }
 
 
-    /// Performs single direction (1 side in, 1 side out) state transistion
+    /// Performs a pool state transistion
     /// @param param swap param
     /// @param payment payment param
     function transition(
