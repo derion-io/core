@@ -229,7 +229,7 @@ The lowest bit of `s_lastPremiumTime` is used for re-entrancy lock.
 * Token's `transferFrom(msg.sender)` which requires direct token allowance from `msg.sender`. This methos is designed for inter-contract interactions and not recommended for user interactions.
 * `UTR.pay` (ERC-6120) payment, which allows UTR or other router contract with the same interface to pay the token input in a callback. The `UTR.pay` call is trustless, since both the contract address and the payload is provided by user, so the actual token received after the call is checked by the `PoolBase` code.
 
-`PoolLogic._swap` make another trustless call to `Helper.swapToState` view function. This Helper function is provided by user, and help calculate the target (after) state for the state transition. Providing malicious or errornous Helper code cannot hurt the fund in the pool, but only hurt the transaction sender himself.
+`PoolLogic._swap` make another trustless call to `Helper.updateState` view function. This Helper function is provided by user, and help calculate the target (after) state for the state transition. Providing malicious or errornous Helper code cannot hurt the fund in the pool, but only hurt the transaction sender himself.
 
 #### 2.4.3. Assets
 

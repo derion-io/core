@@ -17,6 +17,8 @@ import "../interfaces/IPool.sol";
 import "../PoolFactory.sol";
 import "../interfaces/IWeth.sol";
 
+import "../interfaces/IPoolForMaturity.sol";
+
 contract BadHelper2 is NotToken, Constants, IHelper {
     struct SwapParams {
         uint256 sideIn;
@@ -61,7 +63,7 @@ contract BadHelper2 is NotToken, Constants, IHelper {
         IWeth(WETH).deposit{value: msg.value}();
         uint256 amount = IWeth(WETH).balanceOf(address(this));
         IERC20(WETH).approve(pool, amount);
-        IPool(pool).init(state, Payment(address(0), "", msg.sender));
+        IPool(pool).initialize(state, Payment(address(0), "", msg.sender));
     }
 
     function swap(
@@ -107,14 +109,14 @@ contract BadHelper2 is NotToken, Constants, IHelper {
             params.amountIn
         );
 
-        (, amountOut, ) = IPool(params.poolIn).swap(
-            Param(params.sideIn, params.sideOut, address(this), payload),
+        amountOut = IPoolForMaturity(params.poolIn).transition(
+            Param(address(this), payload),
             Payment(
                 msg.sender, // UTR
                 params.payer,
                 params.recipient
             )
-        );
+        ).amountOut;
 
         if (_params.sideOut == SIDE_NATIVE) {
             require(TOKEN_R == WETH, "Reserve token is not Wrapped");
@@ -136,7 +138,7 @@ contract BadHelper2 is NotToken, Constants, IHelper {
         );
     }
 
-    function swapToState(
+    function updateState(
         Slippable calldata __,
         bytes calldata payload
     ) external view override returns (State memory state1) {
@@ -196,28 +198,28 @@ contract BadHelper2 is NotToken, Constants, IHelper {
             params.amountIn
         );
 
-        (, amountOut, ) = IPool(params.poolIn).swap(
-            Param(params.sideIn, SIDE_R, address(this), payload),
+        amountOut = IPoolForMaturity(params.poolIn).transition(
+            Param(address(this), payload),
             Payment(
                 msg.sender, // UTR
                 params.payer,
                 address(this)
             )
-        );
+        ).amountOut;
 
         // TOKEN_R approve poolOut
         IERC20(TOKEN_R).approve(params.poolOut, amountOut);
 
         // swap (poolIn|PoolOut)/R to poolOut/SideOut
         payload = abi.encode(SIDE_R, params.sideOut, amountOut);
-        (, amountOut, ) = IPool(params.poolOut).swap(
-            Param(SIDE_R, params.sideOut, address(this), payload),
+        amountOut = IPoolForMaturity(params.poolOut).transition(
+            Param(address(this), payload),
             Payment(
                 msg.sender, // UTR
                 "",
                 params.recipient
             )
-        );
+        ).amountOut;
 
         address payer = BytesLib.toAddress(params.payer, 0);
 

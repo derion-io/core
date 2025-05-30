@@ -40,7 +40,7 @@ contract PoolDeployer is NotToken, IPoolFactory {
         } else {
             require(msg.value == 0, "PoolDeployer: UNUSED_VALUE");
         }
-        IPool(pool).init(state, payment);
+        IPool(pool).initialize(state, payment);
         require(IERC20(config.TOKEN_R).balanceOf(pool) >= state.R, "PoolDeployer: POOL_INIT_FAILED");
         _emit(
             baseToken,
@@ -56,17 +56,12 @@ contract PoolDeployer is NotToken, IPoolFactory {
         address pool
     ) internal pure returns (bytes memory) {
         return abi.encode(
-            config.FETCHER,
             config.ORACLE,
             config.TOKEN_R,
             config.K,
             config.MARK,
             config.INTEREST_HL,
             config.PREMIUM_HL,
-            config.MATURITY,
-            config.MATURITY_VEST,
-            config.MATURITY_RATE,
-            config.OPEN_RATE,
             pool
         );
     }

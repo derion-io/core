@@ -27,7 +27,7 @@ function _v(xk, r, R) {
   return mulDivRoundingUp(R, R, denominator)
 }
 
-async function swapToState(
+async function updateState(
   market, // {xkA, xkB}
   state, // {a, b, R}
   rA,
@@ -87,6 +87,6 @@ function encodePath(path, fees) {
 
 module.exports = {
   _v,
-  swapToState,
+  updateState,
   encodePath,
 }

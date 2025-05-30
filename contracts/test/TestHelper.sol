@@ -4,6 +4,7 @@ pragma solidity ^0.8.28;
 import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
 import "@derion/utr/contracts/NotToken.sol";
 import "../interfaces/IPool.sol";
+import "../interfaces/IPoolForMaturity.sol";
 
 contract TestHelper is NotToken {
     address private immutable POOL;
@@ -28,15 +29,15 @@ contract TestHelper is NotToken {
             sideOut,
             IERC1155(TOKEN).balanceOf(address(this), _packID(POOL, sideIn))
         );
-        return
-            IPool(POOL).swap(
-                Param(sideIn, sideOut, HELPER, payload),
-                Payment(
-                    msg.sender, // UTR
-                    payer,
-                    recipient
-                )
-            );
+        Result memory result = IPoolForMaturity(POOL).transition(
+            Param(HELPER, payload),
+            Payment(
+                msg.sender, // UTR
+                payer,
+                recipient
+            )
+        );
+        return (result.amountIn, result.amountOut, result.price);
     }
 
     function onERC1155Received(

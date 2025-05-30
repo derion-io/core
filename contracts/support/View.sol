@@ -36,10 +36,9 @@ contract View is PoolLogic {
     }
 
     constructor(
-        address token,
         address feeTo,
         uint256 feeRate
-    ) PoolLogic(token, feeTo, feeRate) {}
+    ) PoolLogic(feeTo, feeRate) {}
 
     function metadata() external view returns (Metadata memory meta) {
         Config memory config = loadConfig();
@@ -67,7 +66,6 @@ contract View is PoolLogic {
     }
 
     function compute(
-        address TOKEN,
         uint256 FEE_RATE,
         uint256 twap,
         uint256 spot
@@ -76,7 +74,7 @@ contract View is PoolLogic {
         State memory state = State(_reserve(config.TOKEN_R), s_a, s_b);
 
         if (twap == 0 && spot == 0) {
-            (twap, spot) = _fetch(config.FETCHER, uint256(config.ORACLE));
+            (twap, spot) = IFetcher(config.POSITIONER).fetch(uint256(config.ORACLE));
         }
         (uint256 rAt, uint256 rBt) = _evaluate(_xk(config, twap), state);
         (uint256 rAs, uint256 rBs) = _evaluate(_xk(config, spot), state);
@@ -94,19 +92,12 @@ contract View is PoolLogic {
             state.R = Rt;
         }
 
-        stateView.sA = _supply(TOKEN, SIDE_A);
-        stateView.sB = _supply(TOKEN, SIDE_B);
-        stateView.sC = _supply(TOKEN, SIDE_C);
+        stateView.sA = IPositioner(config.POSITIONER).sideSupply(address(this), SIDE_A);
+        stateView.sB = IPositioner(config.POSITIONER).sideSupply(address(this), SIDE_B);
+        stateView.sC = IPositioner(config.POSITIONER).sideSupply(address(this), SIDE_C);
         stateView.twap = twap;
         stateView.spot = spot;
         stateView.state = state;
-    }
-
-    function _supply(
-        address TOKEN,
-        uint256 side
-    ) internal view returns (uint256 s) {
-        return IERC1155Supply(TOKEN).totalSupply(_packID(address(this), side));
     }
 
     function _applyRate(

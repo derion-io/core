@@ -42,16 +42,11 @@ contract PoolFactory is NotToken, IPoolFactory {
             config.ORACLE & ORACLE_MASK,            // topic2: price index
             bytes32(uint256(uint160(config.TOKEN_R))), // topic3: reserve token
             abi.encode(
-                config.FETCHER,
                 config.ORACLE,
                 config.K,
                 config.MARK,
                 config.INTEREST_HL,
                 config.PREMIUM_HL,
-                config.MATURITY,
-                config.MATURITY_VEST,
-                config.MATURITY_RATE,
-                config.OPEN_RATE,
                 uint256(uint160(pool))
             )
         );

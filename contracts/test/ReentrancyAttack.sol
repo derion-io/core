@@ -29,7 +29,7 @@ contract ReentrancyAttack is ERC1155Holder {
         // reentrant attack on SIDE_C
         if (id >> 160 == 48) {
             // now, the recipient is tx.origin, so no recusive re-entrancy
-            IPool(POOL).swap(s_param, s_payment);
+            IPool(POOL).transition(s_param, s_payment);
             // successfully attacked
         }
         return this.onERC1155Received.selector;
@@ -45,6 +45,6 @@ contract ReentrancyAttack is ERC1155Holder {
         s_payment = payment;
         payment.recipient = address(this);  // trigger the onERC1155Received above
         IERC20(WETH).approve(POOL, amount);
-        IPool(POOL).swap(param, payment);
+        IPool(POOL).transition(param, payment);
     }
 }

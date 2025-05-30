@@ -17,8 +17,11 @@ import "@derion/utr/contracts/NotToken.sol";
 import "../subs/Constants.sol";
 import "../interfaces/IHelper.sol";
 import "../interfaces/IPool.sol";
+import "../interfaces/IPositioner.sol";
 import "../PoolFactory.sol";
 import "../interfaces/IWeth.sol";
+
+import "../interfaces/IPoolForMaturity.sol";
 
 contract Helper is Constants, IHelper, ERC1155Holder, NotToken {
     using BytesLib for bytes;
@@ -160,7 +163,7 @@ contract Helper is Constants, IHelper, ERC1155Holder, NotToken {
                 params.recipient
             );
 
-            uint256 payloadAmountInR = FullMath.mulDiv(amountInR, config.OPEN_RATE, Q128);
+            uint256 payloadAmountInR = FullMath.mulDiv(amountInR, IPositioner(config.POSITIONER).OPEN_RATE(), Q128);
             // TODO: add payloadAmount rate for input tolerrance
 
             bytes memory payload = abi.encode(
@@ -169,15 +172,14 @@ contract Helper is Constants, IHelper, ERC1155Holder, NotToken {
                 payloadAmountInR    // amount
             );
 
-            (, amountOut, price) = IPool(params.pool).swap(
+            Result memory result = IPoolForMaturity(params.pool).transition(
                 Param(
-                    SIDE_R,         // sideIn
-                    params.side,    // sideOut
                     address(this),  // helper's contract
                     payload         // helper's payload
                 ),
                 payment
             );
+            (amountOut, price) = (result.amountOut, result.price);
         }
 
         // clean up
@@ -233,15 +235,14 @@ contract Helper is Constants, IHelper, ERC1155Holder, NotToken {
             amountOut
         );
 
-        (, amountOut, price) = IPool(params.deriPool).swap(
+        Result memory result = IPoolForMaturity(params.deriPool).transition(
             Param(
-                SIDE_R,
-                params.side,
                 address(this),
                 payload
             ),
             payment
         );
+        (amountOut, price) = (result.amountOut, result.price);
 
         if (IERC20(config.TOKEN_R).allowance(address(this), params.deriPool) > 0) {
             TransferHelper.safeApprove(config.TOKEN_R, params.deriPool, 0);
@@ -282,15 +283,15 @@ contract Helper is Constants, IHelper, ERC1155Holder, NotToken {
             params.amount
         );
 
-        (, amountOut, price) = IPool(params.deriPool).swap(
+        Result memory result = IPoolForMaturity(params.deriPool).transition(
             Param(
-                params.side,
-                SIDE_R,
                 address(this),
                 payload
             ),
             payment
         );
+        (amountOut, price) = (result.amountOut, result.price);
+
         uint256 amountOutR = amountOut;
 
         amountOut = exactInputSingle(ExactInputSingleParams({
@@ -342,7 +343,7 @@ contract Helper is Constants, IHelper, ERC1155Holder, NotToken {
         }
     }
 
-    function swapToState(
+    function updateState(
         Slippable calldata __,
         bytes calldata payload
     ) external view override returns (State memory state1) {
@@ -444,19 +445,20 @@ contract Helper is Constants, IHelper, ERC1155Holder, NotToken {
             params.amountIn
         );
 
-        (, amountOut, price) = IPool(params.poolIn).swap(
-            Param(
-                params.sideIn,
-                params.sideOut,
-                address(this),
-                payload
-            ),
-            Payment(
-                msg.sender, // UTR
-                params.payer,
-                params.recipient
-            )
-        );
+        {
+            Result memory result = IPoolForMaturity(params.poolIn).transition(
+                Param(
+                    address(this),
+                    payload
+                ),
+                Payment(
+                    msg.sender, // UTR
+                    params.payer,
+                    params.recipient
+                )
+            );
+            (amountOut, price) = (result.amountOut, result.price);
+        }
 
         if (__.sideOut == SIDE_NATIVE) {
             require(TOKEN_R == WETH, 'Reserve token is not Wrapped');
@@ -491,19 +493,20 @@ contract Helper is Constants, IHelper, ERC1155Holder, NotToken {
             params.amountIn
         );
 
-        (, amountOut, ) = IPool(params.poolIn).swap(
-            Param(
-                params.sideIn,
-                SIDE_R,
-                address(this),
-                payload
-            ),
-            Payment(
-                msg.sender, // UTR
-                params.payer,
-                address(this)
-            )
-        );
+        {
+            Result memory result = IPoolForMaturity(params.poolIn).transition(
+                Param(
+                    address(this),
+                    payload
+                ),
+                Payment(
+                    msg.sender, // UTR
+                    params.payer,
+                    address(this)
+                )
+            );
+            amountOut = result.amountOut;
+        }
 
         // TOKEN_R approve poolOut
         IERC20(TOKEN_R).approve(params.poolOut, amountOut);
@@ -517,19 +520,21 @@ contract Helper is Constants, IHelper, ERC1155Holder, NotToken {
             amountOut
         );
         uint256 amountR = amountOut;
-        (, amountOut, price) = IPool(params.poolOut).swap(
-            Param(
-                SIDE_R,
-                params.sideOut,
-                address(this),
-                payload
-            ),
-            Payment(
-                msg.sender, // UTR
-                '',
-                params.recipient
-            )
-        );
+
+        {
+            Result memory result = IPoolForMaturity(params.poolOut).transition(
+                Param(
+                    address(this),
+                    payload
+                ),
+                Payment(
+                    msg.sender, // UTR
+                    '',
+                    params.recipient
+                )
+            );
+            (amountOut, price) = (result.amountOut, result.price);
+        }
 
         address payer = BytesLib.toAddress(params.payer, 0);
 
