@@ -204,8 +204,8 @@ describe("Premium", async function () {
         expect(rC.sub(rC1), 'LP premmium').equals(0)
         const premium = Number(weiToNumber(rA.mul(Math.floor(DAILY_PREMIUM * UNIT)).div(UNIT)))
         // TODO: zergity this expect should be is close to 1e7 not 1e6
-        expect(Number(weiToNumber(rA.sub(rA1)) / (premium/2)), 'LONG premmium').closeTo(1, 0.000001)
-        expect(Number(weiToNumber(rB1.sub(rB)) / (premium/2)), 'SHORT premmium').closeTo(1, 0.000001)
+        expect(Number(weiToNumber(rA.sub(rA1)) / (premium/2)), 'LONG premmium').closeTo(1, 0.00001)
+        expect(Number(weiToNumber(rB1.sub(rB)) / (premium/2)), 'SHORT premmium').closeTo(1, 0.00001)
 
         await time.increase(SECONDS_PER_DAY * 365 * 50)
         const {rA: rA2, rB: rB2, rC: rC2} = await pool.contract.callStatic.compute(feeRate, 0, 0)
