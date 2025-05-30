@@ -12,15 +12,15 @@ import "../subs/Constants.sol";
 import "../Fetcher.sol";
 
 struct Position {
-    uint share;
+    uint share;     // 1155 balance
     uint value;     // = loan / leverage
     uint margin;    // 0-margin position are LP and cannot be liquidated
 }
 
 /// Positioner for unique position.
 contract PositionerUP is IPositioner, Constants, Fetcher {
-    mapping(uint => uint) s_total;
-    mapping(uint => mapping(address => Position[])) s_pos;
+    mapping(uint => uint) s_total;                              // 1155 id (pool + side) => supply
+    mapping(uint => mapping(address => Position[])) s_pos;      // 1155 id (pool + side) => acc => pos
 
     constructor(
     ) {
