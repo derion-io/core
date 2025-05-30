@@ -28,8 +28,8 @@ contract PoolLogicMock is PoolLogic {
         uint256 curSA = PositionerForMaturity(config.POSITIONER).sideSupply(address(this), SIDE_A);
         uint256 curSB = PositionerForMaturity(config.POSITIONER).sideSupply(address(this), SIDE_B);
         uint256 curSC = PositionerForMaturity(config.POSITIONER).sideSupply(address(this), SIDE_C);
-        address TOKEN = IPositioner(config.POSITIONER).TOKEN();
-        uint256 MATURITY = IPositioner(config.POSITIONER).MATURITY();
+        address TOKEN = PositionerForMaturity(config.POSITIONER).TOKEN();
+        uint256 MATURITY = PositionerForMaturity(config.POSITIONER).MATURITY();
         if (sA < curSA) {
             IToken(TOKEN).burn(
                 msg.sender,

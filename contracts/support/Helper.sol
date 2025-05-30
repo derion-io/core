@@ -22,6 +22,7 @@ import "../PoolFactory.sol";
 import "../interfaces/IWeth.sol";
 
 import "../interfaces/IPoolForMaturity.sol";
+import "./PositionerForMaturity.sol";
 
 contract Helper is Constants, IHelper, ERC1155Holder, NotToken {
     using BytesLib for bytes;
@@ -163,7 +164,7 @@ contract Helper is Constants, IHelper, ERC1155Holder, NotToken {
                 params.recipient
             );
 
-            uint256 payloadAmountInR = FullMath.mulDiv(amountInR, IPositioner(config.POSITIONER).OPEN_RATE(), Q128);
+            uint256 payloadAmountInR = FullMath.mulDiv(amountInR, PositionerForMaturity(config.POSITIONER).OPEN_RATE(), Q128);
             // TODO: add payloadAmount rate for input tolerrance
 
             bytes memory payload = abi.encode(
