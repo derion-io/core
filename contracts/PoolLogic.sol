@@ -44,7 +44,8 @@ contract PoolLogic is PoolBase {
         (bool success, bytes memory result) = config.POSITIONER.delegatecall(
             abi.encodeWithSelector(
                 IPositioner.handleTransition.selector,
-                config.TOKEN_R,
+                config,
+                param.payload,
                 payment,
                 receipt
             )
