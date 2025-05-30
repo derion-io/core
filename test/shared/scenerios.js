@@ -32,36 +32,36 @@ function toConfig(params) {
 
 function trace(text) {
   if (!!process.env.TRACE) {
-    console.trace(text ?? 'TRACE')
+    console.log(text ?? 'TRACE')
   }
 }
 
-/** 
+/**
  * @param options
  * @param options.feeRate
  * @param options.initReserved
  * @param options.callback
-*/
+ */
 function loadFixtureFromParams (arrParams, options={}) {
   async function fixture () {
+    trace('Getting signers')
     const [owner, accountA, accountB] = await ethers.getSigners();
     const signer = owner;
 
     const LogicName = options.logicName || 'PoolLogic'
-    // deploy utr
-    trace()
+
+    trace('Deploying Universal Token Router')
     const UTR = require("@derion/utr/build/UniversalTokenRouter.json")
     const UniversalRouter = new ethers.ContractFactory(UTR.abi, UTR.bytecode, owner)
     const utr = await UniversalRouter.deploy(signer.address)
     await utr.deployed()
 
-    // deploy oracle library
-    trace()
+    trace('Deploying Oracle Library')
     const OracleLibrary = await ethers.getContractFactory("TestOracleHelper")
     const oracleLibrary = await OracleLibrary.deploy()
     await oracleLibrary.deployed()
 
-    // deploy token1155
+    trace('Deploying Token1155')
     const Token = await ethers.getContractFactory("Token")
     const derivable1155 = await Token.deploy(
       utr.address,
@@ -70,12 +70,12 @@ function loadFixtureFromParams (arrParams, options={}) {
     )
     await derivable1155.deployed()
 
-    // deploy fee receiver
+    trace('Deploying Fee Receiver')
     const FeeReceiver = await ethers.getContractFactory("FeeReceiver")
     const feeReceiver = await FeeReceiver.deploy(owner.address)
     await feeReceiver.deployed()
 
-    // logic
+    trace('Deploying Logic Contract')
     const feeRate = options.feeRate ?? 0
     const Logic = await ethers.getContractFactory(LogicName)
     const logic = await Logic.deploy(
@@ -84,24 +84,23 @@ function loadFixtureFromParams (arrParams, options={}) {
     )
     await logic.deployed()
 
-    // deploy pool factory
+    trace('Deploying Pool Factory')
     const PoolFactory = await ethers.getContractFactory("PoolFactory");
     const poolFactory = await PoolFactory.deploy(
       logic.address
     )
 
-    // deploy descriptor
+    trace('Deploying Token Descriptor')
     const TokenDescriptor = await ethers.getContractFactory("TokenDescriptor")
     const tokenDescriptor = await TokenDescriptor.deploy(poolFactory.address)
     await tokenDescriptor.deployed()
-
     await derivable1155.setDescriptor(tokenDescriptor.address)
 
-    // USDC
+    trace('Deploying USDC Token')
     const erc20Factory = await ethers.getContractFactory('USDC')
     const usdc = await erc20Factory.deploy(numberToWei('100000000000000000000'));
 
-    // WETH
+    trace('Deploying WETH Token')
     const compiledWETH = require("canonical-weth/build/contracts/WETH9.json")
     const WETH = await new ethers.ContractFactory(compiledWETH.abi, compiledWETH.bytecode, signer);
     const weth = await WETH.deploy();
@@ -119,7 +118,7 @@ function loadFixtureFromParams (arrParams, options={}) {
     const PoolDeployer = await ethers.getContractFactory("PoolDeployer");
     const poolDeployer = await PoolDeployer.deploy(weth.address, logic.address)
 
-    // INIT PAIRRRRR 
+    trace('Deploying Uniswap Pool Mock')
     const initPrice = options.initPrice || 1500
     const quoteTokenIndex = weth.address.toLowerCase() < usdc.address.toLowerCase() ? 1 : 0
     const deno = options.initPriceDeno || 1
@@ -133,12 +132,12 @@ function loadFixtureFromParams (arrParams, options={}) {
     )
     await uniswapPair.deployed()
 
-    // deploy fetchPrice
+    trace('Deploying FetchPriceUniV3')
     const FetchPrice = await ethers.getContractFactory("FetchPriceUniV3")
     const fetchPrice = await FetchPrice.deploy()
     await fetchPrice.deployed()
 
-    // deploy helper
+    trace('Deploying Helper')
     const StateCalHelper = await ethers.getContractFactory("contracts/support/Helper.sol:Helper")
     const stateCalHelper = await StateCalHelper.deploy(
       derivable1155.address,
@@ -146,13 +145,16 @@ function loadFixtureFromParams (arrParams, options={}) {
     )
     await stateCalHelper.deployed()
 
-    // deploy ddl pool
+    trace('Deploying DDL Pool')
     const oracle = ethers.utils.hexZeroPad(
       bn(quoteTokenIndex).shl(255).add(bn(300).shl(256 - 64)).add(uniswapPair.address).toHexString(),
       32,
     )
+
+    trace('Creating Pools')
     const returnParams = []
     const pools = await Promise.all(arrParams.map(async params => {
+      trace(`Initializing pool with params: ${JSON.stringify(params)}`)
       let realParams = {
         token: derivable1155.address,
         oracle,
@@ -164,10 +166,11 @@ function loadFixtureFromParams (arrParams, options={}) {
       realParams = await _init(oracleLibrary, numberToWei(options.initReserved || "5"), realParams)
       returnParams.push(realParams)
 
+      trace('Deploying Pool')
       const config = toConfig(realParams)
       const tx = await poolFactory.createPool(config)
       const receipt = await tx.wait()
-
+      trace('Aprrove to Account')
       // const poolAddress = await poolFactory.computePoolAddress(realParams)
       const poolAddress = ethers.utils.getAddress('0x' + receipt.logs[0].data.slice(-40))
       // await weth.transfer(poolAddress, numberToWei(options.initReserved || "5"))
