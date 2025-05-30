@@ -3,6 +3,8 @@ const { SIDE_A, SIDE_B, Q128 } = require('./constant');
 const { bn } = require("./utilities")
 const abiCoder = new ethers.utils.AbiCoder()
 
+const abiPoolLogic = require("../abi/PoolLogic.abi.json")
+
 module.exports = class Pool {
   constructor(
     contract,
@@ -10,6 +12,12 @@ module.exports = class Pool {
     utilContracts
   ) {
     this.contract = contract
+    // override the returns type with custom json abi
+    this.contractForTransition = new ethers.Contract(
+      contract.address,
+      abiPoolLogic,
+      contract.signer,
+    )
     this.config = config
     this.utilContracts = utilContracts
   }
@@ -34,20 +42,21 @@ module.exports = class Pool {
     amount,
     options = {}
   ) {
+    const contract = this.contractForTransition
     const swapParams = this.getSwapParam(sideIn, sideOut, amount, options)
     const paymentParams = {
       utr: options.utr || this.utilContracts.utr.address,
       payer: options.payer || [],
-      recipient: options.recipient || this.contract.signer.address
+      recipient: options.recipient || contract.signer.address
     }
     if (options.static) {
       if (options.keepBoth)
-        return (await this.contract.callStatic.swap(swapParams, paymentParams))
-      return (await this.contract.callStatic.swap(swapParams, paymentParams)).amountOut
+        return (await contract.callStatic.transition(swapParams, paymentParams))
+      return (await contract.callStatic.transition(swapParams, paymentParams)).amountOut
     }
     if (options.populateTransaction)
-      return await this.contract.populateTransaction.swap(swapParams, paymentParams)
-    return await this.contract.swap(swapParams, paymentParams)
+      return await contract.populateTransaction.transition(swapParams, paymentParams)
+    return await contract.transition(swapParams, paymentParams)
   }
 
   getSwapParam(sideIn, sideOut, amount, options={}) {
