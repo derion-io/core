@@ -171,10 +171,8 @@ HLs.forEach(HALF_LIFE => {
         SIDE_A,
         numberToWei(1),
       )
-      trace("Pool Compute")
       const {rA, rB, state} = await pool.contract.callStatic.compute(FEE_RATE, 0, 0)
 
-      trace("Calculate Rate")
       const interestRate = Math.round(((1 - dailyInterestRate)**365)*UNIT)/UNIT
 
       const rAAfter = rA.mul(Math.round(UNIT * interestRate)).div(UNIT)

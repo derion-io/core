@@ -63,7 +63,6 @@ describe("Play Token", async function () {
             a: pe(0.03),
             b: pe(0.03),
         }
-        trace(poolAddress)
         const payment = {
             utr: utr.address,
             payer: owner.address,
@@ -105,7 +104,6 @@ describe("Play Token", async function () {
                 )).data,
             }
         ])
-        trace("pass utr")
         const tokenBBefore = await derivable1155.balanceOf(owner.address, packId(SIDE_B, pool.address))
         await utr.exec([], [{
             inputs: [{

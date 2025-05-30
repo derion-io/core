@@ -298,7 +298,6 @@ describe("Protocol", async function () {
             //     payer: encodePayment(owner.address, poolAddress, 20, weth.address, 0),
             //     recipient: owner.address,
             // }
-            trace("pass")
             const pool = await ethers.getContractAt("PoolBase", poolAddress)
             await weth.approve(utr.address, MaxUint256);
             await utr.exec([],

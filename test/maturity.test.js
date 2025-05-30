@@ -182,16 +182,10 @@ configs.forEach(config => describe(`Maturity - EXP = ${config.exp}, COEF ${confi
         }
     }
     async function closePositionPartAndFull(side, t) {
-        trace("Loading fixture...");
         const {accountA, accountB, derivablePools, derivable1155} = await loadFixture(fixture)
-        trace("Fixture loaded");
         const derivablePool = derivablePools[0]
         const poolNoMaturity = derivablePools[1]
-        // console.log(poolNoMaturity)
-        trace("Fetching current time...");
         const curTime = await time.latest()
-        
-        trace("Swap on derivablePool");
         await derivablePool.swap(
             SIDE_R,
             side,
@@ -200,8 +194,6 @@ configs.forEach(config => describe(`Maturity - EXP = ${config.exp}, COEF ${confi
                 recipient: accountA.address
             }
         )
-
-        trace("Swap on poolNoMaturity");
         await poolNoMaturity.swap(
             SIDE_R,
             side,
@@ -210,11 +202,9 @@ configs.forEach(config => describe(`Maturity - EXP = ${config.exp}, COEF ${confi
                 recipient: accountA.address
             }
         )
-        trace("Setting next block timestamp...");
         await time.setNextBlockTimestamp(curTime + 120 - t)
 
         const transferOut = 1
-        trace("Transferring token from accountA to accountB");
         await derivable1155.connect(accountA).safeTransferFrom(
             accountA.address,
             accountB.address,
@@ -223,7 +213,6 @@ configs.forEach(config => describe(`Maturity - EXP = ${config.exp}, COEF ${confi
             0x0
         )
 
-        trace("Getting amountOutNoMaturityPart");
         const amountOutNoMaturityPart = await poolNoMaturity.connect(accountA).swap(
             side,
             SIDE_R,
@@ -232,7 +221,6 @@ configs.forEach(config => describe(`Maturity - EXP = ${config.exp}, COEF ${confi
                 static: true
             }
         )
-        trace("Getting amountOutPart");
         const amountOutPart = await derivablePool.connect(accountA).swap(
             side,
             SIDE_R,
@@ -242,7 +230,6 @@ configs.forEach(config => describe(`Maturity - EXP = ${config.exp}, COEF ${confi
             }
         )
         
-        trace("Getting amountOutNoMaturityFull");
         const amountOutNoMaturityFull = await poolNoMaturity.connect(accountA).swap(
             side,
             SIDE_R,
@@ -252,7 +239,6 @@ configs.forEach(config => describe(`Maturity - EXP = ${config.exp}, COEF ${confi
             }
         )
 
-        trace("Getting amountOutFull and amountInFull");
         const {amountOut: amountOutFull, amountIn: amountInFull} = await derivablePool.connect(accountA).swap(
             side,
             SIDE_R,
@@ -263,11 +249,9 @@ configs.forEach(config => describe(`Maturity - EXP = ${config.exp}, COEF ${confi
             }
         )
 
-        trace("Calculating ratios");
         const partRatio = Number(weiToNumber(amountOutPart)) / Number(weiToNumber(amountOutNoMaturityPart))
         const fullRatio = Number(weiToNumber(amountOutFull)) / Number(weiToNumber(amountOutNoMaturityFull)) 
         expect(partRatio).closeTo(fullRatio, 1e-10)
-        trace("Assertion complete");
     }
 
 
