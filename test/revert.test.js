@@ -146,7 +146,6 @@ describe("Revert", async function () {
       // }
       const pool = await ethers.getContractAt("PoolBase", poolAddress)
       // Revert ZERO_PARAM
-      console.log("pass")
       // TODO: zergity below code expect revert ZERO_PARAMS, but when change to PoolDeployer, it no revert
       // await expect(pool.callStatic.initialize(
       //   {
@@ -157,7 +156,6 @@ describe("Revert", async function () {
       //   payment
       // )).to.be.revertedWith("ZERO_PARAM")
       // Revert INSUFFICIENT_PAYMENT
-      console.log("pass")
       await weth.approve(fakeUTR.address, MaxUint256)
       await expect(fakeUTR.exec([],
         [{
@@ -188,7 +186,6 @@ describe("Revert", async function () {
           )).data,
         }])).to.be.revertedWith("INSUFFICIENT_PAYMENT")
       // Normal case
-      console.log("pass")
       await weth.approve(utr.address, MaxUint256)
       await utr.exec([],
         [{
@@ -249,7 +246,6 @@ describe("Revert", async function () {
         // sideOut: SIDE_C,
         // maturity: 0,
         helper: stateCalHelper.address,
-        payload: '0x0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000030000000000000000000000000000000000000000000000004563918244f40000'
       }
 
       const paymentParams = {
@@ -262,7 +258,7 @@ describe("Revert", async function () {
       // trigger the attack with sideOut == SIDE_C
       await expect(reentrancyAttack.attack(
         numberToWei(5),
-        swapParams,
+        {...swapParams,payload: encodePayload(SIDE_R, SIDE_C,  numberToWei(5)) },
         paymentParams,
       )).to.be.reverted
 
