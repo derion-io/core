@@ -9,6 +9,7 @@ import "./interfaces/IHelper.sol";
 import "./interfaces/IFetcher.sol";
 import "./interfaces/IPositioner.sol";
 import "./PoolBase.sol";
+import "hardhat/console.sol";
 
 /// @title Mathematic and finance logic of Derivable pool.
 /// @author Derivable Labs
@@ -77,6 +78,7 @@ contract PoolLogic is PoolBase {
         _nonReentrantBefore();
         Config memory config = loadConfig();
         Receipt memory receipt = _transition(config, param);
+        console.log("Positioner Delegate Call %s", config.POSITIONER);
         (bool success, bytes memory result) = config.POSITIONER.delegatecall(
             abi.encodeWithSelector(
                 IPositioner.handleTransition.selector,
@@ -86,6 +88,7 @@ contract PoolLogic is PoolBase {
                 receipt
             )
         );
+        console.log("Positioner Delegate Call Res: %s ", success);
         if (!success) {
             assembly {
                 revert(add(result,32),mload(result))

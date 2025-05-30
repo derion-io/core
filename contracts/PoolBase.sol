@@ -11,7 +11,7 @@ import "./interfaces/IPool.sol";
 import "./interfaces/IPositioner.sol";
 import "./subs/Constants.sol";
 import "./subs/Storage.sol";
-
+import "hardhat/console.sol";
 /// @title The base logic code for state initialization and token payment. 
 /// @author Derivable Labs
 /// @notice PoolBase is extended by PoolLogic to form the Pool contract.
