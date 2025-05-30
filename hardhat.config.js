@@ -22,7 +22,7 @@ module.exports = {
             evmVersion: 'cancun',
             optimizer: {
                 enabled: true,
-                runs: 1000000,
+                runs: 10000,
             },
             metadata: {
                 bytecodeHash: 'none',
