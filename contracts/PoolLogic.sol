@@ -9,7 +9,6 @@ import "./interfaces/IHelper.sol";
 import "./interfaces/IFetcher.sol";
 import "./interfaces/IPositioner.sol";
 import "./PoolBase.sol";
-import "hardhat/console.sol";
 
 /// @title Mathematic and finance logic of Derivable pool.
 /// @author Derivable Labs
