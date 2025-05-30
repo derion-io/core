@@ -9,7 +9,7 @@ const { loadFixtureFromParams } = require("./shared/scenerios")
 chai.use(solidity)
 const expect = chai.expect
 const { AddressZero, MaxUint256 } = ethers.constants
-const { bn, swapToSetPriceMock, packId, numberToWei, encodePayment } = require("./shared/utilities")
+const { bn, swapToSetPriceMock, packId, numberToWei, encodePayment, trace } = require("./shared/utilities")
 const { utils } = ethers
 
 const fe = (x) => Number(ethers.utils.formatEther(x))
@@ -238,7 +238,7 @@ describe("Protocol", async function () {
 
     describe("Pool", function () {
         it("Init pool by UTR", async function () {
-            const { owner, weth, utr, params, poolFactory, derivable1155 } = await loadFixture(fixture)
+            const { owner, weth, utr, params, poolDeployer, derivable1155 } = await loadFixture(fixture)
             const config = {
                 FETCHER: params[0].fetcher,
                 ORACLE: params[0].oracle,
@@ -262,12 +262,9 @@ describe("Protocol", async function () {
             )
             await positionerForMaturity.deployed()
             config.POSITIONER = positionerForMaturity.address
-
-            const tx = await poolFactory.createPool(config)
-            const receipt = await tx.wait()
-            const poolAddress = ethers.utils.getAddress('0x' + receipt.logs[0].data.slice(-40))
+            const poolAddress = await poolDeployer.callStatic.create(config)
             expect(await derivable1155.balanceOf(owner.address, packId(SIDE_A, poolAddress))).equal(0)
-            const initParams = {
+            const state = {
                 R: numberToWei(5),
                 a: numberToWei(1),
                 b: numberToWei(1),
@@ -277,10 +274,42 @@ describe("Protocol", async function () {
                 payer: encodePayment(owner.address, poolAddress, 20, weth.address, 0),
                 recipient: owner.address,
             }
+            const { data } = await poolDeployer.populateTransaction.deploy(
+                config,
+                state,
+                payment,
+                weth.address,
+                ethers.utils.formatBytes32String("BTCB"),
+                ethers.utils.formatBytes32String("BTC"),
+                ethers.utils.formatBytes32String("BT"),
+            )
+
+            // const tx = await poolFactory.createPool(config)
+            // const receipt = await tx.wait()
+            // const poolAddress = ethers.utils.getAddress('0x' + receipt.logs[0].data.slice(-40))
+            expect(await derivable1155.balanceOf(owner.address, packId(SIDE_A, poolAddress))).equal(0)
+            // const initParams = {
+            //     R: numberToWei(5),
+            //     a: numberToWei(1),
+            //     b: numberToWei(1),
+            // }
+            // const payment = {
+            //     utr: utr.address,
+            //     payer: encodePayment(owner.address, poolAddress, 20, weth.address, 0),
+            //     recipient: owner.address,
+            // }
+            trace("pass")
             const pool = await ethers.getContractAt("PoolBase", poolAddress)
             await weth.approve(utr.address, MaxUint256);
             await utr.exec([],
             [{
+                inputs: [],
+                flags: 0,
+                code: poolDeployer.address,
+                data: (await poolDeployer.populateTransaction.create(
+                    config
+                )).data,
+            }, {
                 inputs: [{
                     mode: PAYMENT,
                     eip: 20,
@@ -292,86 +321,125 @@ describe("Protocol", async function () {
                 flags: 0,
                 code: poolAddress,
                 data: (await pool.populateTransaction.initialize(
-                    initParams,
+                    state,
                     payment
                 )).data,
             }])
             expect(await derivable1155.balanceOf(owner.address, packId(SIDE_A, poolAddress))).gt(0)
         })
 
-        // it("Deploy Fetcher and Init Pool", async function () {
-        //     const { owner, weth, utr, params, poolFactory, derivable1155, stateCalHelper } = await loadFixture(fixture)
-        //     // deploy Fetcher
-        //     const Fetcher = await ethers.getContractFactory("Fetcher")
-        //     const fetcher = await Fetcher.deploy()
-        //     await fetcher.deployed()
-        //     const config = {
-        //         FETCHER: fetcher.address,
-        //         ORACLE: params[0].oracle,
-        //         TOKEN_R: params[0].reserveToken,
-        //         MARK: params[0].mark,
-        //         K: bn(6),
-        //         INTEREST_HL: params[0].halfLife,
-        //         PREMIUM_HL: params[0].premiumHL,
-        //         MATURITY: params[0].maturity,
-        //         MATURITY_VEST: params[0].maturityVest,
-        //         MATURITY_RATE: params[0].maturityRate,
-        //         OPEN_RATE: params[0].openRate,
-        //     }
-        //     const tx = await poolFactory.createPool(config)
-        //     const receipt = await tx.wait()
-        //     const poolAddress = ethers.utils.getAddress('0x' + receipt.logs[0].data.slice(-40))
-        //     const initParams = {
-        //         R: numberToWei(5),
-        //         a: numberToWei(1),
-        //         b: numberToWei(1),
-        //     }
-        //     const payment = {
-        //         utr: utr.address,
-        //         payer: owner.address,
-        //         recipient: owner.address,
-        //     }
-        //     const pool = await ethers.getContractAt("PoolBase", poolAddress)
-        //     await weth.approve(utr.address, MaxUint256);
-        //     await utr.exec([],
-        //     [{
-        //         inputs: [{
-        //             mode: PAYMENT,
-        //             eip: 20,
-        //             token: weth.address,
-        //             id: 0,
-        //             amountIn: numberToWei(5),
-        //             recipient: poolAddress,
-        //         }],
-        //         flags: 0,
-        //         code: poolAddress,
-        //         data: (await pool.populateTransaction.init(
-        //             initParams,
-        //             payment
-        //         )).data,
-        //     }])
-        //     await utr.exec([], [{
-        //         inputs: [{
-        //             mode: PAYMENT,
-        //             eip: 20,
-        //             token: weth.address,
-        //             id: 0,
-        //             amountIn: pe(0.0001),
-        //             recipient: poolAddress,
-        //         }],
-        //         code: stateCalHelper.address,
-        //         data: (await stateCalHelper.populateTransaction.swap({
-        //             sideIn: SIDE_R,
-        //             poolIn: poolAddress,
-        //             sideOut: SIDE_B,
-        //             poolOut: poolAddress,
-        //             amountIn: pe(0.0001),
-        //             payer: owner.address,
-        //             recipient: owner.address,
-        //             INDEX_R: 0
-        //         })).data,
-        //     }], opts)
-        // })
+        it("Deploy Fetcher and Init Pool", async function () {
+            const { owner, weth, utr, params, poolDeployer, derivable1155, stateCalHelper } = await loadFixture(fixture)
+            // deploy Fetcher
+            const Fetcher = await ethers.getContractFactory("Fetcher")
+            const fetcher = await Fetcher.deploy()
+            await fetcher.deployed()
+            const config = {
+                FETCHER: fetcher.address,
+                ORACLE: params[0].oracle,
+                TOKEN_R: params[0].reserveToken,
+                MARK: params[0].mark,
+                K: bn(6),
+                INTEREST_HL: params[0].halfLife,
+                PREMIUM_HL: params[0].premiumHL,
+                MATURITY: params[0].maturity,
+                MATURITY_VEST: params[0].maturityVest,
+                MATURITY_RATE: params[0].maturityRate,
+                OPEN_RATE: params[0].openRate,
+            }
+            const PositionerForMaturity = await ethers.getContractFactory("PositionerForMaturity")
+            const positionerForMaturity = await PositionerForMaturity.deploy(
+               derivable1155.address,
+               config.MATURITY,
+               config.MATURITY_VEST,
+               config.MATURITY_RATE,
+               config.OPEN_RATE,
+            )
+            await positionerForMaturity.deployed()
+            config.POSITIONER = positionerForMaturity.address
+            const poolAddress = await poolDeployer.callStatic.create(config)
+            const R = numberToWei(5)
+            const state = {
+                R: numberToWei(5),
+                a: numberToWei(1),
+                b: numberToWei(1),
+            }
+            const payment = {
+                utr: utr.address,
+                payer: encodePayment(owner.address, poolAddress, 20, weth.address, 0),
+                recipient: owner.address,
+            }
+            const { data } = await poolDeployer.populateTransaction.deploy(
+                config,
+                state,
+                payment,
+                weth.address,
+                ethers.utils.formatBytes32String("BTCB"),
+                ethers.utils.formatBytes32String("BTC"),
+                ethers.utils.formatBytes32String("BT"),
+            )
+
+            // const tx = await poolFactory.createPool(config)
+            // const receipt = await tx.wait()
+            // const poolAddress = ethers.utils.getAddress('0x' + receipt.logs[0].data.slice(-40))
+            // const initParams = {
+            //     R: numberToWei(5),
+            //     a: numberToWei(1),
+            //     b: numberToWei(1),
+            // }
+            // const payment = {
+            //     utr: utr.address,
+            //     payer: owner.address,
+            //     recipient: owner.address,
+            // }
+            const pool = await ethers.getContractAt("PoolBase", poolAddress)
+            await weth.approve(utr.address, MaxUint256);
+            await utr.exec([],
+                [{
+                    inputs: [],
+                    flags: 0,
+                    code: poolDeployer.address,
+                    data: (await poolDeployer.populateTransaction.create(
+                        config
+                    )).data,
+                }, {
+                    inputs: [{
+                        mode: PAYMENT,
+                        eip: 20,
+                        token: weth.address,
+                        id: 0,
+                        amountIn: numberToWei(5),
+                        recipient: poolAddress,
+                    }],
+                    flags: 0,
+                    code: poolAddress,
+                    data: (await pool.populateTransaction.initialize(
+                        state,
+                        payment
+                    )).data,
+                }])
+            await utr.exec([], [{
+                inputs: [{
+                    mode: PAYMENT,
+                    eip: 20,
+                    token: weth.address,
+                    id: 0,
+                    amountIn: pe(0.0001),
+                    recipient: poolAddress,
+                }],
+                code: stateCalHelper.address,
+                data: (await stateCalHelper.populateTransaction.swap({
+                    sideIn: SIDE_R,
+                    poolIn: poolAddress,
+                    sideOut: SIDE_B,
+                    poolOut: poolAddress,
+                    amountIn: pe(0.0001),
+                    payer: owner.address,
+                    recipient: owner.address,
+                    INDEX_R: 0
+                })).data,
+            }], opts)
+        })
 
         it('_maturityPayoff return 0', async function () {
             const {accountA, derivablePools, weth, owner, utr, derivable1155, stateCalHelper} = await loadFixture(fixture)
@@ -442,7 +510,7 @@ describe("Protocol", async function () {
         })
 
         it("swap without interest", async function () {
-            const { owner, weth, utr, params, poolFactory, derivable1155, stateCalHelper } = await loadFixture(fixture)
+            const { owner, weth, utr, params, poolDeployer, derivable1155, stateCalHelper } = await loadFixture(fixture)
             const SECONDS_PER_DAY = 60 * 60 * 24
             const dailyFundingRate = (0.0000000002 * 6) / 100
             const halfLife = Math.round(
@@ -471,38 +539,68 @@ describe("Protocol", async function () {
             )
             await positionerForMaturity.deployed()
             config.POSITIONER = positionerForMaturity.address
-            const tx = await poolFactory.createPool(config)
-            const receipt = await tx.wait()
-            const poolAddress = ethers.utils.getAddress('0x' + receipt.logs[0].data.slice(-40))
-            const initParams = {
+            const poolAddress = await poolDeployer.callStatic.create(config)
+            const R = numberToWei(5)
+            const state = {
                 R: 6000,
                 a: 2000,
                 b: 2000,
             }
             const payment = {
                 utr: utr.address,
-                payer: owner.address,
+                payer: encodePayment(owner.address, poolAddress, 20, weth.address, 0),
                 recipient: owner.address,
             }
-            const poolBase = await ethers.getContractAt("PoolBase", poolAddress)
+            const { data } = await poolDeployer.populateTransaction.deploy(
+                config,
+                state,
+                payment,
+                weth.address,
+                ethers.utils.formatBytes32String("BTCB"),
+                ethers.utils.formatBytes32String("BTC"),
+                ethers.utils.formatBytes32String("BT"),
+            )
+    
+            await weth.approve(utr.address, MaxUint256)
+            // const tx = await poolFactory.createPool(config)
+            // const receipt = await tx.wait()
+            // const poolAddress = ethers.utils.getAddress('0x' + receipt.logs[0].data.slice(-40))
+            // const initParams = {
+            //     R: 6000,
+            //     a: 2000,
+            //     b: 2000,
+            // }
+            // const payment = {
+            //     utr: utr.address,
+            //     payer: owner.address,
+            //     recipient: owner.address,
+            // }
+            const pool = await ethers.getContractAt("PoolBase", poolAddress)
             await weth.approve(utr.address, MaxUint256);
             await utr.exec([],
-            [{
-                inputs: [{
-                    mode: PAYMENT,
-                    eip: 20,
-                    token: weth.address,
-                    id: 0,
-                    amountIn: 6000,
-                    recipient: poolAddress,
-                }],
-                flags: 0,
-                code: poolAddress,
-                data: (await poolBase.populateTransaction.initialize(
-                    initParams,
-                    payment
-                )).data,
-            }])
+                [{
+                    inputs: [],
+                    flags: 0,
+                    code: poolDeployer.address,
+                    data: (await poolDeployer.populateTransaction.create(
+                        config
+                    )).data,
+                }, {
+                    inputs: [{
+                        mode: PAYMENT,
+                        eip: 20,
+                        token: weth.address,
+                        id: 0,
+                        amountIn: numberToWei(5),
+                        recipient: poolAddress,
+                    }],
+                    flags: 0,
+                    code: poolAddress,
+                    data: (await pool.populateTransaction.initialize(
+                        state,
+                        payment
+                    )).data,
+                }])
             const curTime = await time.latest()
 
             // deploy TestHelper

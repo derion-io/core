@@ -3,7 +3,7 @@ const chai = require("chai")
 const { solidity } = require("ethereum-waffle")
 chai.use(solidity)
 const expect = chai.expect
-const { numberToWei, packId, getSqrtPriceFromPrice, bn } = require("./shared/utilities");
+const { numberToWei, packId, getSqrtPriceFromPrice, bn, encodePayment } = require("./shared/utilities");
 const { loadFixtureFromParams } = require("./shared/scenerios");
 const { AddressZero, MaxUint256 } = require("@ethersproject/constants");
 const { baseParams } = require("./shared/baseParams");
@@ -18,7 +18,7 @@ describe("Price/Mark Overflow/Underflow", async function () {
 
     for (const PRICE of PRICES) {
         it(`O/U: ${PRICE}`, async function() {
-            const { owner, weth, usdc, utr, poolFactory, stateCalHelper, derivable1155 } = await loadFixture(fixture)
+            const { owner, weth, usdc, utr, poolDeployer, stateCalHelper, derivable1155 } = await loadFixture(fixture)
         
             // PEPE
             const erc20Factory = await ethers.getContractFactory('USDC')
@@ -59,6 +59,7 @@ describe("Price/Mark Overflow/Underflow", async function () {
                 MATURITY_RATE: baseParams.maturityRate,
                 OPEN_RATE: baseParams.openRate,
             }
+            
             const PositionerForMaturity = await ethers.getContractFactory("PositionerForMaturity")
             const positionerForMaturity = await PositionerForMaturity.deploy(
                derivable1155.address,
@@ -69,37 +70,66 @@ describe("Price/Mark Overflow/Underflow", async function () {
             )
             await positionerForMaturity.deployed()
             config.POSITIONER = positionerForMaturity.address
-            const tx = await poolFactory.createPool(config)
-            const receipt = await tx.wait()
-            const poolAddress = ethers.utils.getAddress('0x' + receipt.logs[0].data.slice(-40))
-            const initParams = {
-                R: numberToWei(5),
-                a: numberToWei(1),
-                b: numberToWei(1),
-            }
+            const state = {
+                    R: numberToWei(5),
+                    a: numberToWei(1),
+                    b: numberToWei(1),
+            }            
+            const poolAddress = await poolDeployer.callStatic.create(config)
             const payment = {
                 utr: utr.address,
-                payer: owner.address,
+                payer: encodePayment(owner.address, poolAddress, 20, weth.address, 0),
                 recipient: owner.address,
-            }
+            }            
+            const { data } = await poolDeployer.populateTransaction.deploy(
+                    config,
+                    state,
+                    payment,
+                    weth.address,
+                    ethers.utils.formatBytes32String("WETH"),
+                    ethers.utils.formatBytes32String("ETH"),
+                    ethers.utils.formatBytes32String("ET"),
+            )
+            // const tx = await poolFactory.createPool(config)
+            // const receipt = await tx.wait()
+            // const poolAddress = ethers.utils.getAddress('0x' + receipt.logs[0].data.slice(-40))
+            // const initParams = {
+            //     R: numberToWei(5),
+            //     a: numberToWei(1),
+            //     b: numberToWei(1),
+            // }
+            // const payment = {
+            //     utr: utr.address,
+            //     payer: owner.address,
+            //     recipient: owner.address,
+            // }
+            
             const pool = await ethers.getContractAt("PoolBase", poolAddress)
             await weth.approve(utr.address, MaxUint256);
-            await utr.exec([], [{
-                inputs: [{
-                    mode: PAYMENT,
-                    eip: 20,
-                    token: weth.address,
-                    id: 0,
-                    amountIn: numberToWei(5),
-                    recipient: poolAddress,
-                }],
-                flags: 0,
-                code: poolAddress,
-                data: (await pool.populateTransaction.initialize(
-                    initParams,
-                    payment
-                )).data,
-            }])
+                  await utr.exec([],
+                       [{
+                           inputs: [],
+                           flags: 0,
+                           code: poolDeployer.address,
+                           data: (await poolDeployer.populateTransaction.create(
+                               config
+                           )).data,
+                       }, {
+                           inputs: [{
+                               mode: PAYMENT,
+                               eip: 20,
+                               token: weth.address,
+                               id: 0,
+                               amountIn: numberToWei(5),
+                               recipient: poolAddress,
+                           }],
+                           flags: 0,
+                           code: poolAddress,
+                           data: (await pool.populateTransaction.initialize(
+                               state,
+                               payment
+                           )).data,
+                       }])
     
             await pepeWeth.setPrice(price, price)
     

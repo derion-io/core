@@ -1,5 +1,5 @@
 const { loadFixture } = require("@nomicfoundation/hardhat-network-helpers");
-const { bn, packId } = require("./shared/utilities");
+const { bn, packId, encodePayment, trace } = require("./shared/utilities");
 const chai = require("chai")
 const { solidity } = require("ethereum-waffle")
 chai.use(solidity)
@@ -16,7 +16,7 @@ describe("Play Token", async function () {
     const fixture = await loadFixtureFromParams([])
 
     it("is Token reserve", async function() {
-        const { owner, weth, usdc, utr, poolFactory, stateCalHelper, uniswapPair, derivable1155 } = await loadFixture(fixture)
+        const { owner, weth, usdc, utr, poolDeployer, stateCalHelper, uniswapPair, derivable1155 } = await loadFixture(fixture)
 
         const quoteTokenIndex = weth.address.toLowerCase() < usdc.address.toLowerCase() ? 1 : 0
 
@@ -57,30 +57,34 @@ describe("Play Token", async function () {
         )
         await positionerForMaturity.deployed()
         config.POSITIONER = positionerForMaturity.address
-        // const tx = await poolFactory.createPool(config)
-        // const receipt = await tx.wait()
-        // const poolAddress = ethers.utils.getAddress('0x' + receipt.logs[0].data.slice(-40))
-
-        const poolAddress = await poolFactory.callStatic.createPool(config)
-
-        const initParams = {
+        const poolAddress = await poolDeployer.callStatic.create(config)
+        const state = {
             R: pe(1),
             a: pe(0.03),
             b: pe(0.03),
         }
+        trace(poolAddress)
         const payment = {
             utr: utr.address,
             payer: owner.address,
             recipient: owner.address,
         }
-
+        const { data } = await poolDeployer.populateTransaction.deploy(
+            config,
+            state,
+            payment,
+            weth.address,
+            ethers.utils.formatBytes32String("BTCB"),
+            ethers.utils.formatBytes32String("BTC"),
+            ethers.utils.formatBytes32String("BT"),
+        )
         const pool = await ethers.getContractAt("PoolBase", poolAddress)
         await utr.exec([], [
             {
                 inputs: [],
                 flags: 0,
-                code: poolFactory.address,
-                data: (await poolFactory.populateTransaction.createPool(
+                code: poolDeployer.address,
+                data: (await poolDeployer.populateTransaction.create(
                     config
                 )).data,
             },
@@ -90,17 +94,18 @@ describe("Play Token", async function () {
                     eip: 20,
                     token: playToken.address,
                     id: 0,
-                    amountIn: initParams.R,
+                    amountIn: state.R,
                     recipient: poolAddress,
                 }],
                 flags: 0,
                 code: poolAddress,
                 data: (await pool.populateTransaction.initialize(
-                    initParams,
+                    state,
                     payment
                 )).data,
             }
         ])
+        trace("pass utr")
         const tokenBBefore = await derivable1155.balanceOf(owner.address, packId(SIDE_B, pool.address))
         await utr.exec([], [{
             inputs: [{

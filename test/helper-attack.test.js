@@ -14,8 +14,10 @@ const {
     numberToWei,
     packId,
     swapToSetPriceMock,
+    encodePayment,
 } = require("./shared/utilities")
 const { calculateInitParams } = require("./shared/AsymptoticPerpetual")
+const {utils}=require("ethers")
 
 const pe = (x) => ethers.utils.parseEther(String(x))
 
