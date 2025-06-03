@@ -25,7 +25,7 @@ async function main() {
     console.log("Deploying Chainlink Fetcher contract...");
     // deploy Chainlink Fetcher
     const ChainlinkFetcher = await ethers.getContractFactory("ChainlinkFetcher", deployer)
-    const fetcher = await ChainlinkFetcher.deploy(8)
+    const fetcher = await ChainlinkFetcher.deploy()
 
     console.log("Waiting for deployment transaction...");
     await fetcher.deployed()
