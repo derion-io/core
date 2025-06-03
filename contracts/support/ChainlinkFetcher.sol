@@ -6,30 +6,25 @@ import "../interfaces/AggregatorV3Interface.sol";
 import "../subs/Constants.sol";
 
 contract ChainlinkFetcher is Constants {
-
     // DEVIATION(32bit)|DECIMALS(32bit) ... FEED(160bit)
     function fetch(
         uint256 ORACLE
     ) public view returns (uint256 twap, uint256 spot) {
-        uint32 deviation = uint32(ORACLE >> 224);
+        int256 answer = _fetchPrice(address(uint160(ORACLE)));
+
         uint32 decimals = uint32(ORACLE >> 192);
-        (twap, spot) = _fetchPrice(
-            address(uint160(ORACLE)),
-            deviation,
-            decimals
-        );
+        uint256 priceX128 = FullMath.mulDiv(uint256(answer), Q128, 10 ** decimals);
+
+        uint32 deviation = uint32(ORACLE >> 224);
+        if (deviation == 0) {
+            return (priceX128, priceX128);
+        }
+        twap = FullMath.mulDiv(priceX128, Q32 - deviation, Q32);
+        spot = FullMath.mulDivRoundingUp(priceX128, Q32 + deviation, Q32);
     }
 
-    function _fetchPrice(
-        address feed,
-        uint32 deviation,
-        uint32 decimals
-    ) internal view returns (uint256 twap, uint256 spot) {
+    function _fetchPrice(address feed) internal view returns (int256 answer) {
         AggregatorV3Interface aggregator = AggregatorV3Interface(feed);
-        (, int256 answer, , , ) = aggregator.latestRoundData();
-        uint256 answerQ128 = FullMath.mulDiv(uint256(answer), Q128, 10 ** decimals);
-
-        twap = FullMath.mulDiv(answerQ128, Q32 - deviation, Q32);
-        spot = FullMath.mulDivRoundingUp(answerQ128, Q32 + deviation, Q32);
+        (, answer, , , ) = aggregator.latestRoundData();
     }
 }
