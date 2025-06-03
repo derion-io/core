@@ -16,7 +16,7 @@
   },
   "devDependencies": {
     "@atixlabs/hardhat-time-n-mine": "^0.0.5",
-    "@ethersproject/providers": "https://gitpkg.now.sh/derion-io/ethers.js/packages/providers",
+    "@ethersproject/providers": "https://gitpkg.vercel.app/derion-io/ethers.js/packages/providers",
     "@nomicfoundation/hardhat-chai-matchers": "^1.0.0",
     "@nomicfoundation/hardhat-network-helpers": "^1.0.0",
     "@nomicfoundation/hardhat-verify": "^1.1.1",
