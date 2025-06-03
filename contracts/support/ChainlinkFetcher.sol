@@ -31,7 +31,7 @@ contract ChainlinkFetcher is Constants {
         (, int256 answer, , , ) = aggregator.latestRoundData();
         uint256 answerQ128 = FullMath.mulDiv(uint256(answer), Q128, 10 ** DECIMALS);
 
-        twap = FullMath.mulDiv(answerQ128 * (Q32 - deviation), 1, Q32);
-        spot = FullMath.mulDiv(answerQ128 * (Q32 + deviation), 1, Q32);
+        twap = FullMath.mulDiv(answerQ128, Q32 - deviation, Q32);
+        spot = FullMath.mulDivRoundingUp(answerQ128, Q32 + deviation, Q32);
     }
 }
