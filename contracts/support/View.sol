@@ -96,12 +96,12 @@ contract View is PoolLogic {
     }
 
     function _evaluateWithRate(
-        uint xk,
+        uint256 xk,
         State memory state,
-        uint FEE_RATE,
+        uint256 FEE_RATE,
         Config memory config
-    ) internal view returns (uint256 R, uint256 rA, uint256 rB) {
-        (uint rA, uint rB) = _evaluate(xk, state);
+    ) internal view returns (uint256, uint256, uint256) {
+        (uint256 rA, uint256 rB) = _evaluate(xk, state);
         // track the rC before interest and premium for fee calculation
         uint256 rC = state.R - rA - rB;
         // [INTEREST]
