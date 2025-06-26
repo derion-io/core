@@ -380,9 +380,9 @@
     bech32 "1.1.4"
     ws "7.4.6"
 
-"@ethersproject/providers@https://gitpkg.now.sh/derion-io/ethers.js/packages/providers":
+"@ethersproject/providers@https://gitpkg.vercel.app/derion-io/ethers.js/packages/providers":
   version "5.5.2"
-  resolved "https://gitpkg.now.sh/derion-io/ethers.js/packages/providers#6ac23afcc2ad3967690d4194157ed62f41a1127e"
+  resolved "https://gitpkg.vercel.app/derion-io/ethers.js/packages/providers#3a9a5f5fc06ea70ad0025d31ca74093ffe57b7b2"
   dependencies:
     "@ethersproject/abstract-provider" "^5.5.0"
     "@ethersproject/abstract-signer" "^5.5.0"

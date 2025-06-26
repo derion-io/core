@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity ^0.8.28;
 
+
 import "@uniswap/v3-core/contracts/interfaces/pool/IUniswapV3PoolState.sol";
 import "@uniswap/v3-periphery/contracts/libraries/OracleLibrary.sol";
+import "./interfaces/AggregatorV3Interface.sol";
 import "./interfaces/IFetcher.sol";
 import "./subs/Constants.sol";
 
@@ -17,12 +19,18 @@ contract Fetcher is Constants, IFetcher {
         uint256 ORACLE
     ) public view returns (uint256 twap, uint256 spot) {
         address pool = address(uint160(ORACLE));
+        uint32 window = uint32(ORACLE >> 192);
+
+        if (window == 0) {
+            uint256 price = _fetchChainlink(pool);
+            uint32 decimals = uint32(ORACLE >> 160);
+            spot = FullMath.mulDiv(price, Q128, 10 ** decimals);
+            return (spot, spot);
+        }
+
         uint256 sqrtSpotX96 = _sqrtSpotX96(pool);
 
-        (int24 arithmeticMeanTick, ) = OracleLibrary.consult(
-            pool,
-            uint32(ORACLE >> 192)
-        );
+        (int24 arithmeticMeanTick, ) = OracleLibrary.consult(pool, window);
         uint256 sqrtTwapX96 = TickMath.getSqrtRatioAtTick(arithmeticMeanTick);
 
         spot = sqrtSpotX96 << 32;
@@ -43,5 +51,11 @@ contract Fetcher is Constants, IFetcher {
             }
             sqrtSpotX96 := mload(add(result,32))
         }
+    }
+
+    function _fetchChainlink(address feed) internal view returns (uint256 price) {
+        AggregatorV3Interface aggregator = AggregatorV3Interface(feed);
+        (, int256 answer, , , ) = aggregator.latestRoundData();
+        return uint256(answer);
     }
 }
