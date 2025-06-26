@@ -64,8 +64,9 @@ contract PoolLogic is PoolBase, Fetcher {
                 uint256 elapsed = uint32(block.timestamp) - s_lastInterestTime;
                 if (elapsed > 0) {
                     uint256 rate = _decayRate(elapsed, config.INTEREST_HL);
-                    uint256 rAF = FullMath.mulDivRoundingUp(rA, rate, Q64);
-                    uint256 rBF = FullMath.mulDivRoundingUp(rB, rate, Q64);
+                    state.a = FullMath.mulDivRoundingUp(state.a, rate, Q64);
+                    state.b = FullMath.mulDivRoundingUp(state.b, rate, Q64);
+                    (uint256 rAF, uint256 rBF) = _evaluate(xk, state);
                     if (rAF < rA || rBF < rB) {
                         // interest cannot exhaust an entire side
                         rA = Math.max(rAF, 1);
