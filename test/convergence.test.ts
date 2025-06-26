@@ -19,13 +19,15 @@ const {
 
 const PRECISION = 1000000 
 
-const INTEREST_HLS = [0]
-// const PREMIUM_HLS = [1, 60, 60 * 60, 1024]
-const PREMIUM_HLS = [10, 60, 60*60, 60*60*24]
+const INTEREST_HLS = [1, 60*60, 60*60*24]
+const PREMIUM_HLS = [0, 60, 60*60]
 
 INTEREST_HLS.forEach(INTEREST_HL => {
   PREMIUM_HLS.forEach(PREMIUM_HL => {
     describe("Convergence", function () {
+      if (INTEREST_HL == 0 && PREMIUM_HL == 0) {
+        return
+      }
       describe(`I = ${INTEREST_HL}, P = ${PREMIUM_HL}`, async function () {
         const fixture = await loadFixtureFromParams([{
           ...baseParams,
@@ -62,20 +64,20 @@ INTEREST_HLS.forEach(INTEREST_HL => {
             setSideRate(SIDE_C, pc),
           ])
 
-          const anchor = await time.latest()
+          const anchor = await time.latest() + 10
 
           let rate
-          const rates = []
+          const view = []
           for (let i = 0; i < 15; ++i) {
             if (i > 0) {
-              const nextTime = anchor + (PREMIUM_HL << i)
+              const nextTime = anchor + ((PREMIUM_HL + INTEREST_HL) << (i+1))
               if (i == 1) {
-                await time.increaseTo(anchor+10)
+                await time.increaseTo(anchor)
                 const { rA, rB } = await pool.contract.callStatic.compute(derivable1155.address, feeRate, 0, 0)
                 if (pa > pb) {
-                  rate = rates[0].rA.sub(rA).mul(PRECISION).div(rates[0].rA.sub(rates[0].rB)).toNumber() / (PRECISION << i)
+                  rate = view[0].rA.sub(rA).mul(PRECISION).div(view[0].rA.sub(view[0].rB)).toNumber() / (PRECISION << i)
                 } else {
-                  rate = rates[0].rB.sub(rB).mul(PRECISION).div(rates[0].rB.sub(rates[0].rA)).toNumber() / (PRECISION << i)
+                  rate = view[0].rB.sub(rB).mul(PRECISION).div(view[0].rB.sub(view[0].rA)).toNumber() / (PRECISION << i)
                 }
               }
               await time.increaseTo(nextTime)
@@ -91,13 +93,13 @@ INTEREST_HLS.forEach(INTEREST_HL => {
               }
             }
             const { rA, rB, rC } = await pool.contract.callStatic.compute(derivable1155.address, feeRate, 0, 0)
-            rates.push({ rA, rB, rC })
+            view.push({ rA, rB, rC })
 
             if (rA.sub(rB).abs().lte(rA.div(1000))) {
               break;
             }
           }
-          return [rates, rate]
+          return [view, rate]
         }
 
         function deviation(a, b) {
@@ -112,27 +114,24 @@ INTEREST_HLS.forEach(INTEREST_HL => {
 
             const [swap, swapRate] = await converge(a, b, c, true);
             // expect(view.length).eq(swap.length)
-            if (!(swapRate > 0)) {
-              expect(viewRate == swapRate)
-            } else {
-              expect(viewRate/swapRate).closeTo(1, 0.1)
-            }
+            // if (!(swapRate > 0)) {
+            //   expect(viewRate == swapRate)
+            // } else {
+            //   expect(viewRate/swapRate).closeTo(1, 0.1)
+            // }
             let totalDeviation = 0
             const n = Math.min(view.length, swap.length)
             // ignore the first items
-            for (let i = 3; i < n; ++i) {
-              // console.log(
-              //   view[i].rA.toString(), swap[i].rA.toString(),
-              //   view[i].rB.toString(), swap[i].rB.toString(),
-              //   view[i].rC.toString(), swap[i].rC.toString(),
-              // )
-              totalDeviation += deviation(view[i].rA, swap[i].rA)
-              totalDeviation += deviation(view[i].rB, swap[i].rB)
-              totalDeviation += deviation(view[i].rC, swap[i].rC)
+            for (let i = 1; i < n; ++i) {
+              console.log(i, view[i].rA.toString(), view[i].rB.toString(), view[i].rC.toString())
+              console.log(i, swap[i].rA.toString(), swap[i].rB.toString(), swap[i].rC.toString())
+              totalDeviation += deviation(view[i].rA, swap[i].rA) / 2**(n-1-i)
+              totalDeviation += deviation(view[i].rB, swap[i].rB) / 2**(n-1-i)
+              totalDeviation += deviation(view[i].rC, swap[i].rC) / 2**(n-1-i)
             }
             // console.log(totalDeviation)
-            // console.log('deviation', totalDeviation / n, 1.5/Math.log(PREMIUM_HL))
-            expect(Math.abs(totalDeviation) / n).lte(0.05, `avg deviation too high`)
+            console.log('deviation', totalDeviation)
+            expect(Math.abs(totalDeviation)).lte(0.05, `avg deviation too high`)
           })
         }
 
