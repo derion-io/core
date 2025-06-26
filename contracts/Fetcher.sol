@@ -12,24 +12,27 @@ import "./subs/Constants.sol";
 /// @author Derivable Labs
 contract Fetcher is Constants, IFetcher {
     /// fetch the price from ORACLE config
-    /// @param ORACLE 1bit QTI, 31bit reserve, 32bit WINDOW, ... PAIR ADDRESS
+    /// @param ORACLE:
+    ///    255 QTI              0x8...
+    ///    248 CHAINLINK        0x.1..
+    ///    192-161: WINDOW      0x....xxxx
+    ///    160-0: PAIR/FEED
     /// @return twap the time-weighted average price of the oracle
     /// @return spot the latest price of the oracle
     function fetch(
         uint256 ORACLE
     ) public view returns (uint256 twap, uint256 spot) {
         address pool = address(uint160(ORACLE));
-        uint32 window = uint32(ORACLE >> 192);
+        bool isChainlink = ORACLE & Q248 != 0;
 
-        if (window == 0) {
+        if (isChainlink) {
             uint256 price = _fetchChainlink(pool);
-            uint32 decimals = uint32(ORACLE >> 160);
-            spot = FullMath.mulDiv(price, Q128, 10 ** decimals);
-            return (spot, spot);
+            return (price, price);
         }
 
         uint256 sqrtSpotX96 = _sqrtSpotX96(pool);
 
+        uint32 window = uint32(ORACLE >> 192);
         (int24 arithmeticMeanTick, ) = OracleLibrary.consult(pool, window);
         uint256 sqrtTwapX96 = TickMath.getSqrtRatioAtTick(arithmeticMeanTick);
 
@@ -56,6 +59,7 @@ contract Fetcher is Constants, IFetcher {
     function _fetchChainlink(address feed) internal view returns (uint256 price) {
         AggregatorV3Interface aggregator = AggregatorV3Interface(feed);
         (, int256 answer, , , ) = aggregator.latestRoundData();
+        require(answer >= 0, "negative price");
         return uint256(answer);
     }
 }
