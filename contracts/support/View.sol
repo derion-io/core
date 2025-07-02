@@ -78,21 +78,14 @@ contract View is PoolLogic {
         if (twap == 0 && spot == 0) {
             (twap, spot) = _fetch(config.FETCHER, uint256(config.ORACLE));
         }
-        (uint256 rAt, uint256 rBt) = _evaluate(_xk(config, twap), state);
-        (uint256 rAs, uint256 rBs) = _evaluate(_xk(config, spot), state);
-
-        // [INTEREST & FEE]
-        uint256 Rt;
-        (Rt, rAt, rBt) = _applyRate(FEE_RATE, config, state.R, rAt, rBt);
-        (state.R, rAs, rBs) = _applyRate(FEE_RATE, config, state.R, rAs, rBs);
+        (uint Rt, uint256 rAt, uint256 rBt) = _evaluateWithRate(_xk(config, twap), State(state.R, state.a, state.b), FEE_RATE, config);
+        (uint Rs, uint256 rAs, uint256 rBs) = _evaluateWithRate(_xk(config, spot), state, FEE_RATE, config);
 
         stateView.rA = Math.min(rAt, rAs);
         stateView.rB = Math.min(rBt, rBs);
-        stateView.rC = Math.max(Rt - rAt - rBt, state.R - rAs - rBs);
+        stateView.rC = Math.max(Rt - rAt - rBt, Rs - rAs - rBs);
 
-        if (Rt < state.R) {
-            state.R = Rt;
-        }
+        state.R = Math.min(Rt, Rs);
 
         stateView.sA = _supply(TOKEN, SIDE_A);
         stateView.sB = _supply(TOKEN, SIDE_B);
@@ -102,29 +95,23 @@ contract View is PoolLogic {
         stateView.state = state;
     }
 
-    function _supply(
-        address TOKEN,
-        uint256 side
-    ) internal view returns (uint256 s) {
-        return IERC1155Supply(TOKEN).totalSupply(_packID(address(this), side));
-    }
-
-    function _applyRate(
+    function _evaluateWithRate(
+        uint256 xk,
+        State memory state,
         uint256 FEE_RATE,
-        Config memory config,
-        uint256 R,
-        uint256 rA,
-        uint256 rB
+        Config memory config
     ) internal view returns (uint256, uint256, uint256) {
+        (uint256 rA, uint256 rB) = _evaluate(xk, state);
         // track the rC before interest and premium for fee calculation
-        uint256 rC = R - rA - rB;
+        uint256 rC = state.R - rA - rB;
         // [INTEREST]
         if (config.INTEREST_HL > 0) {
             uint256 elapsed = uint32(block.timestamp) - s_lastInterestTime;
             if (elapsed > 0) {
                 uint256 rate = _decayRate(elapsed, config.INTEREST_HL);
-                uint256 rAF = FullMath.mulDivRoundingUp(rA, rate, Q64);
-                uint256 rBF = FullMath.mulDivRoundingUp(rB, rate, Q64);
+                state.a = FullMath.mulDivRoundingUp(state.a, rate, Q64);
+                state.b = FullMath.mulDivRoundingUp(state.b, rate, Q64);
+                (uint256 rAF, uint256 rBF) = _evaluate(xk, state);
                 if (rAF < rA || rBF < rB) {
                     // interest cannot exhaust an entire side
                     rA = Math.max(rAF, 1);
@@ -139,7 +126,7 @@ contract View is PoolLogic {
                 --diff; // premium cannot exhaust an entire side
                 uint256 elapsed = uint32(block.timestamp) - (s_lastPremiumTime);
                 if (elapsed > 0) {
-                    uint256 premiumHL = FullMath.mulDivRoundingUp(config.PREMIUM_HL >> 1, R, rA + rB);
+                    uint256 premiumHL = FullMath.mulDivRoundingUp(config.PREMIUM_HL >> 1, state.R, rA + rB);
                     uint256 rate = _decayRate(elapsed, premiumHL);
                     uint256 premium = diff >> 1;
                     premium -= FullMath.mulDivRoundingUp(premium, rate, Q64);
@@ -157,11 +144,18 @@ contract View is PoolLogic {
         }
         // [FEE]
         if (FEE_RATE > 0) {
-            uint256 fee = (R - rA - rB - rC) / FEE_RATE;
+            uint256 fee = (state.R - rA - rB - rC) / FEE_RATE;
             if (fee > 0) {
-                R -= fee;
+                state.R -= fee;
             }
         }
-        return (R, rA, rB);
+        return (state.R, rA, rB);
+    }
+
+    function _supply(
+        address TOKEN,
+        uint256 side
+    ) internal view returns (uint256 s) {
+        return IERC1155Supply(TOKEN).totalSupply(_packID(address(this), side));
     }
 }

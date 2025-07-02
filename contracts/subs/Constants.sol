@@ -2,6 +2,7 @@
 pragma solidity ^0.8.28;
 
 contract Constants {
+    uint256 internal constant Q32  = 1 << 32;
     uint256 internal constant Q64  = 1 << 64;
     uint256 internal constant Q80  = 1 << 80;
     uint256 internal constant Q192 = 1 << 192;

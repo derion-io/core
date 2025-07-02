@@ -48,7 +48,7 @@ async function main() {
         bn(qti).shl(255).add(bn(windowTime).shl(256 - 64)).add(pairETHUSDC).toHexString(),
         32,
     )
-    
+    console.log("fetchPrice: ", addressList["fetchPrice"])
     const fetchPriceUniV3 = await ethers.getContractAt("Fetcher", addressList["fetchPrice"])
     console.log(await fetchPriceUniV3.fetch(oracle))
 }
