@@ -273,13 +273,16 @@ task('deployToken', 'Use SingletonFatory to deploy Token contract')
             const addressPath = path.join(__dirname, `./json/${hre.network.name}.json`)
             const addressList = JSON.parse(fs.readFileSync(addressPath, 'utf8'))
 
-            const params = ethers.utils.defaultAbiCoder.encode(
+            const params = [utr, admin, ethers.constants.AddressZero]
+            console.log(...params)
+            const paramsEncoded = ethers.utils.defaultAbiCoder.encode(
                 ['address', 'address', 'address'],
-                [utr, admin, ethers.constants.AddressZero]
+                [...params]
             )
+
             const initBytecode = ethers.utils.solidityPack(
                 ['bytes', 'bytes'],
-                [byteCode, params]
+                [byteCode, paramsEncoded]
             )
             // compute address
             const initCodeHash = ethers.utils.keccak256(initBytecode)
@@ -288,20 +291,21 @@ task('deployToken', 'Use SingletonFatory to deploy Token contract')
                 ethers.utils.hexZeroPad(ethers.utils.hexlify(salt), 32),
                 initCodeHash,
             )
-            console.log(`token: ${address}`)
-            addressList['token'] = address
             const byteCodeOfFinalAddress = await provider.getCode(address)
             if (byteCodeOfFinalAddress == '0x') {
+                console.log(`token:`, address)
                 try {
                     const deployTx = await contractWithSigner.deploy(initBytecode, saltHex, { ...opts, gasPrice })
                     console.log('Tx: ', deployTx.hash)
                     const res = await deployTx.wait()
                     console.log('Gas Used:', res.gasUsed.toNumber())
+                    addressList['token'] = address
+                    exportData(addressList, hre.network.name)
                 } catch (error) {
                     console.log('Error: ', error.error ?? error)
                 }
-                exportData(addressList, hre.network.name)
             } else {
+                console.log(`token existed:`, address)
                 return
             }
         }

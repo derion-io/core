@@ -70,7 +70,7 @@ module.exports = {
             ],
             timeout: 900000,
             weth: '0x82aF49447D8a07e3bd95BD0d56f35241523fBab1',
-            utr: '0x8Bd6072372189A12A2889a56b6ec982fD02b0B87',
+            utr: '0x69c4620b62D99f524c5B4dE45442FE2D7dD59576',
             chainId: 42161
         },
         bsc: {

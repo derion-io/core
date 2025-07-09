@@ -26,8 +26,21 @@ function rateToHL(rate, power, DURATION = SECONDS_PER_DAY) {
 function rateFromHL(HL, power, DURATION = SECONDS_PER_DAY) {
     return DURATION * Math.LN2 / power / HL
 }
+const baseRateToHL = (r, DURATION = SECONDS_PER_DAY) => {
+  if (r == 0) {
+    return 0
+  }
+  return Math.ceil((DURATION * Math.LN2) / r)
+}
 
-const chainID = 56
+const baseRateFromHL = (HL, DURATION = SECONDS_PER_DAY) => {
+  if (r == 0) {
+    return 0
+  }
+  return (DURATION * Math.LN2) / HL
+}
+
+const chainID = 42161
 
 const gasPrices = {
     137: 45e9,
@@ -40,27 +53,27 @@ const gasLimit = 1000000
 const settings = {
     // pairAddress: '0xC31E54c7a869B9FcBEcc14363CF510d1c41fa443',
     // pairAddress: '0x8d76e9c2bd1adde00a3dcdc315fcb2774cb3d1d6',
-    pairAddress: ['0x172fcD41E0913e95784454622d1c3724f546f849'],
-    topics: ['BNB', 'BN'],
+    pairAddress: ['0xC6962004f452bE9203591991D15f6b388e09E8D0'],
+    topics: ['ETH', 'ETHER'],
     // window: 120,
     // windowBlocks: 120,
     power: 8,
-    interestRate: 0.03 / 100,
-    premiumRate: 3 / 100,
-    MATURITY: 60 * 60 * 12,
-    vesting: 120,
-    closingFeeDuration: 1 * 60 * 60,
-    closingFee: 1 / 100,
+    interestRate: 0.3 / 100,
+    // premiumRate: 3 / 100,
+    // MATURITY: 60 * 60 * 12,
+    // vesting: 120,
+    // closingFeeDuration: 1 * 60 * 60,
+    // closingFee: 1 / 100,
     // reserveToken: '0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9', // USDT
     // R: 1,
     // reserveToken: 'PLD', // PlayDerivable
-    // openingFee: 0/100,
+    openingFee: 0.3/100,
     // R: 0.0003, // init liquidity
 }
 
 async function deploy(settings) {
     const configs = await fetch(
-        `https://raw.githubusercontent.com/derivable-labs/configs/dev/${chainID}/network.json`
+        `https://raw.githubusercontent.com/derivable-labs/configs/v3-dev/${chainID}/network.json`
     ).then(res => res.json())
 
     const provider = new JsonRpcProvider(configs.rpc, chainID)
@@ -277,8 +290,8 @@ async function deploy(settings) {
     }
     console.log('MARK', mulDivNum(price, Q128.pow(exp)))
 
-    const INTEREST_HL = rateToHL(settings.interestRate, settings.power)
-    const PREMIUM_HL = rateToHL(settings.premiumRate, settings.power)
+    const INTEREST_HL = baseRateToHL(settings.interestRate ?? 0)
+    const PREMIUM_HL = baseRateToHL(settings.premiumRate ?? 0)
 
     console.log('INTEREST_HL', (INTEREST_HL / SECONDS_PER_DAY).toFixed(2), 'day(s)')
     console.log('PREMIUM_HL', (PREMIUM_HL / SECONDS_PER_DAY).toFixed(2), 'day(s)')
